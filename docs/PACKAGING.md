@@ -23,26 +23,72 @@ L'app fait environ 260 Mo (Electron/Chromium), le DMG environ 116 Mo. Le code ap
 
 Seulement **Apple Silicon (arm64)**. Pour un Mac Intel ou un binaire universel, ajouter `x64` (ou utiliser la cible `universal`) dans `build.mac.target[].arch` ; la taille des fichiers double environ. Non testé.
 
-## Signature et Gatekeeper : état actuel
+## Signature et notarisation
 
-L'app est signée **ad hoc** (`identity: "-"`, `hardenedRuntime: false`), c'est-à-dire **sans certificat Apple** et **sans notarisation**. Conséquences :
+Il existe **deux modes**, volontairement séparés :
 
-- Sur **la machine qui l'a construite**, elle se lance normalement.
-- Sur **un autre Mac**, si le DMG/ZIP a été téléchargé (AirDrop, mail, web), macOS affichera un avertissement et refusera de l'ouvrir au double-clic. Contournements pour l'utilisateur : clic droit sur l'app → *Ouvrir* → *Ouvrir*, ou dans *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*, ou `xattr -cr /Applications/Trame.app` dans le Terminal.
-- Une signature ad hoc évite que l'app soit déclarée « endommagée » sur Apple Silicon, qui exige au moins une signature valide pour exécuter du code.
+| | Développement (`npm run pack` / `dist`) | Publication (`npm run release:mac`) |
+| --- | --- | --- |
+| Signature | « ad hoc » (`identity: "-"`), sans compte Apple | Certificat **Developer ID Application** |
+| Runtime durci | non | oui, avec `build/entitlements.mac.plist` |
+| Notarisation | non | oui, ticket agrafé à l'app |
+| Autre Mac | avertissement Gatekeeper, clic droit → Ouvrir | s'ouvre normalement |
+| Configuration | champ `build` de `package.json` | `electron-builder.release.cjs` (reprend `build` et ne change que la signature) |
 
-Pourquoi `identity: "-"` et pas `null` : avec `null`, electron-builder laisse la signature d'origine d'Electron, devenue incohérente après modification du bundle (`codesign --verify` échoue). Pourquoi `hardenedRuntime: false` : le runtime durci avec une signature ad hoc empêche le chargement de bibliothèques d'Electron (validation des bibliothèques) tant que l'entitlement correspondant n'est pas fourni ; il n'a d'intérêt que pour la notarisation.
+### Mode développement (signature ad hoc)
 
-### Pour distribuer à d'autres personnes proprement
+`identity: "-"` + `hardenedRuntime: false`. Pourquoi pas `null` : electron-builder laisserait la signature d'origine d'Electron, devenue incohérente après modification du bundle (`codesign --verify` échoue, et sur Apple Silicon l'app peut être refusée). Pourquoi `hardenedRuntime: false` : avec une signature ad hoc, le runtime durci empêche le chargement des bibliothèques d'Electron ; il n'a d'intérêt que pour la notarisation. Sur un autre Mac, une app téléchargée est bloquée au double-clic : clic droit → *Ouvrir*, ou *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*, ou `xattr -cr /Applications/Trame.app`.
 
-Il faut un compte **Apple Developer Program** et un certificat **« Developer ID Application »** (distribution hors App Store). Les certificats « Apple Development » et « Apple Distribution » (celui-ci pour le Mac App Store) ne conviennent **pas** à une distribution directe. Ensuite :
+### Mode publication : mise en place (une seule fois)
 
-1. Installer le certificat Developer ID dans le trousseau.
-2. Dans `package.json` : retirer `identity: "-"` (electron-builder trouve le certificat Developer ID tout seul, ou donner son nom) et supprimer `hardenedRuntime: false` (le runtime durci est requis par la notarisation ; electron-builder applique alors ses entitlements par défaut pour Electron, à surcharger via `mac.entitlements` seulement si nécessaire).
-3. Notariser : configurer `mac.notarize` avec les identifiants Apple (variables d'environnement `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, **jamais dans le dépôt**).
-4. `npm run dist` puis vérifier : `spctl --assess --type execute -vv dist/mac-arm64/Trame.app`.
+Ces deux étapes demandent **votre compte Apple** : personne d'autre (ni un script) ne peut les faire à votre place.
 
-Ces étapes n'ont pas été exécutées.
+**1. Le certificat « Developer ID Application »** (compte Apple Developer payant, rôle Titulaire ou Admin). Les certificats « Apple Development » et « Apple Distribution » (Mac App Store) ne conviennent **pas** à une distribution directe. Dans Xcode : *Réglages → Comptes →* votre équipe *→ Gérer les certificats… → « + » → Developer ID Application*. La clé privée est créée sur ce Mac et reste dans le trousseau « Connexion » : **sauvegardez-la** (Trousseaux → clic droit sur le certificat → Exporter en `.p12`, protégé par mot de passe, à ranger hors du dépôt), sans quoi il faudra révoquer et recréer le certificat si ce Mac est perdu.
+
+**2. Les identifiants de notarisation**, enregistrés dans le trousseau (rien dans le dépôt, rien dans l'environnement) :
+
+1. sur [appleid.apple.com](https://appleid.apple.com) → *Connexion et sécurité → Mots de passe d'application* : créer un mot de passe nommé par ex. « Trame notarisation » ;
+2. dans un terminal :
+   ```bash
+   xcrun notarytool store-credentials "trame-notary" --apple-id "votre-identifiant@apple" --team-id "VOTRE_ID_D_EQUIPE"
+   ```
+   (l'identifiant d'équipe se lit sur developer.apple.com → *Compte → Appartenance*, ou dans le nom du certificat : `Developer ID Application: Nom (ID_D_EQUIPE)`). Le mot de passe est demandé sans écho puis stocké dans le trousseau.
+
+*Alternative recommandée par electron-builder (sans mot de passe personnel) :* une **clé d'API App Store Connect** (rôle « Developer »). Fournir alors les variables `APPLE_API_KEY` (chemin du `.p8`), `APPLE_API_KEY_ID` et `APPLE_API_ISSUER` à la place du profil ; ne jamais commiter le `.p8`.
+
+Vérification des prérequis, **sans rien construire ni envoyer** :
+
+```bash
+npm run release:check
+```
+
+### Mode publication : à chaque version
+
+```bash
+# 1. incrémenter "version" dans package.json, commiter
+npm run release:mac
+```
+
+Le script (`scripts/release-mac.mjs`) enchaîne : vérification des prérequis → build → signature de **tous** les binaires avec le runtime durci → envoi à Apple et attente du verdict (en général 2 à 10 minutes) → agrafage du ticket à l'app → création du `.dmg` et du `.zip` → vérifications : signature profonde stricte, runtime durci, signataire Developer ID, ticket agrafé, et acceptation par Gatekeeper (`spctl`, source « Notarized Developer ID »), y compris pour l'app **dans** le DMG. Il affiche enfin les empreintes SHA-256. S'il termine par ✓, les fichiers de `dist/` sont distribuables ; sinon ne rien distribuer.
+
+Variables facultatives : `TRAME_NOTARY_PROFILE` (nom du profil, défaut `trame-notary`), `TRAME_SIGN_IDENTITY` (sous-chaîne du certificat à utiliser s'il y en a plusieurs), `TRAME_KEYCHAIN` (trousseau, défaut « Connexion »).
+
+### Entitlements (`build/entitlements.mac.plist`)
+
+Le runtime durci, obligatoire pour la notarisation, interdit par défaut ce dont le moteur JavaScript a besoin ; on ne rend que le strict nécessaire : `allow-jit` et `allow-unsigned-executable-memory`. Vérifié : l'appli signée avec le runtime durci et **ces deux seuls droits** démarre et exporte un PDF vectoriel. `disable-library-validation` n'est **pas** nécessaire tant que tous les binaires (frameworks, bibliothèques `.dylib`, helpers) sont signés par la même équipe, ce que fait electron-builder : ne pas l'ajouter par précaution, il affaiblit la protection. Symptôme d'un binaire oublié : `Library not loaded: … libffmpeg.dylib` au lancement.
+
+### En cas de refus de la notarisation
+
+`electron-builder` affiche l'identifiant de la soumission ; le détail des motifs (binaire non signé, droit manquant, horodatage absent…) s'obtient avec :
+
+```bash
+xcrun notarytool log <identifiant-de-soumission> --keychain-profile trame-notary
+xcrun notarytool history --keychain-profile trame-notary   # liste des envois récents
+```
+
+### État de cette chaîne
+
+**Vérifié** : la configuration se charge, `npm run release:check` détecte et explique chaque prérequis manquant, et l'application démarre et fonctionne **sous le runtime durci avec ces entitlements**, signée par un certificat d'équipe (essai local avec un certificat « Apple Development », pour valider le point le plus risqué). **Non vérifié de bout en bout** : la signature Developer ID, l'envoi à Apple et l'agrafage, faute de certificat Developer ID et d'identifiants sur la machine de développement au moment de l'écriture. Le premier `npm run release:mac` réel est donc aussi sa première exécution complète : en cas d'échec, lire d'abord la sortie du script et le journal de notarisation ci-dessus.
 
 ## Icône
 

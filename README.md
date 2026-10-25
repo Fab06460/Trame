@@ -38,12 +38,14 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run pack`      | Construit `dist/mac-arm64/Trame.app` (test rapide du packaging)    |
 | `npm run dist`      | Construit le `.dmg` et le `.zip` macOS dans `dist/`                |
 | `npm run fidelity`  | Compare le PDF vectoriel à l'image de l'éditeur, pixel à pixel (macOS) |
+| `npm run release:check` | Vérifie les prérequis de signature et de notarisation (rien n'est construit) |
+| `npm run release:mac` | Publie : signe (Developer ID), notarise, agrafe, vérifie (macOS) |
 | `npm run smoke`     | Test de bout en bout : lance l'appli construite et vérifie IPC, récents, sortie (macOS) |
 | `npm test`          | Tests unitaires (Vitest) ; `npm run test:watch` en continu         |
 
 ### Installer l'application
 
-`npm run dist` produit `dist/Trame-<version>-arm64.dmg` (Apple Silicon). L'app n'est **pas signée avec un certificat Apple ni notarisée** : sur un autre Mac, il faudra clic droit → *Ouvrir*. Détails et marche à suivre pour une vraie distribution : [docs/PACKAGING.md](docs/PACKAGING.md).
+`npm run dist` produit `dist/Trame-<version>-arm64.dmg` (Apple Silicon) signé « ad hoc » : sur un autre Mac, il faudra clic droit → *Ouvrir*. Pour une version **signée et notarisée** (qui s'ouvre normalement partout), voir `npm run release:mac` ; mise en place et marche à suivre : [docs/PACKAGING.md](docs/PACKAGING.md).
 
 ### Dépannage
 
