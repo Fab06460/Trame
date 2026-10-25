@@ -39,6 +39,8 @@ export function Canvas(): React.JSX.Element {
   const [lasso, setLasso] = useState<Box | null>(null)
   const lassoStart = useRef<{ x: number; y: number; additive: boolean } | null>(null)
   const dragStart = useRef<Record<string, { x: number; y: number }>>({})
+  // Konva émet transformstart/transformend une fois par nœud : un seul cran d'historique par geste.
+  const transforming = useRef(false)
 
   useLayoutEffect(() => {
     const el = wrapRef.current!
@@ -103,7 +105,9 @@ export function Canvas(): React.JSX.Element {
       dragStart.current = {}
     },
     onTransformStart: () => {
-      if (selectedIds.length === 1) beginChange()
+      if (transforming.current) return
+      transforming.current = true
+      beginChange()
     },
     // Sélection simple : on convertit l'échelle en taille en direct (texte, formes nettes).
     onTransform: (e: Konva.KonvaEventObject<Event>) => {
@@ -117,6 +121,7 @@ export function Canvas(): React.JSX.Element {
     },
     // Sélection multiple : le Transformer gère l'échelle de chaque nœud, on fige le résultat à la fin.
     onTransformEnd: (e: Konva.KonvaEventObject<Event>) => {
+      transforming.current = false
       if (selectedIds.length === 1) return
       const n = e.target
       const w = Math.max(5, n.width() * n.scaleX())

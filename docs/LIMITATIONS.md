@@ -25,7 +25,6 @@
 
 ## Éditeur
 
-- **Annuler/rétablir n'enregistre pas le redimensionnement/rotation d'une sélection multiple** (le `beginChange()` n'est appelé que pour une sélection simple dans `onTransformStart`). Bug connu à corriger.
 - **Texte : la hauteur stockée est indicative.** Konva calcule la hauteur réelle selon le retour à la ligne, mais `boundsOf`, l'alignement vertical, le lasso et les miniatures s'appuient sur `element.height`. Les alignements verticaux et le lasso sont donc approximatifs pour des textes sur plusieurs lignes.
 - Changer le format de page (`setSize`) **ne redimensionne ni ne repositionne** les éléments (pas de « Magic Resize »), et s'applique à toutes les pages.
 - Redimensionner un texte modifie sa boîte, pas sa taille de police ; en sélection multiple, le texte est étiré avec le Transformer puis la boîte est figée.
