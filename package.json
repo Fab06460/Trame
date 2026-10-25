@@ -10,9 +10,11 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pack": "electron-vite build && electron-builder --mac --dir",
+    "dist": "electron-vite build && electron-builder --mac"
   },
-  "dependencies": {
+  "devDependencies": {
     "@fontsource/bebas-neue": "^5.3.0",
     "@fontsource/caveat": "^5.3.0",
     "@fontsource/inter": "^5.3.0",
@@ -23,23 +25,62 @@
     "@fontsource/pacifico": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
     "@fontsource/poppins": "^5.3.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
     "konva": "^10.9.0",
     "nanoid": "^5.1.16",
     "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-konva": "^19.3.2",
-    "zustand": "^5.0.16"
-  },
-  "devDependencies": {
-    "@types/node": "^26.6.5",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "electron": "^45.0.0",
-    "electron-vite": "^6.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "zustand": "^5.0.16"
+  },
+  "author": {
+    "name": "Fabrice Belloncle",
+    "email": "fabrice.belloncle@gmail.com"
+  },
+  "build": {
+    "appId": "app.trame.editor",
+    "productName": "Trame",
+    "copyright": "Copyright © 2026 Fabrice Belloncle",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "Trame ${version}"
+    }
   }
 }

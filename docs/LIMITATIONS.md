@@ -7,7 +7,7 @@
 - **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Pas de tests de bout en bout (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
 - **Pas d'intégration continue.**
-- **Packaging absent** : pas d'application `.app` / `.dmg` / `.exe` distribuable (il faudrait `electron-builder` ou Electron Forge, icône, signature/notarisation macOS).
+- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, signature ad hoc sans certificat Developer ID ni notarisation (avertissement Gatekeeper sur les autres Macs), `appId` provisoire, icône provisoire, pas de mise à jour automatique, pas d'association de fichiers `.trame`. Aucun packaging Windows/Linux.
 - Le bundle du renderer est volumineux (~2,4 Mo hors polices) : aucun découpage de code.
 
 ## Plateformes

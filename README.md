@@ -32,11 +32,18 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run build`     | Compile main, preload et renderer dans `out/`                      |
 | `npm run preview`   | Lance l'appli à partir du build `out/`                             |
 | `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`)                           |
+| `npm run pack`      | Construit `dist/mac-arm64/Trame.app` (test rapide du packaging)    |
+| `npm run dist`      | Construit le `.dmg` et le `.zip` macOS dans `dist/`                |
 | `npm test`          | Tests unitaires (Vitest) ; `npm run test:watch` en continu         |
+
+### Installer l'application
+
+`npm run dist` produit `dist/Trame-<version>-arm64.dmg` (Apple Silicon). L'app n'est **pas signée avec un certificat Apple ni notarisée** : sur un autre Mac, il faudra clic droit → *Ouvrir*. Détails et marche à suivre pour une vraie distribution : [docs/PACKAGING.md](docs/PACKAGING.md).
 
 ### Dépannage
 
 - **`Error: Electron uninstall`** au lancement : le binaire Electron n'a pas été téléchargé pendant `npm install`. Lancer `node node_modules/electron/install.js`, puis relancer.
+- **L'appli quitte immédiatement sans rien afficher** : la variable `ELECTRON_RUN_AS_NODE` est définie dans votre shell. Lancer avec `env -u ELECTRON_RUN_AS_NODE npm run dev`.
 - **`Port 5173 is in use, trying another one`** : sans gravité, Vite choisit un autre port tout seul.
 
 ## Stack
@@ -50,6 +57,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | État                  | Zustand 5                                             |
 | Export PDF            | pdf-lib                                               |
 | Tests                 | Vitest 4                                              |
+| Packaging macOS       | electron-builder                                      |
 | Polices embarquées    | @fontsource (sous-ensemble latin)                     |
 | Identifiants          | nanoid                                                |
 
@@ -73,6 +81,8 @@ src/
       exportPages.ts     Rendu hors écran d'une page + export PDF
       stageRegistry.ts   Accès au Stage Konva courant (export de la page affichée)
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
+build/                   Icône de l'application (icon.icns, icon.png)
+scripts/make-icon.py     Génère l'icône
 docs/                    Documentation détaillée (voir ci-dessous)
 vitest.config.ts         Configuration des tests (tests à côté du code : `*.test.ts`)
 FEATURES.md              Notes de référence sur les fonctionnalités de Canva (pas de la doc technique)
@@ -82,5 +92,6 @@ FEATURES.md              Notes de référence sur les fonctionnalités de Canva 
 
 - [Architecture](docs/ARCHITECTURE.md) : processus, flux de données, store, historique, rendu
 - [Format de fichier `.trame`](docs/FILE_FORMAT.md) : schéma, versions, migration
+- [Packaging et distribution macOS](docs/PACKAGING.md) : build du `.dmg`, signature, notarisation, pièges
 - [Étendre l'appli](docs/EXTENDING.md) : ajouter un type d'élément, un modèle, une police, une action
 - [Limitations connues et dette technique](docs/LIMITATIONS.md) : à lire avant de modifier le code

@@ -118,4 +118,4 @@ Fonctions pures et sans dépendance (candidates idéales pour des tests unitaire
 
 ## Build
 
-`electron-vite` produit trois bundles dans `out/` : `main/`, `preload/` (CJS, requis par `sandbox: true`) et `renderer/`. `package.json#main` pointe vers `out/main/index.js`. L'alias `@` → `src/renderer/src` est déclaré dans `electron.vite.config.ts` **et** `tsconfig.json` (`paths`). **Il n'y a pas encore de packaging** (pas d'`electron-builder`) : l'appli se lance via `npm run dev` ou `npm run preview`.
+`electron-vite` produit trois bundles dans `out/` : `main/`, `preload/` (CJS, requis par `sandbox: true`) et `renderer/`. `package.json#main` pointe vers `out/main/index.js`. L'alias `@` → `src/renderer/src` est déclaré dans `electron.vite.config.ts` **et** `tsconfig.json` (`paths`). Le packaging macOS (`electron-builder`) est décrit dans [PACKAGING.md](PACKAGING.md). Toutes les bibliothèques du renderer sont bundlées par Vite ; elles sont donc en `devDependencies`.
