@@ -61,4 +61,6 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
 3. Les **champs optionnels ajoutés** (comme `groupId`, ou un nouveau champ visuel avec valeur par défaut) ne nécessitent pas de nouvelle version tant que leur absence a un sens.
 4. Mettre à jour ce document.
 
-⚠️ Aujourd'hui `migrateDocument` ne **valide pas** le contenu : un JSON mal formé ou d'une version inconnue (> 2) est accepté tel quel et peut faire planter l'éditeur. Voir [LIMITATIONS.md](LIMITATIONS.md).
+## Validation à l'ouverture
+
+`parseDocument()` (`store/editor.ts`) est le seul point d'entrée pour lire un fichier : JSON → vérification de la version (une version supérieure à 2 produit un message « créé avec une version plus récente de Trame ») → migration → vérification structurelle (dimensions, pages, id/type/coordonnées de chaque élément). Elle lève une `Error` au message affichable, montrée dans une boîte de dialogue : le document courant n'est jamais remplacé par un fichier invalide. Elle ne valide pas le détail des champs optionnels (voir [LIMITATIONS.md](LIMITATIONS.md)). **Toute nouvelle règle de format doit y être reflétée et testée.**

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useEditor } from '@/store/editor'
+import { confirmUnsaved } from '@/fileActions'
 import { SHAPES } from '@/shapes'
 import { TEMPLATES, instantiate, previewPage } from '@/templates'
 import { PageThumb } from './PageThumb'
@@ -16,10 +17,9 @@ export function Sidebar(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('templates')
   const { addElement, loadDocument } = useEditor.getState()
 
-  const applyTemplate = (id: string): void => {
+  const applyTemplate = async (id: string): Promise<void> => {
     const t = TEMPLATES.find((x) => x.id === id)!
-    if (useEditor.getState().dirty && !window.confirm('Remplacer le design actuel ? Les modifications non enregistrées seront perdues.')) return
-    loadDocument(instantiate(t))
+    if (await confirmUnsaved('remplacer ce design par un modèle')) loadDocument(instantiate(t))
   }
 
   const categories = [...new Set(TEMPLATES.map((t) => t.category))]

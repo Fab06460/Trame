@@ -5,11 +5,21 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { useEditor } from '@/store/editor'
+import { confirmUnsaved, newProject, openProject, saveProject } from '@/fileActions'
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const t = e.target as HTMLElement
+      const k = e.key.toLowerCase()
+      // raccourcis fichier : actifs même pendant la saisie de texte
+      if ((e.metaKey || e.ctrlKey) && ['s', 'o', 'n'].includes(k)) {
+        e.preventDefault()
+        if (k === 's') void saveProject(e.shiftKey)
+        else if (k === 'o') void openProject()
+        else void newProject()
+        return
+      }
       if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t as HTMLInputElement).type === 'text')) return
       const s = useEditor.getState()
       const mod = e.metaKey || e.ctrlKey
@@ -40,6 +50,25 @@ export default function App(): React.JSX.Element {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Tient le processus principal informé (garde de fermeture, indicateur macOS) et met à jour le titre
+  const dirty = useEditor((s) => s.dirty)
+  const filePath = useEditor((s) => s.filePath)
+  const name = useEditor((s) => s.doc.name)
+  useEffect(() => {
+    window.trame.setState({ dirty, path: filePath })
+    const file = filePath ? filePath.split(/[\\/]/).pop()!.replace(/\.trame$/, '') : name
+    document.title = `${file}${dirty ? ' •' : ''} — Trame`
+  }, [dirty, filePath, name])
+
+  // Fermeture de fenêtre avec des modifications : proposer d'enregistrer
+  useEffect(
+    () =>
+      window.trame.onBeforeClose(async () => {
+        if (await confirmUnsaved('fermer')) window.trame.confirmClose()
+      }),
+    []
+  )
 
   return (
     <div className="app">

@@ -22,6 +22,41 @@ export function migrateDocument(raw: any): TrameDocument {
   return { ...rest, version: 2, pages: [{ id: nanoid(8), background, elements }] }
 }
 
+const ELEMENT_TYPES = ['rect', 'ellipse', 'text', 'image', 'path']
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+
+/**
+ * Lit et valide le contenu d'un fichier .trame. Lève une Error au message affichable à l'utilisateur.
+ * Vérifie la structure (pas la cohérence visuelle) : suffisant pour ne jamais planter l'éditeur.
+ */
+export function parseDocument(json: string): TrameDocument {
+  const invalid = (detail: string): Error => new Error(`Ce fichier n'est pas un projet Trame valide (${detail}).`)
+  let raw: any
+  try {
+    raw = JSON.parse(json)
+  } catch {
+    throw invalid('JSON illisible')
+  }
+  if (!raw || typeof raw !== 'object') throw invalid('contenu inattendu')
+  if (raw.version !== 1 && raw.version !== 2) {
+    throw isNum(raw.version) && raw.version > 2
+      ? new Error('Ce projet a été créé avec une version plus récente de Trame. Mettez Trame à jour pour l’ouvrir.')
+      : invalid('version inconnue')
+  }
+  const doc = migrateDocument(raw)
+  if (!isNum(doc.width) || !isNum(doc.height) || doc.width <= 0 || doc.height <= 0) throw invalid('dimensions')
+  if (!Array.isArray(doc.pages) || doc.pages.length === 0) throw invalid('aucune page')
+  for (const page of doc.pages) {
+    if (typeof page?.id !== 'string' || typeof page.background !== 'string' || !Array.isArray(page.elements))
+      throw invalid('page malformée')
+    for (const e of page.elements) {
+      if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
+      if (![e.x, e.y, e.width, e.height].every(isNum)) throw invalid('élément mal positionné')
+    }
+  }
+  return { ...doc, name: typeof doc.name === 'string' && doc.name ? doc.name : 'Sans titre' }
+}
+
 export const selectPage = (s: Pick<EditorState, 'doc' | 'pageId'>): TramePage =>
   s.doc.pages.find((p) => p.id === s.pageId) ?? s.doc.pages[0]
 

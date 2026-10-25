@@ -11,9 +11,10 @@
 - Pages multiples (ajout, duplication, suppression, réordonnancement par glisser-déposer)
 - 6 modèles de départ, 10 polices embarquées
 - Annuler / rétablir (100 niveaux)
+- Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
 
-Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner.
+Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner.
 (Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
 
 ## Démarrage rapide

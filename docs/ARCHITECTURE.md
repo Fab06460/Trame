@@ -30,12 +30,22 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 
 | Canal            | Preload                          | Rôle                                                        |
 | ---------------- | -------------------------------- | ----------------------------------------------------------- |
-| `project:save`   | `saveProject(json, path?)`       | Écrit le JSON ; ouvre « Enregistrer sous » si pas de chemin. Retourne le chemin ou `null` si annulé |
+| `project:save`   | `saveProject(json, path?, name?)` | Écrit le JSON ; ouvre « Enregistrer sous » (proposant `name`) si pas de chemin. Retourne le chemin, ou `null` si annulé ou en échec (erreur affichée) |
 | `project:open`   | `openProject()`                  | Dialogue d'ouverture ; retourne `{ path, json }` ou `null`   |
 | `image:pick`     | `pickImage()`                    | Dialogue d'image ; retourne une **data URL** base64          |
 | `export:save`    | `saveExport(dataUrl, name)`      | Décode une data URL (PNG, JPG ou PDF) et l'écrit sur disque  |
+| `dialog:unsaved` | `askUnsaved(name, action)`       | Boîte native Enregistrer / Ne pas enregistrer / Annuler ; retourne `'save' \| 'discard' \| 'cancel'` |
+| `dialog:error`   | `showError(title, message)`      | Boîte d'erreur native                                        |
+| `app:state` (envoi) | `setState({ dirty, path })`   | Le renderer informe le main de l'état du document (garde de fermeture, point « modifié » et icône de document sur macOS) |
+| `app:before-close` (réception) / `app:close-confirmed` (envoi) | `onBeforeClose(cb)` / `confirmClose()` | Protocole de fermeture, voir ci-dessous |
 
 Le type de `window.trame` est déclaré dans `types.ts` à partir de `TrameApi` (exporté par le preload). Ajouter un canal = modifier `main/index.ts` **et** `preload/index.ts`.
+
+### Fichiers et modifications non enregistrées
+
+Les actions fichier vivent dans `fileActions.ts` (`saveProject`, `openProject`, `newProject`, `confirmUnsaved`), utilisées par la barre d'outils, les raccourcis (⌘N, ⌘O, ⌘S, ⇧⌘S dans `App.tsx`) et les modèles. Toute action qui remplace ou ferme le document passe par `confirmUnsaved(action)`.
+
+**Fermeture de fenêtre** : le main process connaît seulement l'état `dirty` (reçu par `app:state`). Sur `close` avec modifications, il annule la fermeture et envoie `app:before-close` ; le renderer exécute `confirmUnsaved('fermer')` (qui peut enregistrer) et, si l'utilisateur poursuit, répond `app:close-confirmed`, après quoi le main referme réellement la fenêtre. Ce protocole couvre aussi ⌘Q. Le titre de la fenêtre est `nom du fichier (ou du document) • — Trame`, le `•` indiquant des modifications.
 
 ## Modèle de données
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { migrateDocument, selectPage, useEditor } from '@/store/editor'
+import { migrateDocument, parseDocument, selectPage, useEditor } from '@/store/editor'
 
 const S = (): ReturnType<typeof useEditor.getState> => useEditor.getState()
 const els = (): ReturnType<typeof selectPage>['elements'] => selectPage(S()).elements
@@ -348,5 +348,62 @@ describe('migrateDocument', () => {
   it('laisse un document v2 intact', () => {
     const doc = S().doc
     expect(migrateDocument(doc)).toBe(doc)
+  })
+})
+
+describe('parseDocument', () => {
+  const valid = (): Record<string, any> => JSON.parse(JSON.stringify(S().doc))
+  const withElement = (e: Record<string, any>): string => {
+    const d = valid()
+    d.pages[0].elements.push(e)
+    return JSON.stringify(d)
+  }
+  const el = { id: 'e1', type: 'rect', x: 0, y: 0, width: 10, height: 10 }
+
+  it('accepte un document v2 valide, y compris après aller-retour JSON', () => {
+    addRects(2)
+    const doc = parseDocument(JSON.stringify(S().doc))
+    expect(doc.pages[0].elements).toHaveLength(2)
+  })
+
+  it('accepte et migre un document v1', () => {
+    const v1 = { version: 1, name: 'Ancien', width: 800, height: 600, background: '#fff', elements: [el] }
+    const doc = parseDocument(JSON.stringify(v1))
+    expect(doc.version).toBe(2)
+    expect(doc.pages[0].elements).toHaveLength(1)
+  })
+
+  it('refuse un JSON illisible ou un contenu qui n’est pas un objet', () => {
+    expect(() => parseDocument('{pas du json')).toThrow(/JSON illisible/)
+    expect(() => parseDocument('42')).toThrow(/valide/)
+    expect(() => parseDocument('null')).toThrow(/valide/)
+  })
+
+  it('refuse une version inconnue et signale une version plus récente', () => {
+    expect(() => parseDocument(JSON.stringify({ ...valid(), version: 99 }))).toThrow(/plus récente/)
+    expect(() => parseDocument(JSON.stringify({ ...valid(), version: 'x' }))).toThrow(/version inconnue/)
+    expect(() => parseDocument(JSON.stringify({ name: 'sans version' }))).toThrow(/version inconnue/)
+  })
+
+  it('refuse des dimensions invalides', () => {
+    expect(() => parseDocument(JSON.stringify({ ...valid(), width: 0 }))).toThrow(/dimensions/)
+    expect(() => parseDocument(JSON.stringify({ ...valid(), height: 'grand' }))).toThrow(/dimensions/)
+  })
+
+  it('refuse un document sans page ou avec une page malformée', () => {
+    expect(() => parseDocument(JSON.stringify({ ...valid(), pages: [] }))).toThrow(/aucune page/)
+    expect(() => parseDocument(JSON.stringify({ ...valid(), pages: [{ id: 'p' }] }))).toThrow(/page malformée/)
+  })
+
+  it('refuse un élément de type inconnu ou aux coordonnées invalides', () => {
+    expect(() => parseDocument(withElement({ ...el, type: 'hologramme' }))).toThrow(/élément inconnu/)
+    expect(() => parseDocument(withElement({ ...el, x: 'gauche' }))).toThrow(/mal positionné/)
+    expect(() => parseDocument(withElement({ ...el, width: null }))).toThrow(/mal positionné/)
+  })
+
+  it('donne un nom par défaut si absent', () => {
+    const d = valid()
+    delete d.name
+    expect(parseDocument(JSON.stringify(d)).name).toBe('Sans titre')
   })
 })

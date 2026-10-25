@@ -4,6 +4,11 @@ import { readFile, writeFile } from 'fs/promises'
 
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
+let mainWindow: BrowserWindow | null = null
+/** Reflète l'état « modifié » du renderer, pour intercepter la fermeture. */
+let hasUnsavedChanges = false
+let closeConfirmed = false
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400,
@@ -21,6 +26,20 @@ function createWindow(): void {
     }
   })
 
+  mainWindow = win
+  win.on('closed', () => {
+    mainWindow = null
+    hasUnsavedChanges = false
+    closeConfirmed = false
+  })
+  // Fermeture avec des modifications : le renderer décide (enregistrer / ignorer / annuler) puis confirme.
+  win.on('close', (e) => {
+    if (hasUnsavedChanges && !closeConfirmed) {
+      e.preventDefault()
+      win.webContents.send('app:before-close')
+    }
+  })
+
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -28,22 +47,63 @@ function createWindow(): void {
   }
 }
 
-ipcMain.handle('project:save', async (_e, json: string, currentPath?: string) => {
-  let path = currentPath
-  if (!path) {
-    const res = await dialog.showSaveDialog({ defaultPath: 'Sans titre.trame', filters: [FILTER] })
-    if (res.canceled || !res.filePath) return null
-    path = res.filePath
+ipcMain.handle('project:save', async (e, json: string, currentPath?: string, name?: string) => {
+  try {
+    let path = currentPath
+    if (!path) {
+      const win = BrowserWindow.fromWebContents(e.sender)!
+      const res = await dialog.showSaveDialog(win, { defaultPath: `${name || 'Sans titre'}.trame`, filters: [FILTER] })
+      if (res.canceled || !res.filePath) return null
+      path = res.filePath
+    }
+    await writeFile(path, json, 'utf-8')
+    return path
+  } catch (err) {
+    dialog.showErrorBox('Enregistrement impossible', err instanceof Error ? err.message : String(err))
+    return null
   }
-  await writeFile(path, json, 'utf-8')
-  return path
 })
 
-ipcMain.handle('project:open', async () => {
-  const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [FILTER] })
+ipcMain.handle('project:open', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender)!
+  const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [FILTER] })
   if (res.canceled || !res.filePaths[0]) return null
   const path = res.filePaths[0]
-  return { path, json: await readFile(path, 'utf-8') }
+  try {
+    return { path, json: await readFile(path, 'utf-8') }
+  } catch (err) {
+    dialog.showErrorBox('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    return null
+  }
+})
+
+ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
+  const win = BrowserWindow.fromWebContents(e.sender)!
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: ['Enregistrer', 'Ne pas enregistrer', 'Annuler'],
+    defaultId: 0,
+    cancelId: 2,
+    message: `Enregistrer les modifications de « ${name} » ?`,
+    detail: `Vos modifications seront perdues si vous ne les enregistrez pas avant de ${action}.`
+  })
+  return (['save', 'discard', 'cancel'] as const)[response]
+})
+
+ipcMain.handle('dialog:error', (_e, title: string, message: string) => {
+  dialog.showErrorBox(title, message)
+})
+
+ipcMain.on('app:state', (_e, state: { dirty: boolean; path?: string }) => {
+  hasUnsavedChanges = state.dirty
+  // macOS : point dans le bouton de fermeture et icône du document dans la barre de titre
+  mainWindow?.setDocumentEdited(state.dirty)
+  mainWindow?.setRepresentedFilename(state.path ?? '')
+})
+
+ipcMain.on('app:close-confirmed', () => {
+  closeConfirmed = true
+  mainWindow?.close()
 })
 
 ipcMain.handle('image:pick', async () => {

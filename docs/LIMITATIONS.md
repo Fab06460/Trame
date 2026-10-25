@@ -16,12 +16,10 @@
 
 ## Risques de perte de données
 
-- **« Nouveau » et « Ouvrir » ne demandent pas confirmation**, même avec des modifications non enregistrées (seule l'application d'un modèle le fait, via `window.confirm`).
-- **Pas d'avertissement à la fermeture** de la fenêtre avec modifications non enregistrées.
-- **Pas d'enregistrement automatique** ni de récupération après un plantage.
-- **Pas de validation à l'ouverture** d'un `.trame` (voir [FILE_FORMAT.md](FILE_FORMAT.md)) : fichier corrompu ou de version future = comportement indéfini.
-- Pas de « Enregistrer sous » distinct : « Enregistrer » réutilise le chemin courant.
-- Le champ `name` du document n'est pas modifiable dans l'interface (il sert aux noms d'export et reste « Sans titre » ou le nom du modèle).
+- **Pas d'enregistrement automatique** ni de récupération après un plantage de l'appli ou de la machine.
+- Les confirmations (Nouveau, Ouvrir, appliquer un modèle, fermer la fenêtre) reposent sur l'indicateur `dirty`, qui passe à `true` à toute modification, **y compris un annuler qui ramène le document à son état enregistré** : une confirmation peut donc être demandée alors que rien n'a réellement changé.
+- La validation à l'ouverture (`parseDocument`) vérifie la **structure** (version, dimensions, pages, type et coordonnées des éléments), pas la cohérence du contenu : un `src` d'image invalide, une couleur incorrecte ou un `path` SVG illisible sont acceptés.
+- Le champ `name` du document n'est pas modifiable dans l'interface (il sert de nom par défaut à « Enregistrer sous » et aux exports et reste « Sans titre » ou le nom du modèle).
 
 ## Éditeur
 
