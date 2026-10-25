@@ -82,17 +82,18 @@ L'historique stocke des **instantanés complets du document** (partage structure
 
 Le changement de page (`setPage`) et la sélection ne sont pas dans l'historique. Après un undo/redo, `selectedIds` est filtré pour ne garder que les éléments encore existants, et `pageId` retombe sur la première page si la sienne a disparu.
 
-## Rendu : trois implémentations à garder synchronisées
+## Rendu : quatre implémentations à garder synchronisées
 
-Un élément est dessiné à **trois endroits**, volontairement distincts :
+Un élément est dessiné à **quatre endroits**, volontairement distincts :
 
 | Où                         | Technique              | Usage                                              |
 | -------------------------- | ---------------------- | -------------------------------------------------- |
 | `components/Canvas.tsx`    | react-konva (déclaratif) | Éditeur interactif                               |
-| `exportPages.ts` (`renderPage`) | Konva impératif, hors écran | Export PDF (toutes les pages), indépendant de la page affichée |
+| `exportPages.ts` (`renderPage`) | Konva impératif, hors écran | Export PNG/JPG et miniatures des modèles personnels, indépendant de la page affichée |
+| `pdfExport.ts` (`exportPdf`) | Opérateurs PDF (pdf-lib) | Export PDF vectoriel (formes, texte réel) |
 | `components/PageThumb.tsx` | DOM / SVG statique     | Miniatures (barre de pages, modèles) : bien moins coûteux qu'un Stage par miniature |
 
-⚠️ **Tout nouveau type d'élément ou nouvelle propriété visuelle doit être ajouté aux trois**, sinon l'éditeur, l'export et les miniatures divergeront. Les miniatures sont des approximations (le retour à la ligne du texte peut différer légèrement de Konva).
+⚠️ **Tout nouveau type d'élément ou nouvelle propriété visuelle doit être ajouté aux quatre**, sinon l'éditeur, les exports et les miniatures divergeront. Les miniatures sont des approximations (le retour à la ligne du texte peut différer légèrement de Konva). La création du nœud de texte Konva est partagée (`createTextNode`) : éditeur, export image et export PDF mesurent donc le texte de la même façon.
 
 ### Canvas (`Canvas.tsx`)
 
@@ -136,8 +137,21 @@ La miniature est produite par le rendu hors écran (`renderPage(…, maxSize)`),
 ## Export
 
 - **PNG / JPG** : page affichée uniquement, rendue hors écran par `renderPage` à la taille du design (donc indépendante du zoom et du déplacement de la vue). Nom de fichier suffixé `-pageN` s'il y a plusieurs pages.
-- **PDF** : `exportPdf(doc)` rend chaque page en PNG via `renderPage`, l'embarque dans un PDF `pdf-lib` dont la page mesure `width×0.75` × `height×0.75` points (px CSS 96 dpi → points). **Le contenu de chaque page est une image raster** (texte non sélectionnable), résolution 1 px de design = 1 px.
-- Le résultat est passé au main process sous forme de data URL (`data:application/pdf;base64,…`) via `export:save`.
+- Le résultat est passé au main process sous forme de data URL (`data:…;base64,…`) via `export:save`. Variable d'environnement `TRAME_TEST_EXPORT_DIR` : si elle est définie, les exports sont écrits directement dans ce dossier sans boîte de dialogue (réservée au test de fumée, qui ne peut pas piloter un dialogue natif).
+
+### PDF vectoriel (`pdfExport.ts`)
+
+`exportPdf(doc)` produit un vrai PDF : page = `width × 0.75` × `height × 0.75` points (px CSS à 96 dpi → points), fond de page, puis chaque élément **dans l'ordre de superposition** :
+
+- Chaque élément est dessiné dans un **repère local** posé par `concatTransformationMatrix(elementMatrix(el))` (`pdfMath.ts`) : origine au coin haut-gauche de l'élément, unités en pixels de design, axe y vers le haut (l'élément occupe y ∈ [−hauteur, 0]), rotation horaire autour de ce coin comme Konva. Les rotations, l'échelle et l'inversion de l'axe y du PDF sont ainsi traitées en un seul endroit.
+- **Rectangles, ellipses, formes** : chemins vectoriels (`drawSvgPath`) ; les formes du viewBox 100×100 sont étirées par une matrice non uniforme. L'opacité passe par un état graphique PDF.
+- **Images** : PNG et JPEG sont intégrés tels quels (résolution d'origine) ; les autres formats sont décodés par le navigateur puis ré-encodés en PNG.
+- **Texte** : du **vrai texte PDF** (sélectionnable, net à tout zoom) avec la police embarquée en sous-ensemble (`fontkit` + `pdf-lib`). La mise en page n'est pas recalculée : **Konva fournit les lignes** (`textArr`, donc les mêmes retours à la ligne qu'à l'écran) et les métriques de police (`measureSize('M')` → ascent/descent, donc la même ligne de base). Chaque ligne est composée glyphe par glyphe d'après la mise en page `fontkit` (ligatures, crénage), et le **crénage est reporté avec l'opérateur `TJ`** (le PDF avance de la largeur nominale du glyphe, la correction rétablit l'avance réelle). L'opérateur `Tf` est émis explicitement : `pdf-lib` ne le fait que dans `drawText`, que l'on n'utilise pas ici.
+- **Replis en image** (le texte reste visible, mais n'est pas sélectionnable) pour un élément de texte dont : la police est système ou inconnue ; la graisse/le style n'existe pas dans la famille (le navigateur le simule, pas le PDF) ; un caractère n'est pas dans le sous-ensemble latin de la police ; un glyphe n'a pas de caractère d'origine. L'élément seul est rendu par Konva sur fond transparent (×3, avec une marge pour les jambages et italiques) puis placé avec la même matrice.
+
+Les polices sont chargées à la demande (`pdfFonts.ts`, `import.meta.glob` en `?inline` : un petit module JS par police, donc rien au démarrage). Pas de `fetch` : une page chargée depuis `file://` ne peut pas lire d'autres `file://`, et la CSP interdit `data:` en connexion. `fontkit.ts` absorbe la différence d'import de ce module CommonJS entre outils de build (espace de noms ou `default`).
+
+**Fidélité** : `npm run fidelity` (macOS) exporte des documents de test (formes, rotations, opacité, crénage, ligatures, alignements, replis, image, et tous les modèles intégrés), rastérise chaque PDF avec PDFKit et le compare pixel à pixel à l'image Konva. Mesuré : 0,2–0,9 % de pixels « très différents » (> 64/255), uniquement du lissage de contours entre deux moteurs de rendu ; recalage optimal à (0, 0) pixel pour le texte. Le seuil d'échec est 2 % (un décalage volontaire de 6 px donne 3–4 %). Il vérifie aussi que le texte est extractible du PDF.
 
 ## Polices
 

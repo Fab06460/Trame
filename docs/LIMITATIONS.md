@@ -61,17 +61,21 @@
 - Les images sont stockées en **data URL base64 dans le JSON** : +33 % de taille, fichiers `.trame` lourds avec de grandes photos, et **chaque cran d'historique référence ces chaînes** (mémoire). Piste : stocker les images à part (dossier/asset store ou archive zip) et ne garder qu'une référence dans le JSON.
 - Aucune limite ni redimensionnement à l'import d'image.
 - Les pages sont rendues à la **taille du design** (1 px = 1 px) ; pas d'export haute résolution (@2x) ni d'option de qualité JPG.
-- Rendu hors écran de l'export PDF séquentiel et synchrone côté UI : un document très long peut figer brièvement l'interface.
+- L'export PDF s'exécute dans le thread de l'interface (rapide en pratique : ~50 ms par modèle, ~200 ms pour une page chargée de replis en image) ; un document de nombreuses pages avec de grandes images peut figer brièvement l'interface.
 
 ## Export
 
-- **PDF raster** : pas de texte sélectionnable ni de vecteurs ; fichiers plus lourds qu'un PDF vectoriel. Passer au vectoriel nécessiterait de reproduire fidèlement le retour à la ligne, l'alignement et la rotation du texte de Konva avec `pdf-lib` + `fontkit`.
+- **PDF vectoriel avec replis** : le texte est sélectionnable sauf pour les éléments qui retombent sur une image (police système ou inconnue — typiquement les documents créés avant les polices embarquées —, graisse ou italique que la famille n'a pas, caractère hors du sous-ensemble **latin** : emoji, cyrillique, grec, symboles comme « ✓ » ou « ≈ »). Aucun avertissement n'est donné à l'utilisateur sur ces replis. Pas de texte à contour/ombre (non supportés par l'éditeur).
+- **Fidélité au sous-pixel** : le texte vectoriel s'aligne à (0, 0) pixel de l'image Konva, mais la composition glyphe par glyphe utilise les largeurs de la police brute alors que le navigateur mesure les siennes : le texte **centré ou aligné à droite** peut différer d'environ 1 px (mesuré sur un bouton centré). Les lignes très longues cumulent un écart de crénage théoriquement plus grand, non observé dans les modèles. Le lissage des contours diffère entre navigateur et lecteurs PDF.
+- **Ligne de base** : reprise de Konva 10 (métriques de police du navigateur) ; une montée de version de Konva qui changerait cette formule déplacerait le texte du PDF — `npm run fidelity` le détecte.
+- **PDF et images** : PNG et JPEG sont intégrés à leur **résolution d'origine** (un PDF peut donc être lourd avec de grandes photos) ; GIF, WebP et SVG sont ré-encodés en PNG. Pas de compression ni de rééchantillonnage.
+- `npm run fidelity` est réservé à macOS (PDFKit) et n'est pas exécuté automatiquement.
 - PNG/JPG exporte **uniquement la page affichée** ; pas d'export de toutes les pages en images, ni de SVG.
 - Le nom de fichier d'export vient de `doc.name`, non modifiable (voir plus haut).
 
 ## Dette technique à connaître
 
-- **Trois rendus parallèles** (Canvas, `renderPage`, `PageThumb`) à maintenir à la main (voir [ARCHITECTURE.md](ARCHITECTURE.md)). Une abstraction commune (liste de « primitives de dessin ») les unifierait.
+- **Quatre rendus parallèles** (Canvas, `renderPage`, `exportPdf`, `PageThumb`) à maintenir à la main (voir [ARCHITECTURE.md](ARCHITECTURE.md)). Une abstraction commune (liste de « primitives de dessin ») les unifierait.
 - `shapes.ts` utilise **`ctx._context`**, une API **non publique** de Konva : à revérifier à chaque montée de version majeure de Konva.
 - `migrateDocument(raw: any)` utilise `any` ; typage à durcir avec une validation de schéma (par ex. zod).
 - `Canvas.tsx` concentre beaucoup de responsabilités (rendu, drag, transformation, lasso, édition de texte) : candidat au découpage.

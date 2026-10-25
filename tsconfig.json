@@ -12,5 +12,5 @@
     "types": ["node"],
     "paths": { "@/*": ["./src/renderer/src/*"] }
   },
-  "include": ["src", "electron.vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "scripts/pdf-fidelity/*.ts", "electron.vite.config.ts", "vitest.config.ts"]
 }

@@ -279,7 +279,16 @@ ipcMain.handle('image:pick', async () => {
   return `data:${mime};base64,${buf.toString('base64')}`
 })
 
+// Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
+// sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
+const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
+
 ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
+  if (TEST_EXPORT_DIR) {
+    const path = join(TEST_EXPORT_DIR, basename(name)) // basename : aucun chemin fourni par le renderer n'est suivi
+    await writeFile(path, Buffer.from(dataUrl.split(',')[1], 'base64'))
+    return path
+  }
   const ext = name.split('.').pop()!
   const res = await dialog.showSaveDialog({
     defaultPath: name,

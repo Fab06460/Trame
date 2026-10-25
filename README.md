@@ -15,7 +15,7 @@
 - Annuler / rétablir (100 niveaux)
 - Projets récents (liste persistée, onglet « Récents », menu « Ouvrir récent » du Dock) et ouverture par double-clic sur un `.trame` dans le Finder (app installée, macOS)
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
-- Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
+- Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF vectoriel (toutes les pages, texte sélectionnable)
 
 Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘C` / `⌘X` / `⌘V` copier / couper / coller · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue.
 (Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
@@ -37,6 +37,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`)                           |
 | `npm run pack`      | Construit `dist/mac-arm64/Trame.app` (test rapide du packaging)    |
 | `npm run dist`      | Construit le `.dmg` et le `.zip` macOS dans `dist/`                |
+| `npm run fidelity`  | Compare le PDF vectoriel à l'image de l'éditeur, pixel à pixel (macOS) |
 | `npm run smoke`     | Test de bout en bout : lance l'appli construite et vérifie IPC, récents, sortie (macOS) |
 | `npm test`          | Tests unitaires (Vitest) ; `npm run test:watch` en continu         |
 
@@ -59,7 +60,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | Interface             | React 19, TypeScript 7                                |
 | Canvas                | Konva 10 + react-konva                                |
 | État                  | Zustand 5                                             |
-| Export PDF            | pdf-lib                                               |
+| Export PDF            | pdf-lib + fontkit (texte vectoriel, polices en sous-ensemble) |
 | Tests                 | Vitest 4                                              |
 | Packaging macOS       | electron-builder                                      |
 | Polices embarquées    | @fontsource (sous-ensemble latin)                     |
@@ -87,11 +88,13 @@ src/
       shapes.ts          Bibliothèque de formes vectorielles + dessin Konva
       templates.ts       Modèles de départ
       fonts.ts           Polices embarquées et préchargement
-      exportPages.ts     Rendu hors écran d'une page + export PDF
+      exportPages.ts     Rendu hors écran d'une page (export PNG/JPG, miniatures)
+      pdfExport.ts       Export PDF vectoriel (pdfMath.ts, pdfFonts.ts, fontkit.ts)
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
 build/                   Icône de l'application (icon.icns, icon.png)
 scripts/make-icon.py     Génère l'icône
 scripts/smoke-test.mjs   Test de fumée de bout en bout
+scripts/pdf-fidelity/    Fidélité de l'export PDF (comparaison pixel à pixel)
 docs/                    Documentation détaillée (voir ci-dessous)
 vitest.config.ts         Configuration des tests (tests à côté du code : `*.test.ts`)
 FEATURES.md              Notes de référence sur les fonctionnalités de Canva (pas de la doc technique)

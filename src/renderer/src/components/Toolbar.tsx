@@ -1,7 +1,8 @@
 import { useEditor } from '@/store/editor'
 import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
-import { exportPdf, renderPage } from '@/exportPages'
+import { renderPage } from '@/exportPages'
+import { exportPdf } from '@/pdfExport'
 
 export function Toolbar(): React.JSX.Element {
   const { addElement, undo, redo } = useEditor.getState()

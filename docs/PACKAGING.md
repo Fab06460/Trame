@@ -15,7 +15,7 @@ Pour changer la version de l'application : modifier `version` dans `package.json
 
 ## Contenu et taille
 
-L'app fait environ 260 Mo (Electron/Chromium), le DMG environ 116 Mo. Le code applicatif empaqueté (`app.asar`) ne pèse que 3,7 Mo : **toutes les bibliothèques (React, Konva, polices…) sont compilées dans le bundle du renderer par Vite**, elles sont donc déclarées en `devDependencies` et electron-builder ne les recopie pas. Règle : une dépendance importée par le renderer reste en `devDependencies` ; une dépendance **chargée à l'exécution par le process principal** sans être bundlée (module natif, par exemple) doit aller en `dependencies`.
+L'app fait environ 260 Mo (Electron/Chromium), le DMG environ 116 Mo. Le code applicatif empaqueté (`app.asar`) ne pèse que ~5 Mo (dont les polices utilisées par l'export PDF, chargées à la demande sous forme de petits modules JS) : **toutes les bibliothèques (React, Konva, polices…) sont compilées dans le bundle du renderer par Vite**, elles sont donc déclarées en `devDependencies` et electron-builder ne les recopie pas. Règle : une dépendance importée par le renderer reste en `devDependencies` ; une dépendance **chargée à l'exécution par le process principal** sans être bundlée (module natif, par exemple) doit aller en `dependencies`.
 
 `files` ne contient que `out/**/*` et `package.json` : ne jamais y ajouter de ressource qui doit être lue au runtime sans vérifier qu'elle est bien dans l'asar.
 

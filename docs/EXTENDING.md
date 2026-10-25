@@ -6,9 +6,10 @@ Recettes pour les évolutions les plus courantes. Lire d'abord [ARCHITECTURE.md]
 
 1. **`types.ts`** : ajouter le type à `ElementType` et les champs optionnels nécessaires.
 2. **`store/editor.ts`** : ajouter ses valeurs par défaut dans `defaults`.
-3. **Trois rendus à tenir synchronisés** :
+3. **Quatre rendus à tenir synchronisés** :
    - `components/Canvas.tsx` : ajouter la branche dans le `map` des éléments (réutiliser `commonProps(el)` pour la sélection, le déplacement et la transformation).
    - `exportPages.ts` (`renderPage`) : même rendu en Konva impératif.
+   - `pdfExport.ts` (`drawElement`) : version vectorielle PDF dans le repère local de l'élément (voir [ARCHITECTURE.md](ARCHITECTURE.md)) ; à défaut, un type d'élément n'apparaît pas dans le PDF. Ajouter l'élément à `scripts/pdf-fidelity/documents.ts` et lancer `npm run fidelity`.
    - `components/PageThumb.tsx` : version DOM/SVG.
 4. **`components/Properties.tsx`** : titre dans la table des libellés + contrôles spécifiques.
 5. **`components/Sidebar.tsx`** : bouton d'ajout (onglet « Éléments »).
@@ -35,7 +36,7 @@ Helpers : `shape`, `icon`, `text`. Les identifiants sont générés à l'applica
 ## Ajouter une police
 
 1. `npm i @fontsource/<nom>`.
-2. Dans `fonts.ts` : importer les `latin-<graisse>[-italic].css` voulus (uniquement les variantes existantes : vérifier `node_modules/@fontsource/<nom>/`) et ajouter l'entrée à `FONTS` (`family` est la valeur stockée dans les fichiers : ne **jamais** la renommer ensuite, cela casserait les documents existants).
+2. Dans `fonts.ts` : importer les `latin-<graisse>[-italic].css` voulus (uniquement les variantes existantes : vérifier `node_modules/@fontsource/<nom>/`) et ajouter l'entrée à `FONTS` : `family` est la valeur stockée dans les fichiers (ne **jamais** la renommer ensuite, cela casserait les documents existants), `slug` est le nom du paquet (préfixe des fichiers) et `variants` la liste **exacte** des variantes embarquées. Cette liste décide si le PDF peut écrire le texte en vecteur ou doit retomber sur une image : une variante annoncée mais absente ferait échouer l'export, une variante oubliée dégrade le texte en image.
 
 ## Ajouter une action d'édition
 
@@ -57,6 +58,10 @@ Handler dans `src/main/index.ts` (`ipcMain.handle`), fonction correspondante dan
 ## Tests
 
 `npm test` lance Vitest (environnement Node) sur les fichiers `src/**/*.test.ts`, placés à côté du code testé. Le store Zustand se teste directement sans React : `useEditor.getState()` puis les actions ; appeler `newDocument()` dans un `beforeEach` pour repartir d'un état propre. Toute nouvelle action du store ou fonction de `geometry.ts` doit venir avec ses tests ; un nouveau modèle ou une nouvelle forme est déjà couvert par les tests de cohérence de `templates.test.ts`.
+
+### Fidélité de l'export PDF
+
+`npm run fidelity` (macOS : Swift et PDFKit) compare le PDF vectoriel à l'image Konva de l'éditeur, pixel à pixel, pour `scripts/pdf-fidelity/documents.ts` (un document « mixte » qui exerce tous les cas + les modèles intégrés), et vérifie l'extraction du texte. Il échoue au-delà de 2 % de pixels très différents. À lancer après toute modification de `pdfExport.ts`, `pdfMath.ts`, `pdfFonts.ts`, de la mise en page du texte ou des polices. Les images produites (PDF rastérisé, Konva) sont conservées dans le dossier temporaire affiché, pour inspection visuelle. Les calculs purs (matrice, chemins, crénage, correspondance des polices) ont en plus leurs tests unitaires (`pdfMath.test.ts`, `pdfFonts.test.ts`).
 
 ### Test de fumée de bout en bout
 

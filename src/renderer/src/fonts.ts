@@ -35,21 +35,25 @@ export interface FontDef {
   /** valeur stockée dans TrameElement.fontFamily */
   family: string
   group: string
+  /** nom du paquet @fontsource, et préfixe des fichiers de police */
+  slug: string
+  /** variantes réellement embarquées : `<graisse>[-italic]` */
+  variants: string[]
 }
 
 export const SYSTEM_FONT = 'Helvetica Neue, Arial, sans-serif'
 
 export const FONTS: FontDef[] = [
-  { name: 'Inter', family: '"Inter", sans-serif', group: 'Sans' },
-  { name: 'Montserrat', family: '"Montserrat", sans-serif', group: 'Sans' },
-  { name: 'Poppins', family: '"Poppins", sans-serif', group: 'Sans' },
-  { name: 'Oswald', family: '"Oswald", sans-serif', group: 'Titre' },
-  { name: 'Bebas Neue', family: '"Bebas Neue", sans-serif', group: 'Titre' },
-  { name: 'Playfair Display', family: '"Playfair Display", serif', group: 'Serif' },
-  { name: 'Lora', family: '"Lora", serif', group: 'Serif' },
-  { name: 'Caveat', family: '"Caveat", cursive', group: 'Manuscrit' },
-  { name: 'Pacifico', family: '"Pacifico", cursive', group: 'Manuscrit' },
-  { name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', group: 'Mono' },
+  { name: 'Inter', family: '"Inter", sans-serif', group: 'Sans', slug: 'inter', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Montserrat', family: '"Montserrat", sans-serif', group: 'Sans', slug: 'montserrat', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Poppins', family: '"Poppins", sans-serif', group: 'Sans', slug: 'poppins', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Oswald', family: '"Oswald", sans-serif', group: 'Titre', slug: 'oswald', variants: ['400', '700'] },
+  { name: 'Bebas Neue', family: '"Bebas Neue", sans-serif', group: 'Titre', slug: 'bebas-neue', variants: ['400'] },
+  { name: 'Playfair Display', family: '"Playfair Display", serif', group: 'Serif', slug: 'playfair-display', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Lora', family: '"Lora", serif', group: 'Serif', slug: 'lora', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Caveat', family: '"Caveat", cursive', group: 'Manuscrit', slug: 'caveat', variants: ['400', '700'] },
+  { name: 'Pacifico', family: '"Pacifico", cursive', group: 'Manuscrit', slug: 'pacifico', variants: ['400'] },
+  { name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', group: 'Mono', slug: 'jetbrains-mono', variants: ['400', '700', '400-italic', '700-italic'] },
 ]
 
 /** Charge toutes les graisses/styles avant le premier rendu : Konva mesure le texte au dessin, la police doit être prête. */

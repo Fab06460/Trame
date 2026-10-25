@@ -11,7 +11,8 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { mkdtemp, rm, mkdir } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readFile, readdir } from 'node:fs/promises'
+import { inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -20,8 +21,9 @@ const electronPath = createRequire(import.meta.url)(join(root, 'node_modules/ele
 const port = 9300 + Math.floor(Math.random() * 400)
 const tmp = await mkdtemp(join(tmpdir(), 'trame-smoke-'))
 await mkdir(join(tmp, 'proj'))
+await mkdir(join(tmp, 'exports'))
 
-const env = { ...process.env }
+const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports') }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`], {
   env,
@@ -192,6 +194,39 @@ try {
   check('le document du modèle contient bien le rectangle', JSON.parse(stored ?? '{}').pages?.[0]?.elements?.[0]?.type === 'rect')
   await run(`window.trame.deleteUserTemplate(${JSON.stringify(saved[0]?.id)})`)
   check('suppression du modèle', (await tpls()).length === 0 && (await run(`window.trame.loadUserTemplate(${JSON.stringify(saved[0]?.id)})`)) === null)
+
+  // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
+  check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
+  await sleep(300)
+  check("bouton « Export PDF »", (await click('header.toolbar button', 'Export PDF')) === true)
+  let pdfFile
+  for (let i = 0; i < 40 && !pdfFile; i++) {
+    await sleep(250)
+    pdfFile = (await readdir(join(tmp, 'exports'))).find((f) => f.endsWith('.pdf'))
+  }
+  check('le PDF est écrit', !!pdfFile)
+  if (pdfFile) {
+    const pdf = await readFile(join(tmp, 'exports', pdfFile))
+    // les objets du PDF sont compressés : on décompresse tous les flux pour y chercher polices et opérateurs de texte
+    const streams = []
+    for (let at = 0; ; ) {
+      const start = pdf.indexOf('stream', at)
+      if (start < 0) break
+      const from = pdf[start + 6] === 0x0d ? start + 8 : start + 7
+      const end = pdf.indexOf('endstream', from)
+      try {
+        streams.push(inflateSync(pdf.subarray(from, end)).toString('latin1'))
+      } catch {
+        /* flux non compressé (police, image) */
+      }
+      at = end + 9
+    }
+    const all = streams.join('\n')
+    check('le texte est du vrai texte PDF (opérateur TJ)', all.includes(' TJ'))
+    check('une police Type0 avec ToUnicode (texte sélectionnable) est embarquée', all.includes('/Type0') && all.includes('/ToUnicode'))
+    check("le texte n'est pas une image (aucun objet image)", !all.includes('/Subtype /Image') && !pdf.includes('/Subtype /Image'))
+    check('métadonnées : créateur « Trame »', all.includes('/Creator <FEFF005400720061006D0065>')) // « Trame » en UTF-16
+  }
 
   // association de fichiers : ouverture depuis le Finder alors que l'application tourne
   const finderFile = join(tmp, 'proj', 'ouvert-par-finder.trame')

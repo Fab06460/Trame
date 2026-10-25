@@ -1,9 +1,22 @@
 import Konva from 'konva'
-import { PDFDocument } from 'pdf-lib'
 import { pathSceneFunc } from '@/shapes'
-import type { TrameDocument, TramePage } from '@/types'
+import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
-const loadImage = (src: string): Promise<HTMLImageElement> =>
+/** Nœud Konva de texte tel que dessiné à l'écran : mêmes propriétés partout (éditeur, export image, export PDF). */
+export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): Konva.Text {
+  return new Konva.Text({
+    ...extra,
+    width: e.width,
+    text: e.text,
+    fontSize: e.fontSize,
+    fontFamily: e.fontFamily,
+    fontStyle: e.fontStyle,
+    align: e.align,
+    fill: e.fill
+  })
+}
+
+export const loadImage = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => resolve(img)
@@ -49,18 +62,7 @@ export async function renderPage(
     } else if (e.type === 'image' && e.src) {
       layer.add(new Konva.Image({ ...common, width: e.width, height: e.height, image: await loadImage(e.src) }))
     } else if (e.type === 'text') {
-      layer.add(
-        new Konva.Text({
-          ...common,
-          width: e.width,
-          text: e.text,
-          fontSize: e.fontSize,
-          fontFamily: e.fontFamily,
-          fontStyle: e.fontStyle,
-          align: e.align,
-          fill: e.fill
-        })
-      )
+      layer.add(createTextNode(e, common))
     }
   }
 
@@ -69,20 +71,4 @@ export async function renderPage(
   const url = stage.toDataURL({ mimeType: type, quality: 0.85, pixelRatio })
   stage.destroy()
   return url
-}
-
-/** Assemble toutes les pages dans un PDF (une image par page, taille de page = taille du design à 96 dpi). */
-export async function exportPdf(doc: TrameDocument): Promise<string> {
-  const pdf = await PDFDocument.create()
-  pdf.setTitle(doc.name)
-  pdf.setCreator('Trame')
-  const w = doc.width * 0.75 // px CSS → points PDF
-  const h = doc.height * 0.75
-  for (const page of doc.pages) {
-    const png = await renderPage(doc, page, 'image/png')
-    const img = await pdf.embedPng(png)
-    const p = pdf.addPage([w, h])
-    p.drawImage(img, { x: 0, y: 0, width: w, height: h })
-  }
-  return 'data:application/pdf;base64,' + (await pdf.saveAsBase64())
 }
