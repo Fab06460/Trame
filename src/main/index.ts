@@ -1,13 +1,13 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile } from 'fs/promises'
+import { createCloseGuard } from './closeGuard'
 
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
 let mainWindow: BrowserWindow | null = null
-/** Reflète l'état « modifié » du renderer, pour intercepter la fermeture. */
-let hasUnsavedChanges = false
-let closeConfirmed = false
+/** Intercepte la fermeture / la sortie tant que le renderer signale des modifications non enregistrées. */
+const closeGuard = createCloseGuard()
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -31,12 +31,11 @@ function createWindow(): void {
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
   win.on('closed', () => {
     mainWindow = null
-    hasUnsavedChanges = false
-    closeConfirmed = false
+    closeGuard.onClosed()
   })
   // Fermeture avec des modifications : le renderer décide (enregistrer / ignorer / annuler) puis confirme.
   win.on('close', (e) => {
-    if (hasUnsavedChanges && !closeConfirmed) {
+    if (closeGuard.onClose()) {
       e.preventDefault()
       win.webContents.send('app:before-close')
     }
@@ -97,15 +96,16 @@ ipcMain.handle('dialog:error', (_e, title: string, message: string) => {
 })
 
 ipcMain.on('app:state', (_e, state: { dirty: boolean; path?: string }) => {
-  hasUnsavedChanges = state.dirty
+  closeGuard.setDirty(state.dirty)
   // macOS : point dans le bouton de fermeture et icône du document dans la barre de titre
   mainWindow?.setDocumentEdited(state.dirty)
   mainWindow?.setRepresentedFilename(state.path ?? '')
 })
 
 ipcMain.on('app:close-confirmed', () => {
-  closeConfirmed = true
-  mainWindow?.close()
+  // si la fermeture bloquée venait d'une sortie (⌘Q), le blocage l'a annulée : on la relance
+  if (closeGuard.onConfirmed() === 'quit') app.quit()
+  else mainWindow?.close()
 })
 
 ipcMain.handle('image:pick', async () => {
@@ -131,6 +131,8 @@ ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   await writeFile(res.filePath, Buffer.from(dataUrl.split(',')[1], 'base64'))
   return res.filePath
 })
+
+app.on('before-quit', () => closeGuard.onBeforeQuit())
 
 app.whenReady().then(() => {
   createWindow()
