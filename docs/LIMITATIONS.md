@@ -7,7 +7,7 @@
 - **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Un test de fumée (`npm run smoke`) couvre le pont IPC, les récents et la sortie de l'application, mais pas l'interface visuelle (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
 - **Pas d'intégration continue.**
-- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, build quotidien signé « ad hoc » (avertissement Gatekeeper sur les autres Macs) ; la chaîne de publication signée et notarisée (`npm run release:mac`) est écrite mais **n'a pas encore été exécutée de bout en bout** (il manque le certificat Developer ID et les identifiants de notarisation), `appId` provisoire, icône provisoire, pas de mise à jour automatique, icône de document = icône de l'app. Aucun packaging Windows/Linux.
+- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, build quotidien signé « ad hoc » (avertissement Gatekeeper sur les autres Macs) ; `npm run release:mac` produit une version signée Developer ID et notarisée (vérifiée sur cette machine, pas sur un autre Mac), `appId` provisoire, icône provisoire, pas de mise à jour automatique, icône de document = icône de l'app. Aucun packaging Windows/Linux.
 - Le bundle du renderer est volumineux (~2,4 Mo hors polices) : aucun découpage de code.
 
 ## Plateformes

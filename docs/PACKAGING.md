@@ -71,11 +71,15 @@ npm run release:mac
 
 Le script (`scripts/release-mac.mjs`) enchaîne : vérification des prérequis → build → signature de **tous** les binaires avec le runtime durci → envoi à Apple et attente du verdict (en général 2 à 10 minutes) → agrafage du ticket à l'app → création du `.dmg` et du `.zip` → vérifications : signature profonde stricte, runtime durci, signataire Developer ID, ticket agrafé, et acceptation par Gatekeeper (`spctl`, source « Notarized Developer ID »), y compris pour l'app **dans** le DMG. Il affiche enfin les empreintes SHA-256. S'il termine par ✓, les fichiers de `dist/` sont distribuables ; sinon ne rien distribuer.
 
-Variables facultatives : `TRAME_NOTARY_PROFILE` (nom du profil, défaut `trame-notary`), `TRAME_SIGN_IDENTITY` (sous-chaîne du certificat à utiliser s'il y en a plusieurs), `TRAME_KEYCHAIN` (trousseau, défaut « Connexion »).
+Variables facultatives : `TRAME_NOTARY_PROFILE` (nom du profil, défaut `trame-notary`), `TRAME_SIGN_IDENTITY` (sous-chaîne du certificat à utiliser s'il y en a plusieurs), `TRAME_KEYCHAIN` (chemin d'un trousseau à imposer ; **par défaut aucun** : `notarytool` retrouve seul le trousseau où le profil a été enregistré).
 
 ### Entitlements (`build/entitlements.mac.plist`)
 
 Le runtime durci, obligatoire pour la notarisation, interdit par défaut ce dont le moteur JavaScript a besoin ; on ne rend que le strict nécessaire : `allow-jit` et `allow-unsigned-executable-memory`. Vérifié : l'appli signée avec le runtime durci et **ces deux seuls droits** démarre et exporte un PDF vectoriel. `disable-library-validation` n'est **pas** nécessaire tant que tous les binaires (frameworks, bibliothèques `.dylib`, helpers) sont signés par la même équipe, ce que fait electron-builder : ne pas l'ajouter par précaution, il affaiblit la protection. Symptôme d'un binaire oublié : `Library not loaded: … libffmpeg.dylib` au lancement.
+
+### Erreur « No Keychain password item found for profile »
+
+Le profil existe mais n'est pas cherché au bon endroit. `notarytool store-credentials` range le profil dans le trousseau que macOS choisit — **souvent le trousseau iCloud, pas « Connexion »** — et `notarytool` ne le retrouve que si on ne lui impose pas de trousseau. Ne pas définir `TRAME_KEYCHAIN` (ni `APPLE_KEYCHAIN`) sauf si le profil a été enregistré avec `--keychain <chemin>`. Contrôle : `xcrun notarytool history --keychain-profile trame-notary` doit répondre (même vide : « No submission history »).
 
 ### En cas de refus de la notarisation
 
@@ -88,7 +92,7 @@ xcrun notarytool history --keychain-profile trame-notary   # liste des envois r�
 
 ### État de cette chaîne
 
-**Vérifié** : la configuration se charge, `npm run release:check` détecte et explique chaque prérequis manquant, et l'application démarre et fonctionne **sous le runtime durci avec ces entitlements**, signée par un certificat d'équipe (essai local avec un certificat « Apple Development », pour valider le point le plus risqué). **Non vérifié de bout en bout** : la signature Developer ID, l'envoi à Apple et l'agrafage, faute de certificat Developer ID et d'identifiants sur la machine de développement au moment de l'écriture. Le premier `npm run release:mac` réel est donc aussi sa première exécution complète : en cas d'échec, lire d'abord la sortie du script et le journal de notarisation ci-dessus.
+**Vérifiée de bout en bout le 25/10/2026** (version 0.1.0, Apple Silicon) : signature Developer ID, runtime durci, soumission à Apple (statut *Accepted*), agrafage, DMG et ZIP. Contrôles indépendants du script : `spctl` répond « accepted — source=Notarized Developer ID » pour l'app, y compris extraite du ZIP avec l'attribut de quarantaine d'un téléchargement ; `stapler validate` réussit ; l'app signée démarre et exporte un PDF vectoriel. **Non couvert** : l'ouverture sur un *autre* Mac (réellement téléchargé), les Mac Intel (build arm64 uniquement), et une machine **hors ligne** à la première ouverture (le ticket est agrafé, donc elle devrait réussir sans réseau ; non testé).
 
 ## Icône
 

@@ -14,13 +14,15 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { readdir } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const CHECK_ONLY = process.argv.includes('--check')
 const PROFILE = process.env.TRAME_NOTARY_PROFILE ?? 'trame-notary'
-const KEYCHAIN = process.env.TRAME_KEYCHAIN ?? join(homedir(), 'Library/Keychains/login.keychain-db')
+// Trousseau contenant le profil de notarisation. Par défaut on n'en impose AUCUN : `notarytool store-credentials` range le profil
+// là où macOS le décide (souvent le trousseau iCloud, pas « Connexion »), et lui seul sait le retrouver. TRAME_KEYCHAIN force un
+// chemin si le profil a été enregistré avec `--keychain`.
+const KEYCHAIN = process.env.TRAME_KEYCHAIN
 
 if (process.platform !== 'darwin') {
   console.error('La publication macOS ne peut se faire que sous macOS.')
@@ -82,7 +84,8 @@ const teamHint = identity?.team ?? ids.out.match(/Apple Distribution: .+? \(([A-
 
 // 3. identifiants de notarisation
 if (notarytool.code === 0) {
-  const hist = await run('xcrun', ['notarytool', 'history', '--keychain-profile', PROFILE, '--output-format', 'json'])
+  // même appel exactement que celui de la notarisation (mêmes arguments de trousseau), pour ne pas valider autre chose
+  const hist = await run('xcrun', ['notarytool', 'history', '--keychain-profile', PROFILE, ...(KEYCHAIN ? ['--keychain', KEYCHAIN] : []), '--output-format', 'json'])
   if (hist.code === 0) ok(`notarisation : profil « ${PROFILE} » valide (connexion à Apple réussie)`)
   else {
     const missing = /No Keychain password item found|could not find/i.test(hist.out)
@@ -107,7 +110,7 @@ if (CHECK_ONLY) process.exit(0)
 
 // ── Publication ─────────────────────────────────────────────────────────────────────────────────────────
 console.log('\n1/3 Construction, signature et notarisation (la notarisation prend en général 2 à 10 minutes)…\n')
-const env = { CSC_NAME: identity.name, APPLE_KEYCHAIN: KEYCHAIN, APPLE_KEYCHAIN_PROFILE: PROFILE }
+const env = { CSC_NAME: identity.name, APPLE_KEYCHAIN_PROFILE: PROFILE, ...(KEYCHAIN ? { APPLE_KEYCHAIN: KEYCHAIN } : {}) }
 delete process.env.ELECTRON_RUN_AS_NODE
 if ((await stream('npx', ['electron-vite', 'build'])) !== 0) process.exit(1)
 if ((await stream('npx', ['electron-builder', '--mac', '--config', 'electron-builder.release.cjs'], env)) !== 0) {
