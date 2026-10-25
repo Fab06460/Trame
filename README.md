@@ -10,11 +10,12 @@
 - Sélection multiple (lasso, Maj+clic, ⌘A), groupes, alignement et répartition, ordre des calques
 - Pages multiples (ajout, duplication, suppression, réordonnancement par glisser-déposer)
 - 6 modèles de départ, 10 polices embarquées
+- Zoom (10 % à 800 %) et déplacement du canvas : pincement, ⌘+molette, barre d'espace
 - Annuler / rétablir (100 niveaux)
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
 
-Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner.
+Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue.
 (Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
 
 ## Démarrage rapide
@@ -74,12 +75,12 @@ src/
       App.tsx            Mise en page et raccourcis clavier
       types.ts           Modèle de données (TrameDocument, TramePage, TrameElement)
       store/editor.ts    Store Zustand : document, sélection, historique, toutes les actions
+      store/view.ts      Zoom et déplacement du canvas (état de vue, non enregistré)
       geometry.ts        Calculs purs : boîtes englobantes, alignement, répartition
       shapes.ts          Bibliothèque de formes vectorielles + dessin Konva
       templates.ts       Modèles de départ
       fonts.ts           Polices embarquées et préchargement
       exportPages.ts     Rendu hors écran d'une page + export PDF
-      stageRegistry.ts   Accès au Stage Konva courant (export de la page affichée)
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
 build/                   Icône de l'application (icon.icns, icon.png)
 scripts/make-icon.py     Génère l'icône

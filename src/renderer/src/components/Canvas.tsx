@@ -4,7 +4,8 @@ import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group } 
 import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
-import { registerStage } from '@/stageRegistry'
+import { useView } from '@/store/view'
+import { ZoomControls } from './ZoomControls'
 import type { TrameElement } from '@/types'
 
 const PADDING = 48
@@ -50,9 +51,80 @@ export function Canvas(): React.JSX.Element {
     return () => ro.disconnect()
   }, [])
 
-  const scale = Math.min((size.w - PADDING * 2) / doc.width, (size.h - PADDING * 2) / doc.height)
-  const offX = (size.w - doc.width * scale) / 2
-  const offY = (size.h - doc.height * scale) / 2
+  // Vue : `fit` ajuste la page à la zone ; zoom et décalage viennent du store de vue (molette, pincement, boutons)
+  const zoom = useView((v) => v.zoom)
+  const panX = useView((v) => v.panX)
+  const panY = useView((v) => v.panY)
+  const fit = Math.max(0.01, Math.min((size.w - PADDING * 2) / doc.width, (size.h - PADDING * 2) / doc.height))
+  const scale = fit * zoom
+  const offX = (size.w - doc.width * scale) / 2 + panX
+  const offY = (size.h - doc.height * scale) / 2 + panY
+
+  useEffect(() => {
+    useView.getState().setLayout({ fit, viewW: size.w, viewH: size.h, docW: doc.width, docH: doc.height })
+  }, [fit, size.w, size.h, doc.width, doc.height])
+
+  // Un nouveau document (ouvrir, nouveau, modèle) repart d'une vue ajustée
+  const firstPageId = doc.pages[0].id
+  useEffect(() => useView.getState().fitToScreen(), [firstPageId])
+
+  const [spaceDown, setSpaceDown] = useState(false)
+  const [panning, setPanning] = useState(false)
+
+  // Barre d'espace maintenue = outil main (déplacer la vue)
+  useEffect(() => {
+    const isTyping = (t: EventTarget | null): boolean => {
+      const el = t as HTMLElement | null
+      return !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+    }
+    const down = (e: KeyboardEvent): void => {
+      if (e.code !== 'Space' || isTyping(e.target)) return
+      e.preventDefault() // évite d'activer le bouton qui aurait le focus
+      setSpaceDown(true)
+    }
+    const up = (e: KeyboardEvent): void => {
+      if (e.code !== 'Space') return
+      if (!isTyping(e.target)) e.preventDefault()
+      setSpaceDown(false)
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
+  const startPan = (clientX: number, clientY: number): void => {
+    const { panX: x0, panY: y0 } = useView.getState()
+    setPanning(true)
+    const move = (e: MouseEvent): void => useView.getState().setPan(x0 + e.clientX - clientX, y0 + e.clientY - clientY)
+    const end = (): void => {
+      setPanning(false)
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', end)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', end)
+  }
+
+  // Molette : pincement / ⌘+molette = zoom autour du curseur ; défilement à deux doigts = déplacement
+  useEffect(() => {
+    const el = wrapRef.current!
+    const onWheel = (e: WheelEvent): void => {
+      e.preventDefault()
+      const v = useView.getState()
+      if (e.ctrlKey || e.metaKey) {
+        const rect = el.getBoundingClientRect()
+        v.zoomBy(Math.exp(-e.deltaY * 0.01), { x: e.clientX - rect.left, y: e.clientY - rect.top })
+      } else {
+        v.setPan(v.panX - e.deltaX, v.panY - e.deltaY)
+      }
+    }
+    // non passif : nécessaire pour pouvoir appeler preventDefault (sinon la page entière zoomerait)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   // Attache le transformer au nœud sélectionné
   useEffect(() => {
@@ -63,25 +135,15 @@ export function Canvas(): React.JSX.Element {
     tr.nodes(nodes)
   }, [selectedIds, page.elements, editing, page.id])
 
-  useEffect(() => {
-    if (!stageRef.current || !trRef.current) return
-    registerStage({
-      stage: stageRef.current,
-      transformer: trRef.current,
-      rect: { x: offX, y: offY, width: doc.width * scale, height: doc.height * scale },
-      scale
-    })
-    return () => registerStage(null)
-  }, [offX, offY, scale, doc.width, doc.height])
-
   const commonProps = (el: TrameElement): Konva.NodeConfig => ({
     id: el.id,
     x: el.x,
     y: el.y,
     rotation: el.rotation,
     opacity: el.opacity,
-    draggable: editing !== el.id,
+    draggable: editing !== el.id && !spaceDown,
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
       if (e.evt.shiftKey) toggleSelect(el.id)
       else if (!selectedIds.includes(el.id)) select([el.id])
     },
@@ -138,6 +200,10 @@ export function Canvas(): React.JSX.Element {
   }
 
   const startLasso = (e: Konva.KonvaEventObject<MouseEvent>): void => {
+    if (spaceDown || e.evt.button === 1) {
+      e.evt.preventDefault()
+      return startPan(e.evt.clientX, e.evt.clientY)
+    }
     if (e.target !== e.target.getStage() && e.target.name() !== 'bg') return
     const additive = e.evt.shiftKey
     if (!additive) select([])
@@ -168,7 +234,7 @@ export function Canvas(): React.JSX.Element {
   const editingEl = page.elements.find((e) => e.id === editing)
 
   return (
-    <div ref={wrapRef} className="canvas-wrap">
+    <div ref={wrapRef} className="canvas-wrap" style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined }}>
       <Stage
         ref={stageRef}
         width={size.w}
@@ -275,6 +341,8 @@ export function Canvas(): React.JSX.Element {
           />
         </Layer>
       </Stage>
+
+      <ZoomControls />
 
       {editingEl && (
         <textarea

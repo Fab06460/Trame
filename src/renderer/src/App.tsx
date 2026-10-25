@@ -5,6 +5,7 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { useEditor } from '@/store/editor'
+import { useView } from '@/store/view'
 import { confirmUnsaved, newProject, openProject, saveProject } from '@/fileActions'
 
 export default function App(): React.JSX.Element {
@@ -18,6 +19,16 @@ export default function App(): React.JSX.Element {
         if (k === 's') void saveProject(e.shiftKey)
         else if (k === 'o') void openProject()
         else void newProject()
+        return
+      }
+      // zoom (actif aussi pendant la saisie hors texte) : ⌘+ / ⌘- / ⌘0 ajuster / ⌘1 taille réelle
+      if ((e.metaKey || e.ctrlKey) && ['=', '+', '-', '0', '1'].includes(e.key)) {
+        e.preventDefault()
+        const v = useView.getState()
+        if (e.key === '-') v.zoomBy(1 / 1.25)
+        else if (e.key === '0') v.fitToScreen()
+        else if (e.key === '1') v.actualSize()
+        else v.zoomBy(1.25)
         return
       }
       if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t as HTMLInputElement).type === 'text')) return

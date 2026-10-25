@@ -96,7 +96,7 @@ Un élément est dessiné à **trois endroits**, volontairement distincts :
 - **Déplacement groupé** : au `dragstart`, les positions de départ de toute la sélection sont mémorisées dans un `ref` ; à chaque `dragmove` on applique le même delta à tous via `setPositions` (sans historique).
 - **Lasso** : rectangle de sélection en coordonnées de design, intersection testée sur `boundsOf()` (boîte englobante tenant compte de la rotation).
 - **Édition de texte** : un `<textarea>` HTML est superposé au canvas pendant l'édition (double-clic) ; la valeur est validée au `blur`.
-- `stageRegistry.ts` expose le Stage/Transformer courant pour `exportDataUrl()` (export PNG/JPG de la page affichée, poignées masquées, `pixelRatio = 1/scale` pour sortir à la taille réelle du design).
+- **Vue (zoom et déplacement)** : `store/view.ts` (store Zustand séparé du document, hors historique et jamais enregistré) contient `zoom` (relatif à l'ajustement : 1 = la page tient en entier), `panX/panY` (décalage par rapport à la page centrée, en px écran) et les dimensions nécessaires aux calculs, publiées par le canvas (`setLayout`). L'échelle effective est `scale = fit × zoom`. `zoomAround()` (pure, testée) garde fixe le point de design situé sous le curseur ; `clampPan` garantit qu'au moins 80 px de la page restent visibles. Interactions : pincement ou ⌘+molette = zoom autour du curseur, défilement à deux doigts = déplacement, barre d'espace maintenue ou clic molette + glisser = outil main, ⌘+ / ⌘- / ⌘0 (ajuster) / ⌘1 (100 %), boutons `ZoomControls` en bas à droite. Le zoom visuel du navigateur est désactivé (`setVisualZoomLevelLimits(1, 1)`), sinon le pincement zoomerait toute l'interface. La vue est réajustée à l'ouverture d'un autre document.
 
 ### Formes vectorielles (`shapes.ts`)
 
@@ -108,7 +108,7 @@ Fonctions pures et sans dépendance (candidates idéales pour des tests unitaire
 
 ## Export
 
-- **PNG / JPG** : page affichée uniquement, via `stageRegistry.exportDataUrl`. Nom de fichier suffixé `-pageN` s'il y a plusieurs pages.
+- **PNG / JPG** : page affichée uniquement, rendue hors écran par `renderPage` à la taille du design (donc indépendante du zoom et du déplacement de la vue). Nom de fichier suffixé `-pageN` s'il y a plusieurs pages.
 - **PDF** : `exportPdf(doc)` rend chaque page en PNG via `renderPage`, l'embarque dans un PDF `pdf-lib` dont la page mesure `width×0.75` × `height×0.75` points (px CSS 96 dpi → points). **Le contenu de chaque page est une image raster** (texte non sélectionnable), résolution 1 px de design = 1 px.
 - Le résultat est passé au main process sous forme de data URL (`data:application/pdf;base64,…`) via `export:save`.
 

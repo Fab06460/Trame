@@ -1,7 +1,6 @@
 import { useEditor } from '@/store/editor'
 import { newProject, openProject, saveProject } from '@/fileActions'
-import { exportDataUrl } from '@/stageRegistry'
-import { exportPdf } from '@/exportPages'
+import { exportPdf, renderPage } from '@/exportPages'
 
 export function Toolbar(): React.JSX.Element {
   const { addElement, undo, redo } = useEditor.getState()
@@ -25,8 +24,10 @@ export function Toolbar(): React.JSX.Element {
   }
 
   const exportAs = async (type: 'image/png' | 'image/jpeg'): Promise<void> => {
-    const url = exportDataUrl(type)
-    if (url) await window.trame.saveExport(url, `${name}${pageCount > 1 ? `-page${pageNo}` : ''}.${type === 'image/png' ? 'png' : 'jpg'}`)
+    // rendu hors écran à la taille réelle du design : indépendant du zoom et de la position de la vue
+    const { doc, pageId } = useEditor.getState()
+    const url = await renderPage(doc, doc.pages.find((p) => p.id === pageId) ?? doc.pages[0], type)
+    await window.trame.saveExport(url, `${name}${pageCount > 1 ? `-page${pageNo}` : ''}.${type === 'image/png' ? 'png' : 'jpg'}`)
   }
 
   const exportPdfFile = async (): Promise<void> => {

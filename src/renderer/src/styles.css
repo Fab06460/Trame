@@ -67,3 +67,9 @@ button.danger { color: #ff7b7b; }
 .shape:hover { color: var(--accent); }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 .text-preset { text-align: left; padding: 10px 12px; background: #1b1c21; }
+.zoom-controls {
+  position: absolute; right: 14px; bottom: 14px; display: flex; gap: 2px; padding: 3px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+}
+.zoom-controls button { background: none; border: none; min-width: 30px; }
+.zoom-controls .zoom-value { min-width: 58px; font-variant-numeric: tabular-nums; }

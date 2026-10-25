@@ -27,6 +27,8 @@ function createWindow(): void {
   })
 
   mainWindow = win
+  // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
+  win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
   win.on('closed', () => {
     mainWindow = null
     hasUnsavedChanges = false
