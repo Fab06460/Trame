@@ -31,6 +31,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run build`     | Compile main, preload et renderer dans `out/`                      |
 | `npm run preview`   | Lance l'appli à partir du build `out/`                             |
 | `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`)                           |
+| `npm test`          | Tests unitaires (Vitest) ; `npm run test:watch` en continu         |
 
 ### Dépannage
 
@@ -47,6 +48,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | Canvas                | Konva 10 + react-konva                                |
 | État                  | Zustand 5                                             |
 | Export PDF            | pdf-lib                                               |
+| Tests                 | Vitest 4                                              |
 | Polices embarquées    | @fontsource (sous-ensemble latin)                     |
 | Identifiants          | nanoid                                                |
 
@@ -71,6 +73,7 @@ src/
       stageRegistry.ts   Accès au Stage Konva courant (export de la page affichée)
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
 docs/                    Documentation détaillée (voir ci-dessous)
+vitest.config.ts         Configuration des tests (tests à côté du code : `*.test.ts`)
 FEATURES.md              Notes de référence sur les fonctionnalités de Canva (pas de la doc technique)
 ```
 

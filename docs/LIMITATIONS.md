@@ -4,9 +4,8 @@
 
 ## Qualité et outillage
 
-- **Aucun test automatisé.** Seules vérifications : `npm run typecheck` et `npm run build`. Les fonctions de `geometry.ts` ont été validées par un script ponctuel (non conservé). Premières cibles de test : `geometry.ts`, `migrateDocument`, les actions du store (`groupSelected`, `moveLayer`, `distribute`, undo/redo).
+- **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Pas de tests de bout en bout (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
-- **Pas de gestion de version** : le répertoire n'est pas (encore) un dépôt git.
 - **Pas d'intégration continue.**
 - **Packaging absent** : pas d'application `.app` / `.dmg` / `.exe` distribuable (il faudrait `electron-builder` ou Electron Forge, icône, signature/notarisation macOS).
 - Le bundle du renderer est volumineux (~2,4 Mo hors polices) : aucun découpage de code.

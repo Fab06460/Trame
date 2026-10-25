@@ -53,3 +53,7 @@ Handler dans `src/main/index.ts` (`ipcMain.handle`), fonction correspondante dan
 - Document immuable : toujours créer de nouveaux objets, jamais muter `doc`.
 - Commentaires courts, en français, expliquant le *pourquoi*.
 - Pas de point d'entrée réseau : toute ressource doit être embarquée.
+
+## Tests
+
+`npm test` lance Vitest (environnement Node) sur les fichiers `src/**/*.test.ts`, placés à côté du code testé. Le store Zustand se teste directement sans React : `useEditor.getState()` puis les actions ; appeler `newDocument()` dans un `beforeEach` pour repartir d'un état propre. Toute nouvelle action du store ou fonction de `geometry.ts` doit venir avec ses tests ; un nouveau modèle ou une nouvelle forme est déjà couvert par les tests de cohérence de `templates.test.ts`.
