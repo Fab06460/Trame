@@ -57,3 +57,7 @@ Handler dans `src/main/index.ts` (`ipcMain.handle`), fonction correspondante dan
 ## Tests
 
 `npm test` lance Vitest (environnement Node) sur les fichiers `src/**/*.test.ts`, placés à côté du code testé. Le store Zustand se teste directement sans React : `useEditor.getState()` puis les actions ; appeler `newDocument()` dans un `beforeEach` pour repartir d'un état propre. Toute nouvelle action du store ou fonction de `geometry.ts` doit venir avec ses tests ; un nouveau modèle ou une nouvelle forme est déjà couvert par les tests de cohérence de `templates.test.ts`.
+
+### Test de fumée de bout en bout
+
+`npm run smoke` (macOS) construit l'application, la **lance vraiment** avec un dossier de données temporaire, la pilote via le protocole de débogage de Chromium (`--remote-debugging-port`) et vérifie le pont preload ↔ processus principal : projets récents (persistance, ordre, fichier supprimé, refus d'ouvrir un chemin non listé) et sortie avec modifications non enregistrées. Il n'y a pas de dépendance supplémentaire (Node 22+ fournit `WebSocket` et `fetch`). Pour couvrir un nouveau canal IPC, ajouter des `check(...)` dans `scripts/smoke-test.mjs`. Le test de sortie envoie un ordre AppleScript à l'application par son bundle : il se désactive tout seul si une autre instance d'Electron tourne (par ex. `npm run dev`) pour ne pas la fermer. Il ne couvre pas l'interface visuelle (glisser, redimensionner…).

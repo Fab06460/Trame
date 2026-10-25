@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { RecentProject } from '../../../preload'
 import { useEditor } from '@/store/editor'
 import { confirmUnsaved } from '@/fileActions'
 import { SHAPES } from '@/shapes'
 import { TEMPLATES, instantiate, previewPage } from '@/templates'
 import { PageThumb } from './PageThumb'
+import { RecentsPanel } from './RecentsPanel'
 
-type Tab = 'templates' | 'elements'
+type Tab = 'recents' | 'templates' | 'elements'
 
 const TEXT_PRESETS = [
   { label: 'Titre', fontSize: 110, fontStyle: 'bold', text: 'Titre' },
@@ -15,7 +17,24 @@ const TEXT_PRESETS = [
 
 export function Sidebar(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('templates')
+  const [recents, setRecents] = useState<RecentProject[]>([])
   const { addElement, loadDocument } = useEditor.getState()
+  const filePath = useEditor((s) => s.filePath)
+
+  const refreshRecents = useCallback((): void => {
+    window.trame.listRecents().then(setRecents, () => setRecents([]))
+  }, [])
+
+  // Au démarrage, on ouvre l'onglet Récents s'il y a quelque chose à y voir
+  useEffect(() => {
+    window.trame.listRecents().then((list) => {
+      setRecents(list)
+      if (list.length > 0) setTab('recents')
+    }, () => {})
+  }, [])
+
+  // Un enregistrement ou une ouverture met la liste à jour
+  useEffect(refreshRecents, [filePath, refreshRecents])
 
   const applyTemplate = async (id: string): Promise<void> => {
     const t = TEMPLATES.find((x) => x.id === id)!
@@ -27,9 +46,12 @@ export function Sidebar(): React.JSX.Element {
   return (
     <aside className="sidebar">
       <div className="tabs">
+        <button className={tab === 'recents' ? 'active' : ''} onClick={() => setTab('recents')}>Récents</button>
         <button className={tab === 'templates' ? 'active' : ''} onClick={() => setTab('templates')}>Modèles</button>
         <button className={tab === 'elements' ? 'active' : ''} onClick={() => setTab('elements')}>Éléments</button>
       </div>
+
+      {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}
 
       {tab === 'templates' &&
         categories.map((c) => (

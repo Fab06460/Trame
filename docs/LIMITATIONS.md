@@ -4,7 +4,7 @@
 
 ## Qualité et outillage
 
-- **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Pas de tests de bout en bout (Playwright + Electron serait la piste).
+- **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Un test de fumée (`npm run smoke`) couvre le pont IPC, les récents et la sortie de l'application, mais pas l'interface visuelle (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
 - **Pas d'intégration continue.**
 - **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, signature ad hoc sans certificat Developer ID ni notarisation (avertissement Gatekeeper sur les autres Macs), `appId` provisoire, icône provisoire, pas de mise à jour automatique, pas d'association de fichiers `.trame`. Aucun packaging Windows/Linux.
@@ -20,6 +20,13 @@
 - Les confirmations (Nouveau, Ouvrir, appliquer un modèle, fermer la fenêtre) reposent sur l'indicateur `dirty`, qui passe à `true` à toute modification, **y compris un annuler qui ramène le document à son état enregistré** : une confirmation peut donc être demandée alors que rien n'a réellement changé.
 - La validation à l'ouverture (`parseDocument`) vérifie la **structure** (version, dimensions, pages, type et coordonnées des éléments), pas la cohérence du contenu : un `src` d'image invalide, une couleur incorrecte ou un `path` SVG illisible sont acceptés.
 - Le champ `name` du document n'est pas modifiable dans l'interface (il sert de nom par défaut à « Enregistrer sous » et aux exports et reste « Sans titre » ou le nom du modèle).
+
+## Projets récents
+
+- Liste limitée à 12 entrées, sans **aperçu** du design : seuls le nom, le dossier et la date de modification du fichier sont affichés.
+- **Pas d'intégration au système** : le menu « Ouvrir récent » du Dock / de la barre de menus macOS n'est pas alimenté (il faudrait `app.addRecentDocument` **et** la gestion de l'événement `open-file` pour qu'un clic fonctionne, ce qui rejoint l'association de fichiers `.trame`).
+- Un projet **déplacé ou renommé** dans le Finder est vu comme introuvable (le chemin est la seule clé). Un disque externe débranché produit le même message.
+- Le fichier de la liste est partagé entre toutes les instances de l'application (une seule fenêtre est gérée aujourd'hui).
 
 ## Éditeur
 

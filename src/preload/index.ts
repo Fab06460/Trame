@@ -1,5 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+export interface RecentProject {
+  path: string
+  name: string
+  /** dossier, avec le répertoire personnel abrégé en ~ */
+  dir: string
+  /** date de modification en ms, ou null si le fichier n'existe plus */
+  modified: number | null
+}
+
 const api = {
   /** Sans `path`, ouvre « Enregistrer sous » (proposant `name`). Retourne le chemin, ou null si annulé/échec. */
   saveProject: (json: string, path?: string, name?: string): Promise<string | null> =>
@@ -9,6 +18,11 @@ const api = {
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
+  listRecents: (): Promise<RecentProject[]> => ipcRenderer.invoke('recent:list'),
+  removeRecent: (path: string): Promise<void> => ipcRenderer.invoke('recent:remove', path),
+  clearRecents: (): Promise<void> => ipcRenderer.invoke('recent:clear'),
+  /** Ouvre un projet de la liste des récents ; null s'il est introuvable ou n'en fait pas partie. */
+  openPath: (path: string): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('project:open-path', path),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),
   /** Contenu le plus récent du presse-papiers : éléments Trame, image, ou texte. */
   readClipboard: (): Promise<

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pack": "electron-vite build && electron-builder --mac --dir",
-    "dist": "electron-vite build && electron-builder --mac"
+    "dist": "electron-vite build && electron-builder --mac",
+    "smoke": "electron-vite build && node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "@fontsource/bebas-neue": "^5.3.0",

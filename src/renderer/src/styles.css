@@ -73,3 +73,15 @@ button.danger { color: #ff7b7b; }
 }
 .zoom-controls button { background: none; border: none; min-width: 30px; }
 .zoom-controls .zoom-value { min-width: 58px; font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); line-height: 1.5; margin: 4px 2px; }
+.recents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.recents li { display: flex; align-items: stretch; gap: 2px; border-radius: 8px; background: #1b1c21; }
+.recents li.current { outline: 1px solid var(--accent); }
+.recents li.missing .recent-name, .recents li.missing .recent-meta { opacity: 0.5; }
+.recent-open { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: none; border: none; padding: 8px 10px; }
+.recent-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-meta { color: var(--muted); font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-remove { background: none; border: none; color: var(--muted); padding: 0 10px; opacity: 0; }
+.recents li:hover .recent-remove { opacity: 1; }
+.link { background: none; border: none; color: var(--muted); text-decoration: underline; align-self: flex-start; padding: 2px; }
+.tabs button { padding-inline: 6px; }

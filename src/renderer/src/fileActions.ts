@@ -27,10 +27,8 @@ export async function newProject(): Promise<void> {
   if (await confirmUnsaved('créer un nouveau projet')) useEditor.getState().newDocument()
 }
 
-export async function openProject(): Promise<void> {
-  // on choisit le fichier d'abord : annuler le sélecteur ne doit pas poser de question
-  const res = await window.trame.openProject()
-  if (!res) return
+/** Valide un fichier lu, demande de sauvegarder le document courant si besoin, puis le charge. */
+async function openFile(res: { path: string; json: string }): Promise<void> {
   let doc
   try {
     doc = parseDocument(res.json)
@@ -39,4 +37,21 @@ export async function openProject(): Promise<void> {
     return
   }
   if (await confirmUnsaved('ouvrir un autre projet')) useEditor.getState().loadDocument(doc, res.path)
+}
+
+export async function openProject(): Promise<void> {
+  // on choisit le fichier d'abord : annuler le sélecteur ne doit pas poser de question
+  const res = await window.trame.openProject()
+  if (res) await openFile(res)
+}
+
+/** Ouvre un projet récent ; s'il a disparu, le signale et le retire de la liste. */
+export async function openRecent(path: string): Promise<void> {
+  const res = await window.trame.openPath(path)
+  if (!res) {
+    await window.trame.showError('Projet introuvable', `Le fichier « ${path} » n'existe plus ou n'est plus accessible. Il a été retiré des projets récents.`)
+    await window.trame.removeRecent(path)
+    return
+  }
+  await openFile(res)
 }

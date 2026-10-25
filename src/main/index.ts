@@ -1,7 +1,32 @@
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain } from 'electron'
 import { join } from 'path'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, stat, writeFile } from 'fs/promises'
+import { homedir } from 'os'
+import { basename, dirname } from 'path'
 import { createCloseGuard } from './closeGuard'
+import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+
+const recentsFile = (): string => join(app.getPath('userData'), 'recent-projects.json')
+
+async function loadRecents(): Promise<RecentEntry[]> {
+  try {
+    return parseRecents(await readFile(recentsFile(), 'utf-8'))
+  } catch {
+    return [] // premier lancement ou fichier absent
+  }
+}
+
+async function saveRecents(list: RecentEntry[]): Promise<void> {
+  try {
+    await writeFile(recentsFile(), JSON.stringify(list), 'utf-8')
+  } catch {
+    // la liste des récents est un confort : ne jamais faire échouer une ouverture ou un enregistrement pour elle
+  }
+}
+
+async function noteRecent(path: string): Promise<void> {
+  await saveRecents(pushRecent(await loadRecents(), path, Date.now()))
+}
 
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
@@ -58,6 +83,7 @@ ipcMain.handle('project:save', async (e, json: string, currentPath?: string, nam
       path = res.filePath
     }
     await writeFile(path, json, 'utf-8')
+    await noteRecent(path)
     return path
   } catch (err) {
     dialog.showErrorBox('Enregistrement impossible', err instanceof Error ? err.message : String(err))
@@ -71,9 +97,41 @@ ipcMain.handle('project:open', async (e) => {
   if (res.canceled || !res.filePaths[0]) return null
   const path = res.filePaths[0]
   try {
-    return { path, json: await readFile(path, 'utf-8') }
+    const json = await readFile(path, 'utf-8')
+    await noteRecent(path)
+    return { path, json }
   } catch (err) {
     dialog.showErrorBox('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    return null
+  }
+})
+
+ipcMain.handle('recent:list', async () => {
+  const home = homedir()
+  return Promise.all(
+    (await loadRecents()).map(async ({ path }) => {
+      const dir = dirname(path)
+      return {
+        path,
+        name: basename(path, '.trame'),
+        dir: dir.startsWith(home) ? '~' + dir.slice(home.length) : dir,
+        modified: await stat(path).then((st) => st.mtimeMs, () => null) // null = fichier introuvable
+      }
+    })
+  )
+})
+
+ipcMain.handle('recent:remove', async (_e, path: string) => saveRecents(removeRecent(await loadRecents(), path)))
+ipcMain.handle('recent:clear', () => saveRecents([]))
+
+// Ouverture directe d'un chemin : réservée aux projets de la liste (le renderer ne peut pas lire un fichier arbitraire)
+ipcMain.handle('project:open-path', async (_e, path: string) => {
+  if (!(await loadRecents()).some((r) => r.path === path)) return null
+  try {
+    const json = await readFile(path, 'utf-8')
+    await noteRecent(path)
+    return { path, json }
+  } catch {
     return null
   }
 })

@@ -13,6 +13,7 @@
 - 6 modèles de départ, 10 polices embarquées
 - Zoom (10 % à 800 %) et déplacement du canvas : pincement, ⌘+molette, barre d'espace
 - Annuler / rétablir (100 niveaux)
+- Projets récents (liste persistée, onglet « Récents », ouverte au démarrage)
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
 
@@ -36,6 +37,7 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`)                           |
 | `npm run pack`      | Construit `dist/mac-arm64/Trame.app` (test rapide du packaging)    |
 | `npm run dist`      | Construit le `.dmg` et le `.zip` macOS dans `dist/`                |
+| `npm run smoke`     | Test de bout en bout : lance l'appli construite et vérifie IPC, récents, sortie (macOS) |
 | `npm test`          | Tests unitaires (Vitest) ; `npm run test:watch` en continu         |
 
 ### Installer l'application
@@ -67,7 +69,9 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 
 ```
 src/
-  main/index.ts          Processus principal Electron : fenêtre, dialogues, accès disque (IPC)
+  main/index.ts          Processus principal Electron : fenêtre, dialogues, accès disque, presse-papiers (IPC)
+  main/closeGuard.ts     Machine à états de la fermeture avec modifications non enregistrées
+  main/recents.ts        Logique pure de la liste des projets récents
   preload/index.ts       Pont sécurisé exposé au renderer : window.trame
   renderer/
     index.html           Point d'entrée + Content-Security-Policy
@@ -85,6 +89,7 @@ src/
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
 build/                   Icône de l'application (icon.icns, icon.png)
 scripts/make-icon.py     Génère l'icône
+scripts/smoke-test.mjs   Test de fumée de bout en bout
 docs/                    Documentation détaillée (voir ci-dessous)
 vitest.config.ts         Configuration des tests (tests à côté du code : `*.test.ts`)
 FEATURES.md              Notes de référence sur les fonctionnalités de Canva (pas de la doc technique)

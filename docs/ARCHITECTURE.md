@@ -34,6 +34,8 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 | `project:open`   | `openProject()`                  | Dialogue d'ouverture ; retourne `{ path, json }` ou `null`   |
 | `image:pick`     | `pickImage()`                    | Dialogue d'image ; retourne une **data URL** base64          |
 | `export:save`    | `saveExport(dataUrl, name)`      | Décode une data URL (PNG, JPG ou PDF) et l'écrit sur disque  |
+| `recent:list` / `recent:remove` / `recent:clear` | `listRecents()` / `removeRecent(path)` / `clearRecents()` | Projets récents, persistés dans `recent-projects.json` du dossier de données de l'application (`userData`). `listRecents` ajoute `name`, `dir` (`~` abrégé) et `modified` (`null` si le fichier a disparu) |
+| `project:open-path` | `openPath(path)` | Ouvre un projet **de la liste des récents uniquement** (un renderer compromis ne peut pas lire un fichier arbitraire) ; `null` si introuvable ou non listé |
 | `clipboard:write-elements` / `clipboard:read` | `writeClipboardElements(json)` / `readClipboard()` | Presse-papiers système. Les éléments copiés sont écrits au format personnalisé `web application/x-trame-elements` (préfixe `web` exigé par l'API pour les types non standard). `readClipboard` renvoie le contenu le plus récent : `elements`, sinon `image` (PNG/JPEG en data URL), sinon `text` |
 | `dialog:unsaved` | `askUnsaved(name, action)`       | Boîte native Enregistrer / Ne pas enregistrer / Annuler ; retourne `'save' \| 'discard' \| 'cancel'` |
 | `dialog:error`   | `showError(title, message)`      | Boîte d'erreur native                                        |
@@ -106,6 +108,10 @@ Une forme est un chemin SVG dans un viewBox 100×100, dessiné via un `Konva.Sha
 ### Géométrie (`geometry.ts`)
 
 Fonctions pures et sans dépendance (candidates idéales pour des tests unitaires) : `boundsOf`, `unionBox`, `intersects`, `alignDeltas`, `distributeDeltas`. L'alignement d'un seul élément se fait sur la page, de plusieurs éléments sur la boîte de leur union.
+
+## Projets récents
+
+`main/recents.ts` (logique pure, testée : dédoublonnage, ordre, limite de 12, lecture tolérante d'un fichier corrompu) et lecture/écriture du fichier dans `main/index.ts`. Toute sauvegarde ou ouverture réussie appelle `noteRecent`. Un échec d'écriture de la liste est ignoré : un confort ne doit jamais faire échouer une ouverture ou un enregistrement. Côté interface : onglet « Récents » de la barre latérale (`RecentsPanel.tsx`, sélectionné au démarrage s'il y a des entrées), ouverture via `openRecent` (`fileActions.ts`) qui passe par la même validation (`parseDocument`) et la même confirmation de modifications non enregistrées que « Ouvrir ». Un projet disparu est signalé « Introuvable » ; l'ouvrir affiche une erreur et le retire de la liste.
 
 ## Copier-coller
 
