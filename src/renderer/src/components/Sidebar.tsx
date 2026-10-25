@@ -6,6 +6,7 @@ import { SHAPES } from '@/shapes'
 import { TEMPLATES, instantiate, previewPage } from '@/templates'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
+import { UserTemplates } from './UserTemplates'
 
 type Tab = 'recents' | 'templates' | 'elements'
 
@@ -52,6 +53,8 @@ export function Sidebar(): React.JSX.Element {
       </div>
 
       {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}
+
+      {tab === 'templates' && <UserTemplates />}
 
       {tab === 'templates' &&
         categories.map((c) => (

@@ -198,3 +198,24 @@ export const previewPage = (p: TemplatePage): TramePage => ({
   background: p.background,
   elements: p.elements.map((e, i) => ({ ...e, id: String(i) }))
 })
+
+/**
+ * Copie d'un document dont tous les identifiants (pages, éléments, groupes) sont renouvelés :
+ * un modèle utilisateur doit produire un document indépendant à chaque application.
+ */
+export function cloneWithNewIds(doc: TrameDocument): TrameDocument {
+  const groups = new Map<string, string>()
+  const group = (g: string | undefined): string | undefined => {
+    if (!g) return undefined
+    if (!groups.has(g)) groups.set(g, nanoid(8))
+    return groups.get(g)
+  }
+  return {
+    ...doc,
+    pages: doc.pages.map((p) => ({
+      ...p,
+      id: nanoid(8),
+      elements: p.elements.map((e) => ({ ...e, id: nanoid(8), ...(e.groupId ? { groupId: group(e.groupId) } : {}) }))
+    }))
+  }
+}

@@ -35,6 +35,8 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 | `image:pick`     | `pickImage()`                    | Dialogue d'image ; retourne une **data URL** base64          |
 | `export:save`    | `saveExport(dataUrl, name)`      | Décode une data URL (PNG, JPG ou PDF) et l'écrit sur disque  |
 | `recent:list` / `recent:remove` / `recent:clear` | `listRecents()` / `removeRecent(path)` / `clearRecents()` | Projets récents, persistés dans `recent-projects.json` du dossier de données de l'application (`userData`). `listRecents` ajoute `name`, `dir` (`~` abrégé) et `modified` (`null` si le fichier a disparu) |
+| `templates:list` / `templates:save` / `templates:load` / `templates:delete` | `listUserTemplates()` / `saveUserTemplate(meta, json)` / `loadUserTemplate(id)` / `deleteUserTemplate(id)` | Modèles de l'utilisateur (voir ci-dessous). `save` génère l'identifiant côté main ; les identifiants reçus sont validés (`isValidId`) avant de construire un chemin de fichier |
+| `dialog:confirm` | `confirm(message, detail, label)` | Confirmation native (suppression d'un modèle) ; `true` si `label` est choisi |
 | `project:open-path` | `openPath(path)` | Ouvre un projet **de la liste des récents uniquement** (un renderer compromis ne peut pas lire un fichier arbitraire) ; `null` si introuvable ou non listé |
 | `clipboard:write-elements` / `clipboard:read` | `writeClipboardElements(json)` / `readClipboard()` | Presse-papiers système. Les éléments copiés sont écrits au format personnalisé `web application/x-trame-elements` (préfixe `web` exigé par l'API pour les types non standard). `readClipboard` renvoie le contenu le plus récent : `elements`, sinon `image` (PNG/JPEG en data URL), sinon `text` |
 | `dialog:unsaved` | `askUnsaved(name, action)`       | Boîte native Enregistrer / Ne pas enregistrer / Annuler ; retourne `'save' \| 'discard' \| 'cancel'` |
@@ -112,6 +114,15 @@ Fonctions pures et sans dépendance (candidates idéales pour des tests unitaire
 ## Projets récents
 
 `main/recents.ts` (logique pure, testée : dédoublonnage, ordre, limite de 12, lecture tolérante d'un fichier corrompu) et lecture/écriture du fichier dans `main/index.ts`. Toute sauvegarde ou ouverture réussie appelle `noteRecent`. Un échec d'écriture de la liste est ignoré : un confort ne doit jamais faire échouer une ouverture ou un enregistrement. Côté interface : onglet « Récents » de la barre latérale (`RecentsPanel.tsx`, sélectionné au démarrage s'il y a des entrées), ouverture via `openRecent` (`fileActions.ts`) qui passe par la même validation (`parseDocument`) et la même confirmation de modifications non enregistrées que « Ouvrir ». Un projet disparu est signalé « Introuvable » ; l'ouvrir affiche une erreur et le retire de la liste.
+
+## Modèles de l'utilisateur
+
+« Enregistrer ce design comme modèle » (onglet Modèles → section « Mes modèles », `UserTemplates.tsx`) conserve **tout le document** (toutes les pages) pour en créer de nouveaux. Stockage dans le dossier de données de l'application (`userData/templates/`) :
+
+- `index.json` : métadonnées légères (nom, dimensions, nombre de pages, **miniature** JPEG de 320 px de la première page), seul fichier lu à l'affichage de la liste ;
+- `<id>.json` : le document complet (images en base64 comprises), lu seulement quand on applique le modèle.
+
+La miniature est produite par le rendu hors écran (`renderPage(…, maxSize)`), donc fidèle à l'éditeur. Appliquer un modèle (`userTemplateActions.ts`) : lecture → `parseDocument` (même validation que l'ouverture d'un fichier) → confirmation si modifications non enregistrées → `cloneWithNewIds` (renouvelle les identifiants de pages, d'éléments **et de groupes** : chaque application produit un document indépendant) → nouveau document nommé d'après le modèle, sans chemin de fichier. Logique pure et testée dans `main/userTemplates.ts` (validation de l'identifiant — qui sert de nom de fichier —, du nom, de la miniature ; lecture tolérante de l'index).
 
 ## Copier-coller
 

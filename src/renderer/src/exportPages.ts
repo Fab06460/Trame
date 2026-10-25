@@ -15,7 +15,9 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
 export async function renderPage(
   doc: Pick<TrameDocument, 'width' | 'height'>,
   page: TramePage,
-  type: 'image/png' | 'image/jpeg' = 'image/png'
+  type: 'image/png' | 'image/jpeg' = 'image/png',
+  /** Si fourni, réduit le rendu pour que le grand côté fasse au plus `maxSize` pixels (miniatures). */
+  maxSize?: number
 ): Promise<string> {
   const container = document.createElement('div')
   const stage = new Konva.Stage({ container, width: doc.width, height: doc.height })
@@ -63,7 +65,8 @@ export async function renderPage(
   }
 
   layer.draw()
-  const url = stage.toDataURL({ mimeType: type, quality: 0.92, pixelRatio: 1 })
+  const pixelRatio = maxSize ? Math.min(1, maxSize / Math.max(doc.width, doc.height)) : 1
+  const url = stage.toDataURL({ mimeType: type, quality: 0.85, pixelRatio })
   stage.destroy()
   return url
 }

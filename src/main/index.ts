@@ -1,9 +1,11 @@
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain } from 'electron'
 import { join } from 'path'
-import { readFile, stat, writeFile } from 'fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
+import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
 import { createCloseGuard } from './closeGuard'
+import { addMeta, isValidId, parseTemplateIndex, removeMeta, sanitizeMeta, type TemplateMeta } from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
 
 const recentsFile = (): string => join(app.getPath('userData'), 'recent-projects.json')
@@ -27,6 +29,23 @@ async function saveRecents(list: RecentEntry[]): Promise<void> {
 async function noteRecent(path: string): Promise<void> {
   await saveRecents(pushRecent(await loadRecents(), path, Date.now()))
 }
+
+// ── Modèles de l'utilisateur ──────────────────────────────────────────────────────────────────────────────
+// userData/templates/index.json : métadonnées légères (nom, miniature…), lues à chaque affichage de la liste ;
+// userData/templates/<id>.json : le document complet, lu uniquement à l'application du modèle.
+const MAX_TEMPLATE_BYTES = 64 * 1024 * 1024
+const templatesDir = (): string => join(app.getPath('userData'), 'templates')
+const templateIndexFile = (): string => join(templatesDir(), 'index.json')
+
+async function loadTemplateIndex(): Promise<TemplateMeta[]> {
+  try {
+    return parseTemplateIndex(await readFile(templateIndexFile(), 'utf-8'))
+  } catch {
+    return [] // aucun modèle enregistré pour l'instant
+  }
+}
+
+const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(templateIndexFile(), JSON.stringify(list), 'utf-8')
 
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
@@ -134,6 +153,51 @@ ipcMain.handle('project:open-path', async (_e, path: string) => {
   } catch {
     return null
   }
+})
+
+ipcMain.handle('templates:list', () => loadTemplateIndex())
+
+ipcMain.handle('templates:save', async (_e, meta: unknown, json: unknown) => {
+  try {
+    if (typeof json !== 'string' || json.length > MAX_TEMPLATE_BYTES) throw new Error('Le design est trop volumineux pour devenir un modèle.')
+    const entry = sanitizeMeta(meta, randomUUID(), Date.now())
+    if (!entry) throw new Error('Informations du modèle invalides.')
+    await mkdir(templatesDir(), { recursive: true })
+    await writeFile(join(templatesDir(), `${entry.id}.json`), json, 'utf-8')
+    await saveTemplateIndex(addMeta(await loadTemplateIndex(), entry))
+    return entry
+  } catch (err) {
+    dialog.showErrorBox('Enregistrement du modèle impossible', err instanceof Error ? err.message : String(err))
+    return null
+  }
+})
+
+ipcMain.handle('templates:load', async (_e, id: unknown) => {
+  if (!isValidId(id)) return null
+  try {
+    return await readFile(join(templatesDir(), `${id}.json`), 'utf-8')
+  } catch {
+    return null
+  }
+})
+
+ipcMain.handle('templates:delete', async (_e, id: unknown) => {
+  if (!isValidId(id)) return
+  await rm(join(templatesDir(), `${id}.json`), { force: true })
+  await saveTemplateIndex(removeMeta(await loadTemplateIndex(), id))
+})
+
+ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, confirmLabel: string) => {
+  const win = BrowserWindow.fromWebContents(e.sender)!
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: [confirmLabel, 'Annuler'],
+    defaultId: 1,
+    cancelId: 1,
+    message,
+    detail
+  })
+  return response === 0
 })
 
 ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {

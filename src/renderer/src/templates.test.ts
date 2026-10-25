@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SHAPES } from '@/shapes'
-import { TEMPLATES, instantiate } from '@/templates'
+import { TEMPLATES, cloneWithNewIds, instantiate } from '@/templates'
 import type { TrameElement } from '@/types'
 
 const allElements = (): Array<{ t: string; e: Omit<TrameElement, 'id'> }> =>
@@ -69,5 +69,38 @@ describe('formes', () => {
         expect(n, s.id).toBeLessThanOrEqual(100)
       }
     }
+  })
+})
+
+describe('cloneWithNewIds', () => {
+  const doc = instantiate(TEMPLATES.find((t) => t.pages.length > 1)!)
+  // deux éléments du même groupe, pour vérifier que la copie conserve le lien entre eux
+  doc.pages[0].elements[0].groupId = 'g1'
+  doc.pages[0].elements[1].groupId = 'g1'
+
+  it('renouvelle tous les identifiants de pages et d’éléments', () => {
+    const copy = cloneWithNewIds(doc)
+    const ids = (d: typeof doc): string[] => d.pages.flatMap((p) => [p.id, ...p.elements.map((e) => e.id)])
+    expect(ids(copy)).toHaveLength(ids(doc).length)
+    expect(ids(copy).filter((id) => ids(doc).includes(id))).toEqual([])
+    expect(new Set(ids(copy)).size).toBe(ids(copy).length)
+  })
+
+  it('renouvelle les groupes en gardant les membres ensemble', () => {
+    const [a, b, c] = cloneWithNewIds(doc).pages[0].elements
+    expect(a.groupId).toBeDefined()
+    expect(a.groupId).not.toBe('g1')
+    expect(a.groupId).toBe(b.groupId)
+    expect(c.groupId).toBeUndefined()
+  })
+
+  it('conserve le contenu et ne modifie pas l’original', () => {
+    const before = JSON.stringify(doc)
+    const copy = cloneWithNewIds(doc)
+    expect(JSON.stringify(doc)).toBe(before)
+    expect(copy.pages.map((p) => p.elements.map((e) => e.text ?? e.type))).toEqual(
+      doc.pages.map((p) => p.elements.map((e) => e.text ?? e.type))
+    )
+    expect(copy.width).toBe(doc.width)
   })
 })

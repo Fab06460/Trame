@@ -10,7 +10,7 @@
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
 - Sélection multiple (lasso, Maj+clic, ⌘A), groupes, alignement et répartition, ordre des calques
 - Pages multiples (ajout, duplication, suppression, réordonnancement par glisser-déposer)
-- 6 modèles de départ, 10 polices embarquées
+- 6 modèles de départ et **modèles personnels** (enregistrer n'importe quel design, toutes pages comprises), 10 polices embarquées
 - Zoom (10 % à 800 %) et déplacement du canvas : pincement, ⌘+molette, barre d'espace
 - Annuler / rétablir (100 niveaux)
 - Projets récents (liste persistée, onglet « Récents », ouverte au démarrage)
@@ -72,6 +72,7 @@ src/
   main/index.ts          Processus principal Electron : fenêtre, dialogues, accès disque, presse-papiers (IPC)
   main/closeGuard.ts     Machine à états de la fermeture avec modifications non enregistrées
   main/recents.ts        Logique pure de la liste des projets récents
+  main/userTemplates.ts  Logique pure des modèles personnels (validation, index)
   preload/index.ts       Pont sécurisé exposé au renderer : window.trame
   renderer/
     index.html           Point d'entrée + Content-Security-Policy

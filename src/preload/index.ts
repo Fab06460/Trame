@@ -9,6 +9,17 @@ export interface RecentProject {
   modified: number | null
 }
 
+export interface UserTemplateMeta {
+  id: string
+  name: string
+  createdAt: number
+  width: number
+  height: number
+  pageCount: number
+  /** data URL de la première page */
+  thumbnail: string
+}
+
 const api = {
   /** Sans `path`, ouvre « Enregistrer sous » (proposant `name`). Retourne le chemin, ou null si annulé/échec. */
   saveProject: (json: string, path?: string, name?: string): Promise<string | null> =>
@@ -23,6 +34,17 @@ const api = {
   clearRecents: (): Promise<void> => ipcRenderer.invoke('recent:clear'),
   /** Ouvre un projet de la liste des récents ; null s'il est introuvable ou n'en fait pas partie. */
   openPath: (path: string): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('project:open-path', path),
+  listUserTemplates: (): Promise<UserTemplateMeta[]> => ipcRenderer.invoke('templates:list'),
+  /** Enregistre un modèle ; retourne ses métadonnées, ou null en cas d'échec (erreur affichée). */
+  saveUserTemplate: (
+    meta: Omit<UserTemplateMeta, 'id' | 'createdAt'>,
+    json: string
+  ): Promise<UserTemplateMeta | null> => ipcRenderer.invoke('templates:save', meta, json),
+  loadUserTemplate: (id: string): Promise<string | null> => ipcRenderer.invoke('templates:load', id),
+  deleteUserTemplate: (id: string): Promise<void> => ipcRenderer.invoke('templates:delete', id),
+  /** Boîte de confirmation native ; true si l'utilisateur choisit `confirmLabel`. */
+  confirm: (message: string, detail: string, confirmLabel: string): Promise<boolean> =>
+    ipcRenderer.invoke('dialog:confirm', message, detail, confirmLabel),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),
   /** Contenu le plus récent du presse-papiers : éléments Trame, image, ou texte. */
   readClipboard: (): Promise<

@@ -28,6 +28,15 @@
 - Un projet **déplacé ou renommé** dans le Finder est vu comme introuvable (le chemin est la seule clé). Un disque externe débranché produit le même message.
 - Le fichier de la liste est partagé entre toutes les instances de l'application (une seule fenêtre est gérée aujourd'hui).
 
+## Modèles personnels
+
+- **Pas de renommage ni de remplacement** d'un modèle : pour corriger un nom ou une mise à jour, supprimer puis réenregistrer.
+- Un modèle contient une **copie complète** du design, images comprises (base64) : il peut être volumineux, et il n'y a pas de limite d'espace ni de nettoyage automatique (seule garde : 64 Mo par modèle).
+- Pas de catégories ni de recherche dans « Mes modèles » ; l'ordre est du plus récent au plus ancien.
+- Les modèles sont **locaux à la machine et à l'utilisateur** (dossier de données de l'application) : pas d'import/export, de partage ni de synchronisation. Désinstaller l'application n'efface pas ce dossier ; le supprimer efface les modèles.
+- La miniature n'est faite que de la première page.
+- Les modèles de départ intégrés (`templates.ts`) ne peuvent être ni modifiés ni supprimés depuis l'interface.
+
 ## Éditeur
 
 - **Texte : la hauteur stockée est indicative.** Konva calcule la hauteur réelle selon le retour à la ligne, mais `boundsOf`, l'alignement vertical, le lasso et les miniatures s'appuient sur `element.height`. Les alignements verticaux et le lasso sont donc approximatifs pour des textes sur plusieurs lignes.
@@ -59,7 +68,7 @@
 - `shapes.ts` utilise **`ctx._context`**, une API **non publique** de Konva : à revérifier à chaque montée de version majeure de Konva.
 - `migrateDocument(raw: any)` utilise `any` ; typage à durcir avec une validation de schéma (par ex. zod).
 - `Canvas.tsx` concentre beaucoup de responsabilités (rendu, drag, transformation, lasso, édition de texte) : candidat au découpage.
-- Les modèles sont codés en dur dans `templates.ts` (pas d'import/export de modèles utilisateur).
+- Les modèles de départ sont codés en dur dans `templates.ts` ; les modèles personnels n'ont ni import ni export.
 - Les versions de dépendances sont très récentes (TypeScript 7, Vite 8, Electron 45, React 19) : lire les notes de version avant toute montée de version majeure. Exemple déjà rencontré : TypeScript 7 refuse l'option `baseUrl` (les alias passent par `paths` avec des chemins relatifs).
 - Accessibilité et internationalisation : textes de l'interface en français, directement dans les composants (pas de couche i18n) ; pas de navigation clavier complète ni de support lecteur d'écran sur le canvas.
 - `FEATURES.md` est un document de recherche sur Canva, pas une spécification validée.
