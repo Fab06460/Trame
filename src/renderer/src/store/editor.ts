@@ -25,6 +25,13 @@ export function migrateDocument(raw: any): TrameDocument {
 const ELEMENT_TYPES = ['rect', 'ellipse', 'text', 'image', 'path']
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
+/** Vrai si `e` a la structure minimale d'un élément (utilisé à l'ouverture d'un fichier et au collage). */
+export function isElement(e: any): e is TrameElement {
+  return (
+    !!e && typeof e.id === 'string' && ELEMENT_TYPES.includes(e.type) && [e.x, e.y, e.width, e.height].every(isNum)
+  )
+}
+
 /**
  * Lit et valide le contenu d'un fichier .trame. Lève une Error au message affichable à l'utilisateur.
  * Vérifie la structure (pas la cohérence visuelle) : suffisant pour ne jamais planter l'éditeur.
@@ -51,7 +58,7 @@ export function parseDocument(json: string): TrameDocument {
       throw invalid('page malformée')
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
-      if (![e.x, e.y, e.width, e.height].every(isNum)) throw invalid('élément mal positionné')
+      if (!isElement(e)) throw invalid('élément mal positionné')
     }
   }
   return { ...doc, name: typeof doc.name === 'string' && doc.name ? doc.name : 'Sans titre' }
@@ -91,6 +98,8 @@ interface EditorState {
   beginChange: () => void
   removeSelected: () => void
   duplicateSelected: () => void
+  /** Colle des éléments (copiés de Trame) dans la page courante, avec de nouveaux identifiants. */
+  pasteElements: (elements: TrameElement[]) => void
   moveLayer: (dir: 'up' | 'down' | 'top' | 'bottom') => void
   setBackground: (color: string) => void
   setSize: (width: number, height: number) => void
@@ -340,6 +349,43 @@ export const useEditor = create<EditorState>((set, get) => {
           groupId = groupMap.get(groupId)
         }
         return { ...e, id: nanoid(8), groupId, x: e.x + 30, y: e.y + 30 }
+      })
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: [...p.elements, ...copies] })),
+        selectedIds: copies.map((c) => c.id),
+        dirty: true
+      })
+    },
+
+    pasteElements: (elements) => {
+      if (!elements.length) return
+      const { doc } = get()
+      const existing = selectPage(get()).elements
+      const box = unionBox(elements.map(boundsOf))
+      // Même page que la copie : on décale jusqu'à ce que la copie ne se superpose plus pile à un élément existant.
+      // Page ou document différents : position d'origine, sauf si tout est hors de la page (autre format) → centré.
+      const lands = (dx: number, dy: number): boolean =>
+        existing.some((o) => elements.some((e) => o.x === e.x + dx && o.y === e.y + dy && o.width === e.width && o.height === e.height))
+      let dx = 0
+      let dy = 0
+      const outside = box.x >= doc.width || box.y >= doc.height || box.x + box.width <= 0 || box.y + box.height <= 0
+      if (outside) {
+        dx = (doc.width - box.width) / 2 - box.x
+        dy = (doc.height - box.height) / 2 - box.y
+      }
+      for (let i = 0; i < 50 && lands(dx, dy); i++) {
+        dx += 30
+        dy += 30
+      }
+      const groupMap = new Map<string, string>()
+      const copies = elements.map((e) => {
+        let groupId = e.groupId
+        if (groupId) {
+          if (!groupMap.has(groupId)) groupMap.set(groupId, nanoid(8))
+          groupId = groupMap.get(groupId)
+        }
+        return { ...e, id: nanoid(8), groupId, x: e.x + dx, y: e.y + dy }
       })
       set({
         ...snapshot(),

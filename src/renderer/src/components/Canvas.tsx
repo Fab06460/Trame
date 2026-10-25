@@ -75,7 +75,7 @@ export function Canvas(): React.JSX.Element {
   useEffect(() => {
     const isTyping = (t: EventTarget | null): boolean => {
       const el = t as HTMLElement | null
-      return !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+      return !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text', 'number'].includes((el as HTMLInputElement).type)))
     }
     const down = (e: KeyboardEvent): void => {
       if (e.code !== 'Space' || isTyping(e.target)) return

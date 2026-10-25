@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
+import { copySelection, cutSelection, paste } from '@/clipboardActions'
 import { confirmUnsaved, newProject, openProject, saveProject } from '@/fileActions'
 
 export default function App(): React.JSX.Element {
@@ -31,7 +32,7 @@ export default function App(): React.JSX.Element {
         else v.zoomBy(1.25)
         return
       }
-      if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t as HTMLInputElement).type === 'text')) return
+      if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes((t as HTMLInputElement).type))) return
       const s = useEditor.getState()
       const mod = e.metaKey || e.ctrlKey
       if (mod && e.key.toLowerCase() === 'z') {
@@ -40,6 +41,10 @@ export default function App(): React.JSX.Element {
       } else if (mod && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         s.duplicateSelected()
+      } else if (mod && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+        e.preventDefault()
+        const k = e.key.toLowerCase()
+        void (k === 'c' ? copySelection() : k === 'x' ? cutSelection() : paste())
       } else if (mod && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         s.selectAll()

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import { createCloseGuard } from './closeGuard'
@@ -93,6 +93,33 @@ ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
 
 ipcMain.handle('dialog:error', (_e, title: string, message: string) => {
   dialog.showErrorBox(title, message)
+})
+
+// Format personnalisé : le préfixe « web » est exigé par l'API presse-papiers pour les types non standard.
+// Écrire remplace tout le contenu : la dernière copie (Trame ou autre application) l'emporte toujours.
+const ELEMENTS_FORMAT = 'web application/x-trame-elements'
+const IMAGE_FORMATS = ['image/png', 'image/jpeg']
+
+ipcMain.handle('clipboard:write-elements', (_e, json: string) =>
+  clipboard.write([new ClipboardItem({ [ELEMENTS_FORMAT]: json })])
+)
+
+ipcMain.handle('clipboard:read', async () => {
+  const items = await clipboard.read()
+  for (const item of items) {
+    if (item.types.includes(ELEMENTS_FORMAT)) {
+      return { kind: 'elements', json: await (await item.getType(ELEMENTS_FORMAT)).text() }
+    }
+  }
+  for (const item of items) {
+    const mime = IMAGE_FORMATS.find((m) => item.types.includes(m))
+    if (mime) {
+      const buf = Buffer.from(await ((await item.getType(mime)) as Blob).arrayBuffer())
+      return { kind: 'image', dataUrl: `data:${mime};base64,${buf.toString('base64')}` }
+    }
+  }
+  const text = await clipboard.readText()
+  return text.trim() ? { kind: 'text', text } : null
 })
 
 ipcMain.on('app:state', (_e, state: { dirty: boolean; path?: string }) => {

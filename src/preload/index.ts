@@ -9,6 +9,11 @@ const api = {
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
+  writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),
+  /** Contenu le plus récent du presse-papiers : éléments Trame, image, ou texte. */
+  readClipboard: (): Promise<
+    { kind: 'elements'; json: string } | { kind: 'image'; dataUrl: string } | { kind: 'text'; text: string } | null
+  > => ipcRenderer.invoke('clipboard:read'),
   askUnsaved: (name: string, action: string): Promise<'save' | 'discard' | 'cancel'> =>
     ipcRenderer.invoke('dialog:unsaved', name, action),
   showError: (title: string, message: string): Promise<void> => ipcRenderer.invoke('dialog:error', title, message),

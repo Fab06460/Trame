@@ -171,6 +171,75 @@ describe('sélection et groupes', () => {
   })
 })
 
+describe('pasteElements', () => {
+  const clipboardOf = (n: number): ReturnType<typeof els> => {
+    addRects(n)
+    return els().map((e) => ({ ...e }))
+  }
+
+  it('génère de nouveaux identifiants, sélectionne les copies et décale si elles se superposeraient aux originaux', () => {
+    const copied = clipboardOf(2)
+    S().pasteElements(copied)
+    expect(els()).toHaveLength(4)
+    const pasted = els().slice(2)
+    expect(pasted.map((e) => e.id)).not.toEqual(copied.map((e) => e.id))
+    expect(pasted[0].x).toBe(copied[0].x + 30) // l'original est toujours là : on décale
+    expect(S().selectedIds).toEqual(pasted.map((e) => e.id))
+  })
+
+  it('un deuxième collage se décale encore', () => {
+    const copied = clipboardOf(1)
+    S().pasteElements(copied)
+    S().pasteElements(copied)
+    expect(els().map((e) => e.x)).toEqual([0, 30, 60])
+  })
+
+  it('sur une autre page, garde la position d’origine', () => {
+    const copied = clipboardOf(2)
+    S().addPage()
+    S().pasteElements(copied)
+    expect(els().map((e) => [e.x, e.y])).toEqual(copied.map((e) => [e.x, e.y]))
+  })
+
+  it('après un couper, retombe à la position d’origine', () => {
+    const copied = clipboardOf(1)
+    S().select([copied[0].id])
+    S().removeSelected()
+    S().pasteElements(copied)
+    expect(els()[0].x).toBe(copied[0].x)
+  })
+
+  it('remappe les groupes : les copies forment un nouveau groupe', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().groupSelected()
+    const copied = els().map((e) => ({ ...e }))
+    S().addPage()
+    S().pasteElements(copied)
+    const [x, y] = els()
+    expect(x.groupId).toBeDefined()
+    expect(x.groupId).toBe(y.groupId)
+    expect(x.groupId).not.toBe(copied[0].groupId)
+  })
+
+  it('recentre des éléments entièrement hors de la page (autre format de document)', () => {
+    S().pasteElements([{ ...clipboardOf(1)[0], x: 5000, y: 5000 }])
+    const e = els().at(-1)!
+    expect(e.x + e.width / 2).toBeCloseTo(1080 / 2)
+    expect(e.y + e.height / 2).toBeCloseTo(1080 / 2)
+  })
+
+  it('est annulable en un seul cran et ne fait rien avec une liste vide', () => {
+    const copied = clipboardOf(2)
+    S().pasteElements(copied)
+    S().undo()
+    expect(els()).toHaveLength(2)
+    const before = S().doc
+    S().pasteElements([])
+    expect(S().doc).toBe(before)
+  })
+})
+
 describe('calques', () => {
   it('top / bottom conservent l’ordre relatif des éléments sélectionnés', () => {
     const [a, b, c, d] = addRects(4)

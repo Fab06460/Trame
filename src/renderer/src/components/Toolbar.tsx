@@ -1,4 +1,5 @@
 import { useEditor } from '@/store/editor'
+import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
 import { exportPdf, renderPage } from '@/exportPages'
 
@@ -13,14 +14,7 @@ export function Toolbar(): React.JSX.Element {
 
   const addImage = async (): Promise<void> => {
     const src = await window.trame.pickImage()
-    if (!src) return
-    const img = new window.Image()
-    img.onload = () => {
-      const { doc } = useEditor.getState()
-      const ratio = Math.min(1, (doc.width * 0.6) / img.width, (doc.height * 0.6) / img.height)
-      addElement({ type: 'image', src, width: img.width * ratio, height: img.height * ratio })
-    }
-    img.src = src
+    if (src) await insertImage(src)
   }
 
   const exportAs = async (type: 'image/png' | 'image/jpeg'): Promise<void> => {

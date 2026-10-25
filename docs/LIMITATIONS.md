@@ -27,10 +27,11 @@
 - Changer le format de page (`setSize`) **ne redimensionne ni ne repositionne** les éléments (pas de « Magic Resize »), et s'applique à toutes les pages.
 - Redimensionner un texte modifie sa boîte, pas sa taille de police ; en sélection multiple, le texte est étiré avec le Transformer puis la boîte est figée.
 - Groupes **à plat** : pas d'imbrication, pas d'édition d'un membre sans dissocier.
-- Zoom et déplacement : la vue n'est pas conservée par document (réajustée à l'ouverture), le zoom n'est pas centré sur la sélection, et le pincement n'a été pensé que pour un trackpad Mac (molette de souris : ⌘+molette pour zoomer). Pas de règles ni de guides d'alignement magnétiques, pas de verrouillage ni de masquage de calques, pas de copier-coller (seulement dupliquer).
+- Zoom et déplacement : la vue n'est pas conservée par document (réajustée à l'ouverture), le zoom n'est pas centré sur la sélection, et le pincement n'a été pensé que pour un trackpad Mac (molette de souris : ⌘+molette pour zoomer). Pas de règles ni de guides d'alignement magnétiques, pas de verrouillage ni de masquage de calques.
 - Pas de retournement d'image, de recadrage, de filtres, de contours, d'ombres ni de dégradés. Les formes vectorielles sont pleines (pas de contour).
 - Texte : un seul style par bloc (pas de mise en forme partielle), pas d'interligne ni d'espacement des lettres réglables.
 - Changer de page n'est pas annulable.
+- Copier-coller : pas de collage de contenu riche (HTML, SVG) venant d'ailleurs, le texte collé perd sa mise en forme, et le format de presse-papiers Trame n'est pas versionné au-delà de `{ trame: 1 }`. Le collage d'un élément entre deux documents de formats différents ne remet pas à l'échelle.
 
 ## Images et performances
 

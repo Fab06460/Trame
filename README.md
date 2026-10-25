@@ -7,6 +7,7 @@
 ## Fonctionnalités
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
+- Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
 - Sélection multiple (lasso, Maj+clic, ⌘A), groupes, alignement et répartition, ordre des calques
 - Pages multiples (ajout, duplication, suppression, réordonnancement par glisser-déposer)
 - 6 modèles de départ, 10 polices embarquées
@@ -15,7 +16,7 @@
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
 
-Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue.
+Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘C` / `⌘X` / `⌘V` copier / couper / coller · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue.
 (Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
 
 ## Démarrage rapide
