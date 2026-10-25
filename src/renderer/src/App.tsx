@@ -7,7 +7,7 @@ import { Properties } from '@/components/Properties'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
 import { copySelection, cutSelection, paste } from '@/clipboardActions'
-import { confirmUnsaved, newProject, openProject, saveProject } from '@/fileActions'
+import { confirmUnsaved, newProject, openFile, openProject, saveProject } from '@/fileActions'
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
@@ -76,6 +76,13 @@ export default function App(): React.JSX.Element {
     const file = filePath ? filePath.split(/[\\/]/).pop()!.replace(/\.trame$/, '') : name
     document.title = `${file}${dirty ? ' •' : ''} — Trame`
   }, [dirty, filePath, name])
+
+  // Fichiers ouverts depuis le Finder ou le Dock : en cours d'exécution, ou reçus pendant le démarrage
+  useEffect(() => {
+    const stop = window.trame.onOpenFile((file) => void openFile(file))
+    void window.trame.rendererReady().then((file) => file && openFile(file))
+    return stop
+  }, [])
 
   // Fermeture de fenêtre avec des modifications : proposer d'enregistrer
   useEffect(

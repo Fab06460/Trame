@@ -45,6 +45,14 @@ const api = {
   /** Boîte de confirmation native ; true si l'utilisateur choisit `confirmLabel`. */
   confirm: (message: string, detail: string, confirmLabel: string): Promise<boolean> =>
     ipcRenderer.invoke('dialog:confirm', message, detail, confirmLabel),
+  /** Fichier ouvert depuis le système (Finder, Dock) pendant que l'application tourne. */
+  onOpenFile: (cb: (file: { path: string; json: string }) => void): (() => void) => {
+    const listener = (_e: unknown, file: { path: string; json: string }): void => cb(file)
+    ipcRenderer.on('app:open-file', listener)
+    return () => ipcRenderer.removeListener('app:open-file', listener)
+  },
+  /** À appeler une fois l'interface prête : retourne le fichier ouvert par le système pendant le démarrage. */
+  rendererReady: (): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('app:renderer-ready'),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),
   /** Contenu le plus récent du presse-papiers : éléments Trame, image, ou texte. */
   readClipboard: (): Promise<

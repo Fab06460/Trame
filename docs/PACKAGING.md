@@ -53,9 +53,20 @@ Ces étapes n'ont pas été exécutées.
 - `appId` : `app.trame.editor` : **identifiant provisoire**. À remplacer par un identifiant en notation DNS inversée dont vous êtes propriétaire (par ex. `fr.votredomaine.trame`) *avant* la première distribution réelle ; le changer ensuite fait considérer l'app comme une autre application par macOS (préférences, droits).
 - `productName` : `Trame` (nom du `.app`).
 
+## Association de fichiers `.trame`
+
+Déclarée dans `build.fileAssociations` (extension `trame`, rôle Éditeur, icône de l'app) : electron-builder écrit `CFBundleDocumentTypes` dans l'`Info.plist`. Une fois **Trame installée** (par ex. dans `/Applications`), macOS l'utilise pour double-clic, « Ouvrir avec » et glisser-déposer d'un `.trame` sur son icône ; les projets ouverts alimentent aussi le menu « Ouvrir récent » du Dock. Côté code : événement `open-file` géré dans `main/index.ts` (voir [ARCHITECTURE.md](ARCHITECTURE.md)).
+
+Points à connaître :
+
+- Le **mode développement** (`npm run dev`, Electron générique) n'est pas associé aux fichiers : seul le `.app` empaqueté l'est. Pour tester sans installer : `npm run pack`, puis `open -n -a dist/mac-arm64/Trame.app un-projet.trame`.
+- macOS retient les applications qu'il a **vues** : lancer un build de `dist/` l'enregistre auprès de LaunchServices. Si plusieurs copies de Trame existent (dist, Applications, DMG monté), le Finder peut en choisir une inattendue. Pour désenregistrer une copie : `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u chemin/vers/Trame.app`.
+- L'icône des fichiers `.trame` est celle de l'application (pas d'icône de document dédiée).
+- Tant que l'app n'est pas signée et notarisée, le premier double-clic sur un autre Mac passe d'abord par l'avertissement Gatekeeper (voir plus haut).
+- Windows / Linux : non gérés (il faudrait lire le chemin dans `process.argv` et utiliser `app.requestSingleInstanceLock` / `second-instance`).
+
 ## Pièges connus
 
-- **`ELECTRON_RUN_AS_NODE`** : si cette variable d'environnement est définie dans votre shell (certains outils et environnements de développement le font), Electron démarre comme un simple Node : l'app quitte aussitôt sans rien afficher, ou `require('electron')` renvoie un chemin au lieu de l'API (`Cannot read properties of undefined (reading 'handle')`). Lancer avec `env -u ELECTRON_RUN_AS_NODE …`.
+- **`ELECTRON_RUN_AS_NODE`** : si cette variable d'environnement est définie dans votre shell (certains outils et environnements de développement le font), Electron démarre comme un simple Node : l'app quitte aussitôt sans rien afficher, ou `require('electron')` renvoie un chemin au lieu de l'API (`Cannot read properties of undefined (reading 'handle')`). Lancer avec `env -u ELECTRON_RUN_AS_NODE …`. Attention : sur les macOS récents, `open` **transmet l'environnement du shell** à l'application qu'il lance : la variable est donc héritée aussi par `open -a Trame.app` (symptôme : `bad option: --remote-debugging-port`).
 - Les `.woff` et `.woff2` des polices sont tous deux copiés dans le bundle ; seuls les `.woff2` sont utilisés par Chromium. Gain possible : quelques Mo.
-- Pas d'**association de fichiers** `.trame` : double-cliquer un projet ne l'ouvre pas dans Trame (il faudrait déclarer `fileAssociations` dans `build` **et** gérer l'événement `open-file` dans `src/main/index.ts`).
 - Pas de **mise à jour automatique**.

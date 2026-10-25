@@ -38,6 +38,7 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 | `templates:list` / `templates:save` / `templates:load` / `templates:delete` | `listUserTemplates()` / `saveUserTemplate(meta, json)` / `loadUserTemplate(id)` / `deleteUserTemplate(id)` | Modèles de l'utilisateur (voir ci-dessous). `save` génère l'identifiant côté main ; les identifiants reçus sont validés (`isValidId`) avant de construire un chemin de fichier |
 | `dialog:confirm` | `confirm(message, detail, label)` | Confirmation native (suppression d'un modèle) ; `true` si `label` est choisi |
 | `project:open-path` | `openPath(path)` | Ouvre un projet **de la liste des récents uniquement** (un renderer compromis ne peut pas lire un fichier arbitraire) ; `null` si introuvable ou non listé |
+| `app:open-file` (réception) / `app:renderer-ready` | `onOpenFile(cb)` / `rendererReady()` | Fichiers ouverts depuis le système (Finder, Dock) : voir « Fichiers ouverts depuis le système » |
 | `clipboard:write-elements` / `clipboard:read` | `writeClipboardElements(json)` / `readClipboard()` | Presse-papiers système. Les éléments copiés sont écrits au format personnalisé `web application/x-trame-elements` (préfixe `web` exigé par l'API pour les types non standard). `readClipboard` renvoie le contenu le plus récent : `elements`, sinon `image` (PNG/JPEG en data URL), sinon `text` |
 | `dialog:unsaved` | `askUnsaved(name, action)`       | Boîte native Enregistrer / Ne pas enregistrer / Annuler ; retourne `'save' \| 'discard' \| 'cancel'` |
 | `dialog:error`   | `showError(title, message)`      | Boîte d'erreur native                                        |
@@ -110,6 +111,10 @@ Une forme est un chemin SVG dans un viewBox 100×100, dessiné via un `Konva.Sha
 ### Géométrie (`geometry.ts`)
 
 Fonctions pures et sans dépendance (candidates idéales pour des tests unitaires) : `boundsOf`, `unionBox`, `intersects`, `alignDeltas`, `distributeDeltas`. L'alignement d'un seul élément se fait sur la page, de plusieurs éléments sur la boîte de leur union.
+
+## Fichiers ouverts depuis le système
+
+macOS envoie `open-file` à l'application pour un double-clic sur un `.trame`, un glisser-déposer sur son icône ou « Ouvrir récent » du Dock. L'événement peut arriver **avant** que l'application soit prête, voire avant qu'une fenêtre existe (lancement déclenché par le fichier) ; `main/index.ts` enregistre donc le listener dès le chargement du module. `openFromSystem` attend `app.whenReady()`, lit le fichier **dans le processus principal** (le renderer ne reçoit jamais un chemin à lire lui-même), l'ajoute aux récents (`noteRecent` appelle aussi `app.addRecentDocument` pour le Dock), crée une fenêtre si besoin (application ouverte sans fenêtre) et le confie à `fileInbox.ts`. Cette petite machine à états (testée) retient le dernier fichier tant que le renderer n'a pas appelé `rendererReady()` — appelé par `App.tsx` après avoir branché `onOpenFile` — puis envoie directement `app:open-file`. Le renderer passe alors par le même `openFile` que « Ouvrir » (validation `parseDocument`, confirmation si modifications non enregistrées). Le rechargement de la page remet l'inbox en attente (`did-start-loading`). Plusieurs fichiers reçus d'un coup : seul le dernier s'ouvre.
 
 ## Projets récents
 

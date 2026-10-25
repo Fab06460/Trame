@@ -13,7 +13,7 @@
 - 6 modèles de départ et **modèles personnels** (enregistrer n'importe quel design, toutes pages comprises), 10 polices embarquées
 - Zoom (10 % à 800 %) et déplacement du canvas : pincement, ⌘+molette, barre d'espace
 - Annuler / rétablir (100 niveaux)
-- Projets récents (liste persistée, onglet « Récents », ouverte au démarrage)
+- Projets récents (liste persistée, onglet « Récents », menu « Ouvrir récent » du Dock) et ouverture par double-clic sur un `.trame` dans le Finder (app installée, macOS)
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF (toutes les pages)
 
@@ -72,6 +72,7 @@ src/
   main/index.ts          Processus principal Electron : fenêtre, dialogues, accès disque, presse-papiers (IPC)
   main/closeGuard.ts     Machine à états de la fermeture avec modifications non enregistrées
   main/recents.ts        Logique pure de la liste des projets récents
+  main/fileInbox.ts      Fichiers ouverts par le système en attente d'un renderer prêt
   main/userTemplates.ts  Logique pure des modèles personnels (validation, index)
   preload/index.ts       Pont sécurisé exposé au renderer : window.trame
   renderer/

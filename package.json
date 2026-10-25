@@ -82,6 +82,15 @@
     },
     "dmg": {
       "title": "Trame ${version}"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "trame",
+        "name": "Projet Trame",
+        "description": "Projet Trame",
+        "role": "Editor",
+        "icon": "build/icon.icns"
+      }
+    ]
   }
 }

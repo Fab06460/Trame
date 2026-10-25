@@ -7,7 +7,7 @@
 - **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Un test de fumée (`npm run smoke`) couvre le pont IPC, les récents et la sortie de l'application, mais pas l'interface visuelle (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
 - **Pas d'intégration continue.**
-- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, signature ad hoc sans certificat Developer ID ni notarisation (avertissement Gatekeeper sur les autres Macs), `appId` provisoire, icône provisoire, pas de mise à jour automatique, pas d'association de fichiers `.trame`. Aucun packaging Windows/Linux.
+- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, signature ad hoc sans certificat Developer ID ni notarisation (avertissement Gatekeeper sur les autres Macs), `appId` provisoire, icône provisoire, pas de mise à jour automatique, icône de document = icône de l'app. Aucun packaging Windows/Linux.
 - Le bundle du renderer est volumineux (~2,4 Mo hors polices) : aucun découpage de code.
 
 ## Plateformes
@@ -21,10 +21,17 @@
 - La validation à l'ouverture (`parseDocument`) vérifie la **structure** (version, dimensions, pages, type et coordonnées des éléments), pas la cohérence du contenu : un `src` d'image invalide, une couleur incorrecte ou un `path` SVG illisible sont acceptés.
 - Le champ `name` du document n'est pas modifiable dans l'interface (il sert de nom par défaut à « Enregistrer sous » et aux exports et reste « Sans titre » ou le nom du modèle).
 
+## Association de fichiers
+
+- **macOS uniquement** (événement `open-file`) ; Windows/Linux ne transmettent pas le chemin du fichier à l'application.
+- Seul le **dernier** fichier est ouvert quand plusieurs sont sélectionnés dans le Finder (un document à la fois).
+- Ouvrir un fichier alors que le document courant a des modifications non enregistrées affiche la confirmation habituelle ; si l'utilisateur annule, le fichier envoyé par le Finder est simplement ignoré.
+- Fonctionne avec l'application **installée/empaquetée** ; le mode `npm run dev` n'est pas associé aux `.trame`.
+
 ## Projets récents
 
 - Liste limitée à 12 entrées, sans **aperçu** du design : seuls le nom, le dossier et la date de modification du fichier sont affichés.
-- **Pas d'intégration au système** : le menu « Ouvrir récent » du Dock / de la barre de menus macOS n'est pas alimenté (il faudrait `app.addRecentDocument` **et** la gestion de l'événement `open-file` pour qu'un clic fonctionne, ce qui rejoint l'association de fichiers `.trame`).
+- **Intégration macOS partielle** : le menu « Ouvrir récent » du Dock est alimenté (`app.addRecentDocument`) mais il est géré par macOS : il ne suit pas le retrait d'une entrée depuis l'onglet « Récents » (seul « Effacer la liste » le vide aussi), et il est indépendant de la liste de Trame.
 - Un projet **déplacé ou renommé** dans le Finder est vu comme introuvable (le chemin est la seule clé). Un disque externe débranché produit le même message.
 - Le fichier de la liste est partagé entre toutes les instances de l'application (une seule fenêtre est gérée aujourd'hui).
 

@@ -30,6 +30,23 @@ const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--use
 let exited = false
 app.on('exit', () => (exited = true))
 
+/** Autres instances d'Electron lancées sur la machine (hors celle du test). */
+async function otherElectronPids() {
+  const ps = await new Promise((resolve) => {
+    let out = ''
+    const p = spawn('ps', ['-axo', 'pid=,command='])
+    p.stdout.on('data', (d) => (out += d))
+    p.on('exit', () => resolve(out))
+  })
+  return ps
+    .split('\n')
+    .filter((l) => l.includes('/Electron.app/Contents/MacOS/Electron') && !l.includes('Helper'))
+    .map((l) => Number(l.trim().split(/\s+/)[0]))
+    .filter((pid) => pid && pid !== app.pid)
+}
+const bundle = resolve(electronPath, '../../..')
+const openWithApp = (...args) => new Promise((r) => spawn('open', args, { stdio: 'ignore' }).on('exit', r))
+
 const failures = []
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : ` ${detail}`}`)
@@ -37,10 +54,10 @@ const check = (name, ok, detail = '') => {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function connect() {
+async function connect(p = port) {
   for (let i = 0; i < 50; i++) {
     try {
-      const page = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((t) => t.type === 'page')
+      const page = (await (await fetch(`http://127.0.0.1:${p}/json`)).json()).find((t) => t.type === 'page')
       if (page) {
         const ws = new WebSocket(page.webSocketDebuggerUrl)
         await new Promise((resolve, reject) => ((ws.onopen = resolve), (ws.onerror = reject)))
@@ -52,6 +69,42 @@ async function connect() {
     await sleep(200)
   }
   throw new Error("L'application n'a pas démarré (build à jour ? lancer `npm run build`)")
+}
+
+async function coldStartTest() {
+  // association de fichiers : l'application n'est pas lancée et démarre à cause du fichier (double-clic à froid)
+  if (process.platform === 'darwin') {
+    const coldPort = port + 500
+    const coldFile = join(tmp, 'proj', 'demarrage-a-froid.trame')
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(coldFile, JSON.stringify({ version: 2, name: 'Froid', width: 200, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] }))
+    await openWithApp('-n', '-a', bundle, coldFile, '--args', root, `--remote-debugging-port=${coldPort}`, `--user-data-dir=${join(tmp, 'cold')}`)
+    try {
+      const ws = await connect(coldPort)
+      let title = ''
+      for (let i = 0; i < 40 && !title.startsWith('demarrage-a-froid'); i++) {
+        await sleep(250)
+        title = await new Promise((resolve) => {
+          ws.onmessage = (m) => resolve(JSON.parse(m.data).result?.result?.value ?? '')
+          ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: 'document.title', returnByValue: true } }))
+        })
+      }
+      check("double-clic dans le Finder (appli fermée) : elle démarre et ouvre le projet", title.startsWith('demarrage-a-froid'), title)
+      ws.close()
+    } catch (err) {
+      check("double-clic dans le Finder (appli fermée)", false, String(err))
+    } finally {
+      // arrêt de l'instance lancée par `open` (on n'a pas son pid) puis attente de sa disparition
+      spawn('pkill', ['-f', `remote-debugging-port=${coldPort}`], { stdio: 'ignore' })
+      for (let i = 0; i < 20; i++) {
+        await sleep(250)
+        const alive = await new Promise((resolve) =>
+          spawn('pgrep', ['-f', `remote-debugging-port=${coldPort}`], { stdio: 'ignore' }).on('exit', (code) => resolve(code === 0))
+        )
+        if (!alive) break
+      }
+    }
+  }
 }
 
 try {
@@ -140,21 +193,25 @@ try {
   await run(`window.trame.deleteUserTemplate(${JSON.stringify(saved[0]?.id)})`)
   check('suppression du modèle', (await tpls()).length === 0 && (await run(`window.trame.loadUserTemplate(${JSON.stringify(saved[0]?.id)})`)) === null)
 
+  // association de fichiers : ouverture depuis le Finder alors que l'application tourne
+  const finderFile = join(tmp, 'proj', 'ouvert-par-finder.trame')
+  const finderDoc = JSON.stringify({ version: 2, name: 'Ouvert', width: 200, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
+  await run(`window.trame.saveProject(${JSON.stringify(finderDoc)}, ${JSON.stringify(finderFile)}, 'Ouvert')`)
+  await run('location.reload()') // état propre : pas de confirmation native
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  if (process.platform === 'darwin' && !(await otherElectronPids()).length) {
+    await openWithApp('-a', bundle, finderFile)
+    for (let i = 0; i < 30 && !(await run('document.title')).startsWith('ouvert-par-finder'); i++) await sleep(200)
+    check('double-clic dans le Finder (appli ouverte) : le projet s\'ouvre', (await run('document.title')).startsWith('ouvert-par-finder'), await run('document.title'))
+  } else {
+    console.log('- ouverture depuis le Finder (appli ouverte) : ignorée (macOS, aucune autre instance d\'Electron)')
+  }
+
   // sortie avec modifications non enregistrées (régression : l'appli restait ouverte sans fenêtre)
   if (process.platform === 'darwin') {
     // AppleScript désigne l'application par son bundle, pas par un pid : si une autre instance d'Electron tourne
     // (par ex. `npm run dev`), elle recevrait aussi l'ordre de quitter. On ne lance alors pas ce test.
-    const ps = await new Promise((resolve) => {
-      let out = ''
-      const p = spawn('ps', ['-axo', 'pid=,command='])
-      p.stdout.on('data', (d) => (out += d))
-      p.on('exit', () => resolve(out))
-    })
-    const others = ps
-      .split('\n')
-      .filter((l) => l.includes('/Electron.app/Contents/MacOS/Electron') && !l.includes('Helper'))
-      .map((l) => Number(l.trim().split(/\s+/)[0]))
-      .filter((pid) => pid && pid !== app.pid)
+    const others = await otherElectronPids()
     if (others.length) {
       console.log(`- sortie avec modifications : ignorée (une autre instance d'Electron tourne : pid ${others.join(', ')})`)
     } else {
@@ -164,7 +221,6 @@ try {
       await run('location.reload()')
       for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
       await run('window.trame.setState({ dirty: true })')
-      const bundle = resolve(electronPath, '../../..')
       spawn('osascript', ['-e', `tell application ${JSON.stringify(bundle)} to quit`], { stdio: 'ignore' })
       for (let i = 0; i < 40 && !exited; i++) await sleep(250)
       check("⌘Q avec des modifications confirmées quitte vraiment l'application", exited)
@@ -173,6 +229,7 @@ try {
     console.log('- sortie avec modifications : ignorée (macOS uniquement)')
   }
   ws.close()
+  await coldStartTest()
 } catch (err) {
   check('exécution du test', false, String(err))
 } finally {

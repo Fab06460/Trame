@@ -28,7 +28,7 @@ export async function newProject(): Promise<void> {
 }
 
 /** Valide un fichier lu, demande de sauvegarder le document courant si besoin, puis le charge. */
-async function openFile(res: { path: string; json: string }): Promise<void> {
+export async function openFile(res: { path: string; json: string }): Promise<void> {
   let doc
   try {
     doc = parseDocument(res.json)

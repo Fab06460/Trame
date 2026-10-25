@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
 import { createCloseGuard } from './closeGuard'
+import { createFileInbox } from './fileInbox'
 import { addMeta, isValidId, parseTemplateIndex, removeMeta, sanitizeMeta, type TemplateMeta } from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
 
@@ -28,6 +29,7 @@ async function saveRecents(list: RecentEntry[]): Promise<void> {
 
 async function noteRecent(path: string): Promise<void> {
   await saveRecents(pushRecent(await loadRecents(), path, Date.now()))
+  app.addRecentDocument(path) // menu « Ouvrir récent » du Dock et du menu Pomme (macOS ; sans effet ailleurs)
 }
 
 // ── Modèles de l'utilisateur ──────────────────────────────────────────────────────────────────────────────
@@ -50,6 +52,8 @@ const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(tem
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
 let mainWindow: BrowserWindow | null = null
+/** Fichiers ouverts par le système, en attente d'un renderer prêt à les recevoir. */
+const fileInbox = createFileInbox<{ path: string; json: string }>()
 /** Intercepte la fermeture / la sortie tant que le renderer signale des modifications non enregistrées. */
 const closeGuard = createCloseGuard()
 
@@ -71,10 +75,12 @@ function createWindow(): void {
   })
 
   mainWindow = win
+  win.webContents.on('did-start-loading', () => fileInbox.onRendererGone())
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
   win.on('closed', () => {
     mainWindow = null
+    fileInbox.onRendererGone()
     closeGuard.onClosed()
   })
   // Fermeture avec des modifications : le renderer décide (enregistrer / ignorer / annuler) puis confirme.
@@ -141,7 +147,10 @@ ipcMain.handle('recent:list', async () => {
 })
 
 ipcMain.handle('recent:remove', async (_e, path: string) => saveRecents(removeRecent(await loadRecents(), path)))
-ipcMain.handle('recent:clear', () => saveRecents([]))
+ipcMain.handle('recent:clear', () => {
+  app.clearRecentDocuments()
+  return saveRecents([])
+})
 
 // Ouverture directe d'un chemin : réservée aux projets de la liste (le renderer ne peut pas lire un fichier arbitraire)
 ipcMain.handle('project:open-path', async (_e, path: string) => {
@@ -282,6 +291,34 @@ ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
 })
 
 app.on('before-quit', () => closeGuard.onBeforeQuit())
+
+// Double-clic sur un .trame, glisser sur l'icône, Dock « Ouvrir récent » (macOS). L'événement peut arriver
+// avant que l'application soit prête : le listener est donc enregistré dès le chargement du module.
+app.on('open-file', (event, path) => {
+  event.preventDefault()
+  void openFromSystem(path)
+})
+
+async function openFromSystem(path: string): Promise<void> {
+  await app.whenReady()
+  if (!path.endsWith('.trame')) return
+  let json: string
+  try {
+    json = await readFile(path, 'utf-8')
+  } catch (err) {
+    dialog.showErrorBox('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    return
+  }
+  await noteRecent(path)
+  if (!mainWindow) createWindow() // application ouverte sans fenêtre (macOS) : on en crée une, le fichier attend le renderer
+  const now = fileInbox.push({ path, json })
+  if (now) mainWindow?.webContents.send('app:open-file', now)
+  if (mainWindow?.isMinimized()) mainWindow.restore()
+  mainWindow?.focus()
+}
+
+// Le renderer écoute désormais : on lui remet le fichier reçu pendant le démarrage, s'il y en a un
+ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 
 app.whenReady().then(() => {
   createWindow()
