@@ -11,11 +11,12 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | ✅ Fait | 2 |
 | 🟡 Partiel | 4 |
 | ⬜ À faire | 6 |
-| 🔶 À faire, lourd | 4 |
+| 🔶 À faire, lourd | 1 |
+| 🚫 Écarté (IA) | 3 |
 | ⛔ Hors-ligne impossible | 4 |
 | **Total** | **20** |
 
-**Légende.** ✅ Fait · 🟡 Partiel (une partie existe) · ⬜ À faire, compatible hors-ligne · 🔶 À faire, compatible hors-ligne mais **lourd** (modèle d'IA local de dizaines de Mo à plusieurs Go, ou chantier de la taille d'un produit) · ⛔ Impossible hors-ligne (la fonctionnalité *est* un service en ligne).
+**Légende.** ✅ Fait · 🟡 Partiel (une partie existe) · ⬜ À faire, compatible hors-ligne · 🔶 À faire, compatible hors-ligne mais **lourd** (chantier de la taille d'un produit) · 🚫 **Écarté par décision** (IA locale : trop complexe pour le gain, 26/10/2026) · ⛔ Impossible hors-ligne (la fonctionnalité *est* un service en ligne).
 
 **Règle de tri** : une fonctionnalité est dite compatible hors-ligne si, une fois l'application installée, elle fonctionne sans réseau et sans compte. Un modèle d'IA **embarqué** dans l'application respecte ce critère mais a un coût (taille de l'installateur, licence, qualité) ; un modèle **téléchargé après coup** ne le respecte pas strictement.
 
@@ -35,19 +36,19 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Retouche photo | ⬜ À faire | Rien aujourd'hui sur les images (pas de recadrage, filtres, cadres). Recadrage, retournement, redressement, filtres, réglages de lumière, flou, cadres : faisables hors-ligne (canvas). La suppression d'arrière-plan l'est aussi, mais avec un modèle d'IA embarqué (de dizaines à centaines de Mo). | E8, E9, H1 |
-| Montage vidéo | 🔶 À faire, lourd | Faisable hors-ligne (lecture native, encodage avec ffmpeg embarqué, enregistrement d'écran natif d'Electron) mais c'est un produit à part entière. Les sous-titres automatiques demandent en plus un modèle de reconnaissance vocale local. | V1, V2, H5 |
+| Retouche photo | ⬜ À faire | Rien aujourd'hui sur les images (pas de recadrage, filtres, cadres). Recadrage, retournement, redressement, filtres, réglages de lumière, flou, cadres : faisables hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
+| Montage vidéo | 🔶 À faire, lourd | Faisable hors-ligne (lecture native, encodage avec ffmpeg embarqué, enregistrement d'écran natif d'Electron) mais c'est un produit à part entière. Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
 | Effets graphiques | ⬜ À faire | Pas d'ombre, de lueur, de contour ni de dégradé aujourd'hui. Tout est faisable hors-ligne ; en PDF ces effets obligent à une image pour l'élément concerné (voir risques). | E1, E2, E3 |
 
 ### 3. Intelligence artificielle
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Magic Write | 🔶 À faire, lourd | Un service en ligne par nature. Hors-ligne, seuls des modèles de langage locaux (plusieurs Go) sont possibles, avec une qualité et un poids discutables : option très tardive. Plus réaliste : correction orthographique (correcteur du système macOS). | H3, H4 |
+| Magic Write | 🚫 Écarté | Un service en ligne par nature. Hors-ligne, seuls des modèles de langage locaux (plusieurs Go) sont possibles, avec une qualité et un poids discutables : option très tardive. **Écarté.** Reste la correction orthographique (correcteur du système macOS), qui n'est pas de l'IA générative. | H3 |
 | Magic Media / générateurs IA | ⛔ Hors-ligne impossible | Génération d'images, vidéos et objets 3D : service en ligne (calcul sur GPU distants). Une génération locale est théoriquement possible mais hors de portée raisonnable (modèles de plusieurs Go, GPU). | — |
-| Magic Edit / Magic Eraser | 🔶 À faire, lourd | Effacer un objet = « inpainting » : possible avec un modèle local (centaines de Mo), qualité variable. La partie générative de Magic Edit est, elle, en ligne. | H2 |
+| Magic Edit / Magic Eraser | 🚫 Écarté | **Écarté** (IA). Effacer un objet = « inpainting » ; la partie générative de Magic Edit est de toute façon en ligne. | — |
 | Magic Expand | ⛔ Hors-ligne impossible | Étendre une photo suppose de **générer** du contenu : modèle génératif distant. | — |
-| Magic Grab | 🔶 À faire, lourd | Isoler un sujet = segmentation : même modèle local que la suppression d'arrière-plan. | H1 |
+| Magic Grab | 🚫 Écarté | **Écarté** (IA : segmentation d'image). | — |
 | Style Match | ⬜ À faire | Version algorithmique hors-ligne possible : extraire la palette d'une image et recolorier le design, sans IA générative. | C4 |
 
 ### 4. Image de marque et collaboration
@@ -88,6 +89,15 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | Mise à l'échelle proportionnelle + repositionnement ; texte redimensionné ; logique pure, très testable. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S |  | — |
 | E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | L'export PDF les intègre déjà via fontkit ; attention à l'avertissement « police inconnue » et aux licences. | — |
+| E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |
+| E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | Konva : `keepRatio`, `rotationSnaps`. | E6 |
+| E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | | — |
+| E16 | Retourner horizontalement / verticalement | M | Touche les 4 rendus (échelle négative). | — |
+| E17 | Nom du document modifiable (barre de titre, noms d'export) | S | Aujourd'hui figé à « Sans titre » ou au nom du modèle. | — |
+| E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | | E5 |
+| E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | | E6 |
+| E20 | Recherche / remplacement de texte dans le document | S | | — |
+| E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | Konva ne gère pas les listes : à composer. | E4 |
 
 ### Phase 2 — Contenus et identité de marque (bibliothèques, kit de marque, graphiques)
 
@@ -115,10 +125,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| H1 | Suppression d'arrière-plan / isolement d'un sujet (modèle local embarqué) | L | Modèle de dizaines à centaines de Mo ; **licence du modèle et de la bibliothèque** à vérifier (certains sont AGPL ou à usage commercial restreint). | E8 |
-| H2 | Gomme magique (effacer un objet, modèle local) | XL | Centaines de Mo ; qualité variable. | H1 |
 | H3 | Correction orthographique | S | Correcteur du système sur macOS (hors-ligne) : à vérifier au moment du développement ; ailleurs les dictionnaires doivent être embarqués. | — |
-| H4 | Assistant d'écriture local (modèle de langage embarqué) | XL | Plusieurs Go : probablement à proposer comme téléchargement facultatif, ce qui sort du « 100 % hors-ligne » à l'installation. | — |
 
 ### Phase 5 — Vidéo (hors périmètre à court terme)
 
@@ -126,12 +133,12 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | --- | --- | :---: | --- | --- |
 | V1 | Vidéo : importer des clips, découper, assembler, exporter en MP4 | XL | ffmpeg embarqué ; produit à part entière. | — |
 | V2 | Enregistrement d'écran | L | API native d'Electron, aucun réseau. | V1 |
-| H5 | Sous-titres automatiques (reconnaissance vocale locale) | XL |  | V1 |
 
 ## 3. Ce qui est volontairement écarté
 
 | Fonctionnalité | Pourquoi | Équivalent hors-ligne |
 | --- | --- | --- |
+| **Toute l'IA locale** : suppression d'arrière-plan, gomme magique, isolement d'un sujet, assistant d'écriture, sous-titres automatiques | **Décision du 26/10/2026** : trop complexe (modèles de dizaines de Mo à plusieurs Go, licences, qualité) pour le gain | Aucun ; recadrage, filtres, détourage manuel restent possibles |
 | Collaboration en temps réel, commentaires, validations | Réseau et serveur | Échange de fichiers `.trame`, packs de modèles |
 | Génération d'images, vidéos, 3D (Magic Media, Magic Expand) | Calcul sur des serveurs d'IA | Aucun raisonnable |
 | Intégrations Slack, Teams, YouTube, Google Photos, planificateurs de publication | Appels réseau par nature | Dépôt de fichiers depuis le Finder, export dans un dossier, feuille de partage du système |
@@ -142,11 +149,11 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 1. **Quatre rendus à tenir synchronisés.** Chaque nouvel élément ou nouvelle propriété visuelle (contour, dégradé, ombre, filtre, graphique…) doit être écrit dans l'éditeur, l'export image, l'export PDF et les miniatures (voir `docs/ARCHITECTURE.md`). C'est le principal multiplicateur de coût de ce backlog ; `npm run fidelity` doit être étendu à chaque fois.
 2. **Effets et PDF.** Ombres, lueurs et flous n'existent pas comme objets vectoriels simples dans un PDF. Décision à prendre : (a) l'élément entier passe en image dans le PDF (simple, mais le texte n'est plus sélectionnable et l'avertissement en direct doit le signaler) ; (b) l'ombre est une image séparée placée sous un **vrai** texte (plus fidèle à l'esprit « texte sélectionnable », plus de travail).
 3. **Format de fichier.** Les nouveaux champs d'éléments (contour, dégradé, filtres, verrouillage, kit de marque…) feront passer le `.trame` en **version 3** avec migration (voir `docs/FILE_FORMAT.md`) ; les champs optionnels sans effet par défaut n'exigent pas de nouvelle version.
-4. **Licences des ressources embarquées.** Icônes, illustrations, polices (SIL OFL), modèles d'IA : vérifier que la licence autorise la redistribution dans une application ; conserver les mentions requises (écran « À propos »).
-5. **Poids de l'application.** Elle pèse aujourd'hui ~260 Mo installée (116 Mo en DMG), presque tout Chromium. Un modèle d'IA de 40 à 200 Mo, un jeu d'icônes ou un ffmpeg embarqué s'ajoutent directement ; le DMG est signé et notarisé à chaque version, ce qui allonge le cycle.
-6. **Vidéo et IA locale** sont des produits dans le produit : à n'engager qu'après les phases 1 à 3, et seulement si le besoin est confirmé.
+4. **Licences des ressources embarquées.** Icônes, illustrations, polices (SIL OFL) : vérifier que la licence autorise la redistribution dans une application ; conserver les mentions requises (écran « À propos »).
+5. **Poids de l'application.** Elle pèse aujourd'hui ~260 Mo installée (116 Mo en DMG), presque tout Chromium. Un jeu d'icônes ou un ffmpeg embarqué s'ajoutent directement ; le DMG est signé et notarisé à chaque version, ce qui allonge le cycle.
+6. **La vidéo** est un produit dans le produit : à n'engager qu'après les phases 1 à 3, et seulement si le besoin est confirmé.
 
 ## 5. Par où commencer
 
-Ordre conseillé, du meilleur rapport valeur/effort au plus coûteux, en suivant les fonctionnalités nommées dans FEATURES.md : **Magic Resize (E10)**, puis **effets et typographie (E1–E4)**, **retouche d'image (E8–E9)**, **kit de marque (E11, E12, C5)** avec le verrouillage de calques (E5) qui ouvre les **modèles de marque (C6)**, puis les **bibliothèques embarquées (C1, C2)** et les **outils PDF/présentation (D1–D5)**.
+**Objectif retenu (26/10/2026) : une alternative crédible à Canva, donc d'abord les petits manques d'édition** (règles, guides, aimantation, position numérique…), puis le reste de la phase 1. Ordre : **E13** (position/taille numériques), **E6** (règles, guides, aimantation), **E14–E15** (poignées, Alt-glisser), **E5** (calques), puis Magic Resize et la suite : **Magic Resize (E10)**, puis **effets et typographie (E1–E4)**, **retouche d'image (E8–E9)**, **kit de marque (E11, E12, C5)** avec le verrouillage de calques (E5) qui ouvre les **modèles de marque (C6)**, puis les **bibliothèques embarquées (C1, C2)** et les **outils PDF/présentation (D1–D5)**.
 
