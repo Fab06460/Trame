@@ -8,10 +8,11 @@ import { applyBuiltinTemplate, hideBuiltinTemplate, renameBuiltinTemplate, resto
 import { TemplateCard } from './TemplateCard'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
+import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
 
-type Tab = 'recents' | 'templates' | 'elements' | 'layers'
+type Tab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand'
 
 const TEXT_PRESETS = [
   { label: 'Titre', fontSize: 110, fontStyle: 'bold', text: 'Titre' },
@@ -58,9 +59,12 @@ export function Sidebar(): React.JSX.Element {
         <button className={tab === 'templates' ? 'active' : ''} onClick={() => setTab('templates')}>Modèles</button>
         <button className={tab === 'elements' ? 'active' : ''} onClick={() => setTab('elements')}>Éléments</button>
         <button className={tab === 'layers' ? 'active' : ''} onClick={() => setTab('layers')}>Calques</button>
+        <button className={tab === 'brand' ? 'active' : ''} onClick={() => setTab('brand')}>Marque</button>
       </div>
 
       {tab === 'layers' && <LayersPanel />}
+
+      {tab === 'brand' && <BrandPanel />}
 
       {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}
 

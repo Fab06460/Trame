@@ -6,6 +6,7 @@ import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
 import { ImagePanel } from './ImagePanel'
+import { useBrand } from '@/store/brand'
 import { PageSize } from './PageSize'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
@@ -28,7 +29,7 @@ export function Properties(): React.JSX.Element {
         <PageSize />
         <label>
           Arrière-plan
-          <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} />
+          <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
         </label>
       </aside>
     )
@@ -176,7 +177,7 @@ export function Properties(): React.JSX.Element {
         el.type !== 'image' && (
           <label>
             Couleur
-            <input type="color" value={el.fill} onPointerDown={beginChange} onChange={(e) => live({ fill: e.target.value })} />
+            <input type="color" value={el.fill} onPointerDown={beginChange} onChange={(e) => live({ fill: e.target.value })} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
           </label>
         )
       )}

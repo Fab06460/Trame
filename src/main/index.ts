@@ -147,6 +147,21 @@ ipcMain.handle('project:open', async (e) => {
   }
 })
 
+// kit de marque : un fichier JSON dans le dossier de données ; la validation du contenu est faite par l'interface (brandKit.ts)
+const brandFile = (): string => join(app.getPath('userData'), 'brand-kit.json')
+const MAX_BRAND_BYTES = 40_000_000
+
+ipcMain.handle('brand:load', async () => readFile(brandFile(), 'utf-8').catch(() => null))
+ipcMain.handle('brand:save', async (_e, json: unknown) => {
+  if (typeof json !== 'string' || json.length > MAX_BRAND_BYTES) return false
+  try {
+    await writeFile(brandFile(), json, 'utf-8')
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('recent:list', async () => {
   const home = homedir()
   return Promise.all(

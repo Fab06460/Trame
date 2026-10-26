@@ -31,6 +31,9 @@ const api = {
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
+  /** Kit de marque (JSON brut, à valider côté interface) ; null s'il n'existe pas encore. */
+  loadBrandKit: (): Promise<string | null> => ipcRenderer.invoke('brand:load'),
+  saveBrandKit: (json: string): Promise<boolean> => ipcRenderer.invoke('brand:save', json),
   listRecents: (): Promise<RecentProject[]> => ipcRenderer.invoke('recent:list'),
   removeRecent: (path: string): Promise<void> => ipcRenderer.invoke('recent:remove', path),
   clearRecents: (): Promise<void> => ipcRenderer.invoke('recent:clear'),

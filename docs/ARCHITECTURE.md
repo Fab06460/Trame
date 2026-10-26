@@ -34,6 +34,7 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 | `project:open`   | `openProject()`                  | Dialogue d'ouverture ; retourne `{ path, json }` ou `null`   |
 | `image:pick`     | `pickImage()`                    | Dialogue d'image ; retourne une **data URL** base64          |
 | `export:save`    | `saveExport(dataUrl, name)`      | Décode une data URL (PNG, JPG ou PDF) et l'écrit sur disque  |
+| `brand:load` / `brand:save` | `loadBrandKit()` / `saveBrandKit(json)` | Kit de marque : JSON brut dans `brand-kit.json` (`userData`, 40 Mo max). Le contenu est validé côté interface (`parseBrandKit`) |
 | `recent:list` / `recent:remove` / `recent:clear` | `listRecents()` / `removeRecent(path)` / `clearRecents()` | Projets récents, persistés dans `recent-projects.json` du dossier de données de l'application (`userData`). `listRecents` ajoute `name`, `dir` (`~` abrégé) et `modified` (`null` si le fichier a disparu) |
 | `templates:rename` / `templates:hidden` / `templates:hide` / `templates:unhide-all` | `renameUserTemplate(id, name)` / `listHiddenTemplates()` / `hideBuiltinTemplate(id)` / `unhideAllTemplates()` | Renommer un modèle personnel ; gérer la liste des modèles **intégrés masqués** (`templates/hidden.json`). Les identifiants sont validés (`isValidId` pour les modèles personnels, `isBuiltinId` pour les intégrés) |
 | `templates:list` / `templates:save` / `templates:load` / `templates:delete` | `listUserTemplates()` / `saveUserTemplate(meta, json, replaceId?)` / `loadUserTemplate(id)` / `deleteUserTemplate(id)` | Modèles de l'utilisateur (voir ci-dessous). `save` génère l'identifiant côté main ; les identifiants reçus sont validés (`isValidId`) avant de construire un chemin de fichier |
@@ -150,6 +151,10 @@ Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quan
 ## Copier-coller
 
 `clipboardActions.ts` : ⌘C / ⌘X / ⌘V sont interceptés dans `App.tsx` (hors champs de saisie) et passent par le presse-papiers **système** via IPC, ce qui permet de coller entre pages, entre documents (autre fenêtre ou fichier ouvert plus tard) et de coller une capture d'écran ou du texte venant d'une autre application. Écrire dans le presse-papiers remplace tout son contenu : la copie la plus récente l'emporte toujours. `pasteElements` (store) régénère les identifiants et les `groupId`, décale de 30 px tant que la copie se superposerait pile à un élément existant, recentre si tout est hors de la page (format différent), et crée un seul cran d'historique. Image collée : insérée à 60 % de la page au plus ; texte collé : nouveau bloc de texte (5 000 caractères max).
+
+## Kit de marque
+
+Onglet « Marque » (`BrandPanel.tsx`). Le kit (`brandKit.ts`, pur et testé : couleurs `#rrggbb`, polices = familles de `FONTS`, logos = data URL d'image ≤ 3 M caractères ; limites 24 / 8 / 12) est **hors des documents**, dans `userData/brand-kit.json` via IPC ; `parseBrandKit` écarte tout ce qui est invalide à la lecture. `store/brand.ts` le garde en mémoire et le réécrit à chaque changement. Les **couleurs récentes** (12 max) sont dans `localStorage` (`trame.recentColors`) : seul un confort, jamais critique. `brandActions.ts` : `applyColor` (sélection hors images, sinon fond de la page, un seul cran d'historique), `applyFont` (textes sélectionnés, sinon crée un texte), `pickScreenColor` (pipette `EyeDropper`, absente = bouton masqué). Un logo se place avec `insertImage`.
 
 ## Listes à puces et numérotées
 
