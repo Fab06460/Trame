@@ -104,6 +104,7 @@ FEATURES.md              Notes de référence sur les fonctionnalités de Canva 
 
 ## Documentation
 
+- [Feuille de route](docs/ROADMAP.md) : fonctionnalités de Canva (`FEATURES.md`) à implémenter, triées selon le prérequis hors-ligne
 - [Architecture](docs/ARCHITECTURE.md) : processus, flux de données, store, historique, rendu
 - [Format de fichier `.trame`](docs/FILE_FORMAT.md) : schéma, versions, migration
 - [Packaging et distribution macOS](docs/PACKAGING.md) : build du `.dmg`, signature, notarisation, pièges
