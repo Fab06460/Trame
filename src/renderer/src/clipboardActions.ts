@@ -17,13 +17,13 @@ export function parseElements(json: string): TrameElement[] {
 }
 
 /** Ajoute une image (data URL) au centre de la page, réduite pour tenir dans 60 % du design. */
-export function insertImage(src: string): Promise<void> {
+export function insertImage(src: string, extra: Partial<TrameElement> = {}): Promise<void> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
       const { doc, addElement } = useEditor.getState()
       const ratio = Math.min(1, (doc.width * 0.6) / img.width, (doc.height * 0.6) / img.height)
-      addElement({ type: 'image', src, width: img.width * ratio, height: img.height * ratio })
+      addElement({ type: 'image', src, width: img.width * ratio, height: img.height * ratio, ...extra })
       resolve()
     }
     img.onerror = () => resolve()

@@ -43,6 +43,16 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
         </button>
       </div>
 
+      {el.credit && (
+        <>
+          <h4>Crédit</h4>
+          <p className="hint" data-field="credit">{el.credit}</p>
+          <button data-action="copy-credit" onClick={() => void navigator.clipboard.writeText(el.credit!).catch(() => {})}>
+            Copier le crédit
+          </button>
+        </>
+      )}
+
       <h4>Recadrage</h4>
       <div className="num-grid">
         <NumberField label="Gauche" field="cropLeft" value={inset.left} min={0} max={95} suffix="%" onCommit={(v) => setInset('left', v)} />

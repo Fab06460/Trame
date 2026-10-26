@@ -12,6 +12,7 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { readdirSync } from 'node:fs'
+import { createServer } from 'node:http'
 import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
@@ -70,7 +71,32 @@ const tmp = await mkdtemp(join(tmpdir(), 'trame-smoke-'))
 await mkdir(join(tmp, 'proj'))
 await mkdir(join(tmp, 'exports'))
 
-const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports') }
+// faux serveur Openverse (le vrai n'est jamais contacté par les tests) : photos, miniatures, erreurs
+const photoRequests = []
+const photoServer = createServer((req, res) => {
+  const url = new URL(req.url, 'http://x')
+  photoRequests.push({ path: url.pathname, query: url.searchParams, ua: req.headers['user-agent'] ?? '' })
+  const base = `http://127.0.0.1:${photoServer.address().port}`
+  const png = (w, h) => { res.writeHead(200, { 'content-type': 'image/png' }); res.end(testPng(w, h)) }
+  if (url.pathname === '/v1/images/') {
+    const q = url.searchParams.get('q'), page = url.searchParams.get('page')
+    if (q === 'limite') { res.writeHead(429); return res.end('{}') }
+    if (q === 'horsligne') return req.socket.destroy()
+    res.writeHead(200, { 'content-type': 'application/json' })
+    const results = q === 'vide' ? [] : page === '2'
+      ? [{ id: 'c3', title: 'Troisième', creator: 'Cléo', license: 'cc0', license_version: '1.0', url: `${base}/img/a.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/c3`, width: 800, height: 400 }]
+      : [
+          { id: 'a1', title: 'Montagne', creator: 'Ada', license: 'by', license_version: '4.0', url: `${base}/img/a.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/a1`, width: 800, height: 400 },
+          { id: 'b2', title: 'Lac', creator: 'Bob', license: 'by-sa', license_version: '3.0', url: `${base}/img/absent.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/b2`, width: 800, height: 400 }
+        ]
+    return res.end(JSON.stringify({ result_count: 3, page_count: 2, page_size: 2, page: Number(page), results }))
+  }
+  if (url.pathname === '/img/a.png') return png(800, 400)
+  if (url.pathname === '/thumb/a.png') return png(80, 40)
+  res.writeHead(404); res.end()
+})
+await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
+const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`], {
   env,
@@ -957,6 +983,50 @@ try {
   check('aller-retour : rectangle et image au même endroit', Math.abs(rtBox[0] - 124) < 8 && Math.abs(rtBox[2] - 255) < 8 && isRed(rtImg), JSON.stringify([rtBox, rtImg]))
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
+  // photos en ligne : recherche (faux serveur Openverse), insertion, repli sur la miniature, pagination, erreurs, crédits
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('.sidebar .tabs button', 'Photos')
+  await sleep(300)
+  const search = async (q) => {
+    await run(`document.querySelector('[data-field="photoQuery"]').focus(); document.querySelector('[data-field="photoQuery"]').select()`)
+    await cdp('Input.insertText', { text: q })
+    await clickSel('[data-action="photo-search"]')
+  }
+  check('aucune requête réseau avant la première recherche', photoRequests.length === 0)
+  await search('montagne')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo]')) < 2; i++) await sleep(250)
+  check('la recherche affiche 2 photos avec leur licence', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo="a1"] .photo-license').innerText`)) === 'CC BY 4.0')
+  const searchReq = photoRequests.find((r) => r.path === '/v1/images/')
+  check('requête : mot-clé, licences commerciales et modifiables, 20 résultats, User-Agent Trame', searchReq?.query.get('q') === 'montagne' && searchReq.query.get('license_type') === 'commercial,modification' && searchReq.query.get('page_size') === '20' && searchReq.ua.startsWith('Trame/'), JSON.stringify([searchReq?.query.toString(), searchReq?.ua]))
+  check('« Plus de résultats » est proposé (2 pages)', (await nBrand('[data-action="photo-more"]')) === 1)
+  const photoThumbsBefore = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
+  await clickSel('[data-photo="a1"]')
+  for (let i = 0; i < 60 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === before; i++) await sleep(250)
+  check('un clic sur une photo l\'insère dans la page', (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === photoThumbsBefore + 1)
+  await clickSel('[data-photo="b2"]')
+  for (let i = 0; i < 60 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) < photoThumbsBefore + 2; i++) await sleep(250)
+  check('original indisponible (404) : la miniature de l\'API est insérée à la place', (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === photoThumbsBefore + 2)
+  check('l\'original a bien été demandé d\'abord, puis la miniature', photoRequests.some((r) => r.path === '/img/absent.png'))
+  await sleep(300)
+  check('le crédit de la photo insérée est affiché dans ses propriétés', (await run(`document.querySelector('.panel [data-field="credit"]')?.innerText ?? ''`)).includes('« Lac » par Bob (CC BY-SA 3.0)'))
+  check('la section Crédits propose de copier les crédits du document', (await nBrand('[data-action="photo-credits"]')) === 1)
+  await clickSel('[data-action="photo-more"]')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo]')) < 3; i++) await sleep(250)
+  check('« Plus de résultats » ajoute la page suivante', (await nBrand('[data-photo]')) === 3 && (await nBrand('[data-action="photo-more"]')) === 0)
+  await search('limite')
+  for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) === 0; i++) await sleep(250)
+  check('limite de requêtes (429) : message dédié', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'rate-limit')
+  await search('horsligne')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'offline'; i++) await sleep(250)
+  check('service injoignable : message « hors ligne » (l\'appli reste utilisable)', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'offline')
+  await search('vide')
+  for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) !== 0; i++) await sleep(250)
+  check('recherche sans résultat : message dédié', (await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'))
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
@@ -1186,6 +1256,7 @@ try {
   check('exécution du test', false, String(err))
 } finally {
   if (!exited) app.kill()
+  photoServer.close()
   await rm(tmp, { recursive: true, force: true })
 }
 

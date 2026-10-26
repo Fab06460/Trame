@@ -32,6 +32,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "stroke": "#7c5cff",     // optionnel : couleur du contour (avec strokeWidth)
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
           "strokeDashed": true,    // optionnel : contour en tirets
+          "credit": "« Montagne » par Ada (CC BY 4.0) — https://…",  // optionnel (images) : crédit d'une photo en ligne
           "pdfSource": { "id": "a1B2c3D4", "page": 1 },  // optionnel (images) : page d'origine d'un PDF importé (voir « sources »)
           "crop": { "x": 0.25, "y": 0, "width": 0.75, "height": 1 },  // optionnel (images) : zone visible, en fractions de l'image d'origine
           "flipX": true, "flipY": true,                                 // optionnel (images) : miroirs

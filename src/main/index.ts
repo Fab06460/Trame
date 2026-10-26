@@ -4,6 +4,8 @@ import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
+import type { PhotoSearchResult } from '../preload'
+import { MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, imageMime, isAllowedUrl, parseSearch, searchUrl, type Photo } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { createFileInbox } from './fileInbox'
 import {
@@ -365,6 +367,88 @@ async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ nam
   }
   return { name: basename(path).replace(new RegExp(`\\.${ext}$`, 'i'), ''), bytes: new Uint8Array(await readFile(path)) }
 }
+
+// --- Photos libres (Openverse) -------------------------------------------------------------------------------------------------
+// Tout le réseau passe par le processus principal : l'interface n'a pas le droit de contacter un site tiers (CSP), ne reçoit que des
+// images déjà téléchargées (data URL) et ne peut jamais faire télécharger une adresse de son choix (seules celles d'une recherche).
+// TRAME_OPENVERSE_URL (tests de bout en bout) remplace le serveur et autorise http://127.0.0.1.
+const OPENVERSE = process.env.TRAME_OPENVERSE_URL || OPENVERSE_BASE
+const ALLOW_LOCAL = !!process.env.TRAME_OPENVERSE_URL
+let lastPhotos = new Map<string, Photo>()
+
+class NetworkError extends Error {
+  constructor(public kind: 'offline' | 'rate-limit' | 'unavailable') {
+    super(kind)
+  }
+}
+
+async function download(url: string, maxBytes: number, accept: string): Promise<{ bytes: Buffer; contentType: string | null }> {
+  if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable')
+  let res: Response
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { 'User-Agent': `Trame/${app.getVersion()} (éditeur de visuels de bureau)`, Accept: accept } })
+  } catch {
+    throw new NetworkError('offline') // pas de réseau, DNS, délai dépassé
+  }
+  if (res.status === 429) throw new NetworkError('rate-limit')
+  if (!res.ok || !isAllowedUrl(res.url || url, ALLOW_LOCAL)) throw new NetworkError('unavailable')
+  const declared = Number(res.headers.get('content-length') ?? 0)
+  if (declared > maxBytes) throw new NetworkError('unavailable')
+  const bytes = Buffer.from(await res.arrayBuffer())
+  if (bytes.length > maxBytes) throw new NetworkError('unavailable')
+  return { bytes, contentType: res.headers.get('content-type') }
+}
+
+const asDataUrl = (d: { bytes: Buffer; contentType: string | null }): string | null => {
+  const mime = imageMime(d.contentType)
+  return mime ? `data:${mime};base64,${d.bytes.toString('base64')}` : null
+}
+
+
+ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown): Promise<PhotoSearchResult> => {
+  if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1 }
+  try {
+    const res = await download(searchUrl(OPENVERSE, query, typeof page === 'number' ? page : 1), 2_000_000, 'application/json')
+    const found = parseSearch(JSON.parse(res.bytes.toString('utf-8')), ALLOW_LOCAL)
+    // miniatures téléchargées ici (6 à la fois) : l'interface ne contacte jamais le site de l'image
+    const photos: Extract<PhotoSearchResult, { ok: true }>['photos'] = []
+    const queue = [...found.photos]
+    await Promise.all(
+      Array.from({ length: 6 }, async () => {
+        for (let p = queue.shift(); p; p = queue.shift()) {
+          try {
+            const thumb = asDataUrl(await download(p.thumbnailUrl, MAX_THUMB_BYTES, 'image/*'))
+            if (thumb) photos.push({ id: p.id, title: p.title, creator: p.creator, license: p.license, credit: p.credit, width: p.width, height: p.height, thumb })
+          } catch {
+            /* une miniature indisponible : la photo est simplement absente de la liste */
+          }
+        }
+      })
+    )
+    const order = new Map(found.photos.map((p, i) => [p.id, i]))
+    photos.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+    lastPhotos = new Map(found.photos.map((p) => [p.id, p]))
+    return { ok: true, photos, page: found.page, pageCount: found.pageCount }
+  } catch (err) {
+    return { ok: false, error: err instanceof NetworkError ? err.kind : 'unavailable' }
+  }
+})
+
+/** Télécharge la photo choisie (l'original, sinon la miniature de l'API) : retourne une data URL, copiée ensuite dans le document. */
+ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: 'offline' | 'rate-limit' | 'unavailable' }> => {
+  const photo = typeof id === 'string' ? lastPhotos.get(id) : undefined
+  if (!photo) return { ok: false, error: 'unavailable' }
+  let lastError: NetworkError = new NetworkError('unavailable')
+  for (const url of [photo.url, photo.thumbnailUrl]) {
+    try {
+      const dataUrl = asDataUrl(await download(url, MAX_IMAGE_BYTES, 'image/*'))
+      if (dataUrl) return { ok: true, dataUrl, credit: photo.credit, title: photo.title }
+    } catch (err) {
+      if (err instanceof NetworkError) lastError = err
+    }
+  }
+  return { ok: false, error: lastError.kind }
+})
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))
 ipcMain.handle('pptx:pick', () => pickImportFile('pptx', 'PowerPoint'))

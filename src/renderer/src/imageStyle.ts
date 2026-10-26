@@ -106,6 +106,8 @@ export function recrop(el: Pick<TrameElement, 'x' | 'y' | 'width' | 'height' | '
 /** Nettoyage à la lecture : recadrage, miroirs et réglages invalides sont retirés (jamais devinés). Modifie en place. */
 export function sanitizeImageStyle(element: object): void {
   const e = element as Record<string, unknown>
+  if (typeof e.credit !== 'string' || !e.credit.trim()) delete e.credit
+  else e.credit = e.credit.slice(0, 400)
   if (e.crop !== undefined) {
     const c = e.crop as Partial<Crop> | null
     if (!c || !isNum(c.x) || !isNum(c.y) || !isNum(c.width) || !isNum(c.height) || c.width <= 0 || c.height <= 0) delete e.crop

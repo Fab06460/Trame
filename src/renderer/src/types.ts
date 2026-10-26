@@ -97,6 +97,8 @@ export interface TrameElement {
   src?: string
   /** image de fond issue d'un PDF importé : page d'origine (à partir de 1) du PDF stocké dans `TrameDocument.sources` ; l'export PDF la remet en vectoriel */
   pdfSource?: { id: string; page: number }
+  /** crédit d'une photo en ligne (auteur, licence, page d'origine), à citer si la licence l'exige */
+  credit?: string
   /** recadrage : la zone de l'image d'origine qui remplit la boîte de l'élément */
   crop?: Crop
   /** miroir horizontal / vertical (images) */
