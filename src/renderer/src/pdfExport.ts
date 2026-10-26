@@ -1,7 +1,7 @@
 import Konva from 'konva'
 import { fontkit, type FontkitFont } from '@/fontkit'
 import {
-  PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFImage, PDFName, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
+  PDFArray, PDFDict, PDFDocument, PDFEmbeddedPage, PDFFont, PDFHexString, PDFImage, PDFName, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
   beginText, concatTransformationMatrix, endText, moveText, popGraphicsState, pushGraphicsState, rgb,
   TextRenderingMode, setCharacterSpacing, setDashPattern, setFillingColor, setFontAndSize, setGraphicsState, setLineWidth,
   appendBezierCurve, clip, closePath, endPath, lineTo, moveTo, setStrokingColor, setTextRenderingMode
@@ -51,7 +51,7 @@ export async function exportPdf(doc: TrameDocument): Promise<PdfExportResult> {
   pdf.setCreator('Trame')
   const w = doc.width * PT_PER_PX
   const h = doc.height * PT_PER_PX
-  const ctx = new ExportContext(pdf, h)
+  const ctx = new ExportContext(pdf, h, doc.sources)
   for (const [pageIndex, page] of doc.pages.entries()) {
     const p = pdf.addPage([w, h])
     ctx.page = pageIndex + 1
@@ -70,8 +70,35 @@ class ExportContext {
 
   constructor(
     private pdf: PDFDocument,
-    private pageHeight: number
+    private pageHeight: number,
+    private sources: Record<string, string> = {}
   ) {}
+
+  /** PDF d'origine chargés (une fois) et pages déjà intégrées : un fond importé redevient la page vectorielle d'origine. */
+  private sourceDocs = new Map<string, PDFDocument | null>()
+  private sourcePages = new Map<string, PDFEmbeddedPage | null>()
+
+  private async embedSourcePage(el: TrameElement): Promise<PDFEmbeddedPage | null> {
+    const ref = el.pdfSource
+    if (!ref || !this.sources[ref.id]) return null
+    const key = `${ref.id}:${ref.page}`
+    if (this.sourcePages.has(key)) return this.sourcePages.get(key) ?? null
+    let page: PDFEmbeddedPage | null = null
+    try {
+      if (!this.sourceDocs.has(ref.id)) this.sourceDocs.set(ref.id, await PDFDocument.load(this.sources[ref.id], { ignoreEncryption: false }).catch(() => null))
+      const src = this.sourceDocs.get(ref.id)
+      const srcPage = src && ref.page <= src.getPageCount() ? src.getPage(ref.page - 1) : null
+      // une page tournée (/Rotate) serait mal orientée : l'image de fond, qui suit l'affichage, est alors plus fidèle
+      if (srcPage && srcPage.getRotation().angle === 0) {
+        const box = srcPage.getCropBox()
+        page = await this.pdf.embedPage(srcPage, { left: box.x, bottom: box.y, right: box.x + box.width, top: box.y + box.height })
+      }
+    } catch {
+      page = null // source illisible : repli sur l'image
+    }
+    this.sourcePages.set(key, page)
+    return page
+  }
 
   async drawElement(p: PDFPage, el: TrameElement): Promise<void> {
     // 1. Cas rendus ENTIÈREMENT en image, décidés avant toute opération de dessin (pour ne jamais dessiner une ombre deux fois) :
@@ -124,8 +151,13 @@ class ExportContext {
           p.pushOperators(popGraphicsState())
         }
       } else if (el.type === 'image' && el.src) {
-        const img = hasImageEdits(el) ? await this.pdf.embedPng(decodeDataUrl(await editedPng(el))!.bytes) : await this.embedImage(el.src)
-        p.drawImage(img, { x: 0, y: -el.height, width: el.width, height: el.height, opacity: el.opacity })
+        const source = hasImageEdits(el) ? null : await this.embedSourcePage(el)
+        if (source) {
+          p.drawPage(source, { x: 0, y: -el.height, width: el.width, height: el.height, opacity: el.opacity })
+        } else {
+          const img = hasImageEdits(el) ? await this.pdf.embedPng(decodeDataUrl(await editedPng(el))!.bytes) : await this.embedImage(el.src)
+          p.drawImage(img, { x: 0, y: -el.height, width: el.width, height: el.height, opacity: el.opacity })
+        }
         // Konva trace le contour d'une image après l'image : un rectangle, sans remplissage
         if (stroke) p.drawSvgPath(roundedRectPath(el.width, el.height, 0), { x: 0, y: 0, ...border })
       } else if (el.type === 'text') {

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
 import { adaptDocument } from '@/magicResize'
+import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
 import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
@@ -88,6 +89,7 @@ export function parseDocument(json: string): TrameDocument {
       else e.name = e.name.slice(0, 80)
     }
   }
+  sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
   return { ...doc, name: cleanDocName(doc.name) }
 }
 

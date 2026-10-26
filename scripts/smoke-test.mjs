@@ -855,6 +855,18 @@ try {
   await sleep(500)
   check('mode image : la page ne contient qu\'un calque (l\'image)', (await nBrand('.layer')) === 1, String(await nBrand('.layer')))
   check('mode image : aucun texte reconstruit', !(await run(`document.querySelector('.page-item.current .thumb').innerText`)).includes('Bonjour'))
+  // annotation vectorielle : on ajoute un texte, on exporte → la page d'origine redevient du vrai PDF (aucune image), annotation par-dessus
+  await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+  await cdp('Input.insertText', { text: 'Sans titre' })
+  await run(`document.querySelector('.doc-name').blur()`)
+  await sleep(300)
+  await click('header.toolbar button', 'Texte')
+  await sleep(400)
+  const annotated = await exportPdfText()
+  const hexOrLiteral = (s) => s.includes('Bonjour') || s.includes('426f6e6a6f7572') || s.includes('426F6E6A6F7572')
+  check('PDF annoté : la page d\'origine est intégrée en vectoriel (aucune image dans le PDF)', !lastPdfRaw.includes('/Subtype /Image'), 'image trouvée')
+  check('PDF annoté : le texte d\'origine est toujours là (objet formulaire)', lastPdfRaw.includes('/Subtype /Form') && (hexOrLiteral(annotated) || hexOrLiteral(lastPdfRaw)))
+  check('PDF annoté : l\'annotation ajoutée est du vrai texte (TJ)', annotated.includes(' TJ'))
 
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')

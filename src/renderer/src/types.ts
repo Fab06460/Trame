@@ -95,6 +95,8 @@ export interface TrameElement {
   path?: string
   // image
   src?: string
+  /** image de fond issue d'un PDF importé : page d'origine (à partir de 1) du PDF stocké dans `TrameDocument.sources` ; l'export PDF la remet en vectoriel */
+  pdfSource?: { id: string; page: number }
   /** recadrage : la zone de l'image d'origine qui remplit la boîte de l'élément */
   crop?: Crop
   /** miroir horizontal / vertical (images) */
@@ -124,6 +126,8 @@ export interface TrameDocument {
   width: number
   height: number
   pages: TramePage[]
+  /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */
+  sources?: Record<string, string>
 }
 
 declare global {

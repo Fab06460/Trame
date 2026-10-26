@@ -3,6 +3,7 @@ import * as pdfjs from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { groupLines, groupParagraphs, lineHeightOf, matchFont, type Paragraph, type PdfTextItem } from '@/pdfImport/layout'
+import { MAX_SOURCE_CHARS } from '@/pdfSources'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -21,6 +22,8 @@ export interface ImportOptions {
   mode: ImportMode
   /** nombre de pages à importer (les premières) */
   pages: number
+  /** PDF d'origine : en mode « page en image », il est conservé dans le document pour que l'export redonne les pages en vectoriel */
+  source?: Uint8Array
   onProgress?: (done: number, total: number) => void
 }
 
@@ -32,7 +35,17 @@ export interface ImportReport {
   substitutedFonts: string[]
   /** paragraphes laissés dans l'image de fond (texte que pdf.js n'a pas pu séparer du dessin) */
   keptAsImage: number
+  /** le PDF d'origine est trop volumineux pour être conservé : l'export utilisera l'image de fond */
+  sourceDropped: boolean
 }
+
+const toBase64 = (bytes: Uint8Array): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve((fr.result as string).split(',')[1] ?? '')
+    fr.onerror = () => reject(fr.error)
+    fr.readAsDataURL(new Blob([bytes as BlobPart]))
+  })
 
 export async function openPdf(bytes: Uint8Array): Promise<PDFDocumentProxy> {
   return pdfjs.getDocument({ data: bytes.slice(), useSystemFonts: true, fontExtraProperties: true }).promise
@@ -171,6 +184,17 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
   let texts = 0
   let kept = 0
   const pages: TramePage[] = []
+  // conservation du PDF d'origine (annotation vectorielle) : seulement en mode « page en image », où le fond contient déjà le texte
+  const sourceId = nanoid(8)
+  let sourceData: string | null = null
+  let sourceDropped = false
+  if (options.mode === 'image' && options.source) {
+    sourceData = await toBase64(options.source)
+    if (sourceData.length > MAX_SOURCE_CHARS) {
+      sourceData = null
+      sourceDropped = true
+    }
+  }
 
   for (let n = 1; n <= total; n++) {
     options.onProgress?.(n - 1, total)
@@ -222,11 +246,13 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
       fill: '#000000',
       src: background.toDataURL('image/png'),
       locked: true,
-      name: `Page PDF ${n}`
+      name: `Page PDF ${n}`,
+      ...(sourceData ? { pdfSource: { id: sourceId, page: n } } : {})
     } as TrameElement)
     pages.push({ id: nanoid(8), background: '#ffffff', elements })
     page.cleanup()
   }
   options.onProgress?.(total, total)
-  return { doc: { version: 2, name, width, height, pages }, texts, substitutedFonts: [...substituted].sort(), keptAsImage: kept }
+  const doc: TrameDocument = { version: 2, name, width, height, pages, ...(sourceData ? { sources: { [sourceId]: sourceData } } : {}) }
+  return { doc, texts, substitutedFonts: [...substituted].sort(), keptAsImage: kept, sourceDropped }
 }
