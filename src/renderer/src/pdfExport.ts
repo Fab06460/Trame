@@ -14,7 +14,9 @@ import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
 import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
 import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
+import { boundsOf } from '@/geometry'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
+import { hasShadow, shadowMargin } from '@/shadowStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -68,12 +70,21 @@ class ExportContext {
   ) {}
 
   async drawElement(p: PDFPage, el: TrameElement): Promise<void> {
-    // Repère local de l'élément (voir elementMatrix) : origine en haut à gauche, y vers le haut, unités = px de design
+    // 1. Cas rendus ENTIÈREMENT en image, décidés avant toute opération de dessin (pour ne jamais dessiner une ombre deux fois) :
+    //    Konva compose l'élément d'un bloc puis applique l'opacité à l'ensemble ; un PDF qui peindrait fond, contour et ombre un par un
+    //    avec une transparence mélangerait leurs parties communes (bande plus sombre, ombre visible à travers le fond).
+    if (el.type !== 'text' && el.opacity < 1 && (hasStroke(el) || hasShadow(el))) return this.drawElementImage(p, el)
+    if (el.type === 'text') {
+      const issue = await this.textIssue(el)
+      if (issue) return this.fallBackToImage(p, el, issue)
+    }
+    // 2. Ombre : une image, placée SOUS l'élément, qui lui reste vectoriel (et son texte, du vrai texte)
+    if (hasShadow(el)) await this.drawShadowImage(p, el)
+
+    // 3. L'élément lui-même. Repère local (voir elementMatrix) : origine en haut à gauche, y vers le haut, unités = px de design
+    let lateIssue: TextIssue | null = null
     p.pushOperators(pushGraphicsState(), concatTransformationMatrix(...elementMatrix(el, this.pageHeight)))
     try {
-      // Fond + contour à opacité < 1 : Konva compose l'élément d'un bloc, le PDF mélangerait la moitié intérieure du trait avec le
-      // fond (bande plus sombre). On rend alors l'élément en image haute résolution plutôt que de produire un rendu différent.
-      if (el.type !== 'text' && hasStroke(el) && el.opacity < 1) return await this.drawElementImage(p, el)
       const color = parseColor(el.fill)
       const fill = rgb(color.r, color.g, color.b)
       // Contour centré sur le bord, comme Konva ; absent des options quand il n'y en a pas
@@ -114,15 +125,23 @@ class ExportContext {
         // Konva trace le contour d'une image après l'image : un rectangle, sans remplissage
         if (stroke) p.drawSvgPath(roundedRectPath(el.width, el.height, 0), { x: 0, y: 0, ...border })
       } else if (el.type === 'text') {
-        const why = await this.drawTextVector(p, el)
-        if (why) {
-          this.fallbacks.push({ page: this.page, text: el.text ?? '', ...why })
-          await this.drawElementImage(p, el)
-        }
+        lateIssue = await this.drawTextVector(p, el) // cause tardive (rare) : rien n'a été dessiné dans ce cas
       }
     } finally {
       p.pushOperators(popGraphicsState())
     }
+    if (lateIssue) await this.fallBackToImage(p, el, lateIssue)
+  }
+
+  /** Le texte ne peut pas être écrit en vrai texte ? (même verdict que l'avertissement en direct de l'éditeur) */
+  private async textIssue(el: TrameElement): Promise<TextIssue | null> {
+    if (!displayText(el).trim()) return null
+    return checkText(el, async (choice) => (await this.loadFont(choice))?.layout ?? null)
+  }
+
+  private async fallBackToImage(p: PDFPage, el: TrameElement, why: TextIssue): Promise<void> {
+    this.fallbacks.push({ page: this.page, text: el.text ?? '', ...why })
+    await this.drawElementImage(p, el)
   }
 
   private async embedImage(src: string): Promise<PDFImage> {
@@ -285,27 +304,64 @@ class ExportContext {
   }
 
   /**
-   * Repli : l'élément seul, rendu par le navigateur sur fond transparent (×3), placé comme une image.
-   * La boîte de texte de Konva est plus serrée que les glyphes (jambages, italiques, accents) et un contour déborde de la boîte :
-   * on ajoute une marge. Konva compose l'élément d'un bloc, opacité comprise : on l'y rend à pleine opacité, l'opacité étant
-   * appliquée à l'image (même résultat visuel).
+   * Rend l'élément hors écran, **dans les axes de la page** : boîte englobante (rotation comprise) agrandie d'une marge, nœud à sa
+   * vraie position et rotation. Konva garde le décalage d'une ombre dans les axes de la page même quand l'élément pivote : on ne
+   * peut donc pas rendre l'élément « à plat » puis le faire pivoter par la matrice du PDF.
+   * `mode: 'shadow'` ne garde que l'ombre (le corps de l'élément est effacé : le vrai élément vectoriel sera peint par-dessus).
+   * Retourne l'image et son emplacement en pixels de design.
    */
-  private async drawElementImage(p: PDFPage, el: TrameElement): Promise<void> {
-    const pad = Math.ceil(Math.max((el.fontSize ?? 0) * 0.35, (el.strokeWidth ?? 0) / 2 + 2))
-    const node = await createNode(el, { x: pad, y: pad, rotation: 0, opacity: 1 })
-    if (!node) return
-    const width = Math.ceil(el.width) + 2 * pad
-    const height = Math.ceil(el.type === 'text' ? node.height() : el.height) + 2 * pad
-    const stage = new Konva.Stage({ container: document.createElement('div'), width, height })
+  private async renderToImage(el: TrameElement, mode: 'full' | 'shadow'): Promise<{ img: PDFImage; x: number; y: number; w: number; h: number } | null> {
+    // un texte n'a pas de hauteur enregistrée fiable : on mesure celle de Konva
+    const height = el.type === 'text' ? createTextNode(el).height() : el.height
+    const box = boundsOf({ ...el, height })
+    // marge : jambages et italiques (texte), moitié du contour, ombre
+    const m = Math.ceil(Math.max((el.fontSize ?? 0) * 0.35, (el.strokeWidth ?? 0) / 2 + 2)) + shadowMargin(el)
+    const x = box.x - m
+    const y = box.y - m
+    const w = Math.ceil(box.width + 2 * m)
+    const h = Math.ceil(box.height + 2 * m)
+    const common = { x: el.x - x, y: el.y - y, rotation: el.rotation }
+    const stage = new Konva.Stage({ container: document.createElement('div'), width: w, height: h })
     const layer = new Konva.Layer()
-    layer.add(node)
     stage.add(layer)
+    if (mode === 'full') {
+      // à sa VRAIE opacité : c'est Konva qui compose fond, contour et ombre, avec ses règles (par ex. l'ombre reste visible à travers
+      // un corps translucide) ; l'image obtenue est ensuite posée telle quelle, sans seconde opacité
+      const node = await createNode(el, { ...common, opacity: el.opacity })
+      if (!node) return null
+      layer.add(node)
+    } else {
+      // à la vraie opacité de l'élément, comme dans Konva : l'ombre s'y atténue comme l'élément, et l'effacement du corps (à la même
+      // opacité) laisse sous un corps translucide la part d'ombre que Konva y laisserait voir
+      const withShadow = await createNode(el, { ...common, opacity: el.opacity })
+      // le corps est effacé (composition « destination-out ») : il ne reste que l'ombre qui déborde
+      const body = await createNode({ ...el, shadow: undefined }, { ...common, opacity: el.opacity, globalCompositeOperation: 'destination-out' })
+      if (!withShadow || !body) return null
+      layer.add(withShadow)
+      layer.add(body)
+    }
     layer.draw()
-    const url = stage.toDataURL({ mimeType: 'image/png', pixelRatio: FALLBACK_PIXEL_RATIO })
+    // une ombre nette (flou faible) demande plus de pixels qu'une ombre floue
+    const ratio = mode === 'shadow' && (el.shadow?.blur ?? 0) >= 6 ? 2 : FALLBACK_PIXEL_RATIO
+    const url = stage.toDataURL({ mimeType: 'image/png', pixelRatio: ratio })
     stage.destroy()
-    const img = await this.pdf.embedPng(decodeDataUrl(url)!.bytes)
-    // repère local : l'image dépasse de `pad` autour de la boîte de l'élément (haut-gauche = (0, 0), y vers le haut)
-    p.drawImage(img, { x: -pad, y: pad - height, width, height, opacity: el.opacity })
+    return { img: await this.pdf.embedPng(decodeDataUrl(url)!.bytes), x, y, w, h }
+  }
+
+  private place(p: PDFPage, r: { img: PDFImage; x: number; y: number; w: number; h: number }, opacity: number): void {
+    p.drawImage(r.img, { x: PT_PER_PX * r.x, y: this.pageHeight - PT_PER_PX * (r.y + r.h), width: PT_PER_PX * r.w, height: PT_PER_PX * r.h, opacity })
+  }
+
+  /** Repli : l'élément entier en image haute résolution (opacité incluse dans l'image). */
+  private async drawElementImage(p: PDFPage, el: TrameElement): Promise<void> {
+    const r = await this.renderToImage(el, 'full')
+    if (r) this.place(p, r, 1)
+  }
+
+  /** Ombre seule, en image, à peindre avant l'élément vectoriel. */
+  private async drawShadowImage(p: PDFPage, el: TrameElement): Promise<void> {
+    const r = await this.renderToImage(el, 'shadow')
+    if (r) this.place(p, r, 1)
   }
 }
 

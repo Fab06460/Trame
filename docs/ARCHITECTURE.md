@@ -151,6 +151,18 @@ Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quan
 
 `clipboardActions.ts` : ⌘C / ⌘X / ⌘V sont interceptés dans `App.tsx` (hors champs de saisie) et passent par le presse-papiers **système** via IPC, ce qui permet de coller entre pages, entre documents (autre fenêtre ou fichier ouvert plus tard) et de coller une capture d'écran ou du texte venant d'une autre application. Écrire dans le presse-papiers remplace tout son contenu : la copie la plus récente l'emporte toujours. `pasteElements` (store) régénère les identifiants et les `groupId`, décale de 30 px tant que la copie se superposerait pile à un élément existant, recentre si tout est hors de la page (format différent), et crée un seul cran d'historique. Image collée : insérée à 60 % de la page au plus ; texte collé : nouveau bloc de texte (5 000 caractères max).
 
+## Ombres et lueurs
+
+`shadow` (`{ color, blur, offsetX, offsetY, opacity }`, tous types ; la lueur est une ombre sans décalage, `shadowStyle.ts` : préréglages, `hasShadow`, `shadowProps`, `shadowMargin`, `cssShadow`, nettoyage). Konva l'applique lui-même (propriétés `shadow*`, flou et décalages en pixels de design, corrigés de l'échelle de la vue). ⚠️ **Konva 10 applique l'ombre au contexte *avant* d'appeler une fonction de dessin personnalisée** (et, pour fond + contour + ombre, à la copie d'un tampon) : les formes dessinées en natif (`pathSceneFunc`) en héritent sans rien faire. Y réappliquer l'ombre la **doublerait** (pixel à 63 au lieu de 127 mesuré lors de la mise au point) ; un contrôle de bout en bout le garde.
+
+**PDF : l'ombre est une image placée *sous* l'élément, qui reste vectoriel** (le texte reste du vrai texte). Un PDF n'a pas de flou : l'ombre est rendue par Konva dans une image PNG (`renderToImage`, mode `shadow`), puis le corps de l'élément y est effacé (composition `destination-out`) pour ne garder que ce qui déborde ; le vrai élément est peint par-dessus. Points délicats :
+- **Axes de la page.** Konva garde le décalage d'une ombre dans les axes de la page même quand l'élément pivote. L'image est donc rendue dans la boîte englobante de l'élément (`boundsOf`, rotation comprise, plus `shadowMargin` = 1,5 × flou + décalage + 2) et posée **sans** la matrice de rotation de l'élément. Même principe pour tous les replis en image (`renderToImage`, mode `full`).
+- **Opacité.** Les nœuds sont rendus à la **vraie opacité** de l'élément : l'ombre s'atténue comme lui et laisse la part d'ombre que Konva laisserait voir sous un corps translucide. Un élément non textuel à opacité < 1 avec **contour ou ombre** est rendu en entier dans une image à sa vraie opacité (Konva compose lui-même fond, contour et ombre).
+- **Netteté.** ×2 pour une ombre floue, ×3 pour une ombre nette (flou < 6).
+- **Ordre de décision** dans `drawElement` : (1) cas entièrement en image ; (2) texte non écrivable en vrai texte → repli (décidé *avant* l'ombre pour ne jamais la dessiner deux fois) ; (3) image d'ombre ; (4) élément vectoriel.
+
+Miniatures : `filter: drop-shadow(...)` (même convention de flou), approximation (le décalage y pivote avec l'élément).
+
 ## Dégradés
 
 `gradient` (`{ type: 'linear' | 'radial', from, to, angle }`) sur les rectangles, ellipses et formes ; il remplace `fill`. **Une seule définition de la géométrie** (`gradient.ts`, pure et testée) pour les quatre rendus : `linearGradientLine` reproduit CSS `linear-gradient(<angle>deg)` (ligne par le centre, longueur telle que les coins extrêmes tombent exactement sur la première et la dernière couleur, quelles que soient les proportions de la boîte) et `radialGradientCircle` le cercle « coin le plus éloigné ».

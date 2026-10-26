@@ -72,7 +72,9 @@ function nativeFill(c: CanvasRenderingContext2D, g: Gradient | undefined, w: num
 
 /**
  * Dessin d'une forme vectorielle dans la boîte width×height du nœud Konva (fond puis contour éventuel).
- * Partagé entre l'éditeur et l'export hors écran.
+ * Partagé entre l'éditeur et l'export hors écran. L'**ombre** n'est pas gérée ici : Konva l'applique au contexte avant d'appeler
+ * cette fonction (et à la copie du tampon pour fond + contour + ombre), le dessin natif en hérite. La réappliquer produirait une
+ * ombre doublée.
  */
 export function pathSceneFunc(d: string) {
   return (ctx: Konva.Context, shape: Konva.Shape): void => {

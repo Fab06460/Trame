@@ -8,6 +8,7 @@ import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
+import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import { ZoomControls } from './ZoomControls'
@@ -323,13 +324,14 @@ export function Canvas(): React.JSX.Element {
             {page.elements.filter((el) => !el.hidden).map((el) => {
               const p = commonProps(el)
               if (el.type === 'rect')
-                return <Rect key={el.id} {...p} {...strokeProps(el)} {...konvaGradientProps(el.gradient, el.width, el.height)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
+                return <Rect key={el.id} {...p} {...strokeProps(el)} {...shadowProps(el)} {...konvaGradientProps(el.gradient, el.width, el.height)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
               if (el.type === 'ellipse')
                 return (
                   <Shape
                     key={el.id}
                     {...p}
                     {...strokeProps(el)}
+                    {...shadowProps(el)}
                     {...konvaGradientProps(el.gradient, el.width, el.height)}
                     width={el.width}
                     height={el.height}
@@ -348,6 +350,7 @@ export function Canvas(): React.JSX.Element {
                     key={el.id}
                     {...p}
                     {...strokeProps(el)}
+                    {...shadowProps(el)}
                     width={el.width}
                     height={el.height}
                     fill={el.fill}
@@ -356,12 +359,13 @@ export function Canvas(): React.JSX.Element {
                     hitFunc={boxHitFunc}
                   />
                 )
-              if (el.type === 'image') return <ImageNode key={el.id} {...p} {...strokeProps(el)} src={el.src} width={el.width} height={el.height} />
+              if (el.type === 'image') return <ImageNode key={el.id} {...p} {...strokeProps(el)} {...shadowProps(el)} src={el.src} width={el.width} height={el.height} />
               return (
                 <Text
                   key={el.id}
                   {...p}
                   {...strokeProps(el)}
+                  {...shadowProps(el)}
                   visible={editing !== el.id}
                   width={el.width}
                   text={displayText(el)}

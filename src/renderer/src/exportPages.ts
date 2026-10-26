@@ -1,6 +1,7 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
 import { konvaGradientProps } from '@/gradient'
+import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
@@ -19,7 +20,8 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
     fontStyle: e.fontStyle,
     align: e.align,
     fill: e.fill,
-    ...strokeProps(e)
+    ...strokeProps(e),
+    ...shadowProps(e)
   })
 }
 
@@ -37,12 +39,13 @@ export const loadImage = (src: string): Promise<HTMLImageElement> =>
  */
 export async function createNode(e: TrameElement, common: Konva.NodeConfig): Promise<Konva.Shape | null> {
   if (e.type === 'rect') {
-    return new Konva.Rect({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, ...konvaGradientProps(e.gradient, e.width, e.height), cornerRadius: e.cornerRadius })
+    return new Konva.Rect({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, ...konvaGradientProps(e.gradient, e.width, e.height), cornerRadius: e.cornerRadius })
   }
   if (e.type === 'ellipse') {
     return new Konva.Shape({
       ...common,
       ...strokeProps(e),
+      ...shadowProps(e),
       width: e.width,
       height: e.height,
       fill: e.fill,
@@ -56,10 +59,10 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
     })
   }
   if (e.type === 'path' && e.path) {
-    return new Konva.Shape({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, sceneFunc: pathSceneFunc(e.path) })
+    return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, sceneFunc: pathSceneFunc(e.path) })
   }
   if (e.type === 'image' && e.src) {
-    return new Konva.Image({ ...common, ...strokeProps(e), width: e.width, height: e.height, image: await loadImage(e.src) })
+    return new Konva.Image({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, image: await loadImage(e.src) })
   }
   if (e.type === 'text') return createTextNode(e, common)
   return null

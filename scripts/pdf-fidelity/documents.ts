@@ -89,6 +89,23 @@ function mixed(): TrameDocument {
         { id: 'd8', type: 'ellipse', x: 560, y: 600, width: 220, height: 340, ...base, fill: '#000', gradient: { type: 'linear', from: '#f472b6', to: '#a78bfa', angle: 180 } },
         { id: 'd9', type: 'rect', x: 820, y: 620, width: 200, height: 300, ...base, fill: '#000', gradient: { type: 'radial', from: '#fff7ed', to: '#c2410c', angle: 0 } }
       ]
+    }, {
+      // page 5 : ombres et lueurs (le corps de l'élément reste vectoriel, l'ombre est une image placée dessous)
+      id: 'p5', background: '#e7e9f5',
+      elements: [
+        { id: 'o1', type: 'rect', x: 70, y: 70, width: 260, height: 170, cornerRadius: 30, ...base, fill: '#ffffff', shadow: { color: '#000000', blur: 24, offsetX: 0, offsetY: 14, opacity: 0.35 } },
+        { id: 'o2', type: 'ellipse', x: 400, y: 70, width: 260, height: 170, ...base, fill: '#7c5cff', shadow: { color: '#ffb703', blur: 40, offsetX: 0, offsetY: 0, opacity: 0.95 } },
+        { id: 'o3', type: 'path', x: 740, y: 60, width: 260, height: 180, path: SHAPES_STAR, ...base, fill: '#ff3d71', shadow: { color: '#1e1f24', blur: 8, offsetX: 14, offsetY: 14, opacity: 0.6 } },
+        text('o4', { x: 70, y: 310, width: 940, fontStyle: 'bold', fontSize: 96, fill: '#1e1f24', text: 'Ombre portée', shadow: { color: '#000000', blur: 12, offsetX: 6, offsetY: 8, opacity: 0.45 } }),
+        text('o5', { x: 70, y: 450, width: 940, fontStyle: 'bold', fontSize: 96, fill: '#ffffff', text: 'Lueur douce', shadow: { color: '#7c5cff', blur: 28, offsetX: 0, offsetY: 0, opacity: 1 } }),
+        { id: 'o6', type: 'image', x: 70, y: 610, width: 230, height: 150, src: pngDataUrl(), ...base, shadow: { color: '#000000', blur: 18, offsetX: 10, offsetY: 12, opacity: 0.5 } },
+        { id: 'o7', type: 'rect', x: 400, y: 620, width: 220, height: 140, ...base, fill: '#38bdf8', rotation: 30, shadow: { color: '#000000', blur: 14, offsetX: 26, offsetY: 26, opacity: 0.5 } },
+        { id: 'o8', type: 'rect', x: 740, y: 610, width: 240, height: 150, ...base, fill: '#34d399', shadow: { color: '#000000', blur: 0, offsetX: 16, offsetY: 16, opacity: 0.4 } },
+        { id: 'o9', type: 'rect', x: 70, y: 830, width: 280, height: 160, ...base, fill: '#ffd166', stroke: '#1e1f24', strokeWidth: 8, shadow: { color: '#000000', blur: 16, offsetX: 8, offsetY: 12, opacity: 0.4 } },
+        { id: 'o10', type: 'ellipse', x: 420, y: 830, width: 260, height: 160, ...base, fill: '#000', gradient: { type: 'linear', from: '#f472b6', to: '#6366f1', angle: 90 }, shadow: { color: '#000000', blur: 20, offsetX: 0, offsetY: 16, opacity: 0.4 } },
+        { id: 'o11', type: 'rect', x: 780, y: 830, width: 230, height: 160, ...base, fill: '#ef4444', opacity: 0.6, shadow: { color: '#000000', blur: 14, offsetX: 10, offsetY: 10, opacity: 0.5 } },
+        text('o12', { x: 70, y: 1010, width: 940, fontStyle: 'bold', fontSize: 52, fill: '#1e1f24', opacity: 0.5, text: 'Texte translucide', shadow: { color: '#000000', blur: 10, offsetX: 8, offsetY: 8, opacity: 0.8 } })
+      ]
     }]
   }
 }
@@ -108,7 +125,7 @@ export interface Case {
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 %
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 %
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

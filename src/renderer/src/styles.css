@@ -155,3 +155,5 @@ button.danger { color: #ff7b7b; }
 .seg button.active { background: var(--accent); color: #fff; }
 .stroke-row:has([data-field="gradFrom"]) { grid-template-columns: 1fr 40px 1fr; }
 .panel select { background: #1b1c21; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px; font: inherit; }
+.seg.three { grid-template-columns: 1fr 1fr 1fr; }
+.stroke-row:has([data-field="shadowColor"]) { grid-template-columns: 42px 1fr 1fr; }

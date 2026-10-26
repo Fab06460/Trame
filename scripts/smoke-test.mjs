@@ -160,6 +160,9 @@ try {
       pending.set(i, resolve)
       ws.send(JSON.stringify({ id: i, method, params }))
     })
+  // La page se comporte comme si sa fenêtre avait le focus du système, même quand une autre application est au premier plan :
+  // sans cela, focus() / blur() ne déclenchent aucun événement et les champs ne se valident plus (test dépendant du bureau).
+  await cdp('Emulation.setFocusEmulationEnabled', { enabled: true })
   const doc = JSON.stringify({ version: 2, name: 'Test', width: 100, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
   const a = join(tmp, 'proj', 'a.trame')
   const b = join(tmp, 'proj', 'b.trame')
@@ -478,12 +481,14 @@ try {
     await sleep(200)
     return readFile(join(exportsDir, 'Sans titre.png'))
   }
+  let lastPdfRaw = ''
   const exportPdfText = async () => {
     await rm(join(exportsDir, 'Sans titre.pdf'), { force: true })
     await click('header.toolbar button', 'Export PDF')
     for (let i = 0; i < 40; i++) { await sleep(250); if ((await readdir(exportsDir)).includes('Sans titre.pdf')) break }
     await sleep(200)
     const pdf = await readFile(join(exportsDir, 'Sans titre.pdf'))
+    lastPdfRaw = pdf.toString('latin1') // objets non compressés (dictionnaires d'images…)
     let all = ''
     for (let at = 0; ; ) { const a = pdf.indexOf('stream', at); if (a < 0) break; const from = pdf[a + 6] === 0x0d ? a + 8 : a + 7; const e = pdf.indexOf('endstream', from); try { all += inflateSync(pdf.subarray(from, e)).toString('latin1') + '\n' } catch {} ; at = e + 9 }
     return all
@@ -621,7 +626,75 @@ try {
   await sleep(300)
   check('annuler rétablit le dégradé', (await fillMode()) === 'true')
 
-  // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
+  // ombre et lueur : panneau → aperçu → PDF (ombre = image sous un élément resté vectoriel)
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle')
+  await sleep(400)
+  const shadowMode = () => run(`['none', 'drop', 'glow'].find(m => document.querySelector('.panel [data-shadow="' + m + '"]').getAttribute('aria-pressed') === 'true')`)
+  check('par défaut : aucune ombre, pas de champs d\'ombre', (await shadowMode()) === 'none' && (await count('.panel [data-field="shadowBlur"]')) === 0)
+  const noShadowPdf = await exportPdfText()
+  check('PDF sans ombre : aucune image', !lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('.panel [data-shadow="drop"]')
+  await sleep(350)
+  check('« Ombre » : flou 20, décalage (0, 10), intensité 35 %', (await shadowMode()) === 'drop' && (await field('shadowBlur')) === 20 && (await field('shadowX')) === 0 && (await field('shadowY')) === 10 && (await field('shadowOpacity')) === 35)
+  check('l\'aperçu de la page applique l\'ombre (drop-shadow)', /drop-shadow\(/.test(await run(`document.querySelector('.page-item.current .thumb div div').style.filter`)))
+  const shadowPdf = await exportPdfText()
+  check('PDF avec ombre : une image (l\'ombre) ET le rectangle toujours vectoriel', lastPdfRaw.includes('/Subtype /Image') && (shadowPdf.match(/\nh\nf\n/g) ?? []).length >= 2)
+  await setField('shadowBlur', 40)
+  await setField('shadowX', 25)
+  check('flou et décalage modifiables', (await field('shadowBlur')) === 40 && (await field('shadowX')) === 25 && (await shadowMode()) === 'drop')
+  await clickSel('.panel [data-shadow="glow"]')
+  await sleep(350)
+  check('« Lueur » : sans décalage, flou 30, intensité 90 %', (await shadowMode()) === 'glow' && (await field('shadowX')) === 0 && (await field('shadowY')) === 0 && (await field('shadowBlur')) === 30 && (await field('shadowOpacity')) === 90)
+  await clickSel('.panel [data-shadow="none"]')
+  await sleep(350)
+  check('« Aucune » retire l\'ombre', (await shadowMode()) === 'none' && (await count('.panel [data-field="shadowBlur"]')) === 0)
+  await exportPdfText()
+  check('PDF : plus d\'image une fois l\'ombre retirée', !lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('annuler rétablit l\'ombre', (await shadowMode()) === 'glow')
+  // texte avec ombre : l'ombre est une image, le texte reste du vrai texte
+  await click('header.toolbar button', 'Texte')
+  await sleep(400)
+  await clickSel('.panel [data-shadow="drop"]')
+  await sleep(350)
+  const textShadowPdf = await exportPdfText()
+  check('texte avec ombre : l\'ombre est une image et le texte reste du vrai texte (TJ)', lastPdfRaw.includes('/Subtype /Image') && textShadowPdf.includes(' TJ'))
+
+  // forme vectorielle (dessin natif) : son ombre doit figurer dans l'export image (aucun autre contrôle ne la voit : la fidélité compare Konva à Konva)
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('.sidebar .tabs button', 'Éléments')
+  await sleep(300)
+  await clickSel('.sidebar .shape[title="Étoile"]') // 240 × 240 en (420, 420)
+  await sleep(400)
+  await clickSel('.panel [data-shadow="drop"]')
+  await sleep(300)
+  await setField('shadowBlur', 0) // ombre dure : aucune ambiguïté de pixel
+  await setField('shadowY', 30)
+  await setField('shadowOpacity', 100)
+  const shadowPx = pngPixel(await exportPng(), 450, 545) // sous le bras gauche (bord bas du bras vers y = 527) : seule l'ombre décalée de 30 px couvre ce point
+  check('l\'ombre d\'une forme figure dans l\'export image (pixel sombre sous l\'étoile)', shadowPx.every((v) => v < 60), JSON.stringify(shadowPx))
+  // fond + contour + ombre : Konva dessine dans un tampon puis applique l'ombre à la copie. L'ombre doit rester UNE seule fois :
+  // 50 % de noir sur du blanc donne ≈ 127 ; une ombre appliquée deux fois donnerait ≈ 64
+  await setField('strokeWidth', 6)
+  await setField('shadowOpacity', 50)
+  const onceShadow = pngPixel(await exportPng(), 450, 545)
+  check('forme avec fond, contour et ombre : l\'ombre n\'est pas doublée (≈ 127)', onceShadow.every((v) => v > 105 && v < 150), JSON.stringify(onceShadow))
+  await clickSel('.panel [data-shadow="none"]')
+  await sleep(300)
+  check('sans ombre, le même pixel est blanc', pngPixel(await exportPng(), 450, 545).every((v) => v > 240))
+  await click('.sidebar .tabs button', 'Modèles')
+
+  // export PDF vectoriel : on ajoute du texte dans l'interface (document vierge : les scénarios précédents ont laissé des éléments)
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  // puis on exporte et on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)
   check("bouton « Export PDF »", (await click('header.toolbar button', 'Export PDF')) === true)

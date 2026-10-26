@@ -8,6 +8,7 @@ import { NumberField } from './NumberField'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
+import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -337,6 +338,36 @@ export function Properties(): React.JSX.Element {
           ┅
         </button>
       </div>
+
+      <h3>Ombre</h3>
+      {(() => {
+        const sh = el.shadow
+        const mode = !sh ? 'none' : sh.offsetX === 0 && sh.offsetY === 0 ? 'glow' : 'drop'
+        const patchShadow = (patch: Partial<NonNullable<typeof sh>>): void => updateElement(el.id, { shadow: { ...sh!, ...patch } })
+        return (
+          <>
+            <div className="seg three" role="group" aria-label="Type d'ombre">
+              <button data-shadow="none" aria-pressed={mode === 'none'} className={mode === 'none' ? 'active' : ''} onClick={() => updateElement(el.id, { shadow: undefined })}>Aucune</button>
+              <button data-shadow="drop" aria-pressed={mode === 'drop'} className={mode === 'drop' ? 'active' : ''} onClick={() => mode !== 'drop' && updateElement(el.id, { shadow: dropShadow() })}>Ombre</button>
+              {/* la lueur reprend la couleur de l'élément pour rester lisible sur n'importe quel fond */}
+              <button data-shadow="glow" aria-pressed={mode === 'glow'} className={mode === 'glow' ? 'active' : ''} onClick={() => mode !== 'glow' && updateElement(el.id, { shadow: glow(el.gradient?.from ?? el.fill) })}>Lueur</button>
+            </div>
+            {sh && (
+              <>
+                <div className="stroke-row">
+                  <input type="color" data-field="shadowColor" title="Couleur de l'ombre" value={sh.color} onPointerDown={beginChange} onChange={(e) => live({ shadow: { ...sh, color: e.target.value } })} />
+                  <NumberField label="Flou" field="shadowBlur" value={sh.blur} min={SHADOW_LIMITS.blur.min} max={SHADOW_LIMITS.blur.max} suffix="px" onCommit={(v) => patchShadow({ blur: v })} />
+                  <NumberField label="Intensité" field="shadowOpacity" value={Math.round(sh.opacity * 100)} min={0} max={100} suffix="%" onCommit={(v) => patchShadow({ opacity: v / 100 })} />
+                </div>
+                <div className="num-grid">
+                  <NumberField label="Décalage X" field="shadowX" value={sh.offsetX} min={SHADOW_LIMITS.offset.min} max={SHADOW_LIMITS.offset.max} suffix="px" onCommit={(v) => patchShadow({ offsetX: v })} />
+                  <NumberField label="Décalage Y" field="shadowY" value={sh.offsetY} min={SHADOW_LIMITS.offset.min} max={SHADOW_LIMITS.offset.max} suffix="px" onCommit={(v) => patchShadow({ offsetY: v })} />
+                </div>
+              </>
+            )}
+          </>
+        )
+      })()}
 
       <label>
         Opacité

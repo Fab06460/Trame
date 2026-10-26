@@ -1,5 +1,15 @@
 export type ElementType = 'rect' | 'ellipse' | 'text' | 'image' | 'path'
 
+/** Ombre portée ou lueur (une lueur est une ombre sans décalage). Flou et décalages en pixels de design ; le décalage reste dans les axes de la page, même si l'élément pivote. */
+export interface Shadow {
+  color: string
+  blur: number
+  offsetX: number
+  offsetY: number
+  /** 0 à 1 */
+  opacity: number
+}
+
 /** Dégradé à deux couleurs. `angle` : degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas), ignoré en radial. */
 export interface Gradient {
   type: 'linear' | 'radial'
@@ -28,6 +38,8 @@ export interface TrameElement {
   fill: string
   /** dégradé de remplissage (rectangle, ellipse, forme) : remplace `fill` tant qu'il est présent */
   gradient?: Gradient
+  /** ombre portée / lueur */
+  shadow?: Shadow
   /** couleur du contour (absent = pas de contour) */
   stroke?: string
   /** épaisseur du contour en pixels de design, centré sur le bord de l'élément (absent ou 0 = pas de contour) */

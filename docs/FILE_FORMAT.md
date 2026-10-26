@@ -27,6 +27,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "opacity": 1,
           "fill": "#1e1f24",
           "groupId": "k3J9aa01",   // optionnel : même valeur = même groupe
+          "shadow": { "color": "#000000", "blur": 20, "offsetX": 0, "offsetY": 10, "opacity": 0.35 },  // optionnel : ombre portée / lueur
           "gradient": { "type": "linear", "from": "#7c5cff", "to": "#38bdf8", "angle": 135 },  // optionnel : remplace fill
           "stroke": "#7c5cff",     // optionnel : couleur du contour (avec strokeWidth)
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
@@ -50,6 +51,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
   ]
 }
 ```
+
+L'**ombre** (`shadow`, tous les types ; une lueur est une ombre sans décalage) : `blur` 0 à 200, `offsetX` / `offsetY` −500 à 500 (dans les axes de la **page**, même si l'élément pivote), `opacity` 0 à 1. Une ombre incomplète ou hors bornes est ignorée ou ramenée aux bornes à la lecture ; une ombre sans effet visible (opacité 0, ou ni flou ni décalage) n'est pas dessinée.
 
 Le **dégradé** (`gradient`, rectangles, ellipses et formes) remplace `fill` tant qu'il est présent ; `fill` est conservé (c'est la couleur retrouvée en revenant à « Uni »). `type` vaut `linear` ou `radial`, `angle` est en degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas ; ignoré en radial). À la lecture, un dégradé incomplet ou de type inconnu est retiré et l'élément garde son `fill`. Aucune nouvelle version du format.
 

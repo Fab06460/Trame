@@ -1,4 +1,5 @@
 import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradient'
+import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
 import type { TramePage } from '@/types'
 
@@ -30,7 +31,8 @@ export function PageThumb({
             height: e.height,
             opacity: e.opacity,
             transform: `rotate(${e.rotation}deg)`,
-            transformOrigin: '0 0'
+            transformOrigin: '0 0',
+            filter: cssShadow(e)
           }
           // contour centré sur le bord : `outline` décalé de la moitié de son épaisseur vers l'intérieur
           const w = e.strokeWidth ?? 0
