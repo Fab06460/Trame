@@ -97,7 +97,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | | E5 |
 | E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | | E6 |
 | E20 | Recherche / remplacement de texte dans le document | S | | — |
-| E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | Konva ne gère pas les listes : à composer. | E4 |
+| E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | **Listes à puces et numérotées faites** (retrait des lignes suivantes, PDF en vrai texte). Reste : colonnes. | E4 |
 
 ### Phase 2 — Contenus et identité de marque (bibliothèques, kit de marque, graphiques)
 

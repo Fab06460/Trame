@@ -265,6 +265,25 @@ export function Properties(): React.JSX.Element {
               </button>
             ))}
           </div>
+          <div className="row">
+            {(
+              [
+                ['bullet', 'Liste à puces', '•'],
+                ['number', 'Liste numérotée', '1.']
+              ] as const
+            ).map(([kind, title, glyph]) => (
+              <button
+                key={kind}
+                data-list={kind}
+                aria-pressed={el.list === kind}
+                className={el.list === kind ? 'active' : ''}
+                title={title}
+                onClick={() => updateElement(el.id, { list: el.list === kind ? undefined : kind })}
+              >
+                {glyph}
+              </button>
+            ))}
+          </div>
           <div className="num-grid">
             <NumberField label="Interlettrage" field="letterSpacing" value={el.letterSpacing ?? 0} min={LETTER_SPACING.min} max={LETTER_SPACING.max} step={0.5} suffix="px" onCommit={(v) => updateElement(el.id, { letterSpacing: v || undefined })} />
             <NumberField label="Interligne" field="lineHeight" value={el.lineHeight ?? LINE_HEIGHT.default} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.05} suffix="×" onCommit={(v) => updateElement(el.id, { lineHeight: v === LINE_HEIGHT.default ? undefined : v })} />

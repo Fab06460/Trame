@@ -16,6 +16,8 @@ import type { PdfFallback } from '@/pdfFallbacks'
 import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
 import { boundsOf } from '@/geometry'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
+import { listIndent } from '@/listStyle'
+import type { ListTextNode } from '@/listText'
 import { editedPng } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { hasShadow, shadowMargin } from '@/shadowStyle'
@@ -245,8 +247,16 @@ class ExportContext {
 
     const { layout, pdfFont } = font
     const spacing = letterSpacingOf(el)
-    const lines: Array<{ x: number; baseline: number; width: number; operand: PDFArray }> = []
-    for (const [i, line] of node.textArr.entries()) {
+    type Line = { x: number; baseline: number; width: number; operand: PDFArray }
+    const lines: Line[] = []
+    const markerLines: Line[] = [] // marqueurs d'une liste : dans la colonne de retrait, jamais soulignés ni barrés
+    const indent = el.list ? listIndent(el.fontSize) : 0
+    const entries = [
+      ...node.textArr.map((line, i) => ({ text: line.text, width: line.width, i, x: indent + lineOffsetX(el.align, el.width - indent, line.width), into: lines })),
+      ...((node as ListTextNode).listMarkers ?? []).map((m) => ({ text: m.text, width: node.measureSize(m.text).width, i: m.line, x: 0, into: markerLines }))
+    ]
+    for (const { text, width, i, x, into } of entries) {
+      const line = { text, width }
       const items: Array<PDFHexString | PDFNumber> = []
       // Avec un interlettrage, Konva dessine lettre par lettre : ni crénage ni ligatures. On fait de même (une mise en page par
       // caractère), l'espacement lui-même étant porté par l'opérateur Tc ; sinon la ligne entière est composée avec son crénage.
@@ -259,8 +269,8 @@ class ExportContext {
           if (adj !== 0) items.push(PDFNumber.of(adj))
         }
       }
-      lines.push({
-        x: lineOffsetX(el.align, el.width, line.width),
+      into.push({
+        x,
         baseline: baselineY(i, fontSize, lineHeight, ascent, descent),
         width: line.width,
         operand: this.pdf.context.obj(items) as PDFArray
@@ -285,7 +295,7 @@ class ExportContext {
       )
     }
     let prev = { x: 0, y: 0 } // Td est relatif à la ligne précédente
-    for (const line of lines) {
+    for (const line of [...lines, ...markerLines]) {
       const pos = { x: line.x, y: -line.baseline }
       p.pushOperators(moveText(pos.x - prev.x, pos.y - prev.y), PDFOperator.of(PDFOperatorNames.ShowTextAdjusted, [line.operand]))
       prev = pos

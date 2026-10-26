@@ -42,6 +42,9 @@ export interface Gradient {
   angle: number
 }
 
+/** Liste d'un texte : un paragraphe (ligne saisie) = un élément de la liste. */
+export type ListKind = 'bullet' | 'number'
+
 export interface TrameElement {
   id: string
   type: ElementType
@@ -86,6 +89,8 @@ export interface TrameElement {
   strike?: boolean
   /** affichage en majuscules ; le texte saisi reste tel quel */
   uppercase?: boolean
+  /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
+  list?: ListKind
   // path : chemin SVG (viewBox 100×100)
   path?: string
   // image

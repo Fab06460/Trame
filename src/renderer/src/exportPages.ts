@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
+import { patchListText } from '@/listText'
 import { konvaGradientProps } from '@/gradient'
 import { editedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
@@ -9,7 +10,7 @@ import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /** Nœud Konva de texte tel que dessiné à l'écran : mêmes propriétés partout (éditeur, export image, export PDF). */
 export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): Konva.Text {
-  return new Konva.Text({
+  const node = new Konva.Text({
     ...extra,
     width: e.width,
     text: displayText(e),
@@ -22,8 +23,11 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
     align: e.align,
     fill: e.fill,
     ...strokeProps(e),
-    ...shadowProps(e)
+    ...shadowProps(e),
+    trameList: e.list
   })
+  patchListText(node)
+  return node
 }
 
 export const loadImage = (src: string): Promise<HTMLImageElement> =>

@@ -8,6 +8,7 @@ import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
+import { patchListText } from '@/listText'
 import { useEditedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
@@ -367,6 +368,10 @@ export function Canvas(): React.JSX.Element {
                   fontStyle={el.fontStyle}
                   align={el.align}
                   fill={el.fill}
+                  trameList={el.list}
+                  ref={(n: Konva.Text | null) => {
+                    if (n) patchListText(n)
+                  }}
                   onDblClick={() => startTextEdit(el.id)}
                   onDblTap={() => startTextEdit(el.id)}
                 />

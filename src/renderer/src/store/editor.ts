@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
 import { adaptDocument } from '@/magicResize'
 import { cleanDocName } from '@/docName'
+import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
@@ -79,6 +80,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeStroke(e)
       sanitizeGradient(e)
       sanitizeShadow(e)
+      sanitizeList(e)
       if (e.type === 'image') sanitizeImageStyle(e)
       if (e.locked !== true) delete e.locked
       if (e.hidden !== true) delete e.hidden

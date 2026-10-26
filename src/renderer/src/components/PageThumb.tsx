@@ -4,7 +4,24 @@ import { dashPattern, hasStroke } from '@/strokeStyle'
 import { useEditedImage } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { useEffect, useRef } from 'react'
-import type { TrameElement, TramePage } from '@/types'
+import { listIndent, markersFor } from '@/listStyle'
+import type { ListKind, TrameElement, TramePage } from '@/types'
+
+/** Paragraphes d'une liste : marqueur dans une colonne de la largeur du retrait, texte à côté (les lignes suivantes restent en retrait). */
+function ListRows({ el }: { el: TrameElement }): React.JSX.Element {
+  const paragraphs = (el.text ?? '').split('\n')
+  const markers = markersFor(el.list as ListKind, paragraphs)
+  return (
+    <>
+      {paragraphs.map((p, i) => (
+        <div key={i} style={{ display: 'flex' }}>
+          <span style={{ width: listIndent(el.fontSize), flex: 'none' }}>{markers[i]}</span>
+          <span style={{ flex: 1, minWidth: 0 }}>{p || '\u200b'}</span>
+        </div>
+      ))}
+    </>
+  )
+}
 
 /** Image d'une miniature : l'originale telle quelle, ou (si retouchée) le rendu retouché réduit dans un petit canvas. */
 function ThumbImage({ el, style }: { el: TrameElement; style: React.CSSProperties }): React.JSX.Element {
@@ -119,7 +136,7 @@ export function PageThumb({
                   ...(hasStroke(e) ? { WebkitTextStroke: `${w}px ${e.stroke}` } : {})
                 }}
               >
-                {e.text}
+                {e.list ? <ListRows el={e} /> : e.text}
               </div>
             )
           return (

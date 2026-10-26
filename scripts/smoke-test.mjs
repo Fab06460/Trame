@@ -790,6 +790,28 @@ try {
   await sleep(300)
   check('annuler rétablit le nom précédent', (await run(`document.querySelector('.doc-name').value`)) === 'Affiche / été')
 
+  // listes : bouton → miniature (marqueurs) → export image différent → PDF toujours en vrai texte
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Texte')
+  await sleep(400)
+  const plainPng = await exportPng()
+  check('par défaut : aucun bouton de liste enfoncé', (await run(`document.querySelectorAll('.panel [data-list][aria-pressed="true"]').length`)) === 0)
+  await clickSel('.panel [data-list="bullet"]')
+  await sleep(500)
+  check('le bouton « puces » est enfoncé', (await run(`document.querySelector('.panel [data-list="bullet"]').getAttribute('aria-pressed')`)) === 'true')
+  check('la miniature affiche le marqueur « • »', (await run(`document.querySelector('.page-item.current .thumb').innerText`)).includes('•'))
+  check("l'export image change (marqueur dessiné, texte en retrait)", !(await exportPng()).equals(plainPng))
+  const listPdf = await exportPdfText()
+  check('PDF de liste : vrai texte (TJ), aucune image', listPdf.includes(' TJ') && !lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('.panel [data-list="number"]')
+  await sleep(400)
+  check('« numérotée » remplace « puces »', (await run(`document.querySelector('.page-item.current .thumb').innerText`)).includes('1.') && (await run(`document.querySelector('.panel [data-list="bullet"]').getAttribute('aria-pressed')`)) === 'false')
+  await clickSel('.panel [data-list="number"]')
+  await sleep(400)
+  check('un second clic retire la liste (export identique à l\'original)', (await exportPng()).equals(plainPng))
+
   // Magic Resize : 1080 × 1080 → Story 1080 × 1920 avec adaptation du contenu, puis sans, puis annulation
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)

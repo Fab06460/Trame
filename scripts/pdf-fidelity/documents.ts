@@ -144,6 +144,17 @@ function mixed(): TrameDocument {
         { id: 'm9', type: 'image', x: 800, y: 600, width: 200, height: 120, src: photoDataUrl(), ...base, crop: { x: 0.1, y: 0.2, width: 0.6, height: 0.5 }, flipX: true, filters: { sepia: 40, contrast: 20 }, rotation: 12, stroke: '#d6336c', strokeWidth: 8 },
         { id: 'm10', type: 'image', x: 60, y: 840, width: 300, height: 200, src: photoDataUrl(), ...base, opacity: 0.5, flipX: true, flipY: true, filters: { brightness: -20 }, shadow: { color: '#000000', blur: 18, offsetX: 10, offsetY: 12, opacity: 0.5 } }
       ]
+    }, {
+      // page 7 : listes (puces, numéros, retrait des lignes suivantes, alignements, rotation, interlettrage, majuscules)
+      id: 'p7', background: '#ffffff',
+      elements: [
+        text('l1', { x: 60, y: 60, width: 440, fontSize: 36, list: 'bullet', text: "Premier point, assez long pour passer à la ligne et montrer le retrait\nSecond point\n\nTroisième après une ligne vide" }),
+        text('l2', { x: 560, y: 60, width: 440, fontSize: 36, list: 'number', fontFamily: '"Playfair Display", serif', fontStyle: 'bold', text: "Un\nDeux, avec une phrase longue qui revient à la ligne\n\nTrois (la ligne vide ne compte pas)" }),
+        text('l3', { x: 60, y: 480, width: 440, fontSize: 32, list: 'number', align: 'right', text: 'Aligné à droite\nAvec un texte qui est plus long que la ligne' }),
+        text('l4', { x: 560, y: 480, width: 440, fontSize: 32, list: 'bullet', align: 'center', underline: true, uppercase: true, letterSpacing: 4, text: 'Centré souligné\nmajuscules espacées' }),
+        text('l5', { x: 140, y: 800, width: 400, fontSize: 34, list: 'bullet', rotation: -12, fill: '#d6336c', text: 'Liste pivotée\nrose' }),
+        text('l6', { x: 600, y: 800, width: 420, fontSize: 34, list: 'bullet', fill: '#ffffff', text: 'Avec ombre\net contour', stroke: '#1e1f24', strokeWidth: 3, shadow: { color: '#7c5cff', blur: 14, offsetX: 6, offsetY: 6, opacity: 0.9 } })
+      ]
     }]
   }
 }
@@ -163,7 +174,7 @@ export interface Case {
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 %
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

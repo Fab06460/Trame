@@ -6,6 +6,7 @@ import { FONTS } from '@/fonts'
 import type { FontkitFont } from '@/fontkit'
 import { diagnoseFont, type FontChoice } from '@/pdfFonts'
 import type { PdfFallback } from '@/pdfFallbacks'
+import { markerChars } from '@/listStyle'
 import { displayText } from '@/textStyle'
 import type { TrameElement } from '@/types'
 
@@ -22,8 +23,9 @@ export function missingChars(text: string, has: (codePoint: number) => boolean):
  * `getLayout` fournit la police (mise en page fontkit) d'une variante ; null si elle est illisible.
  */
 export async function checkText(el: TrameElement, getLayout: (choice: FontChoice) => Promise<FontkitFont | null>): Promise<TextIssue | null> {
-  const text = displayText(el) // les majuscules demandent d'autres glyphes que le texte saisi
-  if (!text.trim()) return null // rien à dessiner
+  const body = displayText(el) // les majuscules demandent d'autres glyphes que le texte saisi
+  if (!body.trim()) return null // rien à dessiner
+  const text = body + markerChars(el) // les marqueurs de liste s'écrivent aussi : la police doit les avoir
   const d = diagnoseFont(el.fontFamily, el.fontStyle)
   if (!d.ok) return { reason: d.reason, family: d.family, variantLabel: d.variantLabel }
   const layout = await getLayout(d.choice)
