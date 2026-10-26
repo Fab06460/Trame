@@ -19,6 +19,7 @@ export function PhotosPanel(): React.JSX.Element {
   const [pageCount, setPageCount] = useState(1)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<PhotoError | null>(null)
+  const [detail, setDetail] = useState('')
   const [importing, setImporting] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const doc = useEditor((s) => s.doc)
@@ -28,9 +29,13 @@ export function PhotosPanel(): React.JSX.Element {
     if (!q.trim() || busy) return
     setBusy(true)
     setError(null)
+    setDetail('')
     const res = await window.trame.searchPhotos(q, p)
     setBusy(false)
-    if (!res.ok) return setError(res.error)
+    if (!res.ok) {
+      setDetail(res.detail ?? '')
+      return setError(res.error)
+    }
     setAsked(q)
     setPage(res.page)
     setPageCount(res.pageCount)
@@ -41,9 +46,11 @@ export function PhotosPanel(): React.JSX.Element {
     if (importing) return
     setImporting(photo.id)
     setError(null)
+    setDetail('')
     const res = await window.trame.importPhoto(photo.id)
     if (!res.ok) {
       setImporting(null)
+      setDetail(res.detail ?? '')
       return setError(res.error)
     }
     try {
@@ -85,6 +92,7 @@ export function PhotosPanel(): React.JSX.Element {
         {error && (
           <div className="warn" role="status" data-photo-error={error}>
             {MESSAGES[error]}
+            {detail && <small className="detail" data-photo-detail>Détail technique : {detail}</small>}
           </div>
         )}
       </section>

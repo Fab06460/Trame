@@ -32,7 +32,7 @@ const api = {
   /** Recherche de photos libres (en ligne, via le processus principal). */
   searchPhotos: (query: string, page: number): Promise<PhotoSearchResult> => ipcRenderer.invoke('photos:search', query, page),
   /** Télécharge la photo choisie (par son identifiant dans la dernière recherche). */
-  importPhoto: (id: string): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: PhotoError }> => ipcRenderer.invoke('photos:import', id),
+  importPhoto: (id: string): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: PhotoError; detail?: string }> => ipcRenderer.invoke('photos:import', id),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
@@ -106,6 +106,6 @@ export interface PhotoView {
   /** miniature (data URL) */
   thumb: string
 }
-export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number } | { ok: false; error: PhotoError }
+export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number } | { ok: false; error: PhotoError; detail?: string }
 
 export type TrameApi = typeof api

@@ -81,6 +81,7 @@ const photoServer = createServer((req, res) => {
   if (url.pathname === '/v1/images/') {
     const q = url.searchParams.get('q'), page = url.searchParams.get('page')
     if (q === 'limite') { res.writeHead(429); return res.end('{}') }
+    if (q === 'refus') { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"detail":"Accès refusé pour test"}') }
     if (q === 'horsligne') return req.socket.destroy()
     res.writeHead(200, { 'content-type': 'application/json' })
     const results = q === 'vide' ? [] : page === '2'
@@ -1018,6 +1019,10 @@ try {
   await search('limite')
   for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) === 0; i++) await sleep(250)
   check('limite de requêtes (429) : message dédié', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'rate-limit')
+  await search('refus')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'unavailable'; i++) await sleep(250)
+  const refusDetail = await run(`document.querySelector('[data-photo-detail]')?.innerText ?? ''`)
+  check('refus du service (403) : le code HTTP et le début de la réponse sont affichés', refusDetail.includes('HTTP 403') && refusDetail.includes('Accès refusé pour test'), refusDetail)
   await search('horsligne')
   for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'offline'; i++) await sleep(250)
   check('service injoignable : message « hors ligne » (l\'appli reste utilisable)', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'offline')

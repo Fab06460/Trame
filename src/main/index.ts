@@ -377,25 +377,31 @@ const ALLOW_LOCAL = !!process.env.TRAME_OPENVERSE_URL
 let lastPhotos = new Map<string, Photo>()
 
 class NetworkError extends Error {
-  constructor(public kind: 'offline' | 'rate-limit' | 'unavailable') {
+  constructor(
+    public kind: 'offline' | 'rate-limit' | 'unavailable',
+    /** cause technique (code HTTP, début de la réponse, message système) : affichée pour pouvoir diagnostiquer un service qui refuse */
+    public detail = ''
+  ) {
     super(kind)
   }
 }
 
 async function download(url: string, maxBytes: number, accept: string): Promise<{ bytes: Buffer; contentType: string | null }> {
-  if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable')
+  if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `adresse refusée : ${url.slice(0, 120)}`)
   let res: Response
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { 'User-Agent': `Trame/${app.getVersion()} (éditeur de visuels de bureau)`, Accept: accept } })
-  } catch {
-    throw new NetworkError('offline') // pas de réseau, DNS, délai dépassé
+  } catch (err) {
+    const cause = (err as { cause?: { code?: string; message?: string } }).cause
+    throw new NetworkError('offline', `${(err as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ''}`) // pas de réseau, DNS, délai dépassé
   }
-  if (res.status === 429) throw new NetworkError('rate-limit')
-  if (!res.ok || !isAllowedUrl(res.url || url, ALLOW_LOCAL)) throw new NetworkError('unavailable')
+  if (res.status === 429) throw new NetworkError('rate-limit', 'HTTP 429')
+  if (!res.ok) throw new NetworkError('unavailable', `HTTP ${res.status} — ${(await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200)}`)
+  if (!isAllowedUrl(res.url || url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `redirection refusée vers ${(res.url || '').slice(0, 120)}`)
   const declared = Number(res.headers.get('content-length') ?? 0)
-  if (declared > maxBytes) throw new NetworkError('unavailable')
+  if (declared > maxBytes) throw new NetworkError('unavailable', `réponse trop volumineuse (${declared} octets)`)
   const bytes = Buffer.from(await res.arrayBuffer())
-  if (bytes.length > maxBytes) throw new NetworkError('unavailable')
+  if (bytes.length > maxBytes) throw new NetworkError('unavailable', `réponse trop volumineuse (${bytes.length} octets)`)
   return { bytes, contentType: res.headers.get('content-type') }
 }
 
@@ -409,7 +415,13 @@ ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown): Promi
   if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1 }
   try {
     const res = await download(searchUrl(OPENVERSE, query, typeof page === 'number' ? page : 1), 2_000_000, 'application/json')
-    const found = parseSearch(JSON.parse(res.bytes.toString('utf-8')), ALLOW_LOCAL)
+    let json: unknown
+    try {
+      json = JSON.parse(res.bytes.toString('utf-8'))
+    } catch {
+      throw new NetworkError('unavailable', `réponse illisible (type ${res.contentType ?? 'inconnu'}) : ${res.bytes.toString('utf-8').replace(/\s+/g, ' ').slice(0, 150)}`)
+    }
+    const found = parseSearch(json, ALLOW_LOCAL)
     // miniatures téléchargées ici (6 à la fois) : l'interface ne contacte jamais le site de l'image
     const photos: Extract<PhotoSearchResult, { ok: true }>['photos'] = []
     const queue = [...found.photos]
@@ -430,15 +442,17 @@ ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown): Promi
     lastPhotos = new Map(found.photos.map((p) => [p.id, p]))
     return { ok: true, photos, page: found.page, pageCount: found.pageCount }
   } catch (err) {
-    return { ok: false, error: err instanceof NetworkError ? err.kind : 'unavailable' }
+    const e = err instanceof NetworkError ? err : new NetworkError('unavailable', String(err))
+    console.error('[photos:search]', e.kind, e.detail)
+    return { ok: false, error: e.kind, detail: e.detail }
   }
 })
 
 /** Télécharge la photo choisie (l'original, sinon la miniature de l'API) : retourne une data URL, copiée ensuite dans le document. */
-ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: 'offline' | 'rate-limit' | 'unavailable' }> => {
+ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail?: string }> => {
   const photo = typeof id === 'string' ? lastPhotos.get(id) : undefined
   if (!photo) return { ok: false, error: 'unavailable' }
-  let lastError: NetworkError = new NetworkError('unavailable')
+  let lastError: NetworkError = new NetworkError('unavailable', 'aucune photo téléchargeable (type de fichier non pris en charge ?)')
   for (const url of [photo.url, photo.thumbnailUrl]) {
     try {
       const dataUrl = asDataUrl(await download(url, MAX_IMAGE_BYTES, 'image/*'))
@@ -447,7 +461,8 @@ ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dat
       if (err instanceof NetworkError) lastError = err
     }
   }
-  return { ok: false, error: lastError.kind }
+  console.error('[photos:import]', lastError.kind, lastError.detail)
+  return { ok: false, error: lastError.kind, detail: lastError.detail }
 })
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))

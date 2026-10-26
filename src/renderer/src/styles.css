@@ -194,3 +194,5 @@ button.danger { color: #ff7b7b; }
 .photo-license { position: absolute; left: 4px; bottom: 4px; padding: 1px 5px; border-radius: 4px; font-size: 10px; background: rgba(0, 0, 0, 0.65); color: #fff; }
 .photo-busy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 20px; }
 .sidebar input[type="search"] { flex: 1; min-width: 0; }
+
+.warn .detail { display: block; margin-top: 6px; font-size: 11px; opacity: 0.85; word-break: break-word; user-select: text; }
