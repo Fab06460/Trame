@@ -9,15 +9,13 @@ import { createTextNode, loadImage } from '@/exportPages'
 import {
   PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, tjAdjustment
 } from '@/pdfMath'
-import { diagnoseFont, loadFontBytes } from '@/pdfFonts'
+import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
+import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /** Résolution (× la taille du design) des rendus en image de repli, pour rester nets en zoom. */
 const FALLBACK_PIXEL_RATIO = 3
-
-/** Pourquoi un texte ne peut pas être écrit en vrai texte PDF (voir `PdfFallback`). */
-type Cause = Pick<PdfFallback, 'reason' | 'family' | 'variantLabel' | 'chars'>
 
 interface LoadedFont {
   pdfFont: PDFFont
@@ -108,11 +106,8 @@ class ExportContext {
     return this.pdf.embedPng(decodeDataUrl(canvas.toDataURL('image/png'))!.bytes)
   }
 
-  /** Police PDF de l'élément, ou la raison pour laquelle il n'y en a pas. */
-  private async loadFont(el: TrameElement): Promise<LoadedFont | Cause> {
-    const d = diagnoseFont(el.fontFamily, el.fontStyle)
-    if (!d.ok) return { reason: d.reason, family: d.family, variantLabel: d.variantLabel }
-    const choice = d.choice
+  /** Police PDF d'une variante (chargée une seule fois), ou null si elle est illisible. */
+  private async loadFont(choice: FontChoice): Promise<LoadedFont | null> {
     const key = `${choice.def.slug}/${choice.variant}`
     if (!this.fonts.has(key)) {
       let loaded: LoadedFont | null = null
@@ -124,7 +119,7 @@ class ExportContext {
       }
       this.fonts.set(key, loaded)
     }
-    return this.fonts.get(key) ?? { reason: 'font-unreadable', family: choice.def.name }
+    return this.fonts.get(key)!
   }
 
   private gstate(p: PDFPage, opacity: number): ReturnType<PDFPage['node']['newExtGState']> {
@@ -133,11 +128,14 @@ class ExportContext {
   }
 
   /** Dessine le texte en vrai texte PDF. Retourne null si c'est fait, sinon la cause (l'élément sera rendu en image). */
-  private async drawTextVector(p: PDFPage, el: TrameElement): Promise<Cause | null> {
-    const text = el.text ?? ''
-    if (!text.trim()) return null // rien à dessiner
-    const font = await this.loadFont(el)
-    if ('reason' in font) return font
+  private async drawTextVector(p: PDFPage, el: TrameElement): Promise<TextIssue | null> {
+    if (!(el.text ?? '').trim()) return null // rien à dessiner
+    // même verdict que l'avertissement en direct de l'éditeur (pdfTextCheck)
+    const issue = await checkText(el, async (choice) => (await this.loadFont(choice))?.layout ?? null)
+    if (issue) return issue
+    const diagnosis = diagnoseFont(el.fontFamily, el.fontStyle)
+    if (!diagnosis.ok) return null // inatteignable : checkText a déjà répondu
+    const font = (await this.loadFont(diagnosis.choice))!
 
     // Même mise en page que l'écran : Konva fournit les lignes (retours à la ligne) et les métriques de la police
     const node = createTextNode(el)
@@ -149,9 +147,6 @@ class ExportContext {
 
     const { layout, pdfFont } = font
     const lines: Array<{ x: number; baseline: number; operand: PDFArray }> = []
-    // on relève d'abord TOUS les caractères manquants pour les citer ensemble dans le message
-    const missing = new Set([...text].filter((c) => c !== '\n' && !layout.hasGlyphForCodePoint(c.codePointAt(0)!)))
-    if (missing.size) return { reason: 'missing-glyph', family: el.fontFamily ?? '', chars: [...missing].join('') }
     for (const [i, line] of node.textArr.entries()) {
       const run = layout.layout(line.text)
       const items: Array<PDFHexString | PDFNumber> = []

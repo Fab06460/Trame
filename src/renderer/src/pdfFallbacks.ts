@@ -22,7 +22,7 @@ const snippet = (text: string): string => {
 }
 
 /** Explication d'une cause, avec ce qu'il faut faire. */
-export function explain(f: PdfFallback): string {
+export function explain(f: Pick<PdfFallback, 'reason' | 'family' | 'variantLabel' | 'chars'>): string {
   switch (f.reason) {
     case 'unknown-font':
       return `la police « ${f.family} » n'est pas embarquée : choisissez une police du menu « Police »`

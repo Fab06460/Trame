@@ -1,5 +1,8 @@
 import { useEditor, selectPage } from '@/store/editor'
 import { FONTS, SYSTEM_FONT } from '@/fonts'
+import { explain } from '@/pdfFallbacks'
+import { suggestFix } from '@/pdfTextCheck'
+import { usePdfIssues } from '@/store/pdfIssues'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -13,6 +16,7 @@ export function Properties(): React.JSX.Element {
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const el = page.elements.find((e) => e.id === selectedIds[0])
+  const pdfIssue = usePdfIssues((st) => (el ? st.issues[el.id] : undefined))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
   const { updateElement, setBackground, setSize, moveLayer, duplicateSelected, removeSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
     useEditor.getState()
@@ -133,6 +137,20 @@ export function Properties(): React.JSX.Element {
               ))}
             </select>
           </label>
+          {pdfIssue && (
+            <div className="warn" role="status">
+              <strong>⚠ Exporté en image dans le PDF</strong>
+              <span>Ce texte s'affichera correctement mais ne sera pas sélectionnable : {explain(pdfIssue.issue)}.</span>
+              {(() => {
+                const fix = suggestFix(el, pdfIssue.issue)
+                return fix ? (
+                  <button className="warn-fix" onClick={() => updateElement(el.id, fix.patch)}>
+                    {fix.label}
+                  </button>
+                ) : null
+              })()}
+            </div>
+          )}
           <label>
             Taille
             <input

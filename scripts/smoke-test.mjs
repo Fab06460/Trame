@@ -124,6 +124,12 @@ try {
       ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }))
     }).then((d) => (d.result.exceptionDetails ? { __error: d.result.exceptionDetails.exception?.description } : d.result.result.value))
 
+  const cdp = (method, params) =>
+    new Promise((resolve) => {
+      const i = ++id
+      pending.set(i, resolve)
+      ws.send(JSON.stringify({ id: i, method, params }))
+    })
   const doc = JSON.stringify({ version: 2, name: 'Test', width: 100, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
   const a = join(tmp, 'proj', 'a.trame')
   const b = join(tmp, 'proj', 'b.trame')
@@ -255,6 +261,23 @@ try {
     check('un export avec des replis en image prévient l\'utilisateur', info.includes('2 textes exportés sous forme d\'image'), info.split('\n')[0])
     check('le message nomme la police système et le caractère absent', info.includes('Helvetica Neue') && info.includes('✓'), info)
     check("le message indique la marche à suivre (menu « Police »)", info.includes('menu « Police »'))
+
+    // avertissement en direct dans l'éditeur : compteur sur le bouton, encart du panneau, correction en un clic
+    const pdfBtn = () => run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.includes('Export PDF'))?.textContent.trim()`)
+    check('le bouton « Export PDF » signale les 2 textes concernés', (await pdfBtn()) === 'Export PDF ⚠ 2', await pdfBtn())
+    // clic sur le premier texte (même calcul d'ajustement que le canvas : marge 48, document 400 × 200)
+    const geo = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+    const fit = Math.min((geo.w - 96) / 400, (geo.h - 96) / 200)
+    const px = geo.l + (geo.w - 400 * fit) / 2 + 60 * fit
+    const py = geo.t + (geo.h - 200 * fit) / 2 + 32 * fit
+    for (const type of ['mousePressed', 'mouseReleased']) await cdp('Input.dispatchMouseEvent', { type, x: px, y: py, button: 'left', clickCount: 1 })
+    await sleep(500)
+    const warn = await run(`document.querySelector('.panel .warn')?.innerText ?? ''`)
+    check("le panneau explique pourquoi (police « Helvetica Neue » non embarquée)", warn.includes('Helvetica Neue') && warn.includes('Exporté en image'), warn)
+    check('le panneau propose la correction « Utiliser Inter »', (await click('.panel .warn-fix', 'Utiliser Inter')) === true)
+    for (let i = 0; i < 30 && (await pdfBtn()) !== 'Export PDF ⚠ 1'; i++) await sleep(200)
+    check("après la correction, il ne reste qu'un texte signalé (le caractère absent)", (await pdfBtn()) === 'Export PDF ⚠ 1', await pdfBtn())
+    check("l'encart disparaît du texte corrigé", (await run(`document.querySelector('.panel .warn') ? 1 : 0`)) === 0)
   } else {
     console.log('- ouverture depuis le Finder (appli ouverte) : ignorée (macOS, aucune autre instance d\'Electron)')
   }

@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
+import { watchDocument } from '@/store/pdfIssues'
 import { copySelection, cutSelection, paste } from '@/clipboardActions'
 import { confirmUnsaved, newProject, openFile, openProject, saveProject } from '@/fileActions'
 
@@ -76,6 +77,10 @@ export default function App(): React.JSX.Element {
     const file = filePath ? filePath.split(/[\\/]/).pop()!.replace(/\.trame$/, '') : name
     document.title = `${file}${dirty ? ' •' : ''} — Trame`
   }, [dirty, filePath, name])
+
+  // Avertissements « ce texte sera exporté en image dans le PDF » : recalculés après chaque modification du document
+  const doc = useEditor((s) => s.doc)
+  useEffect(() => watchDocument(doc), [doc])
 
   // Fichiers ouverts depuis le Finder ou le Dock : en cours d'exécution, ou reçus pendant le démarrage
   useEffect(() => {

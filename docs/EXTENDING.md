@@ -59,6 +59,10 @@ Handler dans `src/main/index.ts` (`ipcMain.handle`), fonction correspondante dan
 
 `npm test` lance Vitest (environnement Node) sur les fichiers `src/**/*.test.ts`, placés à côté du code testé. Le store Zustand se teste directement sans React : `useEditor.getState()` puis les actions ; appeler `newDocument()` dans un `beforeEach` pour repartir d'un état propre. Toute nouvelle action du store ou fonction de `geometry.ts` doit venir avec ses tests ; un nouveau modèle ou une nouvelle forme est déjà couvert par les tests de cohérence de `templates.test.ts`.
 
+### Règle « vrai texte ou image » (PDF)
+
+Toute modification de ce qui décide si un texte peut être écrit en vrai texte (nouvelle police, nouveau style, nouvelle condition) se fait dans `pdfTextCheck.ts` : l'export et l'avertissement en direct de l'éditeur en dépendent tous deux. Une nouvelle cause doit aussi être décrite dans `explain` (`pdfFallbacks.ts`) et, si une correction automatique existe, dans `suggestFix`.
+
 ### Fidélité de l'export PDF
 
 `npm run fidelity` (macOS : Swift et PDFKit) compare le PDF vectoriel à l'image Konva de l'éditeur, pixel à pixel, pour `scripts/pdf-fidelity/documents.ts` (un document « mixte » qui exerce tous les cas + les modèles intégrés), et vérifie l'extraction du texte et le nombre de replis en image. Il échoue au-delà de 2 % de pixels très différents. À lancer après toute modification de `pdfExport.ts`, `pdfMath.ts`, `pdfFonts.ts`, de la mise en page du texte ou des polices. Les images produites (PDF rastérisé, Konva) sont conservées dans le dossier temporaire affiché, pour inspection visuelle. Les calculs purs (matrice, chemins, crénage, correspondance des polices) ont en plus leurs tests unitaires (`pdfMath.test.ts`, `pdfFonts.test.ts`).

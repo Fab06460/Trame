@@ -4,6 +4,7 @@ import { newProject, openProject, saveProject } from '@/fileActions'
 import { renderPage } from '@/exportPages'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
+import { usePdfIssues } from '@/store/pdfIssues'
 
 export function Toolbar(): React.JSX.Element {
   const { addElement, undo, redo } = useEditor.getState()
@@ -11,6 +12,7 @@ export function Toolbar(): React.JSX.Element {
   const pageNo = useEditor((s) => s.doc.pages.findIndex((p) => p.id === s.pageId) + 1)
   const pageCount = useEditor((s) => s.doc.pages.length)
   const dirty = useEditor((s) => s.dirty)
+  const pdfIssueCount = usePdfIssues((s) => Object.keys(s.issues).length)
   const canUndo = useEditor((s) => s.past.length > 0)
   const canRedo = useEditor((s) => s.future.length > 0)
 
@@ -51,7 +53,17 @@ export function Toolbar(): React.JSX.Element {
       <button onClick={() => addElement({ type: 'ellipse' })}>Ellipse</button>
       <button onClick={addImage}>Image</button>
       <span className="spacer" />
-      <button onClick={exportPdfFile}>Export PDF</button>
+      <button
+        onClick={exportPdfFile}
+        className={pdfIssueCount ? 'has-warning' : ''}
+        title={
+          pdfIssueCount
+            ? `${pdfIssueCount} texte${pdfIssueCount > 1 ? 's seront exportés' : ' sera exporté'} en image dans le PDF (non sélectionnable${pdfIssueCount > 1 ? 's' : ''}). Sélectionnez-les : l'éditeur indique pourquoi.`
+            : 'Exporter toutes les pages en PDF'
+        }
+      >
+        Export PDF{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''}
+      </button>
       <button onClick={() => exportAs('image/jpeg')}>Export JPG</button>
       <button className="primary" onClick={() => exportAs('image/png')}>Export PNG</button>
     </header>

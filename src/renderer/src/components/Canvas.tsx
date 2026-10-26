@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { boundsOf, intersects, type Box } from '@/geometry'
-import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group } from 'react-konva'
+import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle } from 'react-konva'
 import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
+import { usePdfIssues } from '@/store/pdfIssues'
 import { ZoomControls } from './ZoomControls'
 import type { TrameElement } from '@/types'
 
@@ -30,6 +31,7 @@ export function Canvas(): React.JSX.Element {
   const doc = useEditor((s) => s.doc)
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
+  const pdfIssues = usePdfIssues((s) => s.issues)
   const { select, toggleSelect, updateElement, beginChange, setPositions } = useEditor.getState()
 
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -317,6 +319,20 @@ export function Canvas(): React.JSX.Element {
               )
             })}
           </Group>
+          {/* pastille « ce texte sera exporté en image dans le PDF » : indication d'édition, absente de tous les exports */}
+          {page.elements
+            .filter((el) => pdfIssues[el.id])
+            .map((el) => {
+              const b = boundsOf(el)
+              return (
+                // décalée vers l'extérieur du coin supérieur droit pour ne pas masquer la poignée de redimensionnement
+                <Group key={`warn-${el.id}`} x={offX + (b.x + b.width) * scale + 4} y={offY + b.y * scale - 16} listening={false}>
+                  <Circle radius={9} fill="#f59e0b" stroke="#1e1f24" strokeWidth={1.5} />
+                  <Text x={-9} y={-7} width={18} align="center" text="!" fontSize={13} fontStyle="bold" fontFamily="Helvetica Neue, Arial, sans-serif" fill="#1e1f24" />
+                </Group>
+              )
+            })}
+
           {lasso && (
             <Rect
               x={offX + lasso.x * scale}

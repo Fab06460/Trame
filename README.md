@@ -15,7 +15,7 @@
 - Annuler / rétablir (100 niveaux)
 - Projets récents (liste persistée, onglet « Récents », menu « Ouvrir récent » du Dock) et ouverture par double-clic sur un `.trame` dans le Finder (app installée, macOS)
 - Protection contre la perte de données : confirmation avant de remplacer ou fermer un document modifié, validation des fichiers à l'ouverture
-- Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF vectoriel (toutes les pages, texte sélectionnable)
+- Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF vectoriel (toutes les pages, texte sélectionnable), avec avertissement en direct quand un texte ne pourra pas être sélectionnable dans le PDF
 
 Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘C` / `⌘X` / `⌘V` copier / couper / coller · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue.
 (Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
