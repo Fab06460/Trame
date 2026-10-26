@@ -3,6 +3,7 @@ import { FONTS, SYSTEM_FONT } from '@/fonts'
 import { explain } from '@/pdfFallbacks'
 import { suggestFix } from '@/pdfTextCheck'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { PositionPanel } from './PositionPanel'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -96,6 +97,7 @@ export function Properties(): React.JSX.Element {
           </button>
           <button onClick={ungroupSelected} disabled={!grouped}>Dissocier</button>
         </div>
+        <PositionPanel />
         {alignButtons}
         {layerButtons}
       </aside>
@@ -218,6 +220,7 @@ export function Properties(): React.JSX.Element {
         />
       </label>
 
+      <PositionPanel />
       {alignButtons}
       {layerButtons}
     </aside>

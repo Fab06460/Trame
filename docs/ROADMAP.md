@@ -121,7 +121,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | D4 | Signature : visuelle (dessinée ou importée) ; numérique certifiée en option | M | La signature numérique avec certificat est un chantier à part (L). | — |
 | D5 | Mode présentation plein écran, transitions, notes de l'orateur | L |  | — |
 
-### Phase 4 — Outils avancés à modèle local (optionnels et lourds)
+### Phase 4 — Compléments (correction orthographique)
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |

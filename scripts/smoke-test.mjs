@@ -276,6 +276,29 @@ try {
   await run(`window.trame.deleteUserTemplate(${JSON.stringify(idBefore)})`) // nettoyage : l'original revient
   await run('window.trame.unhideAllTemplates()')
 
+  // position et taille numériques (panneau « Propriétés »)
+  const field = (name) => run(`Number(document.querySelector('.panel [data-field="${name}"]')?.value)`)
+  const setField = async (name, value) => {
+    await run(`(() => { const i = document.querySelector('.panel [data-field="${name}"]'); i.focus(); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(String(value))}); i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) })()`)
+    await sleep(250)
+  }
+  await click('header.toolbar button', 'Rectangle') // nouvel élément sélectionné, centré : 300 × 200 dans une page de 1080
+  await sleep(400)
+  check('X, Y, L, H initiaux d\'un rectangle centré', (await field('x')) === 390 && (await field('y')) === 440 && (await field('width')) === 300 && (await field('height')) === 200,
+    JSON.stringify([await field('x'), await field('y'), await field('width'), await field('height')]))
+  await setField('x', 100)
+  check('saisir X déplace l\'élément', (await field('x')) === 100)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('annuler restaure la position (un seul cran d\'historique par saisie)', (await field('x')) === 390, String(await field('x')))
+  await setField('width', 500)
+  check('largeur libre : la hauteur ne change pas', (await field('width')) === 500 && (await field('height')) === 200)
+  await clickSel('.panel .lock')
+  await setField('width', 600)
+  check('proportions verrouillées : la hauteur suit (500×200 → 600×240)', (await field('height')) === 240, String(await field('height')))
+  await setField('rotation', 90)
+  check('après rotation de 90°, X/Y suivent la boîte visible (X = 390 − hauteur)', (await field('x')) === 150 && (await field('y')) === 440, JSON.stringify([await field('x'), await field('y')]))
+
   // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)
