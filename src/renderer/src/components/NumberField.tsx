@@ -13,7 +13,7 @@ interface Props {
   suffix?: string
 }
 
-const show = (v: number): string => String(Math.round(v * 10) / 10)
+const show = (v: number): string => String(Math.round(v * 100) / 100)
 
 /**
  * Champ numérique qui n'applique la valeur qu'à la validation (Entrée ou sortie du champ) : un seul cran d'historique par
@@ -29,6 +29,8 @@ export function NumberField({ label, field, value, onCommit, disabled, min, max,
   }, [value])
 
   const commit = (): void => {
+    // rien n'a été saisi : on ne « valide » pas la valeur affichée (arrondie) à la place de la vraie
+    if (draft === show(value)) return
     const n = Number(draft.replace(',', '.'))
     if (!Number.isFinite(n) || draft.trim() === '') return setDraft(show(value))
     const clamped = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n))

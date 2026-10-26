@@ -26,6 +26,14 @@ export interface TrameElement {
   fontFamily?: string
   fontStyle?: string // 'normal' | 'bold' | 'italic' | 'italic bold'
   align?: 'left' | 'center' | 'right'
+  /** espacement supplémentaire entre les lettres, en pixels de design (0 = normal) */
+  letterSpacing?: number
+  /** interligne, en multiple de la taille de police (1 = serré, défaut) */
+  lineHeight?: number
+  underline?: boolean
+  strike?: boolean
+  /** affichage en majuscules ; le texte saisi reste tel quel */
+  uppercase?: boolean
   // path : chemin SVG (viewBox 100×100)
   path?: string
   // image

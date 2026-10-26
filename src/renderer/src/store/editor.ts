@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
+import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
 import type { Guide, TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -68,6 +69,7 @@ export function parseDocument(json: string): TrameDocument {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
       if (!isElement(e)) throw invalid('élément mal positionné')
       // indicateurs de calque : seules les valeurs attendues sont retenues (un « locked: "oui" » ne doit rien verrouiller)
+      sanitizeTextStyle(e)
       if (e.locked !== true) delete e.locked
       if (e.hidden !== true) delete e.hidden
       if (typeof e.name !== 'string' || !e.name.trim()) delete e.name

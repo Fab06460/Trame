@@ -526,6 +526,39 @@ try {
   check('annuler remet l\'ordre précédent', (await layerNames()) === 'Votre texte|Soleil|Rectangle', await layerNames())
   await click('.sidebar .tabs button', 'Modèles')
 
+  // typographie : interlettrage, interligne, souligné, barré, majuscules (panneau « Propriétés » → PDF)
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Texte') // « Votre texte », Inter gras 64
+  await sleep(400)
+  check('la taille de police est un champ numérique validé à la sortie (64)', (await field('fontSize')) === 64)
+  await setField('fontSize', 80)
+  check('taille modifiée', (await field('fontSize')) === 80)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('un seul annuler rétablit la taille (un cran par saisie, pas un par chiffre)', (await field('fontSize')) === 64, String(await field('fontSize')))
+  await setField('letterSpacing', 20)
+  await setField('lineHeight', 1.25)
+  check('interlettrage et interligne saisis', (await field('letterSpacing')) === 20 && (await field('lineHeight')) === 1.25)
+  // régression : un interligne à 2 décimales ne doit pas être « arrondi » par un simple passage dans le champ
+  await run(`(() => { const i = document.querySelector('.panel [data-field="lineHeight"]'); i.focus(); i.blur() })()`)
+  await sleep(250)
+  check('1,25 reste 1,25 après un simple passage dans le champ (pas d\'arrondi silencieux)', (await field('lineHeight')) === 1.25, String(await field('lineHeight')))
+  for (const flag of ['underline', 'strike', 'uppercase']) await clickSel(`.panel [data-flag="${flag}"]`)
+  await sleep(300)
+  check('souligné, barré et majuscules sont activés', (await run(`[...document.querySelectorAll('.panel [data-flag]')].map(b => b.getAttribute('aria-pressed')).join()`)) === 'true,true,true')
+  check('l\'aperçu de la page applique les majuscules', (await run(`getComputedStyle(document.querySelector('.page-item.current .thumb div div')).textTransform`)) === 'uppercase')
+  const typoPdf = await exportPdfText()
+  check('PDF : l\'interlettrage est un vrai espacement de caractères (20 Tc)', /\b20 Tc\b/.test(typoPdf))
+  const typoLines = (typoPdf.match(/\] TJ/g) ?? []).length // une opération TJ par ligne de texte
+  const typoStrokes = (typoPdf.match(/\nh\nf\n/g) ?? []).length // pdf-lib écrit un rectangle « m l l l h f »
+  check('PDF : un souligné et un barré par ligne de texte (+ le fond de page)', typoLines >= 1 && typoStrokes === 1 + 2 * typoLines, `${typoLines} ligne(s), ${typoStrokes} rectangles`)
+  check('PDF : le texte reste du vrai texte', typoPdf.includes(' TJ'))
+  await clickSel('.panel [data-flag="uppercase"]')
+  await sleep(250)
+  check('retirer une option la désactive', (await run(`document.querySelector('.panel [data-flag="uppercase"]').getAttribute('aria-pressed')`)) === 'false')
+
   // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)

@@ -3,7 +3,7 @@ import { fontkit, type FontkitFont } from '@/fontkit'
 import {
   PDFArray, PDFDocument, PDFFont, PDFHexString, PDFImage, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
   beginText, concatTransformationMatrix, endText, moveText, popGraphicsState, pushGraphicsState, rgb,
-  setFillingColor, setFontAndSize, setGraphicsState
+  setCharacterSpacing, setFillingColor, setFontAndSize, setGraphicsState
 } from 'pdf-lib'
 import { createTextNode, loadImage } from '@/exportPages'
 import {
@@ -12,6 +12,7 @@ import {
 import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
 import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
+import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /** Résolution (× la taille du design) des rendus en image de repli, pour rester nets en zoom. */
@@ -129,7 +130,7 @@ class ExportContext {
 
   /** Dessine le texte en vrai texte PDF. Retourne null si c'est fait, sinon la cause (l'élément sera rendu en image). */
   private async drawTextVector(p: PDFPage, el: TrameElement): Promise<TextIssue | null> {
-    if (!(el.text ?? '').trim()) return null // rien à dessiner
+    if (!displayText(el).trim()) return null // rien à dessiner
     // même verdict que l'avertissement en direct de l'éditeur (pdfTextCheck)
     const issue = await checkText(el, async (choice) => (await this.loadFont(choice))?.layout ?? null)
     if (issue) return issue
@@ -146,19 +147,25 @@ class ExportContext {
     const lineHeight = node.lineHeight()
 
     const { layout, pdfFont } = font
-    const lines: Array<{ x: number; baseline: number; operand: PDFArray }> = []
+    const spacing = letterSpacingOf(el)
+    const lines: Array<{ x: number; baseline: number; width: number; operand: PDFArray }> = []
     for (const [i, line] of node.textArr.entries()) {
-      const run = layout.layout(line.text)
       const items: Array<PDFHexString | PDFNumber> = []
-      for (const [g, glyph] of run.glyphs.entries()) {
-        if (!glyph.codePoints.length) return { reason: 'missing-glyph', family: el.fontFamily ?? '' } // glyphe sans caractère d'origine : on ne sait pas l'encoder
-        items.push(pdfFont.encodeText(String.fromCodePoint(...glyph.codePoints)) as PDFHexString)
-        const adj = tjAdjustment(run.positions[g].xAdvance, glyph.advanceWidth, layout.unitsPerEm)
-        if (adj !== 0) items.push(PDFNumber.of(adj))
+      // Avec un interlettrage, Konva dessine lettre par lettre : ni crénage ni ligatures. On fait de même (une mise en page par
+      // caractère), l'espacement lui-même étant porté par l'opérateur Tc ; sinon la ligne entière est composée avec son crénage.
+      const runs = spacing !== 0 ? [...line.text].map((ch) => layout.layout(ch)) : [layout.layout(line.text)]
+      for (const run of runs) {
+        for (const [g, glyph] of run.glyphs.entries()) {
+          if (!glyph.codePoints.length) return { reason: 'missing-glyph', family: el.fontFamily ?? '' } // glyphe sans caractère d'origine : on ne sait pas l'encoder
+          items.push(pdfFont.encodeText(String.fromCodePoint(...glyph.codePoints)) as PDFHexString)
+          const adj = spacing !== 0 ? 0 : tjAdjustment(run.positions[g].xAdvance, glyph.advanceWidth, layout.unitsPerEm)
+          if (adj !== 0) items.push(PDFNumber.of(adj))
+        }
       }
       lines.push({
         x: lineOffsetX(el.align, el.width, line.width),
         baseline: baselineY(i, fontSize, lineHeight, ascent, descent),
+        width: line.width,
         operand: this.pdf.context.obj(items) as PDFArray
       })
     }
@@ -169,6 +176,7 @@ class ExportContext {
     const fontName = p.node.newFontDictionary(pdfFont.name, pdfFont.ref)
     if (el.opacity < 1) p.pushOperators(setGraphicsState(this.gstate(p, el.opacity)))
     p.pushOperators(beginText(), setFontAndSize(fontName, fontSize), setFillingColor(rgb(color.r, color.g, color.b)))
+    if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
     let prev = { x: 0, y: 0 } // Td est relatif à la ligne précédente
     for (const line of lines) {
       const pos = { x: line.x, y: -line.baseline }
@@ -176,6 +184,17 @@ class ExportContext {
       prev = pos
     }
     p.pushOperators(endText())
+
+    // Soulignement et barré : mêmes position, épaisseur et longueur arrondie que Konva
+    if (el.underline || el.strike) {
+      const g = decorationGeometry(fontSize)
+      for (const line of lines) {
+        for (const offset of [el.underline ? g.underlineOffset : null, el.strike ? g.strikeOffset : null]) {
+          if (offset === null) continue
+          p.drawRectangle({ x: line.x, y: -(line.baseline + offset) - g.thickness / 2, width: Math.round(line.width), height: g.thickness, color: rgb(color.r, color.g, color.b), borderWidth: 0 })
+        }
+      }
+    }
     return null
   }
 

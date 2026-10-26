@@ -51,7 +51,10 @@ export function PageThumb({
                   fontStyle: e.fontStyle?.includes('italic') ? 'italic' : 'normal',
                   textAlign: e.align,
                   whiteSpace: 'pre-wrap',
-                  lineHeight: 1
+                  lineHeight: e.lineHeight ?? 1,
+                  letterSpacing: e.letterSpacing ?? 0,
+                  textDecoration: [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].filter(Boolean).join(' ') || 'none',
+                  textTransform: e.uppercase ? 'uppercase' : 'none'
                 }}
               >
                 {e.text}

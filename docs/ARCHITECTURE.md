@@ -151,6 +151,18 @@ Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quan
 
 `clipboardActions.ts` : ⌘C / ⌘X / ⌘V sont interceptés dans `App.tsx` (hors champs de saisie) et passent par le presse-papiers **système** via IPC, ce qui permet de coller entre pages, entre documents (autre fenêtre ou fichier ouvert plus tard) et de coller une capture d'écran ou du texte venant d'une autre application. Écrire dans le presse-papiers remplace tout son contenu : la copie la plus récente l'emporte toujours. `pasteElements` (store) régénère les identifiants et les `groupId`, décale de 30 px tant que la copie se superposerait pile à un élément existant, recentre si tout est hors de la page (format différent), et crée un seul cran d'historique. Image collée : insérée à 60 % de la page au plus ; texte collé : nouveau bloc de texte (5 000 caractères max).
 
+## Typographie
+
+Champs de texte : `letterSpacing`, `lineHeight`, `underline`, `strike`, `uppercase` (voir `FILE_FORMAT.md`). `textStyle.ts` regroupe la logique **commune aux quatre rendus** : `displayText` (les majuscules ne changent que l'affichage, jamais le texte saisi), `decorationOf`, `decorationGeometry` et le nettoyage à la lecture. `createTextNode` (nœud Konva partagé par l'éditeur, l'export image et l'export PDF) les applique, donc les lignes, les retours à la ligne et les largeurs sont identiques partout.
+
+Particularités de Konva, reproduites telles quelles dans le PDF (c'est ce que mesure `npm run fidelity`, page 2 du document d'essai) :
+- avec un **interlettrage non nul**, Konva dessine **lettre par lettre** : plus de crénage ni de ligatures. L'export fait de même (une mise en page `fontkit` par caractère, sans correction `TJ`) et porte l'espacement par l'opérateur `Tc` ;
+- **souligné et barré** : traits de `taille / 15` d'épaisseur, à `round(taille / 4)` sous (souligné) ou au-dessus (barré) de la ligne de base, d'une longueur égale à la largeur arrondie de la ligne ; dessinés par l'export comme des rectangles pleins ;
+- **interligne** : multiple de la taille, repris dans la position de la ligne de base (`baselineY`) ;
+- **majuscules** : `toLocaleUpperCase('fr')` ; l'avertissement « texte exporté en image » et le contrôle des glyphes portent sur le texte **affiché** (les majuscules demandent d'autres glyphes).
+
+La taille et les espacements se saisissent dans des champs numériques validés à la sortie (un cran d'historique par modification).
+
 ## Calques
 
 `components/LayersPanel.tsx` (onglet « Calques » de la barre latérale) liste les éléments de la page **du premier plan à l'arrière-plan** (le tableau `elements` est dans l'ordre de superposition, dernier = devant ; `layers.ts` convertit les indices : `displayToIndex`, `dropIndex`). Chaque ligne : œil (masquer), glyphe du type, nom (double-clic pour renommer ; `layerLabel` : nom choisi, sinon début du texte, sinon type), repères « groupe » et « ⚠ exporté en image », cadenas (verrouiller). Le réordonnancement par glisser-déposer HTML5 appelle `reorderElement` (un cran d'historique, aucun si rien ne change).

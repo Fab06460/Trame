@@ -4,6 +4,8 @@ import { explain } from '@/pdfFallbacks'
 import { suggestFix } from '@/pdfTextCheck'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
+import { NumberField } from './NumberField'
+import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -156,16 +158,7 @@ export function Properties(): React.JSX.Element {
               })()}
             </div>
           )}
-          <label>
-            Taille
-            <input
-              type="number"
-              min={8}
-              max={400}
-              value={Math.round(el.fontSize ?? 32)}
-              onChange={(e) => updateElement(el.id, { fontSize: Number(e.target.value) })}
-            />
-          </label>
+          <NumberField label="Taille" field="fontSize" value={el.fontSize ?? 32} min={8} max={400} suffix="px" onCommit={(v) => updateElement(el.id, { fontSize: v })} />
           <div className="row">
             <button
               className={el.fontStyle?.includes('bold') ? 'active' : ''}
@@ -192,6 +185,31 @@ export function Properties(): React.JSX.Element {
                 {{ left: '⇤', center: '↔︎', right: '⇥' }[a]}
               </button>
             ))}
+          </div>
+          <div className="row">
+            {(
+              [
+                ['underline', 'Souligné', <u key="u">S</u>],
+                ['strike', 'Barré', <s key="s">B</s>],
+                ['uppercase', 'MAJUSCULES', <span key="a">AA</span>]
+              ] as const
+            ).map(([flag, title, glyph]) => (
+              <button
+                key={flag}
+                data-flag={flag}
+                aria-pressed={!!el[flag]}
+                className={el[flag] ? 'active' : ''}
+                title={title}
+                // `undefined` : la clé disparaît du fichier quand l'option est retirée
+                onClick={() => updateElement(el.id, { [flag]: el[flag] ? undefined : true })}
+              >
+                {glyph}
+              </button>
+            ))}
+          </div>
+          <div className="num-grid">
+            <NumberField label="Interlettrage" field="letterSpacing" value={el.letterSpacing ?? 0} min={LETTER_SPACING.min} max={LETTER_SPACING.max} step={0.5} suffix="px" onCommit={(v) => updateElement(el.id, { letterSpacing: v || undefined })} />
+            <NumberField label="Interligne" field="lineHeight" value={el.lineHeight ?? LINE_HEIGHT.default} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.05} suffix="×" onCommit={(v) => updateElement(el.id, { lineHeight: v === LINE_HEIGHT.default ? undefined : v })} />
           </div>
         </>
       )}

@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
+import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /** Nœud Konva de texte tel que dessiné à l'écran : mêmes propriétés partout (éditeur, export image, export PDF). */
@@ -7,7 +8,10 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
   return new Konva.Text({
     ...extra,
     width: e.width,
-    text: e.text,
+    text: displayText(e),
+    letterSpacing: letterSpacingOf(e),
+    lineHeight: lineHeightOf(e),
+    textDecoration: decorationOf(e),
     fontSize: e.fontSize,
     fontFamily: e.fontFamily,
     fontStyle: e.fontStyle,

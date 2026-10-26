@@ -44,6 +44,21 @@ function mixed(): TrameDocument {
         text('t8', { x: 600, y: 780, width: 420, fontSize: 30, fontFamily: '"JetBrains Mono", monospace', text: 'mono 0O1l {x}' }),
         { id: 'i', type: 'image', x: 820, y: 280, width: 180, height: 120, src: pngDataUrl(), ...base, rotation: 8 }
       ]
+    }, {
+      // page 2 : styles de texte (interlettrage, interligne, soulignement, barré, majuscules)
+      id: 'p2', background: '#ffffff',
+      elements: [
+        text('s1', { x: 60, y: 60, width: 960, fontStyle: 'bold', fontSize: 56, letterSpacing: 14, text: 'Espacé large' }),
+        text('s2', { x: 60, y: 160, width: 960, fontStyle: 'bold', fontSize: 64, letterSpacing: -3, text: 'Serré −3 px AVA To' }),
+        text('s3', { x: 60, y: 270, width: 520, fontSize: 34, lineHeight: 1.7, text: "Un interligne généreux sur plusieurs lignes : le texte est enroulé par Konva puis repris tel quel dans le PDF." }),
+        text('s4', { x: 620, y: 270, width: 400, fontSize: 34, lineHeight: 0.85, text: "Interligne serré, lignes presque collées entre elles pour voir l'écart." }),
+        text('s5', { x: 60, y: 560, width: 460, fontSize: 52, underline: true, text: 'Souligné' }),
+        text('s6', { x: 560, y: 560, width: 460, fontSize: 52, strike: true, text: 'Barré' }),
+        text('s7', { x: 60, y: 660, width: 960, fontSize: 60, fontFamily: '"Playfair Display", serif', fontStyle: 'italic bold', underline: true, strike: true, align: 'center', fill: '#d6336c', text: 'Les deux à la fois' }),
+        text('s8', { x: 60, y: 780, width: 960, fontSize: 40, uppercase: true, letterSpacing: 8, align: 'center', text: 'élégant été, ÇA se voit' }),
+        text('s9', { x: 60, y: 880, width: 560, fontSize: 36, underline: true, lineHeight: 1.4, letterSpacing: 2, align: 'right', text: 'Souligné, espacé et\naligné à droite' }),
+        text('s10', { x: 640, y: 880, width: 380, fontSize: 30, fontFamily: '"Lora", serif', uppercase: true, text: 'Majuscules Lora' })
+      ]
     }]
   }
 }
@@ -58,7 +73,7 @@ export interface Case {
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l'], expectFallbacks: 2 },
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux'], expectFallbacks: 2 },
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

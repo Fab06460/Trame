@@ -7,6 +7,7 @@ import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import { ZoomControls } from './ZoomControls'
 import type { TrameElement } from '@/types'
 
@@ -356,7 +357,10 @@ export function Canvas(): React.JSX.Element {
                   {...p}
                   visible={editing !== el.id}
                   width={el.width}
-                  text={el.text}
+                  text={displayText(el)}
+                  letterSpacing={letterSpacingOf(el)}
+                  lineHeight={lineHeightOf(el)}
+                  textDecoration={decorationOf(el)}
                   fontSize={el.fontSize}
                   fontFamily={el.fontFamily}
                   fontStyle={el.fontStyle}
@@ -445,12 +449,16 @@ export function Canvas(): React.JSX.Element {
             left: offX + editingEl.x * scale,
             top: offY + editingEl.y * scale,
             width: editingEl.width * scale,
-            minHeight: (editingEl.fontSize ?? 32) * scale * 1.2,
+            minHeight: (editingEl.fontSize ?? 32) * scale * lineHeightOf(editingEl),
             fontSize: (editingEl.fontSize ?? 32) * scale,
             fontFamily: editingEl.fontFamily,
             fontWeight: editingEl.fontStyle?.includes('bold') ? 700 : 400,
             fontStyle: editingEl.fontStyle?.includes('italic') ? 'italic' : 'normal',
             textAlign: editingEl.align,
+            letterSpacing: letterSpacingOf(editingEl) * scale,
+            lineHeight: lineHeightOf(editingEl),
+            textDecoration: decorationOf(editingEl) || 'none',
+            textTransform: editingEl.uppercase ? 'uppercase' : 'none',
             color: editingEl.fill,
             transform: `rotate(${editingEl.rotation}deg)`
           }}

@@ -34,7 +34,12 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "text": "Votre texte", "fontSize": 64,
           "fontFamily": "\"Inter\", sans-serif",
           "fontStyle": "bold",     // normal | bold | italic | "italic bold"
-          "align": "left"          // left | center | right
+          "align": "left",         // left | center | right
+          "letterSpacing": 4,      // optionnel : px entre les lettres (−10 à 100, défaut 0)
+          "lineHeight": 1.25,      // optionnel : interligne en multiple de la taille (0,5 à 4, défaut 1)
+          "underline": true,       // optionnels : souligné, barré, affichage en majuscules
+          "strike": true,
+          "uppercase": true        // le texte saisi reste tel quel, seul l'affichage change
         }
       ]
     }
@@ -42,7 +47,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
 }
 ```
 
-Les indicateurs de calque `locked` et `hidden` ne sont écrits que lorsqu'ils valent `true` ; à la lecture toute autre valeur est ignorée (un `locked: "oui"` ne verrouille rien) et `name` est borné à 80 caractères. Aucune nouvelle version du format.
+Les champs de style de texte sont bornés à la lecture (`letterSpacing` −10 à 100, `lineHeight` 0,5 à 4) et les valeurs inattendues retirées ; `underline`, `strike` et `uppercase` ne sont écrits que lorsqu'ils valent `true`. Les indicateurs de calque `locked` et `hidden` ne sont écrits que lorsqu'ils valent `true` ; à la lecture toute autre valeur est ignorée (un `locked: "oui"` ne verrouille rien) et `name` est borné à 80 caractères. Aucune nouvelle version du format.
 
 Les **repères** (`guides`, en pixels de design) sont enregistrés avec la page mais **jamais dessinés** dans les exports. À la lecture, une entrée invalide est ignorée sans refuser le fichier ; un champ absent ou vide signifie « aucun repère ». Ils ne demandent pas de nouvelle version du format.
 
@@ -52,7 +57,7 @@ Les **repères** (`guides`, en pixels de design) sont enregistrés avec la page 
 | --------- | ---------------------------------------------------------------------------------- |
 | `rect`    | `cornerRadius`                                                                     |
 | `ellipse` | aucun (dessinée dans la boîte `width × height`)                                    |
-| `text`    | `text`, `fontSize`, `fontFamily`, `fontStyle`, `align` (la largeur impose le retour à la ligne ; `height` n'est qu'indicatif) |
+| `text`    | `text`, `fontSize`, `fontFamily`, `fontStyle`, `align`, `letterSpacing`, `lineHeight`, `underline`, `strike`, `uppercase` (la largeur impose le retour à la ligne ; `height` n'est qu'indicatif) |
 | `image`   | `src` : **data URL base64 complète** (l'image est incorporée au fichier)            |
 | `path`    | `path` : chemin SVG dans un viewBox **100×100**, étiré à `width × height` ; `fill` pour la couleur |
 

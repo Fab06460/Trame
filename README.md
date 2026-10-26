@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Typographie : interlettrage, interligne, souligné, barré, majuscules, avec export PDF fidèle
 - Panneau Calques : ordre de superposition par glisser-déposer, masquer, verrouiller (⌘L), renommer
 - Règles graduées, repères d'alignement (glissés depuis les règles), aimantation aux bords, centres et repères ; position et taille numériques
 - Sélection multiple (lasso, Maj+clic, ⌘A), groupes, alignement et répartition, ordre des calques
