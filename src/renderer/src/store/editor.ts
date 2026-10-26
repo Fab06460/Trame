@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
-import type { TrameDocument, TrameElement, TramePage } from '@/types'
+import type { Guide, TrameDocument, TrameElement, TramePage } from '@/types'
 
 const HISTORY_LIMIT = 100
 
@@ -24,6 +24,8 @@ export function migrateDocument(raw: any): TrameDocument {
 
 const ELEMENT_TYPES = ['rect', 'ellipse', 'text', 'image', 'path']
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+
+const isGuide = (g: any): g is Guide => !!g && (g.orientation === 'h' || g.orientation === 'v') && isNum(g.position)
 
 /** Vrai si `e` a la structure minimale d'un élément (utilisé à l'ouverture d'un fichier et au collage). */
 export function isElement(e: any): e is TrameElement {
@@ -56,6 +58,12 @@ export function parseDocument(json: string): TrameDocument {
   for (const page of doc.pages) {
     if (typeof page?.id !== 'string' || typeof page.background !== 'string' || !Array.isArray(page.elements))
       throw invalid('page malformée')
+    // repères : optionnels ; une entrée invalide est ignorée plutôt que de refuser tout le fichier
+    if (page.guides !== undefined) {
+      const ok = (Array.isArray(page.guides) ? page.guides : []).filter(isGuide)
+      if (ok.length) page.guides = ok
+      else delete page.guides
+    }
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
       if (!isElement(e)) throw invalid('élément mal positionné')
@@ -106,10 +114,17 @@ interface EditorState {
   beginChange: () => void
   removeSelected: () => void
   duplicateSelected: () => void
+  /**
+   * Alt + glisser : laisse derrière une copie de la sélection, à la même place et juste en dessous des originaux
+   * (qui restent sélectionnés, et sont ceux que l'on déplace). Un seul cran d'historique, avec le déplacement qui suit.
+   */
+  cloneSelectedInPlace: () => void
   /** Colle des éléments (copiés de Trame) dans la page courante, avec de nouveaux identifiants. */
   pasteElements: (elements: TrameElement[]) => void
   moveLayer: (dir: 'up' | 'down' | 'top' | 'bottom') => void
   setBackground: (color: string) => void
+  /** Modifie les repères de la page courante. `commit=false` pour un geste continu (après un `beginChange`). */
+  updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
   setSize: (width: number, height: number) => void
   undo: () => void
   redo: () => void
@@ -369,6 +384,25 @@ export const useEditor = create<EditorState>((set, get) => {
       })
     },
 
+    cloneSelectedInPlace: () => {
+      const ids = get().selectedIds
+      if (!ids.length) return
+      const groupMap = new Map<string, string>()
+      const copyOf = (e: TrameElement): TrameElement => {
+        let groupId = e.groupId
+        if (groupId) {
+          if (!groupMap.has(groupId)) groupMap.set(groupId, nanoid(8))
+          groupId = groupMap.get(groupId)
+        }
+        return { ...e, id: nanoid(8), groupId }
+      }
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.flatMap((e) => (ids.includes(e.id) ? [copyOf(e), e] : [e])) })),
+        dirty: true
+      })
+    },
+
     pasteElements: (elements) => {
       if (!elements.length) return
       const { doc } = get()
@@ -421,6 +455,11 @@ export const useEditor = create<EditorState>((set, get) => {
           if (isSel(els[i]) && !isSel(els[i - 1])) [els[i], els[i - 1]] = [els[i - 1], els[i]]
       }
       set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: els })), dirty: true })
+    },
+
+    updateGuides: (f, commit = true) => {
+      if (commit) set(snapshot())
+      set({ doc: mapPage((p) => ({ ...p, guides: f(p.guides ?? []) })), dirty: true })
     },
 
     setBackground: (background) =>

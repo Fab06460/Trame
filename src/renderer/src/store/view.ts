@@ -57,7 +57,42 @@ export function zoomAround(
   return { zoom: z, ...clampPan({ ...g, zoom: z }, next.panX, next.panY) }
 }
 
+export interface ViewSettings {
+  /** règles graduées sur les bords du canvas */
+  rulers: boolean
+  /** repères d'alignement visibles */
+  guides: boolean
+  /** aimantation aux bords, centres et repères */
+  snap: boolean
+}
+
+const SETTINGS_KEY = 'trame.view'
+const DEFAULT_SETTINGS: ViewSettings = { rulers: true, guides: true, snap: true }
+
+function loadSettings(): ViewSettings {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}')
+    return {
+      rulers: typeof raw.rulers === 'boolean' ? raw.rulers : DEFAULT_SETTINGS.rulers,
+      guides: typeof raw.guides === 'boolean' ? raw.guides : DEFAULT_SETTINGS.guides,
+      snap: typeof raw.snap === 'boolean' ? raw.snap : DEFAULT_SETTINGS.snap
+    }
+  } catch {
+    return { ...DEFAULT_SETTINGS } // stockage indisponible ou corrompu : valeurs par défaut
+  }
+}
+
+function saveSettings(s: ViewSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s))
+  } catch {
+    /* confort : jamais bloquant */
+  }
+}
+
 interface ViewState extends ViewGeometry {
+  settings: ViewSettings
+  toggleSetting: (key: keyof ViewSettings) => void
   /** Appelé par le canvas à chaque changement de taille de zone ou de document. */
   setLayout: (l: Pick<ViewGeometry, 'fit' | 'viewW' | 'viewH' | 'docW' | 'docH'>) => void
   zoomTo: (zoom: number, anchor?: { x: number; y: number }) => void
@@ -70,6 +105,12 @@ interface ViewState extends ViewGeometry {
 }
 
 export const useView = create<ViewState>((set, get) => ({
+  settings: loadSettings(),
+  toggleSetting: (key) => {
+    const settings = { ...get().settings, [key]: !get().settings[key] }
+    saveSettings(settings)
+    set({ settings })
+  },
   zoom: 1,
   panX: 0,
   panY: 0,

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { boundsOf, intersects, type Box } from '@/geometry'
-import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle } from 'react-konva'
+import { boundsOf, intersects, snapBox, snapEdges, unionBox, type Box, type ChangedEdges, type SnapLine } from '@/geometry'
+import { Rulers, ViewOptions } from './Rulers'
+import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
 import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
@@ -10,6 +11,19 @@ import { ZoomControls } from './ZoomControls'
 import type { TrameElement } from '@/types'
 
 const PADDING = 48
+/** Distance d'accroche, en pixels écran : constante à l'écran quel que soit le zoom. */
+const SNAP_PX = 6
+const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'bottom-right', 'bottom-center', 'bottom-left', 'middle-left']
+const TEXT_ANCHORS = ['middle-left', 'middle-right']
+/** La rotation s'aimante tous les 45° (à 5° près). */
+const ROTATION_SNAPS = [0, 45, 90, 135, 180, 225, 270, 315]
+/** Bord déplacé par chaque poignée « de côté » (les coins ne s'aimantent pas : ils garderaient mal les proportions). */
+const SIDE_EDGES: Record<string, ChangedEdges> = {
+  'middle-left': { left: true },
+  'middle-right': { right: true },
+  'top-center': { top: true },
+  'bottom-center': { bottom: true }
+}
 
 function useLoadedImage(src?: string): HTMLImageElement | undefined {
   const [img, setImg] = useState<HTMLImageElement>()
@@ -32,7 +46,9 @@ export function Canvas(): React.JSX.Element {
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const pdfIssues = usePdfIssues((s) => s.issues)
-  const { select, toggleSelect, updateElement, beginChange, setPositions } = useEditor.getState()
+  const { select, toggleSelect, updateElement, beginChange, setPositions, cloneSelectedInPlace } = useEditor.getState()
+  const settings = useView((v) => v.settings)
+  const [snapLines, setSnapLines] = useState<SnapLine[]>([])
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Konva.Stage>(null)
@@ -42,6 +58,8 @@ export function Canvas(): React.JSX.Element {
   const [lasso, setLasso] = useState<Box | null>(null)
   const lassoStart = useRef<{ x: number; y: number; additive: boolean } | null>(null)
   const dragStart = useRef<Record<string, { x: number; y: number }>>({})
+  /** copies des éléments déplacés, à leur position de départ : sert à calculer la boîte englobante pour l'aimantation */
+  const dragEls = useRef<TrameElement[]>([])
   // Konva émet transformstart/transformend une fois par nœud : un seul cran d'historique par geste.
   const transforming = useRef(false)
 
@@ -150,23 +168,42 @@ export function Canvas(): React.JSX.Element {
       else if (!selectedIds.includes(el.id)) select([el.id])
     },
     onTap: () => select([el.id]),
-    onDragStart: () => {
-      beginChange()
+    onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => {
+      // Alt + glisser : on laisse une copie derrière (un seul cran d'historique pour la copie et le déplacement)
+      if (e.evt.altKey) cloneSelectedInPlace()
+      else beginChange()
       const selectedIds = useEditor.getState().selectedIds
+      const moved = page.elements.filter((x) => selectedIds.includes(x.id))
       // mémorise les positions de départ de toute la sélection pour la déplacer d'un bloc
-      dragStart.current = Object.fromEntries(
-        page.elements.filter((x) => selectedIds.includes(x.id)).map((x) => [x.id, { x: x.x, y: x.y }])
-      )
+      dragStart.current = Object.fromEntries(moved.map((x) => [x.id, { x: x.x, y: x.y }]))
+      dragEls.current = moved
     },
     onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => {
       const start = dragStart.current[el.id]
       if (!start) return updateElement(el.id, { x: e.target.x(), y: e.target.y() }, false)
-      const dx = e.target.x() - start.x
-      const dy = e.target.y() - start.y
+      let dx = e.target.x() - start.x
+      let dy = e.target.y() - start.y
+      // Maj : déplacement bloqué sur l'axe dominant
+      if (e.evt.shiftKey) {
+        if (Math.abs(dx) >= Math.abs(dy)) dy = 0
+        else dx = 0
+      }
+      // Aimantation : bords et centres de la sélection vers ceux des autres éléments, de la page et des repères (⌘ la suspend)
+      if (settings.snap && !e.evt.metaKey && !e.evt.ctrlKey) {
+        const box = unionBox(dragEls.current.map((x) => boundsOf({ ...x, x: x.x + dx, y: x.y + dy })))
+        const ctx = snapContext(dragEls.current.map((x) => x.id))
+        const snapped = snapBox(box, ctx.targets, ctx.options)
+        // sur un axe verrouillé par Maj on ne corrige pas : l'élément ne doit pas quitter son axe
+        if (!(e.evt.shiftKey && dx === 0 && snapped.dx !== 0)) dx += snapped.dx
+        if (!(e.evt.shiftKey && dy === 0 && snapped.dy !== 0)) dy += snapped.dy
+        setSnapLines(snapped.lines)
+      } else setSnapLines([])
       setPositions(Object.fromEntries(Object.entries(dragStart.current).map(([id, p]) => [id, { x: p.x + dx, y: p.y + dy }])))
     },
     onDragEnd: () => {
       dragStart.current = {}
+      dragEls.current = []
+      setSnapLines([])
     },
     onTransformStart: () => {
       if (transforming.current) return
@@ -186,6 +223,7 @@ export function Canvas(): React.JSX.Element {
     // Sélection multiple : le Transformer gère l'échelle de chaque nœud, on fige le résultat à la fin.
     onTransformEnd: (e: Konva.KonvaEventObject<Event>) => {
       transforming.current = false
+      setSnapLines([])
       if (selectedIds.length === 1) return
       const n = e.target
       const w = Math.max(5, n.width() * n.scaleX())
@@ -194,6 +232,12 @@ export function Canvas(): React.JSX.Element {
       n.scaleY(1)
       updateElement(el.id, { x: n.x(), y: n.y(), width: w, height: h, rotation: n.rotation() }, false)
     }
+  })
+
+  /** Cibles d'aimantation : tous les éléments non sélectionnés de la page ; seuil et repères selon les réglages. */
+  const snapContext = (selected: string[]): { targets: Box[]; options: Parameters<typeof snapBox>[2] } => ({
+    targets: page.elements.filter((e) => !selected.includes(e.id)).map(boundsOf),
+    options: { width: doc.width, height: doc.height, guides: settings.guides ? page.guides : undefined, threshold: SNAP_PX / scale }
   })
 
   const toDesign = (): { x: number; y: number } => {
@@ -234,9 +278,10 @@ export function Canvas(): React.JSX.Element {
   }
 
   const editingEl = page.elements.find((e) => e.id === editing)
+  const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
-    <div ref={wrapRef} className="canvas-wrap" style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined }}>
+    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined }}>
       <Stage
         ref={stageRef}
         width={size.w}
@@ -345,19 +390,45 @@ export function Canvas(): React.JSX.Element {
               listening={false}
             />
           )}
+          {/* lignes d'aimantation (déplacement ou redimensionnement) : indication d'édition, absente de tous les exports */}
+          {snapLines.map((l, i) => {
+            const at = Math.round((l.axis === 'x' ? offX : offY) + l.position * scale) + 0.5
+            const a = (l.axis === 'x' ? offY : offX) + l.from * scale - 8
+            const b = (l.axis === 'x' ? offY : offX) + l.to * scale + 8
+            return <Line key={`snap-${i}`} points={l.axis === 'x' ? [at, a, at, b] : [a, at, b, at]} stroke="#ff3d71" strokeWidth={1} listening={false} />
+          })}
+
           <Transformer
             ref={trRef}
             rotateEnabled
-            keepRatio={false}
+            // comme Canva : les coins gardent les proportions, les côtés étirent librement ; un texte ne s'étire que en largeur
+            keepRatio
+            enabledAnchors={soleText ? TEXT_ANCHORS : ALL_ANCHORS}
+            rotationSnaps={ROTATION_SNAPS}
+            rotationSnapTolerance={5}
             borderStroke="#7c5cff"
             anchorStroke="#7c5cff"
             anchorSize={10}
             anchorCornerRadius={5}
-            boundBoxFunc={(o, n) => (n.width < 10 || n.height < 10 ? o : n)}
+            boundBoxFunc={(o, n) => {
+              if (n.width < 10 || n.height < 10) return o
+              // aimantation du redimensionnement : seuls les côtés (un bord à la fois), sans rotation ; les coins gardent les proportions
+              const edges = SIDE_EDGES[trRef.current?.getActiveAnchor() ?? '']
+              if (!settings.snap || !edges || n.rotation !== 0) {
+                setSnapLines((l) => (l.length ? [] : l))
+                return n
+              }
+              const ctx = snapContext(selectedIds)
+              const r = snapEdges({ x: (n.x - offX) / scale, y: (n.y - offY) / scale, width: n.width / scale, height: n.height / scale }, edges, ctx.targets, ctx.options)
+              setSnapLines(r.lines)
+              return { ...n, x: offX + r.box.x * scale, y: offY + r.box.y * scale, width: r.box.width * scale, height: r.box.height * scale }
+            }}
           />
         </Layer>
       </Stage>
 
+      <Rulers />
+      <ViewOptions />
       <ZoomControls />
 
       {editingEl && (

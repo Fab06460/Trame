@@ -14,6 +14,10 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
     {
       "id": "aB3xK9_q",
       "background": "#ffffff",
+      "guides": [            // optionnel : repères d'alignement de la page
+        { "orientation": "v", "position": 540 },   // v = ligne verticale à x = 540
+        { "orientation": "h", "position": 100 }    // h = ligne horizontale à y = 100
+      ],
       "elements": [          // l'ordre = z-index (dernier = devant)
         {
           "id": "Qw8e_1Zt",
@@ -34,6 +38,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
   ]
 }
 ```
+
+Les **repères** (`guides`, en pixels de design) sont enregistrés avec la page mais **jamais dessinés** dans les exports. À la lecture, une entrée invalide est ignorée sans refuser le fichier ; un champ absent ou vide signifie « aucun repère ». Ils ne demandent pas de nouvelle version du format.
 
 ### Champs par type
 

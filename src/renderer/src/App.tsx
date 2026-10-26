@@ -23,6 +23,12 @@ export default function App(): React.JSX.Element {
         else void newProject()
         return
       }
+      // Maj + R : règles ; Maj + G : repères ; Maj + A : aimantation
+      if (e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && ['r', 'g', 'a'].includes(e.key.toLowerCase()) && !(['TEXTAREA', 'INPUT'].includes(t.tagName))) {
+        e.preventDefault()
+        useView.getState().toggleSetting({ r: 'rulers', g: 'guides', a: 'snap' }[e.key.toLowerCase() as 'r' | 'g' | 'a'] as 'rulers' | 'guides' | 'snap')
+        return
+      }
       // zoom (actif aussi pendant la saisie hors texte) : ⌘+ / ⌘- / ⌘0 ajuster / ⌘1 taille réelle
       if ((e.metaKey || e.ctrlKey) && ['=', '+', '-', '0', '1'].includes(e.key)) {
         e.preventDefault()

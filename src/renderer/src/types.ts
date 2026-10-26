@@ -26,9 +26,17 @@ export interface TrameElement {
   src?: string
 }
 
+/** Repère d'alignement posé par l'utilisateur : `v` = ligne verticale à x = position, `h` = ligne horizontale à y = position (pixels de design). */
+export interface Guide {
+  orientation: 'h' | 'v'
+  position: number
+}
+
 export interface TramePage {
   id: string
   background: string
+  /** repères de la page (absents = aucun) ; jamais dessinés dans les exports */
+  guides?: Guide[]
   elements: TrameElement[] // ordre = z-index croissant
 }
 

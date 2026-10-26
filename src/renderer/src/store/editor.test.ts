@@ -171,6 +171,96 @@ describe('sélection et groupes', () => {
   })
 })
 
+describe('cloneSelectedInPlace (Alt + glisser)', () => {
+  it('laisse une copie à la même place, sous l’original, sans changer la sélection', () => {
+    const [a, b] = addRects(2)
+    S().select([a])
+    S().cloneSelectedInPlace()
+    expect(els()).toHaveLength(3)
+    const [copy, original] = els().slice(0, 2)
+    expect(original.id).toBe(a)
+    expect(copy.id).not.toBe(a)
+    expect([copy.x, copy.y]).toEqual([original.x, original.y])
+    expect(els()[2].id).toBe(b) // l'ordre des autres éléments est conservé
+    expect(S().selectedIds).toEqual([a])
+  })
+
+  it('les copies d’un groupe forment un nouveau groupe', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().groupSelected()
+    const g = els()[0].groupId
+    S().cloneSelectedInPlace()
+    const copies = els().filter((e) => !S().selectedIds.includes(e.id))
+    expect(copies).toHaveLength(2)
+    expect(copies[0].groupId).toBe(copies[1].groupId)
+    expect(copies[0].groupId).not.toBe(g)
+  })
+
+  it('un seul annuler retire la copie', () => {
+    const [a] = addRects(1)
+    S().select([a])
+    S().cloneSelectedInPlace()
+    S().undo()
+    expect(els()).toHaveLength(1)
+  })
+
+  it('ne fait rien sans sélection', () => {
+    addRects(1)
+    S().select([])
+    const before = S().doc
+    S().cloneSelectedInPlace()
+    expect(S().doc).toBe(before)
+  })
+})
+
+describe('repères (guides)', () => {
+  it('updateGuides ajoute, déplace et supprime sur la page courante, avec historique', () => {
+    S().updateGuides((g) => [...g, { orientation: 'v', position: 200 }])
+    expect(selectPage(S()).guides).toEqual([{ orientation: 'v', position: 200 }])
+    S().updateGuides((g) => g.map((x) => ({ ...x, position: 250 })))
+    expect(selectPage(S()).guides![0].position).toBe(250)
+    S().undo()
+    expect(selectPage(S()).guides![0].position).toBe(200)
+    S().updateGuides((g) => g.filter(() => false))
+    expect(selectPage(S()).guides).toEqual([])
+  })
+
+  it('un geste continu (commit=false) ne crée qu’un cran d’historique', () => {
+    S().beginChange()
+    S().updateGuides((g) => [...g, { orientation: 'h', position: 10 }], false)
+    for (let i = 11; i <= 40; i++) S().updateGuides((g) => g.map((x) => ({ ...x, position: i })), false)
+    S().undo()
+    expect(selectPage(S()).guides ?? []).toEqual([])
+  })
+
+  it('les repères sont propres à chaque page', () => {
+    S().updateGuides((g) => [...g, { orientation: 'v', position: 5 }])
+    S().addPage()
+    expect(selectPage(S()).guides ?? []).toEqual([])
+  })
+
+  it('une page dupliquée garde ses repères', () => {
+    S().updateGuides((g) => [...g, { orientation: 'v', position: 5 }])
+    S().duplicatePage(S().pageId)
+    expect(selectPage(S()).guides).toEqual([{ orientation: 'v', position: 5 }])
+  })
+
+  it('survivent à l’enregistrement et à la relecture du fichier', () => {
+    S().updateGuides((g) => [...g, { orientation: 'v', position: 540 }, { orientation: 'h', position: 100 }])
+    const doc = parseDocument(JSON.stringify(S().doc))
+    expect(doc.pages[0].guides).toEqual([{ orientation: 'v', position: 540 }, { orientation: 'h', position: 100 }])
+  })
+
+  it('à la lecture, les repères invalides sont ignorés sans refuser le fichier', () => {
+    const d = JSON.parse(JSON.stringify(S().doc))
+    d.pages[0].guides = [{ orientation: 'v', position: 10 }, { orientation: 'diag', position: 1 }, { orientation: 'h', position: 'x' }, null]
+    expect(parseDocument(JSON.stringify(d)).pages[0].guides).toEqual([{ orientation: 'v', position: 10 }])
+    d.pages[0].guides = 'n’importe quoi'
+    expect(parseDocument(JSON.stringify(d)).pages[0]).not.toHaveProperty('guides')
+  })
+})
+
 describe('pasteElements', () => {
   const clipboardOf = (n: number): ReturnType<typeof els> => {
     addRects(n)

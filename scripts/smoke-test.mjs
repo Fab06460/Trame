@@ -299,6 +299,100 @@ try {
   await setField('rotation', 90)
   check('après rotation de 90°, X/Y suivent la boîte visible (X = 390 − hauteur)', (await field('x')) === 150 && (await field('y')) === 440, JSON.stringify([await field('x'), await field('y')]))
 
+  // règles, repères et aimantation : parcours à la souris (événements réels envoyés au navigateur)
+  await run('location.reload()') // document vierge de 1 080 × 1 080 : géométrie connue
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440)
+  await sleep(500)
+  const mouse = (type, x, y, modifiers = 0) => cdp('Input.dispatchMouseEvent', { type, x, y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, modifiers })
+  const wrap = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+  const fit = Math.max(0.01, Math.min((wrap.w - 96) / 1080, (wrap.h - 96) / 1080))
+  const sx = (d) => wrap.l + (wrap.w - 1080 * fit) / 2 + d * fit
+  const sy = (d) => wrap.t + (wrap.h - 1080 * fit) / 2 + d * fit
+  const drag = async (from, to, modifiers = 0, steps = 10) => {
+    // Maj enfoncé au moment du clic basculerait la sélection : l'axe se contraint en pressant Maj PENDANT le glisser
+    await mouse('mousePressed', from[0], from[1], modifiers & ~8)
+    for (let i = 1; i <= steps; i++) await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: from[0] + ((to[0] - from[0]) * i) / steps, y: from[1] + ((to[1] - from[1]) * i) / steps, button: 'left', buttons: 1, modifiers })
+    await mouse('mouseReleased', to[0], to[1], modifiers)
+    await sleep(250)
+  }
+  const guidesAttr = () => run(`[...document.querySelectorAll('.guide')].map(g => g.dataset.guide).sort().join(',')`)
+  const elementCount = () => run(`document.querySelectorAll('.page-item.current .thumb div div').length`)
+
+  check('les règles sont affichées par défaut', (await count('.ruler.top')) === 1 && (await count('.ruler.left')) === 1)
+  await clickSel('.view-options [data-setting="rulers"]')
+  await sleep(200)
+  check('le bouton « Règles » les masque', (await count('.ruler.top')) === 0)
+  check('le réglage est mémorisé', (await run(`JSON.parse(localStorage.getItem('trame.view')).rulers`)) === false)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'R', code: 'KeyR', modifiers: 8 })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'R', code: 'KeyR', modifiers: 8 })
+  await sleep(250)
+  check('⇧R les réaffiche', (await count('.ruler.top')) === 1)
+
+  // création de repères en glissant depuis les règles
+  await drag([wrap.l + 500, wrap.t + 10], [wrap.l + 500, sy(300)]) // règle du haut → repère horizontal à y = 300
+  await drag([wrap.l + 10, wrap.t + 400], [sx(200), wrap.t + 400]) // règle de gauche → repère vertical à x = 200
+  check('glisser depuis les règles crée un repère horizontal (y = 300) et un vertical (x = 200)', (await guidesAttr()) === 'h:300,v:200', await guidesAttr())
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('annuler retire le dernier repère créé (un seul cran par geste)', (await run(`document.querySelector('.canvas-wrap').dataset.guideCount`)) === '1', await guidesAttr())
+  await clickSel('header.toolbar button[title^="Rétablir"]')
+  await sleep(300)
+  check('rétablir le remet', (await guidesAttr()) === 'h:300,v:200')
+
+  // aimantation au déplacement : le bord gauche (390) s'approche du repère x = 200 à 3 px, le haut (440) du repère y = 300 à 3 px
+  const grab = [sx(540), sy(540)]
+  await drag(grab, [grab[0] - 187 * fit, grab[1] - 137 * fit], 0, 14)
+  check('le bord gauche et le haut s\'accrochent aux repères (X = 200, Y = 300)', (await field('x')) === 200 && (await field('y')) === 300, JSON.stringify([await field('x'), await field('y')]))
+
+  // ⌘ maintenu : aimantation suspendue. Le geste s'éloigne d'abord (pour dépasser le seuil de démarrage d'un glisser), puis revient
+  // à 3 px du repère : sans ⌘ il s'accrocherait à 200, avec ⌘ il reste à ≈ 203.
+  const here = [sx(200 + 150), sy(300 + 100)]
+  await mouse('mousePressed', here[0], here[1], 4)
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: here[0] + 60 * fit, y: here[1], button: 'left', buttons: 1, modifiers: 4 })
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: here[0] + 3 * fit, y: here[1], button: 'left', buttons: 1, modifiers: 4 })
+  await mouse('mouseReleased', here[0] + 3 * fit, here[1], 4)
+  await sleep(250)
+  const xFree = await field('x')
+  check('⌘ suspend l\'aimantation (X reste libre, ni 200 ni éloigné)', xFree > 200.5 && xFree < 205, String(xFree))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(250)
+  check('l\'annulation ramène l\'élément sur le repère (X = 200)', (await field('x')) === 200, String(await field('x')))
+
+  // Maj : déplacement bloqué sur l'axe dominant
+  const y0 = await field('y')
+  const here2 = [sx((await field('x')) + 150), sy(y0 + 100)]
+  await drag(here2, [here2[0] + 120 * fit, here2[1] + 30 * fit], 8, 10)
+  check('Maj bloque le déplacement sur l\'axe dominant (Y inchangé, X a bougé)', (await field('y')) === y0 && (await field('x')) > 250, JSON.stringify([await field('x'), await field('y')]))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(250)
+
+  // Alt + glisser : une copie reste en place
+  const before = await elementCount()
+  const here3 = [sx((await field('x')) + 150), sy((await field('y')) + 100)]
+  await drag(here3, [here3[0] + 200 * fit, here3[1] + 150 * fit], 1, 8)
+  check('Alt + glisser laisse une copie derrière (un élément de plus)', (await elementCount()) === before + 1, `${before} → ${await elementCount()}`)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('un seul annuler défait la copie et le déplacement', (await elementCount()) === before, String(await elementCount()))
+
+  // aimantation du redimensionnement : poignée de droite vers un repère vertical à x = 800
+  await drag([wrap.l + 10, wrap.t + 500], [sx(800), wrap.t + 500]) // nouveau repère x = 800
+  const [ex, ey, ew, eh] = [await field('x'), await field('y'), await field('width'), await field('height')]
+  await drag([sx(ex + ew), sy(ey + eh / 2)], [sx(803), sy(ey + eh / 2)], 0, 12) // bord droit amené à 803, à 3 px du repère
+  check('le bord droit s\'accroche au repère lors du redimensionnement (X + L = 800)', Math.abs((await field('x')) + (await field('width')) - 800) < 0.6, JSON.stringify([await field('x'), await field('width')]))
+
+  // suppression d'un repère : le glisser sur la règle
+  const nBefore = (await guidesAttr()).split(',').length
+  const gx = sx(800)
+  await drag([gx, wrap.t + 600], [wrap.l + 8, wrap.t + 600], 0, 10) // un repère vertical se supprime en le ramenant sur la règle de GAUCHE
+  check('glisser un repère sur la règle le supprime', (await guidesAttr()).split(',').length === nBefore - 1, await guidesAttr())
+  // double-clic : suppression directe
+  await run(`(() => { const g = document.querySelector('.guide'); g.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })) })()`)
+  await sleep(250)
+  check('double-clic sur un repère le supprime', (await run(`document.querySelector('.canvas-wrap').dataset.guideCount`)) === String(nBefore - 2), await guidesAttr())
+
   // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)

@@ -151,6 +151,21 @@ Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quan
 
 `clipboardActions.ts` : ⌘C / ⌘X / ⌘V sont interceptés dans `App.tsx` (hors champs de saisie) et passent par le presse-papiers **système** via IPC, ce qui permet de coller entre pages, entre documents (autre fenêtre ou fichier ouvert plus tard) et de coller une capture d'écran ou du texte venant d'une autre application. Écrire dans le presse-papiers remplace tout son contenu : la copie la plus récente l'emporte toujours. `pasteElements` (store) régénère les identifiants et les `groupId`, décale de 30 px tant que la copie se superposerait pile à un élément existant, recentre si tout est hors de la page (format différent), et crée un seul cran d'historique. Image collée : insérée à 60 % de la page au plus ; texte collé : nouveau bloc de texte (5 000 caractères max).
 
+## Règles, repères et aimantation
+
+**Repères** (`page.guides`) : lignes d'alignement posées par l'utilisateur, **dans le document** (donc enregistrées, annulables, propres à chaque page, copiées avec la page). Modifiés par `updateGuides(f, commit?)` (même règle d'historique que le reste : `beginChange()` puis `commit=false` pour un geste continu).
+
+**Règles et repères à l'écran** (`components/Rulers.tsx`) : une couche HTML au-dessus du canvas (pas dans Konva), calculée à partir du seul store de vue (`décalage + position × échelle`). Les règles sont deux `<canvas>` 2D (la gauche est dessinée comme la règle du haut puis tournée de 90° par CSS, d'où sa ligne de base inversée) ; les graduations viennent de `rulerMath.ts` (`rulerTicks`, pure : pas « agréable » 1/2/5/10/25/50/100…, libellés espacés d'au moins 70 px écran). Glisser depuis une règle crée un repère (un seul cran d'historique pour tout le geste), le relâcher sur la règle correspondante ou hors du canvas le supprime, un double-clic aussi. Un repère est un `div` à zone de saisie de 9 px. Réglages **mémorisés** dans `localStorage` (`trame.view` : règles, repères, aimantation) ; raccourcis ⇧R, ⇧G, ⇧A.
+
+**Aimantation** (`geometry.ts`, fonctions pures et testées) :
+- `snapBox(box, cibles, options)` : au **déplacement**, les bords et le centre de la boîte englobante de la sélection (rotation comprise) s'accrochent aux bords et centres des autres éléments, de la page et aux repères visibles. Les deux axes sont indépendants ; la plus petite correction dans le seuil l'emporte ; les lignes affichées sont toutes celles sur lesquelles on est accroché, étendues jusqu'à leur cible. Le seuil est de **6 px écran** (donc `6 ÷ échelle` pixels de design : constant à l'écran quel que soit le zoom).
+- `snapEdges(box, bordsDéplacés, cibles, options)` : au **redimensionnement**, seuls les bords déplacés s'accrochent ; taille minimale 1 px.
+- Dans `Canvas.tsx` : `onDragMove` calcule la boîte de la sélection à sa position brute, applique `snapBox`, puis écrit les positions corrigées dans le store ; `boundBoxFunc` du `Transformer` applique `snapEdges` (poignées de côté, sans rotation). Les lignes roses sont des `Line` Konva en coordonnées écran, **propres à l'éditeur** (absentes des exports).
+- Modificateurs : **⌘ / Ctrl** suspend l'aimantation, **Maj** pendant le glisser bloque l'axe dominant (et ne corrige pas l'axe bloqué), **Alt** au début du glisser laisse une copie (`cloneSelectedInPlace` : un seul cran d'historique).
+- Poignées « à la Canva » : `keepRatio` (les coins gardent les proportions, les côtés étirent librement), un texte ne s'étire qu'en largeur, rotation aimantée tous les 45° à 5° près.
+
+**Position et taille numériques** (`PositionPanel.tsx`, `NumberField.tsx`) : X / Y de la **boîte visible** (comme l'alignement), L / H / rotation de l'élément, proportions verrouillables (par défaut pour une image). Le champ n'applique la valeur qu'à la validation (Entrée ou sortie) : un cran d'historique par saisie. ⚠️ **Zustand 5 exige des sélecteurs à résultat stable** : `useEditor((s) => s.x.filter(...))` boucle à l'infini (l'interface plante). Lire la valeur brute puis filtrer au rendu.
+
 ## Export
 
 - **PNG / JPG** : page affichée uniquement, rendue hors écran par `renderPage` à la taille du design (donc indépendante du zoom et du déplacement de la vue). Nom de fichier suffixé `-pageN` s'il y a plusieurs pages.

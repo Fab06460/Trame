@@ -27,7 +27,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Il manque : guides magnétiques, règles, verrouillage de calques, dépôt de fichiers depuis le Finder. | E5, E6, E7 |
+| Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Règles, repères et aimantation sont faits ; il manque : verrouillage de calques, dépôt de fichiers depuis le Finder. | E5, E7 |
 | Bibliothèque de modèles | 🟡 Partiel | 6 modèles intégrés + modèles personnels (enregistrer, renommer, masquer, remplacer). « Des millions » est impossible hors-ligne (hébergement), mais une collection embarquée plus large et des packs de modèles échangeables par fichier le sont. | C2 |
 | Bibliothèque de médias | 🟡 Partiel | 12 formes vectorielles, 10 polices embarquées, import d'images locales. Photos, vidéos, pistes audio « par millions » : impossible hors-ligne. Faisable : jeu d'icônes/illustrations à licence ouverte embarqué, polices supplémentaires, bibliothèque locale (dossier surveillé, étiquettes). | C1, C3, E12 |
 | Magic Resize | ⬜ À faire | Changer le format (`setSize`) ne redimensionne rien aujourd'hui. Algorithme déterministe, aucune IA : faisable à 100 % hors-ligne. | E10 |
@@ -82,15 +82,15 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E3 | Ombre portée et lueur (formes, texte, images) | M | Konva oui. **PDF : l'élément passe en image** (voir risques) → décider si le texte à ombre reste sélectionnable (ombre en image séparée sous un vrai texte). | — |
 | E4 | Typographie : espacement des lettres, interligne, souligné, barré, majuscules | M | Konva gère `letterSpacing`/`lineHeight` ; PDF : `Tc` et interligne explicites ; mise à jour de `fidelity`. | — |
 | E5 | Panneau Calques : verrouiller, masquer, renommer | M | Prérequis des modèles de marque verrouillés. | — |
-| E6 | Guides magnétiques, règles, grille | M | Logique pure testable (aimantation aux bords/centres). | — |
+| E6 | Guides magnétiques, règles, grille | M | **Fait.** Règles, repères, aimantation (déplacement + côtés au redimensionnement). Logique pure testable (aimantation aux bords/centres). | — |
 | E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | Équivalent hors-ligne des « intégrations » de photos. | — |
 | E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | Rendu PDF : recadrer/retourner les pixels avant intégration. | — |
 | E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | Konva possède des filtres ; PDF : image « cuite » avec les réglages. | E8 |
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | Mise à l'échelle proportionnelle + repositionnement ; texte redimensionné ; logique pure, très testable. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S |  | — |
 | E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | L'export PDF les intègre déjà via fontkit ; attention à l'avertissement « police inconnue » et aux licences. | — |
-| E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |
-| E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | Konva : `keepRatio`, `rotationSnaps`. | E6 |
+| E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | **Fait.** Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |
+| E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | **Fait** (coins proportionnels, texte en largeur seule, rotation aimantée). L'aimantation des coins est volontairement exclue. Konva : `keepRatio`, `rotationSnaps`. | E6 |
 | E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | | — |
 | E16 | Retourner horizontalement / verticalement | M | Touche les 4 rendus (échelle négative). | — |
 | E17 | Nom du document modifiable (barre de titre, noms d'export) | S | Aujourd'hui figé à « Sans titre » ou au nom du modèle. | — |
