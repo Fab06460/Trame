@@ -77,8 +77,10 @@ export interface ExtraFontData {
   family: string
   category: string
   license: string
-  /** fichiers WOFF2 en base64, par variante */
+  /** fichiers de police en base64, par variante */
   data: Record<string, string>
+  /** importée depuis un fichier de l'utilisateur */
+  custom?: boolean
 }
 
 const extras = new Map<string, { def: FontDef; font: ExtraFontData; faces: FontFace[] }>()

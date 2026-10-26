@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CatalogFont, FontsFailure } from '../../../preload'
 import { bytesOfBase64, extraFonts, registerExtraFont, unregisterExtraFont } from '@/fonts'
+import { importFontFiles, type FontImportReport } from '@/fontImport'
 import { useFonts } from '@/store/fonts'
 
 const CATEGORIES: Array<[string, string]> = [
@@ -31,6 +32,9 @@ export function FontCatalogDialog(): React.JSX.Element | null {
   const [busy, setBusy] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const faces = useRef<FontFace[]>([])
+  const [importCategory, setImportCategory] = useState('sans-serif')
+  const [importReport, setImportReport] = useState<FontImportReport | null>(null)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     if (!open || fonts) return
@@ -51,6 +55,7 @@ export function FontCatalogDialog(): React.JSX.Element | null {
     setSelected(null)
     setPreviewFamily(null)
     setNote('')
+    setImportReport(null)
   }, [open])
 
   const installedIds = useMemo(() => new Set(extraFonts().map((f) => f.id)), [version]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,9 +100,56 @@ export function FontCatalogDialog(): React.JSX.Element | null {
     setNote('Police retirée. Les textes qui l\'utilisent encore s\'affichent avec une police de remplacement.')
   }
 
+  const importFiles = async (): Promise<void> => {
+    setImporting(true)
+    setImportReport(null)
+    try {
+      const r = await importFontFiles(importCategory)
+      if (r) setImportReport(r)
+    } finally {
+      setImporting(false)
+    }
+  }
+  const mine = extraFonts().filter((f) => f.custom)
+
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Polices en ligne" onKeyDown={(e) => e.key === 'Escape' && close()}>
       <div className="modal wide">
+        <h3>Polices</h3>
+        <section className="font-import" data-font-import>
+          <strong>Mes fichiers de police</strong>
+          <p className="hint">Importez des fichiers TTF, OTF, WOFF ou WOFF2 (normal, gras, italique…). Ils sont copiés sur ce poste et dans les documents qui les utilisent. Vérifiez que la licence de la police autorise son intégration dans vos documents et PDF.</p>
+          <div className="row">
+            <select data-field="importCategory" value={importCategory} onChange={(e) => setImportCategory(e.target.value)} aria-label="Famille générique de secours" title="Famille de secours si la police manque ailleurs">
+              {CATEGORIES.filter(([v]) => v).map(([v, label]) => (
+                <option key={v} value={v}>{label}</option>
+              ))}
+            </select>
+            <button data-action="font-import" disabled={importing} onClick={() => void importFiles()}>
+              {importing ? 'Import…' : 'Importer des fichiers…'}
+            </button>
+          </div>
+          {importReport && (
+            <div className="hint" role="status" data-font-import-report>
+              {importReport.imported.map((f) => (
+                <div key={f.name}>✓ « {f.name} » importée ({f.variants.map((v) => ({ '400': 'normal', '700': 'gras', '400-italic': 'italique', '700-italic': 'gras italique' })[v] ?? v).join(', ')})</div>
+              ))}
+              {[...importReport.ignored, ...importReport.notes].map((n, i) => (
+                <div key={i}>⚠ {n}</div>
+              ))}
+            </div>
+          )}
+          {mine.length > 0 && (
+            <div className="font-list" data-my-fonts>
+              {mine.map((f) => (
+                <div key={f.id} className="font-row" data-my-font={f.id}>
+                  <span>{f.name}</span>
+                  <button className="link" data-action="my-font-remove" onClick={() => void remove(f.id)}>Retirer</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
         <h3>Polices en ligne</h3>
         <p className="hint">Catalogue Google Fonts (via Fontsource), polices libres. La recherche n'envoie que ce service ; une police installée est copiée sur ce poste et dans les documents qui l'utilisent.</p>
         {error && (

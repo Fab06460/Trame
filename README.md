@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Import de ses propres polices (TTF, OTF, WOFF, WOFF2), licence d'intégration contrôlée, embarquées dans les documents
 - Catalogue de polices en ligne (~1 900 polices libres, installées sur demande, embarquées dans les documents)
 - Recherche de photos libres de droits (Openverse, avec Wikimedia Commons en secours ; en ligne, sur demande ; la photo est copiée dans le document, crédit conservé)
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque

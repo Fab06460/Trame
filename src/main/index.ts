@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
 import type { InstalledFont, PhotoSearchResult } from '../preload'
-import { ALL_VARIANTS, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
+import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { createFileInbox } from './fileInbox'
@@ -535,15 +535,16 @@ async function loadCatalog(): Promise<{ fonts: CatalogFont[]; stale: boolean }> 
 async function readInstalledFont(id: string): Promise<InstalledFont | null> {
   try {
     const dir = join(fontsDir(), id)
-    const meta = JSON.parse(await readFile(join(dir, 'meta.json'), 'utf-8')) as { name?: unknown; category?: unknown; license?: unknown }
+    const meta = JSON.parse(await readFile(join(dir, 'meta.json'), 'utf-8')) as { name?: unknown; category?: unknown; license?: unknown; custom?: unknown }
     if (typeof meta.name !== 'string' || typeof meta.category !== 'string') return null
     const data: Record<string, string> = {}
     for (const v of ALL_VARIANTS) {
-      const bytes = await readFile(join(dir, `${v}.woff2`)).catch(() => null)
-      if (bytes && isWoff2(bytes)) data[v] = bytes.toString('base64')
+      // police du catalogue : <variante>.woff2 ; police personnelle : <variante>.font (TTF, OTF, WOFF ou WOFF2, tel que fourni)
+      const bytes = (await readFile(join(dir, `${v}.woff2`)).catch(() => null)) ?? (await readFile(join(dir, `${v}.font`)).catch(() => null))
+      if (bytes && isFontFile(bytes)) data[v] = bytes.toString('base64')
     }
     if (!data['400']) return null
-    return { id, name: meta.name, family: cssFamily(meta.name, meta.category), category: meta.category, license: typeof meta.license === 'string' ? meta.license : '', variants: Object.keys(data), data }
+    return { id, name: meta.name, family: cssFamily(meta.name, meta.category), category: meta.category, license: typeof meta.license === 'string' ? meta.license : '', variants: Object.keys(data), data, ...(meta.custom === true ? { custom: true } : {}) }
   } catch {
     return null
   }
@@ -605,6 +606,50 @@ ipcMain.handle('fonts:preview', async (_e, id: unknown) => {
     const font = (await loadCatalog()).fonts.find((f) => f.id === id)
     if (!font) throw new NetworkError('unavailable', 'police absente du catalogue')
     return { ok: true as const, name: font.name, data: (await downloadVariant(id, '400')).toString('base64') }
+  } catch (err) {
+    return fontsFailure(err)
+  }
+})
+
+/** Choix de fichiers de police à importer. Taille lue d'abord : un fichier trop gros n'est pas chargé en mémoire (l'interface le refusera). */
+ipcMain.handle('fonts:pick-files', async (): Promise<Array<{ name: string; size: number; bytes: Uint8Array }>> => {
+  let paths: string[]
+  if (TEST_EXPORT_DIR) {
+    // tests de bout en bout : les fichiers pick-font-* du dossier de test tiennent lieu de choix (aucun dialogue natif)
+    paths = (await readdir(TEST_EXPORT_DIR)).filter((f) => f.startsWith('pick-font-')).sort().map((f) => join(TEST_EXPORT_DIR, f))
+  } else {
+    const res = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: 'Polices', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] })
+    if (res.canceled) return []
+    paths = res.filePaths
+  }
+  const out: Array<{ name: string; size: number; bytes: Uint8Array }> = []
+  for (const p of paths.slice(0, 24)) {
+    const size = (await stat(p).catch(() => null))?.size ?? 0
+    out.push({ name: basename(p), size, bytes: size > 0 && size <= 2_000_000 ? new Uint8Array(await readFile(p)) : new Uint8Array(0) })
+  }
+  return out
+})
+
+/** Enregistre une famille importée (les fichiers sont gardés tels quels, une famille du même nom est remplacée). */
+ipcMain.handle('fonts:save-custom', async (_e, id: unknown, name: unknown, category: unknown, variants: unknown) => {
+  try {
+    if (!isSafeId(id) || !id.startsWith(CUSTOM_PREFIX) || !isSafeFamilyName(name) || typeof category !== 'string' || !CATEGORY_LIST.includes(category)) throw new NetworkError('unavailable', 'police invalide')
+    const files: Array<[string, Buffer]> = []
+    for (const [v, b64] of Object.entries((variants && typeof variants === 'object' ? variants : {}) as Record<string, unknown>)) {
+      if (!ALL_VARIANTS.includes(v as FontVariant) || typeof b64 !== 'string') continue
+      const bytes = Buffer.from(b64, 'base64')
+      if (bytes.length > MAX_FONT_BYTES || !isFontFile(bytes)) throw new NetworkError('unavailable', `fichier de police invalide (${v})`)
+      files.push([v, bytes])
+    }
+    if (!files.some(([v]) => v === '400')) throw new NetworkError('unavailable', 'la graisse normale est obligatoire')
+    const dir = join(fontsDir(), id)
+    await rm(dir, { recursive: true, force: true })
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'meta.json'), JSON.stringify({ id, name, category, license: 'Fichier personnel', custom: true }), 'utf-8')
+    for (const [v, bytes] of files) await writeFile(join(dir, `${v}.font`), bytes)
+    const font = await readInstalledFont(id)
+    if (!font) throw new NetworkError('unavailable', "la police n'a pas pu être enregistrée")
+    return { ok: true as const, font }
   } catch (err) {
     return fontsFailure(err)
   }

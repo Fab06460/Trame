@@ -39,6 +39,9 @@ const api = {
   installFont: (id: string): Promise<{ ok: true; font: InstalledFont } | FontsFailure> => ipcRenderer.invoke('fonts:install', id),
   previewFont: (id: string): Promise<{ ok: true; name: string; data: string } | FontsFailure> => ipcRenderer.invoke('fonts:preview', id),
   removeFont: (id: string): Promise<boolean> => ipcRenderer.invoke('fonts:remove', id),
+  /** Import de fichiers de police personnels (TTF, OTF, WOFF, WOFF2). */
+  pickFontFiles: (): Promise<Array<{ name: string; size: number; bytes: Uint8Array }>> => ipcRenderer.invoke('fonts:pick-files'),
+  saveCustomFont: (id: string, name: string, category: string, variants: Record<string, string>): Promise<{ ok: true; font: InstalledFont } | FontsFailure> => ipcRenderer.invoke('fonts:save-custom', id, name, category, variants),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
@@ -116,8 +119,10 @@ export interface InstalledFont {
   license: string
   /** `400`, `700`, `400-italic`, `700-italic` (celles qui ont été téléchargées) */
   variants: string[]
-  /** fichiers WOFF2 en base64, par variante */
+  /** fichiers de police (WOFF2 pour le catalogue ; TTF, OTF, WOFF ou WOFF2 pour une police importée) en base64, par variante */
   data: Record<string, string>
+  /** police importée depuis un fichier de l'utilisateur */
+  custom?: boolean
 }
 export type FontsFailure = { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail: string }
 

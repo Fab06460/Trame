@@ -67,3 +67,16 @@ export function cssFamily(name: string, category: string): string {
 
 /** Un fichier WOFF2 commence par « wOF2 » : on ne garde pas une page d'erreur HTML qui aurait le bon en-tête HTTP. */
 export const isWoff2 = (bytes: Uint8Array): boolean => bytes.length > 4 && bytes[0] === 0x77 && bytes[1] === 0x4f && bytes[2] === 0x46 && bytes[3] === 0x32
+
+/** Fichier de police reconnu (TrueType, OpenType, WOFF, WOFF2) d'après sa signature ; les collections (.ttc) sont refusées. */
+export function isFontFile(b: Uint8Array): boolean {
+  if (b.length < 12) return false
+  const tag = String.fromCharCode(b[0], b[1], b[2], b[3])
+  return tag === 'wOF2' || tag === 'wOFF' || tag === 'OTTO' || tag === 'true' || (b[0] === 0 && b[1] === 1 && b[2] === 0 && b[3] === 0)
+}
+
+export const CUSTOM_PREFIX = 'perso-'
+export const CATEGORY_LIST = ['sans-serif', 'serif', 'display', 'handwriting', 'monospace']
+
+/** Nom de famille accepté pour une police personnelle : il entre dans une famille CSS entre guillemets. */
+export const isSafeFamilyName = (n: unknown): n is string => typeof n === 'string' && /^[^"\\<>\u0000-\u001f]{1,60}$/.test(n) && n.trim().length > 0
