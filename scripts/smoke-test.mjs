@@ -201,6 +201,81 @@ try {
   await run(`window.trame.deleteUserTemplate(${JSON.stringify(saved[0]?.id)})`)
   check('suppression du modèle', (await tpls()).length === 0 && (await run(`window.trame.loadUserTemplate(${JSON.stringify(saved[0]?.id)})`)) === null)
 
+  // modèles : masquer / restaurer, renommer, rétablir l'original, remplacer après modification (parcours dans l'interface)
+  const count = (sel) => run(`document.querySelectorAll(${JSON.stringify(sel)}).length`)
+  const clickSel = (sel) => run(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true })()`)
+  const typeInto = (sel, value) =>
+    run(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); if (!i) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
+  const pressEnter = (sel) => run(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); if (!i) return false; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return true })()`)
+  const waitFor = async (fn, ms = 6000) => { for (let t = 0; t < ms; t += 200) { if (await fn()) return true; await sleep(200) } return false }
+  const builtinIds = () => run(`[...document.querySelectorAll('.builtin-template')].map(c => c.dataset.templateId).join(',')`)
+
+  await click('.sidebar .tabs button', 'Modèles')
+  await sleep(300)
+  check('6 modèles intégrés affichés au départ', (await count('.builtin-template')) === 6, await builtinIds())
+
+  // masquer un modèle intégré, puis le restaurer
+  await clickSel('.builtin-template[data-template-id="quote"] .card-remove')
+  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 5 && !(await builtinIds()).includes('quote')))
+  check('une confirmation est demandée avant de masquer', (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes('Masquer le modèle'))
+  check('le modèle masqué est mémorisé côté système', (await run('window.trame.listHiddenTemplates()')).join() === 'quote')
+  check('le lien « Restaurer les modèles masqués (1) » apparaît', (await click('.sidebar button.link', 'Restaurer les modèles masqués (1)')) === true)
+  check('restaurer remet les 6 modèles', await waitFor(async () => (await count('.builtin-template')) === 6 && (await run('window.trame.listHiddenTemplates()')).length === 0))
+
+  // renommer un modèle intégré : crée la version personnalisée, l'original disparaît de sa catégorie
+  await clickSel('.builtin-template[data-template-id="promo"] .card-rename')
+  await sleep(200)
+  await typeInto('.builtin-template[data-template-id="promo"] .card-rename-input', 'Promo été')
+  await pressEnter('.builtin-template[data-template-id="promo"] .card-rename-input')
+  check('renommer un modèle intégré crée « votre version » (basedOn) sous le nouveau nom', await waitFor(async () => (await run('window.trame.listUserTemplates()')).some((t) => t.name === 'Promo été' && t.basedOn === 'promo')))
+  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 5))
+  check('la version personnalisée porte l’étiquette « personnalisé »', (await run(`document.querySelector('.user-template .badge')?.textContent`)) === 'personnalisé')
+
+  // renommer un modèle personnel
+  await clickSel('.user-template .card-rename')
+  await sleep(200)
+  await typeInto('.user-template .card-rename-input', 'Promo d’été 2')
+  await pressEnter('.user-template .card-rename-input')
+  check('renommer un modèle personnel met à jour son nom', await waitFor(async () => (await run('window.trame.listUserTemplates()'))[0]?.name === 'Promo d’été 2'))
+
+  // rétablir l'original = supprimer la version personnalisée
+  await clickSel('.user-template .card-remove')
+  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 6))
+  check("la confirmation parle de rétablir l'original", (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes("Rétablir le modèle d'origine"))
+
+  // modifier le contenu : appliquer, retoucher, enregistrer en REMPLAÇANT
+  await clickSel('.builtin-template[data-template-id="event"] .card-open')
+  check('appliquer un modèle intégré ouvre son document', await waitFor(async () => (await run('document.title')).startsWith('Événement')))
+  const elementsOf = async () => JSON.parse((await run(`window.trame.loadUserTemplate(${JSON.stringify((await run('window.trame.listUserTemplates()'))[0]?.id)})`)) ?? '{}').pages?.[0]?.elements?.length
+  await click('header.toolbar button', 'Rectangle')
+  await sleep(300)
+  await clickSel('.sidebar button.wide:not([disabled])')
+  await sleep(300)
+  check("le formulaire propose de remplacer le modèle d'origine", (await run(`document.querySelector('.choice')?.innerText ?? ''`)).includes('Remplacer « Événement »'))
+  check('« Nouveau modèle » est coché par défaut (choix non destructif)', (await run(`document.querySelector('.choice input[type=radio]')?.checked`)) === true)
+  await clickSel('.choice label:nth-of-type(2) input')
+  await sleep(200)
+  check('choisir « Remplacer » préremplit le nom du modèle', (await run(`document.querySelector('.sidebar form .text-field')?.value`)) === 'Événement')
+  await click('.sidebar form button[type=submit]', 'Remplacer')
+  await waitFor(async () => (await count('.sidebar form')) === 0)
+  check("remplacer crée la version personnalisée de l'événement (basedOn) et masque l'original", await waitFor(async () => (await run('window.trame.listUserTemplates()')).some((t) => t.basedOn === 'event') && !(await builtinIds()).includes('event')))
+  const firstCount = await elementsOf()
+  // seconde retouche : le document vient maintenant du modèle personnalisé, on le REMPLACE (même identifiant, pas de doublon)
+  const idBefore = (await run('window.trame.listUserTemplates()'))[0].id
+  await click('header.toolbar button', 'Ellipse')
+  await sleep(300)
+  await clickSel('.sidebar button.wide:not([disabled])')
+  await sleep(300)
+  await clickSel('.choice label:nth-of-type(2) input')
+  await sleep(200)
+  await click('.sidebar form button[type=submit]', 'Remplacer')
+  // le formulaire ne se ferme qu'une fois l'enregistrement terminé : sans cette attente on vérifierait l'état d'AVANT
+  check('le formulaire se ferme après l\'enregistrement', await waitFor(async () => (await count('.sidebar form')) === 0))
+  check('remplacer à nouveau garde le même modèle (aucun doublon, même identifiant)', await run('window.trame.listUserTemplates()').then((l) => l.length === 1 && l[0].id === idBefore))
+  check('le contenu du modèle remplacé a bien été mis à jour (un élément de plus)', await waitFor(async () => (await elementsOf()) === firstCount + 1), `${firstCount} → ${await elementsOf()}`)
+  await run(`window.trame.deleteUserTemplate(${JSON.stringify(idBefore)})`) // nettoyage : l'original revient
+  await run('window.trame.unhideAllTemplates()')
+
   // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)

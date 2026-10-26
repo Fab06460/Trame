@@ -18,6 +18,8 @@ export interface UserTemplateMeta {
   pageCount: number
   /** data URL de la première page */
   thumbnail: string
+  /** identifiant du modèle intégré que celui-ci remplace (version personnalisée) */
+  basedOn?: string
 }
 
 const api = {
@@ -38,8 +40,15 @@ const api = {
   /** Enregistre un modèle ; retourne ses métadonnées, ou null en cas d'échec (erreur affichée). */
   saveUserTemplate: (
     meta: Omit<UserTemplateMeta, 'id' | 'createdAt'>,
-    json: string
-  ): Promise<UserTemplateMeta | null> => ipcRenderer.invoke('templates:save', meta, json),
+    json: string,
+    /** si fourni, remplace le contenu de ce modèle au lieu d'en créer un nouveau */
+    replaceId?: string
+  ): Promise<UserTemplateMeta | null> => ipcRenderer.invoke('templates:save', meta, json, replaceId),
+  renameUserTemplate: (id: string, name: string): Promise<UserTemplateMeta | null> => ipcRenderer.invoke('templates:rename', id, name),
+  /** Modèles intégrés masqués par l'utilisateur. */
+  listHiddenTemplates: (): Promise<string[]> => ipcRenderer.invoke('templates:hidden'),
+  hideBuiltinTemplate: (id: string): Promise<void> => ipcRenderer.invoke('templates:hide', id),
+  unhideAllTemplates: (): Promise<void> => ipcRenderer.invoke('templates:unhide-all'),
   loadUserTemplate: (id: string): Promise<string | null> => ipcRenderer.invoke('templates:load', id),
   deleteUserTemplate: (id: string): Promise<void> => ipcRenderer.invoke('templates:delete', id),
   /** Boîte de confirmation native ; true si l'utilisateur choisit `confirmLabel`. */

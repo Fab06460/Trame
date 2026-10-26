@@ -10,7 +10,7 @@
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
 - Sélection multiple (lasso, Maj+clic, ⌘A), groupes, alignement et répartition, ordre des calques
 - Pages multiples (ajout, duplication, suppression, réordonnancement par glisser-déposer)
-- 6 modèles de départ et **modèles personnels** (enregistrer n'importe quel design, toutes pages comprises), 10 polices embarquées
+- 6 modèles de départ et **modèles personnels** (enregistrer n'importe quel design, toutes pages comprises) ; tous les modèles se renomment, se masquent ou se remplacent par une version retouchée, l'original restant rétablissable, 10 polices embarquées
 - Zoom (10 % à 800 %) et déplacement du canvas : pincement, ⌘+molette, barre d'espace
 - Annuler / rétablir (100 niveaux)
 - Projets récents (liste persistée, onglet « Récents », menu « Ouvrir récent » du Dock) et ouverture par double-clic sur un `.trame` dans le Finder (app installée, macOS)

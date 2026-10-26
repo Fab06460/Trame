@@ -6,7 +6,10 @@ import { homedir } from 'os'
 import { basename, dirname } from 'path'
 import { createCloseGuard } from './closeGuard'
 import { createFileInbox } from './fileInbox'
-import { addMeta, isValidId, parseTemplateIndex, removeMeta, sanitizeMeta, type TemplateMeta } from './userTemplates'
+import {
+  addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
+  type TemplateMeta
+} from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
 
 const recentsFile = (): string => join(app.getPath('userData'), 'recent-projects.json')
@@ -38,12 +41,21 @@ async function noteRecent(path: string): Promise<void> {
 const MAX_TEMPLATE_BYTES = 64 * 1024 * 1024
 const templatesDir = (): string => join(app.getPath('userData'), 'templates')
 const templateIndexFile = (): string => join(templatesDir(), 'index.json')
+const hiddenFile = (): string => join(templatesDir(), 'hidden.json')
 
 async function loadTemplateIndex(): Promise<TemplateMeta[]> {
   try {
     return parseTemplateIndex(await readFile(templateIndexFile(), 'utf-8'))
   } catch {
     return [] // aucun modèle enregistré pour l'instant
+  }
+}
+
+async function loadHidden(): Promise<string[]> {
+  try {
+    return parseHidden(await readFile(hiddenFile(), 'utf-8'))
+  } catch {
+    return [] // aucun modèle intégré masqué
   }
 }
 
@@ -170,19 +182,52 @@ ipcMain.handle('project:open-path', async (_e, path: string) => {
 
 ipcMain.handle('templates:list', () => loadTemplateIndex())
 
-ipcMain.handle('templates:save', async (_e, meta: unknown, json: unknown) => {
+// `replaceId` : remplace le contenu d'un modèle existant (même identifiant) au lieu d'en créer un nouveau
+ipcMain.handle('templates:save', async (_e, meta: unknown, json: unknown, replaceId?: unknown) => {
   try {
     if (typeof json !== 'string' || json.length > MAX_TEMPLATE_BYTES) throw new Error('Le design est trop volumineux pour devenir un modèle.')
-    const entry = sanitizeMeta(meta, randomUUID(), Date.now())
-    if (!entry) throw new Error('Informations du modèle invalides.')
     await mkdir(templatesDir(), { recursive: true })
+    const index = await loadTemplateIndex()
+    let entry: TemplateMeta | undefined
+    let next: TemplateMeta[] | null
+    if (replaceId !== undefined && replaceId !== null) {
+      if (!isValidId(replaceId) || !index.some((m) => m.id === replaceId)) throw new Error('Le modèle à remplacer est introuvable.')
+      next = replaceMeta(index, replaceId, meta)
+      entry = next?.[0]
+    } else {
+      entry = sanitizeMeta(meta, randomUUID(), Date.now()) ?? undefined
+      next = entry ? addMeta(index, entry) : null
+    }
+    if (!entry || !next) throw new Error('Informations du modèle invalides.')
     await writeFile(join(templatesDir(), `${entry.id}.json`), json, 'utf-8')
-    await saveTemplateIndex(addMeta(await loadTemplateIndex(), entry))
+    await saveTemplateIndex(next)
     return entry
   } catch (err) {
     dialog.showErrorBox('Enregistrement du modèle impossible', err instanceof Error ? err.message : String(err))
     return null
   }
+})
+
+ipcMain.handle('templates:rename', async (_e, id: unknown, name: unknown) => {
+  if (!isValidId(id)) return null
+  const index = await loadTemplateIndex()
+  if (!index.some((m) => m.id === id)) return null
+  const next = renameMeta(index, id, name)
+  await saveTemplateIndex(next)
+  return next.find((m) => m.id === id) ?? null
+})
+
+// Modèles intégrés masqués par l'utilisateur (ils sont dans le code : on les cache, on ne les supprime pas)
+ipcMain.handle('templates:hidden', () => loadHidden())
+
+ipcMain.handle('templates:hide', async (_e, id: unknown) => {
+  if (!isBuiltinId(id)) return
+  await mkdir(templatesDir(), { recursive: true })
+  await writeFile(hiddenFile(), JSON.stringify(addHidden(await loadHidden(), id)), 'utf-8')
+})
+
+ipcMain.handle('templates:unhide-all', async () => {
+  await rm(hiddenFile(), { force: true })
 })
 
 ipcMain.handle('templates:load', async (_e, id: unknown) => {
@@ -201,6 +246,11 @@ ipcMain.handle('templates:delete', async (_e, id: unknown) => {
 })
 
 ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, confirmLabel: string) => {
+  if (TEST_EXPORT_DIR) {
+    // mode test (voir export:save) : on garde la question et on répond « oui », sans boîte que le test ne pourrait pas fermer
+    await writeFile(join(TEST_EXPORT_DIR, 'dialog-confirm.txt'), `${message}\n${detail}\n[${confirmLabel}]`, 'utf-8')
+    return true
+  }
   const win = BrowserWindow.fromWebContents(e.sender)!
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',

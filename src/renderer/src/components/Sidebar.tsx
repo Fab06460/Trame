@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RecentProject } from '../../../preload'
 import { useEditor } from '@/store/editor'
-import { confirmUnsaved } from '@/fileActions'
 import { SHAPES } from '@/shapes'
-import { TEMPLATES, instantiate, previewPage } from '@/templates'
+import { TEMPLATES, previewPage } from '@/templates'
+import { useTemplates } from '@/store/templates'
+import { applyBuiltinTemplate, hideBuiltinTemplate, renameBuiltinTemplate, restoreHiddenTemplates } from '@/userTemplateActions'
+import { TemplateCard } from './TemplateCard'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
 import { UserTemplates } from './UserTemplates'
@@ -19,7 +21,9 @@ const TEXT_PRESETS = [
 export function Sidebar(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('templates')
   const [recents, setRecents] = useState<RecentProject[]>([])
-  const { addElement, loadDocument } = useEditor.getState()
+  const { addElement } = useEditor.getState()
+  const userTemplates = useTemplates((s) => s.user)
+  const hidden = useTemplates((s) => s.hidden)
   const filePath = useEditor((s) => s.filePath)
 
   const refreshRecents = useCallback((): void => {
@@ -37,12 +41,14 @@ export function Sidebar(): React.JSX.Element {
   // Un enregistrement ou une ouverture met la liste à jour
   useEffect(refreshRecents, [filePath, refreshRecents])
 
-  const applyTemplate = async (id: string): Promise<void> => {
-    const t = TEMPLATES.find((x) => x.id === id)!
-    if (await confirmUnsaved('remplacer ce design par un modèle')) loadDocument(instantiate(t))
-  }
+  useEffect(() => {
+    void useTemplates.getState().refresh()
+  }, [])
 
-  const categories = [...new Set(TEMPLATES.map((t) => t.category))]
+  // Modèles intégrés affichés : ni masqués, ni remplacés par une version personnalisée (qui est alors dans « Mes modèles »)
+  const replaced = new Set(userTemplates.map((t) => t.basedOn).filter(Boolean))
+  const shown = TEMPLATES.filter((t) => !hidden.includes(t.id) && !replaced.has(t.id))
+  const categories = [...new Set(shown.map((t) => t.category))]
 
   return (
     <aside className="sidebar">
@@ -61,15 +67,30 @@ export function Sidebar(): React.JSX.Element {
           <section key={c}>
             <h3>{c}</h3>
             <div className="grid">
-              {TEMPLATES.filter((t) => t.category === c).map((t) => (
-                <button key={t.id} className="card" onClick={() => applyTemplate(t.id)} title={t.name}>
-                  <PageThumb page={previewPage(t.pages[0])} width={t.width} height={t.height} maxW={110} maxH={110} />
-                  <span>{t.name}{t.pages.length > 1 ? ` · ${t.pages.length} p.` : ''}</span>
-                </button>
+              {shown.filter((t) => t.category === c).map((t) => (
+                <TemplateCard
+                  key={t.id}
+                  id={t.id}
+                  kind="builtin"
+                  name={t.name}
+                  suffix={t.pages.length > 1 ? ` · ${t.pages.length} p.` : undefined}
+                  thumb={<PageThumb page={previewPage(t.pages[0])} width={t.width} height={t.height} maxW={110} maxH={110} />}
+                  onOpen={() => void applyBuiltinTemplate(t.id)}
+                  onRename={(n) => void renameBuiltinTemplate(t.id, n)}
+                  onRemove={() => void hideBuiltinTemplate(t.id)}
+                  renameTitle="Renommer : crée votre version personnalisée de ce modèle (dans « Mes modèles »)"
+                  removeTitle="Masquer ce modèle (restaurable)"
+                />
               ))}
             </div>
           </section>
         ))}
+
+      {tab === 'templates' && hidden.length > 0 && (
+        <button className="link" onClick={() => void restoreHiddenTemplates()}>
+          Restaurer les modèles masqués ({hidden.length})
+        </button>
+      )}
 
       {tab === 'elements' && (
         <>

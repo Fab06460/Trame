@@ -13,6 +13,8 @@ export interface TemplateMeta {
   pageCount: number
   /** data URL de la première page (JPEG réduit), pour l'aperçu sans charger le document */
   thumbnail: string
+  /** identifiant du modèle intégré que celui-ci remplace (version personnalisée) ; le modèle d'origine est alors masqué */
+  basedOn?: string
 }
 
 /** L'identifiant sert de nom de fichier : on n'accepte que des caractères sûrs (aucun `/`, `..`, etc.). */
@@ -22,6 +24,9 @@ export function normalizeName(raw: unknown): string {
   const name = typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim().slice(0, MAX_NAME) : ''
   return name || 'Sans titre'
 }
+
+/** Identifiant d'un modèle intégré (ceux de templates.ts : minuscules, chiffres, tirets). */
+export const isBuiltinId = (id: unknown): id is string => typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id)
 
 const isPositiveInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0
 
@@ -37,7 +42,8 @@ export function sanitizeMeta(input: any, id: string, now: number): TemplateMeta 
     width: input.width,
     height: input.height,
     pageCount: input.pageCount,
-    thumbnail: t
+    thumbnail: t,
+    ...(isBuiltinId(input.basedOn) ? { basedOn: input.basedOn } : {})
   }
 }
 
@@ -61,3 +67,37 @@ export const addMeta = (list: TemplateMeta[], meta: TemplateMeta): TemplateMeta[
 ]
 
 export const removeMeta = (list: TemplateMeta[], id: string): TemplateMeta[] => list.filter((m) => m.id !== id)
+
+/** Renomme un modèle ; la liste est inchangée si l'identifiant n'existe pas. */
+export const renameMeta = (list: TemplateMeta[], id: string, name: unknown): TemplateMeta[] =>
+  list.map((m) => (m.id === id ? { ...m, name: normalizeName(name) } : m))
+
+/**
+ * Remplace un modèle existant en gardant son identité (identifiant, date de création, modèle intégré remplacé).
+ * `null` si l'identifiant est inconnu ou si les nouvelles métadonnées sont invalides.
+ */
+export function replaceMeta(list: TemplateMeta[], id: string, input: unknown): TemplateMeta[] | null {
+  const old = list.find((m) => m.id === id)
+  if (!old) return null
+  const fresh = sanitizeMeta({ ...(input as object), basedOn: old.basedOn ?? (input as { basedOn?: unknown })?.basedOn }, id, old.createdAt)
+  return fresh ? addMeta(list, fresh) : null
+}
+
+// ── Modèles intégrés masqués ──────────────────────────────────────────────────────────────────────────────
+/** Lit la liste des modèles intégrés masqués ; tout contenu illisible donne une liste vide. */
+export function parseHidden(raw: string): string[] {
+  try {
+    const data = JSON.parse(raw)
+    return Array.isArray(data) ? [...new Set(data.filter(isBuiltinId))] : []
+  } catch {
+    return []
+  }
+}
+
+export const addHidden = (list: string[], id: string): string[] => (list.includes(id) ? list : [...list, id])
+
+/** Modèles intégrés à afficher : ni masqués par l'utilisateur, ni remplacés par une de ses versions personnalisées. */
+export function visibleBuiltins<T extends { id: string }>(builtins: T[], hidden: string[], userTemplates: Array<{ basedOn?: string }>): T[] {
+  const replaced = new Set(userTemplates.map((t) => t.basedOn).filter(Boolean))
+  return builtins.filter((b) => !hidden.includes(b.id) && !replaced.has(b.id))
+}

@@ -67,7 +67,15 @@ export function parseDocument(json: string): TrameDocument {
 export const selectPage = (s: Pick<EditorState, 'doc' | 'pageId'>): TramePage =>
   s.doc.pages.find((p) => p.id === s.pageId) ?? s.doc.pages[0]
 
+/** Modèle dont le document actuel est parti (appliqué depuis l'onglet Modèles) : permet de proposer de le remplacer à l'enregistrement. */
+export interface TemplateOrigin {
+  kind: 'builtin' | 'user'
+  id: string
+  name: string
+}
+
 interface EditorState {
+  templateOrigin: TemplateOrigin | null
   doc: TrameDocument
   pageId: string
   selectedIds: string[]
@@ -106,6 +114,8 @@ interface EditorState {
   undo: () => void
   redo: () => void
   loadDocument: (doc: TrameDocument, path?: string) => void
+  /** À appeler juste après loadDocument quand le document vient d'un modèle (loadDocument remet l'origine à zéro). */
+  setTemplateOrigin: (origin: TemplateOrigin | null) => void
   newDocument: () => void
   markSaved: (path: string) => void
 }
@@ -169,6 +179,7 @@ export const useEditor = create<EditorState>((set, get) => {
   })
 
   return {
+    templateOrigin: null,
     doc: initial,
     pageId: initial.pages[0].id,
     selectedIds: [],
@@ -447,12 +458,14 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     loadDocument: (doc, path) =>
-      set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false }),
+      set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null }),
 
     newDocument: () => {
       const doc = blankDoc()
-      set({ doc, pageId: doc.pages[0].id, filePath: undefined, selectedIds: [], past: [], future: [], dirty: false })
+      set({ doc, pageId: doc.pages[0].id, filePath: undefined, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null })
     },
+
+    setTemplateOrigin: (templateOrigin) => set({ templateOrigin }),
 
     markSaved: (path) => set({ filePath: path, dirty: false })
   }

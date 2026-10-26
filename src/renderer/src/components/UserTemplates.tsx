@@ -1,29 +1,37 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { UserTemplateMeta } from '../../../preload'
-import { applyUserTemplate, deleteUserTemplate, saveAsTemplate } from '@/userTemplateActions'
+import { useEffect, useState } from 'react'
+import { applyUserTemplate, deleteUserTemplate, renameUserTemplate, saveAsTemplate } from '@/userTemplateActions'
 import { useEditor } from '@/store/editor'
+import { useTemplates } from '@/store/templates'
+import { TEMPLATES } from '@/templates'
+import { TemplateCard } from './TemplateCard'
 
-/** Section « Mes modèles » : enregistrer le design actuel, réutiliser ou supprimer ses modèles. */
+/** Section « Mes modèles » : enregistrer le design actuel (ou remplacer le modèle dont il vient), réutiliser, renommer, supprimer. */
 export function UserTemplates(): React.JSX.Element {
-  const [items, setItems] = useState<UserTemplateMeta[]>([])
+  const items = useTemplates((s) => s.user)
+  const refresh = useTemplates((s) => s.refresh)
   const [naming, setNaming] = useState(false)
   const [name, setName] = useState('')
+  const [replace, setReplace] = useState(false)
   const [busy, setBusy] = useState(false)
   const docName = useEditor((s) => s.doc.name)
+  const origin = useEditor((s) => s.templateOrigin)
   const isEmpty = useEditor((s) => s.doc.pages.every((p) => p.elements.length === 0))
 
-  const refresh = useCallback((): void => {
-    window.trame.listUserTemplates().then(setItems, () => setItems([]))
-  }, [])
-  useEffect(refresh, [refresh])
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  // Le document vient-il d'un modèle qu'on peut encore remplacer ?
+  const replaceable =
+    origin && (origin.kind === 'user' ? items.some((t) => t.id === origin.id) : !items.some((t) => t.basedOn === origin.id) && TEMPLATES.some((t) => t.id === origin.id))
+      ? origin
+      : null
 
   const save = async (): Promise<void> => {
     setBusy(true)
     try {
-      if (await saveAsTemplate(name)) {
-        setNaming(false)
-        refresh()
-      }
+      const opts = replace && replaceable ? (replaceable.kind === 'user' ? { replaceId: replaceable.id } : { basedOn: replaceable.id }) : {}
+      if (await saveAsTemplate(name, opts)) setNaming(false)
     } finally {
       setBusy(false)
     }
@@ -41,6 +49,21 @@ export function UserTemplates(): React.JSX.Element {
             void save()
           }}
         >
+          {replaceable && (
+            <fieldset className="choice">
+              <label>
+                <input type="radio" name="tpl-mode" checked={!replace} onChange={() => { setReplace(false); setName(docName === 'Sans titre' ? '' : docName) }} />
+                Nouveau modèle
+              </label>
+              <label>
+                <input type="radio" name="tpl-mode" checked={replace} onChange={() => { setReplace(true); setName(replaceable.name) }} />
+                <span>
+                  Remplacer « {replaceable.name} »
+                  {replaceable.kind === 'builtin' ? <small> — l'original pourra être rétabli</small> : null}
+                </span>
+              </label>
+            </fieldset>
+          )}
           <input
             className="text-field"
             autoFocus
@@ -54,7 +77,7 @@ export function UserTemplates(): React.JSX.Element {
             }}
           />
           <div className="row">
-            <button type="submit" className="primary" disabled={busy || !name.trim()}>Enregistrer</button>
+            <button type="submit" className="primary" disabled={busy || !name.trim()}>{replace && replaceable ? 'Remplacer' : 'Enregistrer'}</button>
             <button type="button" onClick={() => setNaming(false)}>Annuler</button>
           </div>
         </form>
@@ -64,6 +87,7 @@ export function UserTemplates(): React.JSX.Element {
           disabled={isEmpty}
           title={isEmpty ? 'Ajoutez d’abord des éléments à votre design' : 'Conserver ce design (toutes les pages) comme modèle'}
           onClick={() => {
+            setReplace(false) // par défaut on ne remplace rien : choix explicite
             setName(docName === 'Sans titre' ? '' : docName)
             setNaming(true)
           }}
@@ -76,23 +100,26 @@ export function UserTemplates(): React.JSX.Element {
         <p className="empty">Vos modèles apparaîtront ici.</p>
       ) : (
         <div className="grid">
-          {items.map((t) => (
-            <div key={t.id} className="card user-template">
-              <button className="card-open" onClick={() => applyUserTemplate(t)} title={t.name}>
-                <img src={t.thumbnail} alt="" draggable={false} />
-                <span>{t.name}{t.pageCount > 1 ? ` · ${t.pageCount} p.` : ''}</span>
-              </button>
-              <button
-                className="card-remove"
-                title="Supprimer ce modèle"
-                onClick={async () => {
-                  if (await deleteUserTemplate(t)) refresh()
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+          {items.map((t) => {
+            const builtin = t.basedOn ? TEMPLATES.find((b) => b.id === t.basedOn) : undefined
+            return (
+              <TemplateCard
+                key={t.id}
+                id={t.id}
+                kind="user"
+                name={t.name}
+                suffix={t.pageCount > 1 ? ` · ${t.pageCount} p.` : undefined}
+                thumb={<img src={t.thumbnail} alt="" draggable={false} />}
+                badge={builtin ? 'personnalisé' : undefined}
+                onOpen={() => void applyUserTemplate(t)}
+                onRename={(n) => void renameUserTemplate(t, n)}
+                onRemove={() => void deleteUserTemplate(t)}
+                renameTitle="Renommer ce modèle"
+                removeTitle={builtin ? `Rétablir le modèle d'origine « ${builtin.name} »` : 'Supprimer ce modèle'}
+                removeIcon={builtin ? '↺' : '✕'}
+              />
+            )
+          })}
         </div>
       )}
     </section>

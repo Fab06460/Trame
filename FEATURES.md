@@ -37,3 +37,5 @@ Canva est une plateforme de création visuelle tout-en-un qui regroupe des outil
 • Canva Offline : Mode hors-ligne pour continuer à travailler sans connexion Internet. [1] (https://www.canva.com/launches/), [2] (https://www.canva.com/features/), [3] (https://www.jotform.com/blog/canva-features/), [4] (https://www.canva.com/en_in/canva-business/), [5] (https://www.canva.com/en_in/pricing/)
 Vous pouvez consulter les détails complets sur la page officielle des fonctionnalités Canva ou comparer les formules sur la page des tarifs Canva.
 Souhaitez-vous des détails sur une fonctionnalité spécifique (par exemple : la différence entre Canva Gratuit et Canva Pro) ou de l'aide pour débuter un projet précis ?
+
+

@@ -35,7 +35,8 @@ Fenêtre créée avec `contextIsolation: true`, `nodeIntegration: false`, `sandb
 | `image:pick`     | `pickImage()`                    | Dialogue d'image ; retourne une **data URL** base64          |
 | `export:save`    | `saveExport(dataUrl, name)`      | Décode une data URL (PNG, JPG ou PDF) et l'écrit sur disque  |
 | `recent:list` / `recent:remove` / `recent:clear` | `listRecents()` / `removeRecent(path)` / `clearRecents()` | Projets récents, persistés dans `recent-projects.json` du dossier de données de l'application (`userData`). `listRecents` ajoute `name`, `dir` (`~` abrégé) et `modified` (`null` si le fichier a disparu) |
-| `templates:list` / `templates:save` / `templates:load` / `templates:delete` | `listUserTemplates()` / `saveUserTemplate(meta, json)` / `loadUserTemplate(id)` / `deleteUserTemplate(id)` | Modèles de l'utilisateur (voir ci-dessous). `save` génère l'identifiant côté main ; les identifiants reçus sont validés (`isValidId`) avant de construire un chemin de fichier |
+| `templates:rename` / `templates:hidden` / `templates:hide` / `templates:unhide-all` | `renameUserTemplate(id, name)` / `listHiddenTemplates()` / `hideBuiltinTemplate(id)` / `unhideAllTemplates()` | Renommer un modèle personnel ; gérer la liste des modèles **intégrés masqués** (`templates/hidden.json`). Les identifiants sont validés (`isValidId` pour les modèles personnels, `isBuiltinId` pour les intégrés) |
+| `templates:list` / `templates:save` / `templates:load` / `templates:delete` | `listUserTemplates()` / `saveUserTemplate(meta, json, replaceId?)` / `loadUserTemplate(id)` / `deleteUserTemplate(id)` | Modèles de l'utilisateur (voir ci-dessous). `save` génère l'identifiant côté main ; les identifiants reçus sont validés (`isValidId`) avant de construire un chemin de fichier |
 | `dialog:info` | `showInfo(message, detail)` | Boîte d'information native (un bouton OK) ; en mode test (`TRAME_TEST_EXPORT_DIR`), le message est écrit dans `dialog-info.txt` au lieu d'être affiché |
 | `dialog:confirm` | `confirm(message, detail, label)` | Confirmation native (suppression d'un modèle) ; `true` si `label` est choisi |
 | `project:open-path` | `openPath(path)` | Ouvre un projet **de la liste des récents uniquement** (un renderer compromis ne peut pas lire un fichier arbitraire) ; `null` si introuvable ou non listé |
@@ -130,6 +131,21 @@ macOS envoie `open-file` à l'application pour un double-clic sur un `.trame`, u
 - `<id>.json` : le document complet (images en base64 comprises), lu seulement quand on applique le modèle.
 
 La miniature est produite par le rendu hors écran (`renderPage(…, maxSize)`), donc fidèle à l'éditeur. Appliquer un modèle (`userTemplateActions.ts`) : lecture → `parseDocument` (même validation que l'ouverture d'un fichier) → confirmation si modifications non enregistrées → `cloneWithNewIds` (renouvelle les identifiants de pages, d'éléments **et de groupes** : chaque application produit un document indépendant) → nouveau document nommé d'après le modèle, sans chemin de fichier. Logique pure et testée dans `main/userTemplates.ts` (validation de l'identifiant — qui sert de nom de fichier —, du nom, de la miniature ; lecture tolérante de l'index).
+
+### Modifier, renommer, supprimer les modèles
+
+Les modèles intégrés sont **du code** (`templates.ts`) : on ne les modifie ni ne les supprime sur le disque, on les **masque** ou on les **remplace par une version personnelle**. Toutes les opérations sont non destructives et réversibles :
+
+| Action | Modèle personnel | Modèle intégré |
+| --- | --- | --- |
+| **Supprimer** | supprimé définitivement (confirmation) | **masqué** (`hidden.json`) ; « Restaurer les modèles masqués » le fait réapparaître |
+| **Renommer** (✎, sur place) | l'index est mis à jour | crée **votre version** (même contenu, nouveau nom) qui prend sa place |
+| **Modifier le contenu** | appliquer → retoucher → « Enregistrer comme modèle » → **Remplacer** (même identifiant, même date de création) | idem : crée votre version qui remplace l'original |
+| **Rétablir l'original** | — | supprimer votre version (↺) : l'original revient |
+
+Une *version personnelle* d'un modèle intégré est un modèle personnel dont `basedOn` vaut l'identifiant de l'intégré. Règle d'affichage (`visibleBuiltins`, testée) : un modèle intégré est montré s'il n'est ni masqué ni remplacé par un modèle personnel de `basedOn` égal ; la version personnelle apparaît dans « Mes modèles » avec l'étiquette « personnalisé ». **Les identifiants des modèles intégrés sont donc persistants** (`hidden.json`, `basedOn`) : ne jamais les renommer ni les réutiliser pour un autre modèle.
+
+Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quand le document vient du modèle X (`templateOrigin` dans le store : posé quand on applique un modèle, remis à zéro par « Nouveau », « Ouvrir » ou le chargement d'un fichier ; **en mémoire seulement**, perdu à la fermeture). Le choix par défaut est toujours **Nouveau modèle** (non destructif). Après un enregistrement, l'origine devient le modèle enregistré : on peut retoucher et remplacer de nouveau sans créer de doublon. `templates:save` avec `replaceId` écrase le fichier du modèle et ré-écrit l'index en conservant identité, date de création et `basedOn`. `store/templates.ts` partage la liste personnelle et la liste des masqués entre les deux sections de l'onglet. Le mode test de `dialog:confirm` répond « oui » automatiquement (comme `dialog:info`).
 
 ## Copier-coller
 

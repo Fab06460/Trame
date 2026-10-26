@@ -37,12 +37,13 @@
 
 ## Modèles personnels
 
-- **Pas de renommage ni de remplacement** d'un modèle : pour corriger un nom ou une mise à jour, supprimer puis réenregistrer.
+- Un modèle se **renomme** (✎) et se **remplace** (retoucher puis « Remplacer ») mais **ne se modifie pas en place** : il faut l'appliquer, retoucher le document, puis enregistrer. Pas d'historique : remplacer écrase définitivement l'ancienne version d'un modèle personnel (pas d'annulation).
+- Le lien « document ↔ modèle d'origine » (`templateOrigin`) n'existe qu'en **mémoire** : après un redémarrage, ou si l'on rouvre le document depuis un fichier `.trame`, l'application ne propose plus de remplacer le modèle d'origine (« Nouveau modèle » reste possible).
 - Un modèle contient une **copie complète** du design, images comprises (base64) : il peut être volumineux, et il n'y a pas de limite d'espace ni de nettoyage automatique (seule garde : 64 Mo par modèle).
 - Pas de catégories ni de recherche dans « Mes modèles » ; l'ordre est du plus récent au plus ancien.
 - Les modèles sont **locaux à la machine et à l'utilisateur** (dossier de données de l'application) : pas d'import/export, de partage ni de synchronisation. Désinstaller l'application n'efface pas ce dossier ; le supprimer efface les modèles.
 - La miniature n'est faite que de la première page.
-- Les modèles de départ intégrés (`templates.ts`) ne peuvent être ni modifiés ni supprimés depuis l'interface.
+- Les modèles intégrés (`templates.ts`) ne sont jamais modifiés sur le disque : « supprimer » les **masque** (restaurables) et « renommer » ou « remplacer » crée une **version personnelle** à leur place. Conséquences : cette version part dans « Mes modèles » (elle quitte sa catégorie d'origine) ; si une future version de Trame améliore ou retire le modèle intégré, **la version personnelle garde l'ancien contenu** (aucune fusion) ; un modèle intégré retiré du code dont une version personnelle subsiste devient un modèle personnel ordinaire. Les modèles masqués sont mémorisés par utilisateur.
 
 ## Éditeur
 

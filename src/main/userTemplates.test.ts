@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_NAME, MAX_THUMBNAIL_CHARS, addMeta, isValidId, normalizeName, parseTemplateIndex, removeMeta, sanitizeMeta,
-  type TemplateMeta
+  MAX_NAME, MAX_THUMBNAIL_CHARS, addHidden, addMeta, isBuiltinId, isValidId, normalizeName, parseHidden, parseTemplateIndex,
+  removeMeta, renameMeta, replaceMeta, sanitizeMeta, visibleBuiltins, type TemplateMeta
 } from './userTemplates'
 
 const input = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -63,5 +63,64 @@ describe('index', () => {
     expect(parseTemplateIndex(raw)).toEqual([good])
     expect(parseTemplateIndex('{pas du json')).toEqual([])
     expect(parseTemplateIndex('{"a":1}')).toEqual([])
+  })
+})
+
+describe('basedOn (version personnalisée d’un modèle intégré)', () => {
+  it('est conservé quand il est valide, ignoré sinon', () => {
+    expect(sanitizeMeta(input({ basedOn: 'story-new' }), 'abcdefgh', 1)?.basedOn).toBe('story-new')
+    expect(sanitizeMeta(input({ basedOn: '../etc' }), 'abcdefgh', 1)).not.toHaveProperty('basedOn')
+    expect(sanitizeMeta(input({ basedOn: 42 }), 'abcdefgh', 1)).not.toHaveProperty('basedOn')
+    expect(sanitizeMeta(input(), 'abcdefgh', 1)).not.toHaveProperty('basedOn')
+  })
+  it('isBuiltinId', () => {
+    expect(isBuiltinId('promo')).toBe(true)
+    expect(isBuiltinId('story-new')).toBe(true)
+    for (const bad of ['', 'Promo', 'a/b', '..', 'x'.repeat(41), 7, null]) expect(isBuiltinId(bad)).toBe(false)
+  })
+  it('survit à la relecture de l’index', () => {
+    const m = sanitizeMeta(input({ basedOn: 'deck' }), 'abcdefgh', 5)!
+    expect(parseTemplateIndex(JSON.stringify([m]))[0].basedOn).toBe('deck')
+  })
+})
+
+describe('renameMeta / replaceMeta', () => {
+  it('renomme en normalisant le nom, sans toucher aux autres', () => {
+    const list = [meta('aaaaaaaa'), meta('bbbbbbbb')]
+    const out = renameMeta(list, 'bbbbbbbb', '  Nouveau   nom ')
+    expect(out.map((m) => m.name)).toEqual(['Mon modèle', 'Nouveau nom'])
+    expect(renameMeta(list, 'bbbbbbbb', '   ')[1].name).toBe('Sans titre')
+    expect(renameMeta(list, 'inconnu00', 'x')).toEqual(list)
+  })
+
+  it('remplacer garde l’identifiant, la date de création et le modèle intégré remplacé, et passe en tête', () => {
+    const old = meta('bbbbbbbb', { createdAt: 7, basedOn: 'promo' })
+    const out = replaceMeta([meta('aaaaaaaa'), old], 'bbbbbbbb', input({ name: 'Version 2', pageCount: 3 }))!
+    expect(out[0]).toMatchObject({ id: 'bbbbbbbb', createdAt: 7, name: 'Version 2', pageCount: 3, basedOn: 'promo' })
+    expect(out).toHaveLength(2)
+  })
+
+  it('remplacer un modèle inconnu ou avec des métadonnées invalides échoue', () => {
+    expect(replaceMeta([meta('aaaaaaaa')], 'zzzzzzzz', input())).toBeNull()
+    expect(replaceMeta([meta('aaaaaaaa')], 'aaaaaaaa', input({ width: 0 }))).toBeNull()
+  })
+})
+
+describe('modèles intégrés masqués', () => {
+  it('parseHidden est tolérant et ne garde que des identifiants sûrs, sans doublon', () => {
+    expect(parseHidden('["promo","promo","../x","deck"]')).toEqual(['promo', 'deck'])
+    expect(parseHidden('{pas du json')).toEqual([])
+    expect(parseHidden('{"a":1}')).toEqual([])
+  })
+  it('addHidden ne duplique pas', () => {
+    expect(addHidden(['promo'], 'promo')).toEqual(['promo'])
+    expect(addHidden(['promo'], 'deck')).toEqual(['promo', 'deck'])
+  })
+  it('visibleBuiltins retire les masqués et ceux remplacés par une version personnalisée', () => {
+    const builtins = [{ id: 'promo' }, { id: 'quote' }, { id: 'deck' }]
+    expect(visibleBuiltins(builtins, [], []).map((b) => b.id)).toEqual(['promo', 'quote', 'deck'])
+    expect(visibleBuiltins(builtins, ['quote'], []).map((b) => b.id)).toEqual(['promo', 'deck'])
+    expect(visibleBuiltins(builtins, [], [{ basedOn: 'deck' }, {}]).map((b) => b.id)).toEqual(['promo', 'quote'])
+    expect(visibleBuiltins(builtins, ['promo'], [{ basedOn: 'promo' }]).map((b) => b.id)).toEqual(['quote', 'deck'])
   })
 })
