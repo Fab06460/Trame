@@ -81,6 +81,7 @@ const photoServer = createServer((req, res) => {
   if (url.pathname === '/v1/images/') {
     const q = url.searchParams.get('q'), page = url.searchParams.get('page')
     if (q === 'limite') { res.writeHead(429); return res.end('{}') }
+    if (q === 'planteur' && url.searchParams.has('license_type')) { res.writeHead(500, { 'content-type': 'text/html' }); return res.end('<h1>Server Error (500)</h1>') }
     if (q === 'refus') { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"detail":"Accès refusé pour test"}') }
     if (q === 'horsligne') return req.socket.destroy()
     res.writeHead(200, { 'content-type': 'application/json' })
@@ -88,6 +89,7 @@ const photoServer = createServer((req, res) => {
       ? [{ id: 'c3', title: 'Troisième', creator: 'Cléo', license: 'cc0', license_version: '1.0', url: `${base}/img/a.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/c3`, width: 800, height: 400 }]
       : [
           { id: 'a1', title: 'Montagne', creator: 'Ada', license: 'by', license_version: '4.0', url: `${base}/img/a.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/a1`, width: 800, height: 400 },
+          { id: 'nc9', title: 'Interdit', creator: 'Zed', license: 'by-nc', license_version: '4.0', url: `${base}/img/a.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/nc9`, width: 800, height: 400 },
           { id: 'b2', title: 'Lac', creator: 'Bob', license: 'by-sa', license_version: '3.0', url: `${base}/img/absent.png`, thumbnail: `${base}/thumb/a.png`, foreign_landing_url: `${base}/p/b2`, width: 800, height: 400 }
         ]
     return res.end(JSON.stringify({ result_count: 3, page_count: 2, page_size: 2, page: Number(page), results }))
@@ -99,9 +101,9 @@ const photoServer = createServer((req, res) => {
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
 const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
-const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`], {
+const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
-  stdio: 'ignore'
+  stdio: process.env.SMOKE_VERBOSE ? ['ignore', 'inherit', 'inherit'] : 'ignore'
 })
 let exited = false
 app.on('exit', () => (exited = true))
@@ -1004,7 +1006,7 @@ try {
   check('« Plus de résultats » est proposé (2 pages)', (await nBrand('[data-action="photo-more"]')) === 1)
   const photoThumbsBefore = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
   await clickSel('[data-photo="a1"]')
-  for (let i = 0; i < 60 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === before; i++) await sleep(250)
+  for (let i = 0; i < 60 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === photoThumbsBefore; i++) await sleep(250)
   check('un clic sur une photo l\'insère dans la page', (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === photoThumbsBefore + 1)
   await clickSel('[data-photo="b2"]')
   for (let i = 0; i < 60 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) < photoThumbsBefore + 2; i++) await sleep(250)
@@ -1019,6 +1021,9 @@ try {
   await search('limite')
   for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) === 0; i++) await sleep(250)
   check('limite de requêtes (429) : message dédié', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'rate-limit')
+  await search('planteur')
+  for (let i = 0; i < 40 && (await nBrand('[data-photo]')) !== 2; i++) await sleep(250)
+  check('filtre de licences refusé (500) : requête minimale en repli, résultats non réutilisables écartés', (await nBrand('[data-photo]')) === 2 && (await nBrand('[data-photo="nc9"]')) === 0 && photoRequests.some((r) => r.query.get('q') === 'planteur' && !r.query.has('license_type')))
   await search('refus')
   for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'unavailable'; i++) await sleep(250)
   const refusDetail = await run(`document.querySelector('[data-photo-detail]')?.innerText ?? ''`)
@@ -1027,7 +1032,7 @@ try {
   for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'offline'; i++) await sleep(250)
   check('service injoignable : message « hors ligne » (l\'appli reste utilisable)', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'offline')
   await search('vide')
-  for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) !== 0; i++) await sleep(250)
+  for (let i = 0; i < 40 && !(await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'); i++) await sleep(250)
   check('recherche sans résultat : message dédié', (await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'))
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)

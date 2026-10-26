@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE, creditOf, imageMime, isAllowedUrl, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
+import { PAGE_SIZE, creditOf, imageMime, isAllowedUrl, isReusable, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
 
 describe('photos', () => {
   it('adresse de recherche : usage commercial + modification, page et taille bornées', () => {
@@ -9,8 +9,20 @@ describe('photos', () => {
     expect(u.searchParams.get('page')).toBe('2')
     expect(u.searchParams.get('page_size')).toBe(String(PAGE_SIZE))
     expect(u.searchParams.get('license_type')).toBe('commercial,modification')
+    expect(u.searchParams.has('mature')).toBe(false)
+    expect(new URL(searchUrl('https://x.test', 'a', 1, false)).searchParams.has('license_type')).toBe(false) // requête minimale
     expect(new URL(searchUrl('https://x.test', 'a', -4)).searchParams.get('page')).toBe('1')
     expect(new URL(searchUrl('https://x.test', 'a'.repeat(500), 1)).searchParams.get('q')).toHaveLength(100)
+  })
+
+  it('licences réutilisables : ni NC ni ND', () => {
+    for (const l of ['cc0', 'pdm', 'by', 'by-sa', 'BY']) expect(isReusable(l)).toBe(true)
+    for (const l of ['by-nc', 'by-nd', 'by-nc-sa', 'by-nc-nd', '', undefined, 4]) expect(isReusable(l)).toBe(false)
+  })
+
+  it('les résultats non réutilisables sont écartés (la requête minimale n\'a pas filtré)', () => {
+    const r = parseSearch({ results: [{ id: 'a', url: 'https://i.test/a.jpg', license: 'by-nc' }, { id: 'b', url: 'https://i.test/b.jpg', license: 'by' }, { id: 'c', url: 'https://i.test/c.jpg', license: 'by-nd' }] })
+    expect(r.photos.map((p) => p.id)).toEqual(['b'])
   })
 
   it('libellés de licence', () => {

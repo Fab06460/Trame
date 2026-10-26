@@ -25,10 +25,21 @@ export interface Photo {
   credit: string
 }
 
-/** Adresse de recherche : usage commercial et modification autorisés (on recadre, filtre, recolore et exporte les images). */
-export function searchUrl(base: string, query: string, page: number): string {
-  const q = new URLSearchParams({ q: query.trim().slice(0, MAX_QUERY), page: String(Math.max(1, Math.floor(page))), page_size: String(PAGE_SIZE), license_type: 'commercial,modification', mature: 'false' })
+/**
+ * Adresse de recherche. `filtered` demande au service les licences qui autorisent l'usage commercial et la modification (on recadre,
+ * filtre, recolore et exporte les images) ; sans lui, la requête est minimale — le tri par licence est alors refait ici
+ * (`isReusable`), car le service refuse ou plante parfois sur les filtres (HTTP 500 constaté).
+ */
+export function searchUrl(base: string, query: string, page: number, filtered = true): string {
+  const q = new URLSearchParams({ q: query.trim().slice(0, MAX_QUERY), page: String(Math.max(1, Math.floor(page))), page_size: String(PAGE_SIZE) })
+  if (filtered) q.set('license_type', 'commercial,modification')
   return `${base.replace(/\/+$/, '')}/v1/images/?${q}`
+}
+
+/** Licence qui autorise l'usage commercial ET la modification : ni « NC » (non commercial) ni « ND » (pas de modification). */
+export function isReusable(license: unknown): boolean {
+  const l = typeof license === 'string' ? license.toLowerCase() : ''
+  return l === 'cc0' || l === 'pdm' || l === 'by' || l === 'by-sa'
 }
 
 /** Libellé lisible d'une licence Openverse (`by`, `by-sa`, `cc0`, `pdm`…) et de sa version. */
@@ -75,7 +86,7 @@ export function parseSearch(json: unknown, allowLocal = false): { photos: Photo[
     const url = str(x.url, 2000)
     // la miniature de l'API est un petit fichier bien plus léger que l'original : c'est aussi le repli si l'original est indisponible
     const thumbnailUrl = str(x.thumbnail, 2000) || url
-    if (!id || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal)) continue
+    if (!id || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal) || !isReusable(x.license)) continue
     const license = licenseLabel(x.license, x.license_version)
     const base = { title: str(x.title, 120), creator: str(x.creator, 120), license, landingUrl: isAllowedUrl(str(x.foreign_landing_url, 2000), allowLocal) ? str(x.foreign_landing_url, 2000) : '' }
     photos.push({ id, ...base, licenseUrl: isAllowedUrl(str(x.license_url, 2000), allowLocal) ? str(x.license_url, 2000) : '', url, thumbnailUrl, width: posInt(x.width), height: posInt(x.height), credit: creditOf(base) })

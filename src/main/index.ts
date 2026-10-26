@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net } from 'electron'
 import { join } from 'path'
 import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
@@ -390,7 +390,9 @@ async function download(url: string, maxBytes: number, accept: string): Promise<
   if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `adresse refusée : ${url.slice(0, 120)}`)
   let res: Response
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { 'User-Agent': `Trame/${app.getVersion()} (éditeur de visuels de bureau)`, Accept: accept } })
+    // net.fetch (pile réseau de Chromium) plutôt que le fetch de Node : le service est derrière Cloudflare, qui bloque (HTTP 403) les
+    // requêtes dont l'empreinte TLS n'est pas celle d'un navigateur ; elle suit aussi le proxy du système
+    res = await net.fetch(url, { signal: AbortSignal.timeout(20_000), headers: { 'User-Agent': `Trame/${app.getVersion()} (+desktop visual editor)`, Accept: accept } })
   } catch (err) {
     const cause = (err as { cause?: { code?: string; message?: string } }).cause
     throw new NetworkError('offline', `${(err as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ''}`) // pas de réseau, DNS, délai dépassé
@@ -414,7 +416,12 @@ const asDataUrl = (d: { bytes: Buffer; contentType: string | null }): string | n
 ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown): Promise<PhotoSearchResult> => {
   if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1 }
   try {
-    const res = await download(searchUrl(OPENVERSE, query, typeof page === 'number' ? page : 1), 2_000_000, 'application/json')
+    const pageNo = typeof page === 'number' ? page : 1
+    // d'abord avec le filtre de licences du service ; s'il le refuse ou plante (400, 5xx), requête minimale et tri ici
+    const res = await download(searchUrl(OPENVERSE, query, pageNo, true), 2_000_000, 'application/json').catch(async (err) => {
+      if (err instanceof NetworkError && err.kind === 'unavailable' && /^HTTP (400|5\d\d)/.test(err.detail)) return download(searchUrl(OPENVERSE, query, pageNo, false), 2_000_000, 'application/json')
+      throw err
+    })
     let json: unknown
     try {
       json = JSON.parse(res.bytes.toString('utf-8'))
