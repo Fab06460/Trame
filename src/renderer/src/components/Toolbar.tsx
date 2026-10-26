@@ -7,6 +7,7 @@ import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { fileSafeName } from '@/docName'
 import { DocName } from './DocName'
+import { importPptxFile } from '@/pptxImport/actions'
 import { startPdfImport } from '@/pdfImport/actions'
 import { usePdfIssues } from '@/store/pdfIssues'
 
@@ -62,6 +63,7 @@ export function Toolbar(): React.JSX.Element {
       <button onClick={openProject} title="Ouvrir (⌘O)">Ouvrir</button>
       <button onClick={() => saveProject()} title="Enregistrer (⌘S)">Enregistrer{dirty ? ' •' : ''}</button>
       <button onClick={() => void startPdfImport()} title="Importer un PDF comme nouveau document">Importer PDF</button>
+      <button onClick={() => void importPptxFile()} title="Importer une présentation PowerPoint (.pptx) comme nouveau document">Importer PPTX</button>
       <button onClick={() => saveProject(true)} title="Enregistrer sous (⇧⌘S)">Enregistrer sous…</button>
       <span className="sep" />
       <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>

@@ -63,6 +63,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
+| Import / export PowerPoint | ✅ Fait | Export `.pptx` (objets modifiables) et import `.pptx` (dont les exports de Canva), voir `docs/ARCHITECTURE.md`. | — |
 | Éditeur PDF et documents | 🟡 Partiel | Création de PDF : fait (vectoriel, texte sélectionnable). Restent, tous faisables hors-ligne : fusion/scission/réordonnancement de pages, compression, signature visuelle, import de pages PDF comme fonds (**fait**, D3). Modifier le texte d'un PDF arbitraire est un très gros chantier peu fiable : à éviter. | D1, D2, D3, D4 |
 | Présentations et tableurs | 🟡 Partiel | Pages 16:9 et un modèle de présentation. Manquent : mode présentation plein écran, transitions, notes de l'orateur ; graphiques et tableaux (faisables sans service externe, à partir de données collées ou d'un CSV). | D5, C7 |
 | Intégrations | ⛔ Hors-ligne impossible | Slack, Teams, YouTube, Google Photos, planificateurs : des appels réseau par définition. Équivalents hors-ligne : glisser-déposer depuis le Finder, export dans un dossier choisi, feuille de partage du système. | E7, D1 |

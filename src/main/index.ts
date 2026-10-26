@@ -345,26 +345,29 @@ ipcMain.on('app:close-confirmed', () => {
   else mainWindow?.close()
 })
 
-const MAX_PDF_BYTES = 150_000_000
+const MAX_IMPORT_BYTES = 150_000_000
 
-/** Choix d'un PDF à importer : retourne son nom (sans extension) et son contenu. */
-ipcMain.handle('pdf:pick', async (): Promise<{ name: string; bytes: Uint8Array } | null> => {
+/** Choix d'un fichier à importer (PDF, PPTX) : retourne son nom (sans extension) et son contenu. */
+async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
   let path: string
   if (TEST_EXPORT_DIR) {
-    // tests de bout en bout : le fichier pick-import.pdf du dossier de test tient lieu de choix (aucun dialogue natif)
-    path = join(TEST_EXPORT_DIR, 'pick-import.pdf')
+    // tests de bout en bout : le fichier pick-import.<ext> du dossier de test tient lieu de choix (aucun dialogue natif)
+    path = join(TEST_EXPORT_DIR, `pick-import.${ext}`)
     if (!(await stat(path).catch(() => null))) return null
   } else {
-    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: label, extensions: [ext] }] })
     if (res.canceled || !res.filePaths[0]) return null
     path = res.filePaths[0]
   }
-  if ((await stat(path)).size > MAX_PDF_BYTES) {
-    dialog.showErrorBox('PDF trop volumineux', 'Ce PDF dépasse 150 Mo : il ne peut pas être importé.')
+  if ((await stat(path)).size > MAX_IMPORT_BYTES) {
+    dialog.showErrorBox('Fichier trop volumineux', `Ce fichier dépasse 150 Mo : il ne peut pas être importé.`)
     return null
   }
-  return { name: basename(path).replace(/\.pdf$/i, ''), bytes: new Uint8Array(await readFile(path)) }
-})
+  return { name: basename(path).replace(new RegExp(`\\.${ext}$`, 'i'), ''), bytes: new Uint8Array(await readFile(path)) }
+}
+
+ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))
+ipcMain.handle('pptx:pick', () => pickImportFile('pptx', 'PowerPoint'))
 
 ipcMain.handle('image:pick', async () => {
   // tests de bout en bout : l'image « choisie » est le fichier pick-image.png du dossier de test (aucun dialogue natif)

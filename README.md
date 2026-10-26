@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Export PowerPoint (.pptx) : textes, formes et images modifiables dans PowerPoint, Keynote ou Google Slides
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export)
 - Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette

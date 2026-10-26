@@ -29,6 +29,7 @@ const api = {
   openProject: (): Promise<{ path: string; json: string } | null> =>
     ipcRenderer.invoke('project:open'),
   pickPdf: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pdf:pick'),
+  pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
