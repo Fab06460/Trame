@@ -18,6 +18,12 @@ export interface TrameElement {
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */
   hidden?: boolean
   fill: string
+  /** couleur du contour (absent = pas de contour) */
+  stroke?: string
+  /** épaisseur du contour en pixels de design, centré sur le bord de l'élément (absent ou 0 = pas de contour) */
+  strokeWidth?: number
+  /** contour en tirets */
+  strokeDashed?: boolean
   // rect
   cornerRadius?: number
   // text

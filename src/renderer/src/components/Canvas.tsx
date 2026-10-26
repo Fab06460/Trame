@@ -7,6 +7,7 @@ import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import { ZoomControls } from './ZoomControls'
 import type { TrameElement } from '@/types'
@@ -321,12 +322,13 @@ export function Canvas(): React.JSX.Element {
             {page.elements.filter((el) => !el.hidden).map((el) => {
               const p = commonProps(el)
               if (el.type === 'rect')
-                return <Rect key={el.id} {...p} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
+                return <Rect key={el.id} {...p} {...strokeProps(el)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
               if (el.type === 'ellipse')
                 return (
                   <Shape
                     key={el.id}
                     {...p}
+                    {...strokeProps(el)}
                     width={el.width}
                     height={el.height}
                     fill={el.fill}
@@ -334,7 +336,7 @@ export function Canvas(): React.JSX.Element {
                       ctx.beginPath()
                       ctx.ellipse(shape.width() / 2, shape.height() / 2, shape.width() / 2, shape.height() / 2, 0, 0, Math.PI * 2)
                       ctx.closePath()
-                      ctx.fillShape(shape)
+                      ctx.fillStrokeShape(shape)
                     }}
                   />
                 )
@@ -343,6 +345,7 @@ export function Canvas(): React.JSX.Element {
                   <Shape
                     key={el.id}
                     {...p}
+                    {...strokeProps(el)}
                     width={el.width}
                     height={el.height}
                     fill={el.fill}
@@ -350,11 +353,12 @@ export function Canvas(): React.JSX.Element {
                     hitFunc={boxHitFunc}
                   />
                 )
-              if (el.type === 'image') return <ImageNode key={el.id} {...p} src={el.src} width={el.width} height={el.height} />
+              if (el.type === 'image') return <ImageNode key={el.id} {...p} {...strokeProps(el)} src={el.src} width={el.width} height={el.height} />
               return (
                 <Text
                   key={el.id}
                   {...p}
+                  {...strokeProps(el)}
                   visible={editing !== el.id}
                   width={el.width}
                   text={displayText(el)}

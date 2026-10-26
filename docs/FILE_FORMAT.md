@@ -27,6 +27,9 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "opacity": 1,
           "fill": "#1e1f24",
           "groupId": "k3J9aa01",   // optionnel : même valeur = même groupe
+          "stroke": "#7c5cff",     // optionnel : couleur du contour (avec strokeWidth)
+          "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
+          "strokeDashed": true,    // optionnel : contour en tirets
           "name": "Titre",         // optionnel : nom du calque (sinon automatique)
           "locked": true,          // optionnel : position verrouillée
           "hidden": true,          // optionnel : masqué (ni affiché ni exporté)
@@ -46,6 +49,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
   ]
 }
 ```
+
+Le **contour** (`stroke`, `strokeWidth`, `strokeDashed`) existe pour tous les types ; il n'est conservé à la lecture que si la couleur est une chaîne non vide **et** l'épaisseur strictement positive (sinon les trois champs sont retirés). Pour un texte, c'est le contour des lettres.
 
 Les champs de style de texte sont bornés à la lecture (`letterSpacing` −10 à 100, `lineHeight` 0,5 à 4) et les valeurs inattendues retirées ; `underline`, `strike` et `uppercase` ne sont écrits que lorsqu'ils valent `true`. Les indicateurs de calque `locked` et `hidden` ne sont écrits que lorsqu'ils valent `true` ; à la lecture toute autre valeur est ignorée (un `locked: "oui"` ne verrouille rien) et `name` est borné à 80 caractères. Aucune nouvelle version du format.
 

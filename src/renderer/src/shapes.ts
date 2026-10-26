@@ -37,18 +37,38 @@ export const SHAPES: ShapeDef[] = [
 const cache = new Map<string, Path2D>()
 
 /**
- * Dessin d'une forme vectorielle dans la boîte width×height du nœud Konva.
+ * Chemin de la forme **déjà étiré** à la taille de l'élément. On étire les coordonnées (matrice appliquée au tracé) plutôt que le
+ * contexte de dessin : un contexte étiré déformerait l'épaisseur du contour (plus épais d'un côté que de l'autre).
+ */
+function stretched(d: string, w: number, h: number): Path2D {
+  const key = `${d}|${w}|${h}`
+  let p = cache.get(key)
+  if (!p) {
+    if (cache.size > 200) cache.clear() // pendant un redimensionnement, chaque image produit une taille nouvelle
+    p = new Path2D()
+    p.addPath(new Path2D(d), new DOMMatrix([w / 100, 0, 0, h / 100, 0, 0]))
+    cache.set(key, p)
+  }
+  return p
+}
+
+/**
+ * Dessin d'une forme vectorielle dans la boîte width×height du nœud Konva (fond puis contour éventuel).
  * Partagé entre l'éditeur et l'export hors écran.
  */
 export function pathSceneFunc(d: string) {
   return (ctx: Konva.Context, shape: Konva.Shape): void => {
-    let p = cache.get(d)
-    if (!p) cache.set(d, (p = new Path2D(d)))
+    const p = stretched(d, shape.width(), shape.height())
     const c = ctx._context
     c.save()
-    c.scale(shape.width() / 100, shape.height() / 100)
     c.fillStyle = shape.fill() as string
     c.fill(p)
+    if (shape.strokeEnabled() && shape.strokeWidth() > 0) {
+      c.lineWidth = shape.strokeWidth()
+      c.strokeStyle = shape.stroke() as string
+      c.setLineDash((shape.dash() as number[] | undefined) ?? [])
+      c.stroke(p)
+    }
     c.restore()
   }
 }

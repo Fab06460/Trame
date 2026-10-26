@@ -77,7 +77,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| E1 | Contour (trait) des formes et du texte | S | Konva le gère ; le PDF vectoriel aussi (trait). | — |
+| E1 | Contour (trait) des formes et du texte | S | **Fait.** Formes, images et lettres ; trait centré sur le bord, tirets ; PDF vectoriel (la forme étirée garde un trait d'épaisseur uniforme). | — |
 | E2 | Dégradés (linéaire, radial) pour fonds et formes | M | Konva oui ; PDF : dégradés = opérateurs bruts (pdf-lib n'a pas d'API) ou image. | — |
 | E3 | Ombre portée et lueur (formes, texte, images) | M | Konva oui. **PDF : l'élément passe en image** (voir risques) → décider si le texte à ombre reste sélectionnable (ombre en image séparée sous un vrai texte). | — |
 | E4 | Typographie : espacement des lettres, interligne, souligné, barré, majuscules | M | **Fait.** Konva dessine lettre par lettre avec un interlettrage (pas de crénage) : le PDF fait de même (`Tc`) ; décorations et interligne identiques à Konva, vérifiés par `fidelity` (page 2). Les listes sont E21. | — |

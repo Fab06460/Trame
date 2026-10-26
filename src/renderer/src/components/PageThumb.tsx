@@ -1,3 +1,4 @@
+import { dashPattern, hasStroke } from '@/strokeStyle'
 import type { TramePage } from '@/types'
 
 
@@ -30,13 +31,24 @@ export function PageThumb({
             transform: `rotate(${e.rotation}deg)`,
             transformOrigin: '0 0'
           }
+          // contour centré sur le bord : `outline` décalé de la moitié de son épaisseur vers l'intérieur
+          const w = e.strokeWidth ?? 0
+          const outline: React.CSSProperties = hasStroke(e)
+            ? { outline: `${w}px ${e.strokeDashed ? 'dashed' : 'solid'} ${e.stroke}`, outlineOffset: -w / 2 }
+            : {}
           if (e.type === 'path')
             return (
               <svg key={e.id} viewBox="0 0 100 100" preserveAspectRatio="none" style={box}>
-                <path d={e.path} fill={e.fill} />
+                <path
+                  d={e.path}
+                  fill={e.fill}
+                  {...(hasStroke(e)
+                    ? { stroke: e.stroke, strokeWidth: w, vectorEffect: 'non-scaling-stroke', strokeDasharray: e.strokeDashed ? dashPattern(w).join(' ') : undefined }
+                    : {})}
+                />
               </svg>
             )
-          if (e.type === 'image') return <img key={e.id} src={e.src} style={{ ...box, objectFit: 'fill' }} draggable={false} />
+          if (e.type === 'image') return <img key={e.id} src={e.src} style={{ ...box, ...outline, objectFit: 'fill' }} draggable={false} />
           if (e.type === 'text')
             return (
               <div
@@ -54,7 +66,8 @@ export function PageThumb({
                   lineHeight: e.lineHeight ?? 1,
                   letterSpacing: e.letterSpacing ?? 0,
                   textDecoration: [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].filter(Boolean).join(' ') || 'none',
-                  textTransform: e.uppercase ? 'uppercase' : 'none'
+                  textTransform: e.uppercase ? 'uppercase' : 'none',
+                  ...(hasStroke(e) ? { WebkitTextStroke: `${w}px ${e.stroke}` } : {})
                 }}
               >
                 {e.text}
@@ -65,6 +78,7 @@ export function PageThumb({
               key={e.id}
               style={{
                 ...box,
+                ...outline,
                 background: e.fill,
                 borderRadius: e.type === 'ellipse' ? '50%' : e.cornerRadius
               }}

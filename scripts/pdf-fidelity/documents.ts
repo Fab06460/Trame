@@ -1,6 +1,9 @@
 import { TEMPLATES, instantiate } from '@/templates'
 import type { TrameDocument, TrameElement } from '@/types'
 
+const SHAPES_STAR = 'M50 4 L61.8 36.5 L96.4 37.7 L69 58.8 L78.6 92 L50 72.6 L21.4 92 L31 58.8 L3.6 37.7 L38.2 36.5 Z'
+const SHAPES_HEART = 'M50 90 C20 65 4 48 4 30 C4 16 15 6 28 6 C38 6 46 12 50 20 C54 12 62 6 72 6 C85 6 96 16 96 30 C96 48 80 65 50 90 Z'
+
 const base = { rotation: 0, opacity: 1, fill: '#1e1f24' }
 
 const text = (id: string, over: Partial<TrameElement>): TrameElement =>
@@ -59,6 +62,19 @@ function mixed(): TrameDocument {
         text('s9', { x: 60, y: 880, width: 560, fontSize: 36, underline: true, lineHeight: 1.4, letterSpacing: 2, align: 'right', text: 'Souligné, espacé et\naligné à droite' }),
         text('s10', { x: 640, y: 880, width: 380, fontSize: 30, fontFamily: '"Lora", serif', uppercase: true, text: 'Majuscules Lora' })
       ]
+    }, {
+      // page 3 : contours (trait centré sur le bord, tirets, forme étirée, image, lettres, rotation, opacité)
+      id: 'p3', background: '#fffdf5',
+      elements: [
+        { id: 'k1', type: 'rect', x: 60, y: 60, width: 300, height: 200, cornerRadius: 50, ...base, fill: '#e9e3ff', stroke: '#7c5cff', strokeWidth: 14 },
+        { id: 'k2', type: 'ellipse', x: 420, y: 60, width: 300, height: 200, ...base, fill: '#ffe3d9', stroke: '#ff7a59', strokeWidth: 8, strokeDashed: true },
+        { id: 'k3', type: 'path', x: 780, y: 50, width: 240, height: 130, path: SHAPES_STAR, ...base, fill: '#ffd166', stroke: '#1e1f24', strokeWidth: 6 },
+        { id: 'k4', type: 'image', x: 60, y: 340, width: 240, height: 160, src: pngDataUrl(), ...base, stroke: '#d6336c', strokeWidth: 10 },
+        { id: 'k5', type: 'path', x: 360, y: 320, width: 260, height: 260, path: SHAPES_HEART, ...base, fill: '#ff3d71', stroke: '#1e1f24', strokeWidth: 12, strokeDashed: true },
+        { id: 'k6', type: 'rect', x: 740, y: 340, width: 240, height: 160, ...base, fill: '#ff0000', stroke: '#0000ff', strokeWidth: 20, opacity: 0.5, rotation: 15 },
+        text('k7', { x: 60, y: 620, width: 960, fontStyle: 'bold', fontSize: 130, fill: '#ffd166', stroke: '#1e1f24', strokeWidth: 5, text: 'Contour' }),
+        text('k8', { x: 60, y: 820, width: 960, fontSize: 60, fontFamily: '"Playfair Display", serif', fontStyle: 'italic', align: 'center', stroke: '#7c5cff', strokeWidth: 1.5, text: 'Lettres cernées, fines' })
+      ]
     }]
   }
 }
@@ -68,12 +84,17 @@ export interface Case {
   doc: TrameDocument
   /** textes qui doivent être extraits du PDF (sélectionnables) ; les autres sont des replis en image */
   expectText: string[]
+  /**
+   * Part maximale (en %) de pixels très différents, par page (défaut : 1). À régler juste au-dessus de la mesure réelle : un seuil
+   * large laisserait passer une erreur localisée (un trait déformé ne change que ~1 % de la page).
+   */
+  maxBigPct?: number[]
   /** nombre de textes qui doivent retomber en image (et être signalés) : 0 pour tout document réel */
   expectFallbacks: number
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux'], expectFallbacks: 2 },
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9] }, // mesuré : 0,92 / 1,24 / 0,55 %
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

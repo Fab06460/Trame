@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
+import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -16,7 +17,8 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
     fontFamily: e.fontFamily,
     fontStyle: e.fontStyle,
     align: e.align,
-    fill: e.fill
+    fill: e.fill,
+    ...strokeProps(e)
   })
 }
 
@@ -27,6 +29,39 @@ export const loadImage = (src: string): Promise<HTMLImageElement> =>
     img.onerror = () => reject(new Error('Image illisible'))
     img.src = src
   })
+
+/**
+ * Nœud Konva d'un élément, tel que dessiné à l'écran (un seul endroit : rendu de la page, repli en image de l'export PDF).
+ * `common` fixe position, rotation et opacité du nœud.
+ */
+export async function createNode(e: TrameElement, common: Konva.NodeConfig): Promise<Konva.Shape | null> {
+  if (e.type === 'rect') {
+    return new Konva.Rect({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, cornerRadius: e.cornerRadius })
+  }
+  if (e.type === 'ellipse') {
+    return new Konva.Shape({
+      ...common,
+      ...strokeProps(e),
+      width: e.width,
+      height: e.height,
+      fill: e.fill,
+      sceneFunc: (ctx: Konva.Context, shape: Konva.Shape) => {
+        ctx.beginPath()
+        ctx.ellipse(shape.width() / 2, shape.height() / 2, shape.width() / 2, shape.height() / 2, 0, 0, Math.PI * 2)
+        ctx.closePath()
+        ctx.fillStrokeShape(shape)
+      }
+    })
+  }
+  if (e.type === 'path' && e.path) {
+    return new Konva.Shape({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, sceneFunc: pathSceneFunc(e.path) })
+  }
+  if (e.type === 'image' && e.src) {
+    return new Konva.Image({ ...common, ...strokeProps(e), width: e.width, height: e.height, image: await loadImage(e.src) })
+  }
+  if (e.type === 'text') return createTextNode(e, common)
+  return null
+}
 
 /** Rend une page hors écran à pleine résolution, indépendamment de la page affichée dans l'éditeur. */
 export async function renderPage(
@@ -44,31 +79,8 @@ export async function renderPage(
 
   for (const e of page.elements) {
     if (e.hidden) continue // un calque masqué n'est jamais exporté
-    const common = { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity }
-    if (e.type === 'rect') {
-      layer.add(new Konva.Rect({ ...common, width: e.width, height: e.height, fill: e.fill, cornerRadius: e.cornerRadius }))
-    } else if (e.type === 'ellipse') {
-      layer.add(
-        new Konva.Shape({
-          ...common,
-          width: e.width,
-          height: e.height,
-          fill: e.fill,
-          sceneFunc: (ctx, shape) => {
-            ctx.beginPath()
-            ctx.ellipse(shape.width() / 2, shape.height() / 2, shape.width() / 2, shape.height() / 2, 0, 0, Math.PI * 2)
-            ctx.closePath()
-            ctx.fillShape(shape)
-          }
-        })
-      )
-    } else if (e.type === 'path' && e.path) {
-      layer.add(new Konva.Shape({ ...common, width: e.width, height: e.height, fill: e.fill, sceneFunc: pathSceneFunc(e.path) }))
-    } else if (e.type === 'image' && e.src) {
-      layer.add(new Konva.Image({ ...common, width: e.width, height: e.height, image: await loadImage(e.src) }))
-    } else if (e.type === 'text') {
-      layer.add(createTextNode(e, common))
-    }
+    const node = await createNode(e, { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity })
+    if (node) layer.add(node)
   }
 
   layer.draw()

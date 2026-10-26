@@ -6,6 +6,7 @@ import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
+import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -227,6 +228,39 @@ export function Properties(): React.JSX.Element {
           />
         </label>
       )}
+
+      <h3>Contour</h3>
+      <div className="stroke-row">
+        <input
+          type="color"
+          data-field="stroke"
+          title="Couleur du contour"
+          value={el.stroke ?? DEFAULT_STROKE_COLOR}
+          onPointerDown={beginChange}
+          // choisir une couleur sans épaisseur donne un contour visible (2 px) plutôt qu'un changement invisible
+          onChange={(e) => live({ stroke: e.target.value, ...((el.strokeWidth ?? 0) > 0 ? {} : { strokeWidth: 2 }) })}
+        />
+        <NumberField
+          label="Épaisseur"
+          field="strokeWidth"
+          value={el.strokeWidth ?? 0}
+          min={STROKE_WIDTH.min}
+          max={STROKE_WIDTH.max}
+          step={1}
+          suffix="px"
+          onCommit={(v) => updateElement(el.id, v > 0 ? { strokeWidth: v, stroke: el.stroke ?? DEFAULT_STROKE_COLOR } : { strokeWidth: undefined, stroke: undefined, strokeDashed: undefined })}
+        />
+        <button
+          data-flag="strokeDashed"
+          aria-pressed={!!el.strokeDashed}
+          className={el.strokeDashed ? 'active' : ''}
+          disabled={!hasStroke(el)}
+          title="Contour en tirets"
+          onClick={() => updateElement(el.id, { strokeDashed: el.strokeDashed ? undefined : true })}
+        >
+          ┅
+        </button>
+      </div>
 
       <label>
         Opacité

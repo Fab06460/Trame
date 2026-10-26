@@ -3,15 +3,17 @@ import { fontkit, type FontkitFont } from '@/fontkit'
 import {
   PDFArray, PDFDocument, PDFFont, PDFHexString, PDFImage, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
   beginText, concatTransformationMatrix, endText, moveText, popGraphicsState, pushGraphicsState, rgb,
-  setCharacterSpacing, setFillingColor, setFontAndSize, setGraphicsState
+  TextRenderingMode, setCharacterSpacing, setDashPattern, setFillingColor, setFontAndSize, setGraphicsState, setLineWidth,
+  setStrokingColor, setTextRenderingMode
 } from 'pdf-lib'
-import { createTextNode, loadImage } from '@/exportPages'
+import { createNode, createTextNode, loadImage } from '@/exportPages'
 import {
   PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, tjAdjustment
 } from '@/pdfMath'
 import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
 import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
+import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -68,25 +70,46 @@ class ExportContext {
     // Repère local de l'élément (voir elementMatrix) : origine en haut à gauche, y vers le haut, unités = px de design
     p.pushOperators(pushGraphicsState(), concatTransformationMatrix(...elementMatrix(el, this.pageHeight)))
     try {
+      // Fond + contour à opacité < 1 : Konva compose l'élément d'un bloc, le PDF mélangerait la moitié intérieure du trait avec le
+      // fond (bande plus sombre). On rend alors l'élément en image haute résolution plutôt que de produire un rendu différent.
+      if (el.type !== 'text' && hasStroke(el) && el.opacity < 1) return await this.drawElementImage(p, el)
       const color = parseColor(el.fill)
       const fill = rgb(color.r, color.g, color.b)
+      // Contour centré sur le bord, comme Konva ; absent des options quand il n'y en a pas
+      const stroke = hasStroke(el) ? parseColor(el.stroke) : null
+      const border = stroke
+        ? {
+            borderColor: rgb(stroke.r, stroke.g, stroke.b),
+            borderWidth: el.strokeWidth,
+            borderOpacity: el.opacity,
+            ...(el.strokeDashed ? { borderDashArray: dashPattern(el.strokeWidth as number) } : {})
+          }
+        : {}
       if (el.type === 'rect') {
-        p.drawSvgPath(roundedRectPath(el.width, el.height, el.cornerRadius), { x: 0, y: 0, color: fill, opacity: el.opacity })
+        p.drawSvgPath(roundedRectPath(el.width, el.height, el.cornerRadius), { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
       } else if (el.type === 'ellipse') {
-        p.drawSvgPath(ellipsePath(el.width, el.height), { x: 0, y: 0, color: fill, opacity: el.opacity })
+        p.drawSvgPath(ellipsePath(el.width, el.height), { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
       } else if (el.type === 'path' && el.path) {
-        // le chemin vit dans un viewBox 100×100 : mise à l'échelle non uniforme vers la boîte de l'élément
-        p.pushOperators(pushGraphicsState(), concatTransformationMatrix(el.width / 100, 0, 0, el.height / 100, 0, 0))
-        p.drawSvgPath(el.path, { x: 0, y: 0, color: fill, opacity: el.opacity })
-        p.pushOperators(popGraphicsState())
+        // Le chemin vit dans un viewBox 100×100. On étire ses COORDONNÉES vers la boîte de l'élément (et non le dessin) : un trait
+        // dessiné dans un repère étiré aurait une épaisseur différente en largeur et en hauteur.
+        const scaled = scalePath(el.path, el.width / 100, el.height / 100)
+        if (scaled) {
+          p.drawSvgPath(scaled, { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
+        } else {
+          p.pushOperators(pushGraphicsState(), concatTransformationMatrix(el.width / 100, 0, 0, el.height / 100, 0, 0))
+          p.drawSvgPath(el.path, { x: 0, y: 0, color: fill, opacity: el.opacity })
+          p.pushOperators(popGraphicsState())
+        }
       } else if (el.type === 'image' && el.src) {
         const img = await this.embedImage(el.src)
         p.drawImage(img, { x: 0, y: -el.height, width: el.width, height: el.height, opacity: el.opacity })
+        // Konva trace le contour d'une image après l'image : un rectangle, sans remplissage
+        if (stroke) p.drawSvgPath(roundedRectPath(el.width, el.height, 0), { x: 0, y: 0, ...border })
       } else if (el.type === 'text') {
         const why = await this.drawTextVector(p, el)
         if (why) {
           this.fallbacks.push({ page: this.page, text: el.text ?? '', ...why })
-          await this.drawTextImage(p, el)
+          await this.drawElementImage(p, el)
         }
       }
     } finally {
@@ -177,6 +200,16 @@ class ExportContext {
     if (el.opacity < 1) p.pushOperators(setGraphicsState(this.gstate(p, el.opacity)))
     p.pushOperators(beginText(), setFontAndSize(fontName, fontSize), setFillingColor(rgb(color.r, color.g, color.b)))
     if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
+    // Contour des lettres : remplissage puis trait centré sur le bord des glyphes (même ordre que Konva)
+    const outline = hasStroke(el) ? parseColor(el.stroke) : null
+    if (outline) {
+      p.pushOperators(
+        setStrokingColor(rgb(outline.r, outline.g, outline.b)),
+        setLineWidth(el.strokeWidth as number),
+        setTextRenderingMode(TextRenderingMode.FillAndOutline),
+        ...(el.strokeDashed ? [setDashPattern(dashPattern(el.strokeWidth as number), 0)] : [])
+      )
+    }
     let prev = { x: 0, y: 0 } // Td est relatif à la ligne précédente
     for (const line of lines) {
       const pos = { x: line.x, y: -line.baseline }
@@ -199,14 +232,17 @@ class ExportContext {
   }
 
   /**
-   * Repli : le texte seul, rendu par le navigateur sur fond transparent, placé comme une image.
-   * La boîte de texte de Konva est plus serrée que les glyphes (jambages, italiques, accents) : on ajoute une marge.
+   * Repli : l'élément seul, rendu par le navigateur sur fond transparent (×3), placé comme une image.
+   * La boîte de texte de Konva est plus serrée que les glyphes (jambages, italiques, accents) et un contour déborde de la boîte :
+   * on ajoute une marge. Konva compose l'élément d'un bloc, opacité comprise : on l'y rend à pleine opacité, l'opacité étant
+   * appliquée à l'image (même résultat visuel).
    */
-  private async drawTextImage(p: PDFPage, el: TrameElement): Promise<void> {
-    const pad = Math.ceil((el.fontSize ?? 12) * 0.35)
-    const node = createTextNode(el, { x: pad, y: pad })
+  private async drawElementImage(p: PDFPage, el: TrameElement): Promise<void> {
+    const pad = Math.ceil(Math.max((el.fontSize ?? 0) * 0.35, (el.strokeWidth ?? 0) / 2 + 2))
+    const node = await createNode(el, { x: pad, y: pad, rotation: 0, opacity: 1 })
+    if (!node) return
     const width = Math.ceil(el.width) + 2 * pad
-    const height = Math.ceil(node.height()) + 2 * pad
+    const height = Math.ceil(el.type === 'text' ? node.height() : el.height) + 2 * pad
     const stage = new Konva.Stage({ container: document.createElement('div'), width, height })
     const layer = new Konva.Layer()
     layer.add(node)

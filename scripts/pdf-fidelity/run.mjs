@@ -13,8 +13,8 @@ import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-/** Seuil : part maximale (en %) de pixels très différents (> 64/255) par page. Mesuré ~0,2–0,9 % : le reste est du lissage. */
-const MAX_BIG_PCT = 2
+/** Seuil par défaut : part maximale (en %) de pixels très différents (> 64/255) par page. Les modèles mesurent 0,2–0,5 % (du lissage) ; les documents d'essai ont des seuils propres, plus serrés. */
+const MAX_BIG_PCT = 1
 
 if (process.platform !== 'darwin') {
   console.log('npm run fidelity : macOS uniquement (PDFKit). Ignoré.')
@@ -64,14 +64,15 @@ for (const [name, info] of Object.entries(report)) {
     console.log(`${name.padEnd(12)} ✗ replis en image : ${info.fallbacks.length} (attendu ${info.expectFallbacks}) ${info.fallbacks.map((f) => `« ${f.text.slice(0, 24)} » (${f.reason})`).join(' ; ')}`)
   }
   for (const p of pages) {
-    const bad = p.error || p.bigPct > MAX_BIG_PCT
+    const limit = info.maxBigPct?.[p.page - 1] ?? MAX_BIG_PCT
+    const bad = p.error || p.bigPct > limit
     const textOk = missing.length === 0
     if (bad || (p.page === 1 && !textOk)) failures++
     console.log(
       `${name.padEnd(12)} ${String(p.page).padEnd(4)} ` +
         (p.error
           ? `ERREUR : ${p.error}`
-          : `${p.meanDiff.toFixed(2).padStart(8)}/255   ${(p.bigPct.toFixed(2) + ' %').padStart(10)} ${p.bigPct > MAX_BIG_PCT ? '✗' : '✓'}            ` +
+          : `${p.meanDiff.toFixed(2).padStart(8)}/255   ${(p.bigPct.toFixed(2) + ' %').padStart(10)} ${p.bigPct > limit ? '✗ (> ' + limit + ' %)' : '✓'}            ` +
             `${p.page === 1 ? (textOk ? '✓' : '✗ manque : ' + missing.join(' | ')) : '·'}`.padEnd(20)) +
         `   ${p.page === 1 ? info.exportMs + ' ms' : ''}`
     )
@@ -79,5 +80,5 @@ for (const [name, info] of Object.entries(report)) {
 }
 
 console.log(`\nImages (PDF rastérisé, Konva) : ${out}`)
-console.log(failures ? `✗ ${failures} problème(s) de fidélité (seuil : ${MAX_BIG_PCT} % de pixels très différents)` : '✓ Fidélité OK')
+console.log(failures ? `✗ ${failures} problème(s) de fidélité (seuils par page, voir documents.ts ; défaut ${MAX_BIG_PCT} %)` : '✓ Fidélité OK')
 process.exit(failures ? 1 : 0)

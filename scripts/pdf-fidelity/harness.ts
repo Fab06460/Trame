@@ -20,7 +20,7 @@ async function main(): Promise<void> {
       const png = await renderPage(c.doc, page, 'image/png')
       fs.writeFileSync(`${OUT}/${c.name}-konva-${i + 1}.png`, Buffer.from(png.split(',')[1], 'base64'))
     }
-    report[c.name] = { width: c.doc.width, pages: c.doc.pages.length, exportMs: ms, expectText: c.expectText, expectFallbacks: c.expectFallbacks, fallbacks }
+    report[c.name] = { width: c.doc.width, pages: c.doc.pages.length, exportMs: ms, expectText: c.expectText, expectFallbacks: c.expectFallbacks, maxBigPct: c.maxBigPct, fallbacks }
   }
   fs.writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 1))
   document.title = 'DONE'
