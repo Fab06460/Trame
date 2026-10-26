@@ -60,6 +60,8 @@ const api = {
   > => ipcRenderer.invoke('clipboard:read'),
   askUnsaved: (name: string, action: string): Promise<'save' | 'discard' | 'cancel'> =>
     ipcRenderer.invoke('dialog:unsaved', name, action),
+  /** Boîte d'information native (un bouton OK). */
+  showInfo: (message: string, detail: string): Promise<void> => ipcRenderer.invoke('dialog:info', message, detail),
   showError: (title: string, message: string): Promise<void> => ipcRenderer.invoke('dialog:error', title, message),
   /** Informe le processus principal de l'état du document (fermeture, titre macOS). */
   setState: (state: { dirty: boolean; path?: string }): void => ipcRenderer.send('app:state', state),

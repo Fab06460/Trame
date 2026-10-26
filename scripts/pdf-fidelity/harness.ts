@@ -13,14 +13,14 @@ async function main(): Promise<void> {
   const report: Record<string, unknown> = {}
   for (const c of cases()) {
     const t0 = performance.now()
-    const pdf = await exportPdf(c.doc)
+    const { dataUrl: pdf, fallbacks } = await exportPdf(c.doc)
     const ms = Math.round(performance.now() - t0)
     fs.writeFileSync(`${OUT}/${c.name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
     for (const [i, page] of c.doc.pages.entries()) {
       const png = await renderPage(c.doc, page, 'image/png')
       fs.writeFileSync(`${OUT}/${c.name}-konva-${i + 1}.png`, Buffer.from(png.split(',')[1], 'base64'))
     }
-    report[c.name] = { width: c.doc.width, pages: c.doc.pages.length, exportMs: ms, expectText: c.expectText }
+    report[c.name] = { width: c.doc.width, pages: c.doc.pages.length, exportMs: ms, expectText: c.expectText, expectFallbacks: c.expectFallbacks, fallbacks }
   }
   fs.writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 1))
   document.title = 'DONE'

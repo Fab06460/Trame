@@ -3,6 +3,7 @@ import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
 import { renderPage } from '@/exportPages'
 import { exportPdf } from '@/pdfExport'
+import { describeFallbacks } from '@/pdfFallbacks'
 
 export function Toolbar(): React.JSX.Element {
   const { addElement, undo, redo } = useEditor.getState()
@@ -27,7 +28,11 @@ export function Toolbar(): React.JSX.Element {
 
   const exportPdfFile = async (): Promise<void> => {
     const { doc } = useEditor.getState()
-    await window.trame.saveExport(await exportPdf(doc), `${doc.name}.pdf`)
+    const { dataUrl, fallbacks } = await exportPdf(doc)
+    const saved = await window.trame.saveExport(dataUrl, `${doc.name}.pdf`)
+    // On prévient APRÈS l'enregistrement (rien n'est perdu) des textes qui n'ont pas pu être écrits en vrai texte
+    const warning = saved ? describeFallbacks(fallbacks, doc.pages.length) : null
+    if (warning) await window.trame.showInfo(warning.message, warning.detail)
   }
 
   return (

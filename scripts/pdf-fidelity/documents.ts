@@ -53,13 +53,16 @@ export interface Case {
   doc: TrameDocument
   /** textes qui doivent être extraits du PDF (sélectionnables) ; les autres sont des replis en image */
   expectText: string[]
+  /** nombre de textes qui doivent retomber en image (et être signalés) : 0 pour tout document réel */
+  expectFallbacks: number
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l'] },
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l'], expectFallbacks: 2 },
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),
+    expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
     expectText: t.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && e.text && e.text.length < 14).map((e) => e.text!))
   }))
 ]

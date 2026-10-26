@@ -8,19 +8,40 @@ export interface FontChoice {
   file: string
 }
 
+export type FontDiagnosis =
+  | { ok: true; choice: FontChoice }
+  | {
+      ok: false
+      /** `unknown-font` : police système ou absente du catalogue ; `missing-variant` : la famille n'a pas cette graisse/ce style */
+      reason: 'unknown-font' | 'missing-variant'
+      /** nom de la famille demandée */
+      family: string
+      /** pour `missing-variant` : « gras », « italique » ou « gras italique » */
+      variantLabel?: string
+    }
+
 /**
- * Police embarquée correspondant au texte d'un élément, ou null s'il n'y en a pas (police système, famille inconnue,
- * ou graisse/style que la famille ne possède pas : le navigateur le simulerait, pas le PDF).
+ * Police embarquée correspondant au texte d'un élément, avec la raison précise quand il n'y en a pas : police système ou
+ * inconnue, ou graisse/style que la famille ne possède pas (le navigateur le simulerait, pas le PDF).
  */
-export function resolveFont(fontFamily: string | undefined, fontStyle: string | undefined): FontChoice | null {
+export function diagnoseFont(fontFamily: string | undefined, fontStyle: string | undefined): FontDiagnosis {
   const name = /^\s*["']?([^"',]+?)["']?\s*(?:,|$)/.exec(fontFamily ?? '')?.[1]
   const def = FONTS.find((f) => f.name === name)
-  if (!def) return null
+  if (!def) return { ok: false, reason: 'unknown-font', family: name ?? 'inconnue' }
   const style = fontStyle ?? ''
+  const bold = style.includes('bold')
   const italic = style.includes('italic')
-  const variant = `${style.includes('bold') ? '700' : '400'}${italic ? '-italic' : ''}`
-  if (!def.variants.includes(variant)) return null
-  return { def, variant, file: `${def.slug}-latin-${variant.replace('-italic', '')}-${italic ? 'italic' : 'normal'}.woff` }
+  const variant = `${bold ? '700' : '400'}${italic ? '-italic' : ''}`
+  if (!def.variants.includes(variant)) {
+    return { ok: false, reason: 'missing-variant', family: def.name, variantLabel: [bold && 'gras', italic && 'italique'].filter(Boolean).join(' ') }
+  }
+  return { ok: true, choice: { def, variant, file: `${def.slug}-latin-${variant.replace('-italic', '')}-${italic ? 'italic' : 'normal'}.woff` } }
+}
+
+/** Police embarquée correspondant au texte d'un élément, ou null s'il n'y en a pas (voir `diagnoseFont`). */
+export function resolveFont(fontFamily: string | undefined, fontStyle: string | undefined): FontChoice | null {
+  const d = diagnoseFont(fontFamily, fontStyle)
+  return d.ok ? d.choice : null
 }
 
 // Chargement à la demande : chaque police est un petit module JS (data URL) qui n'est téléchargé qu'au premier export PDF.

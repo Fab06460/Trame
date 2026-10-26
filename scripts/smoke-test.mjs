@@ -225,12 +225,18 @@ try {
     check('le texte est du vrai texte PDF (opérateur TJ)', all.includes(' TJ'))
     check('une police Type0 avec ToUnicode (texte sélectionnable) est embarquée', all.includes('/Type0') && all.includes('/ToUnicode'))
     check("le texte n'est pas une image (aucun objet image)", !all.includes('/Subtype /Image') && !pdf.includes('/Subtype /Image'))
+    check("un export sans repli n'affiche aucun avertissement", !(await readdir(join(tmp, 'exports'))).includes('dialog-info.txt'))
     check('métadonnées : créateur « Trame »', all.includes('/Creator <FEFF005400720061006D0065>')) // « Trame » en UTF-16
   }
 
   // association de fichiers : ouverture depuis le Finder alors que l'application tourne
   const finderFile = join(tmp, 'proj', 'ouvert-par-finder.trame')
-  const finderDoc = JSON.stringify({ version: 2, name: 'Ouvert', width: 200, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
+  const txt = (id, y, text, fontFamily) => ({ id, type: 'text', x: 20, y, width: 300, height: 40, rotation: 0, opacity: 1, fill: '#000000', text, fontSize: 24, fontFamily, fontStyle: 'normal', align: 'left' })
+  // un texte en police système et un texte avec un caractère absent de la police : tous deux devront retomber en image et être signalés
+  const finderDoc = JSON.stringify({
+    version: 2, name: 'Ouvert', width: 400, height: 200,
+    pages: [{ id: 'p', background: '#fff', elements: [txt('a', 20, 'Police système', 'Helvetica Neue, Arial, sans-serif'), txt('b', 80, 'Coche ✓ absente', '"Inter", sans-serif')] }]
+  })
   await run(`window.trame.saveProject(${JSON.stringify(finderDoc)}, ${JSON.stringify(finderFile)}, 'Ouvert')`)
   await run('location.reload()') // état propre : pas de confirmation native
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
@@ -238,6 +244,17 @@ try {
     await openWithApp('-a', bundle, finderFile)
     for (let i = 0; i < 30 && !(await run('document.title')).startsWith('ouvert-par-finder'); i++) await sleep(200)
     check('double-clic dans le Finder (appli ouverte) : le projet s\'ouvre', (await run('document.title')).startsWith('ouvert-par-finder'), await run('document.title'))
+    // export PDF de ce document : les 2 textes retombent en image, l'utilisateur doit en être prévenu avec la cause
+    await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
+    await click('header.toolbar button', 'Export PDF')
+    let info = ''
+    for (let i = 0; i < 40 && !info; i++) {
+      await sleep(250)
+      info = await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '')
+    }
+    check('un export avec des replis en image prévient l\'utilisateur', info.includes('2 textes exportés sous forme d\'image'), info.split('\n')[0])
+    check('le message nomme la police système et le caractère absent', info.includes('Helvetica Neue') && info.includes('✓'), info)
+    check("le message indique la marche à suivre (menu « Police »)", info.includes('menu « Police »'))
   } else {
     console.log('- ouverture depuis le Finder (appli ouverte) : ignorée (macOS, aucune autre instance d\'Electron)')
   }

@@ -58,6 +58,11 @@ for (const [name, info] of Object.entries(report)) {
   const pages = res.out.trim().split('\n').map((l) => JSON.parse(l))
   const allText = norm(pages.map((p) => p.text).join(' '))
   const missing = info.expectText.filter((t) => !allText.includes(norm(t)))
+  const fbOk = info.fallbacks.length === info.expectFallbacks
+  if (!fbOk) {
+    failures++
+    console.log(`${name.padEnd(12)} ✗ replis en image : ${info.fallbacks.length} (attendu ${info.expectFallbacks}) ${info.fallbacks.map((f) => `« ${f.text.slice(0, 24)} » (${f.reason})`).join(' ; ')}`)
+  }
   for (const p of pages) {
     const bad = p.error || p.bigPct > MAX_BIG_PCT
     const textOk = missing.length === 0

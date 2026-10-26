@@ -49,6 +49,10 @@ async function loadTemplateIndex(): Promise<TemplateMeta[]> {
 
 const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(templateIndexFile(), JSON.stringify(list), 'utf-8')
 
+// Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
+// sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
+const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
+
 const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
 
 let mainWindow: BrowserWindow | null = null
@@ -222,6 +226,16 @@ ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
   return (['save', 'discard', 'cancel'] as const)[response]
 })
 
+ipcMain.handle('dialog:info', async (e, message: string, detail: string) => {
+  if (TEST_EXPORT_DIR) {
+    // mode test (voir export:save) : on garde le message dans un fichier au lieu d'ouvrir une boîte que le test ne peut pas fermer
+    await writeFile(join(TEST_EXPORT_DIR, 'dialog-info.txt'), `${message}\n${detail}`, 'utf-8')
+    return
+  }
+  const win = BrowserWindow.fromWebContents(e.sender)!
+  await dialog.showMessageBox(win, { type: 'info', buttons: ['OK'], defaultId: 0, message, detail })
+})
+
 ipcMain.handle('dialog:error', (_e, title: string, message: string) => {
   dialog.showErrorBox(title, message)
 })
@@ -279,9 +293,6 @@ ipcMain.handle('image:pick', async () => {
   return `data:${mime};base64,${buf.toString('base64')}`
 })
 
-// Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
-// sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
-const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
 
 ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   if (TEST_EXPORT_DIR) {

@@ -61,7 +61,7 @@ Handler dans `src/main/index.ts` (`ipcMain.handle`), fonction correspondante dan
 
 ### Fidélité de l'export PDF
 
-`npm run fidelity` (macOS : Swift et PDFKit) compare le PDF vectoriel à l'image Konva de l'éditeur, pixel à pixel, pour `scripts/pdf-fidelity/documents.ts` (un document « mixte » qui exerce tous les cas + les modèles intégrés), et vérifie l'extraction du texte. Il échoue au-delà de 2 % de pixels très différents. À lancer après toute modification de `pdfExport.ts`, `pdfMath.ts`, `pdfFonts.ts`, de la mise en page du texte ou des polices. Les images produites (PDF rastérisé, Konva) sont conservées dans le dossier temporaire affiché, pour inspection visuelle. Les calculs purs (matrice, chemins, crénage, correspondance des polices) ont en plus leurs tests unitaires (`pdfMath.test.ts`, `pdfFonts.test.ts`).
+`npm run fidelity` (macOS : Swift et PDFKit) compare le PDF vectoriel à l'image Konva de l'éditeur, pixel à pixel, pour `scripts/pdf-fidelity/documents.ts` (un document « mixte » qui exerce tous les cas + les modèles intégrés), et vérifie l'extraction du texte et le nombre de replis en image. Il échoue au-delà de 2 % de pixels très différents. À lancer après toute modification de `pdfExport.ts`, `pdfMath.ts`, `pdfFonts.ts`, de la mise en page du texte ou des polices. Les images produites (PDF rastérisé, Konva) sont conservées dans le dossier temporaire affiché, pour inspection visuelle. Les calculs purs (matrice, chemins, crénage, correspondance des polices) ont en plus leurs tests unitaires (`pdfMath.test.ts`, `pdfFonts.test.ts`).
 
 ### Test de fumée de bout en bout
 
