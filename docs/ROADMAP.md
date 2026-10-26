@@ -27,7 +27,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Règles, repères et aimantation sont faits ; il manque : verrouillage de calques, dépôt de fichiers depuis le Finder. | E5, E7 |
+| Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Règles, repères et aimantation sont faits ; il manque : dépôt de fichiers depuis le Finder. | E7 |
 | Bibliothèque de modèles | 🟡 Partiel | 6 modèles intégrés + modèles personnels (enregistrer, renommer, masquer, remplacer). « Des millions » est impossible hors-ligne (hébergement), mais une collection embarquée plus large et des packs de modèles échangeables par fichier le sont. | C2 |
 | Bibliothèque de médias | 🟡 Partiel | 12 formes vectorielles, 10 polices embarquées, import d'images locales. Photos, vidéos, pistes audio « par millions » : impossible hors-ligne. Faisable : jeu d'icônes/illustrations à licence ouverte embarqué, polices supplémentaires, bibliothèque locale (dossier surveillé, étiquettes). | C1, C3, E12 |
 | Magic Resize | ⬜ À faire | Changer le format (`setSize`) ne redimensionne rien aujourd'hui. Algorithme déterministe, aucune IA : faisable à 100 % hors-ligne. | E10 |
@@ -81,7 +81,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E2 | Dégradés (linéaire, radial) pour fonds et formes | M | Konva oui ; PDF : dégradés = opérateurs bruts (pdf-lib n'a pas d'API) ou image. | — |
 | E3 | Ombre portée et lueur (formes, texte, images) | M | Konva oui. **PDF : l'élément passe en image** (voir risques) → décider si le texte à ombre reste sélectionnable (ombre en image séparée sous un vrai texte). | — |
 | E4 | Typographie : espacement des lettres, interligne, souligné, barré, majuscules | M | Konva gère `letterSpacing`/`lineHeight` ; PDF : `Tc` et interligne explicites ; mise à jour de `fidelity`. | — |
-| E5 | Panneau Calques : verrouiller, masquer, renommer | M | Prérequis des modèles de marque verrouillés. | — |
+| E5 | Panneau Calques : verrouiller, masquer, renommer | M | **Fait** (liste, œil, cadenas, renommage, glisser-déposer, ⌘L). Prérequis des modèles de marque verrouillés. | — |
 | E6 | Guides magnétiques, règles, grille | M | **Fait.** Règles, repères, aimantation (déplacement + côtés au redimensionnement). Logique pure testable (aimantation aux bords/centres). | — |
 | E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | Équivalent hors-ligne des « intégrations » de photos. | — |
 | E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | Rendu PDF : recadrer/retourner les pixels avant intégration. | — |

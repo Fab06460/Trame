@@ -19,7 +19,7 @@ export function PageThumb({
   return (
     <div className="thumb" style={{ width: width * k, height: height * k, background: page.background }}>
       <div style={{ width, height, transform: `scale(${k})`, transformOrigin: '0 0', position: 'relative' }}>
-        {page.elements.map((e) => {
+        {page.elements.filter((e) => !e.hidden).map((e) => {
           const box: React.CSSProperties = {
             position: 'absolute',
             left: e.x,

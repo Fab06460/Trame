@@ -44,7 +44,7 @@ export async function computeIssues(doc: TrameDocument, isStale: () => boolean =
   const next: Record<string, IssueEntry> = {}
   for (const [i, page] of doc.pages.entries()) {
     for (const el of page.elements) {
-      if (el.type !== 'text') continue
+      if (el.type !== 'text' || el.hidden) continue // un texte masqué n'est pas exporté : rien à signaler
       const key = JSON.stringify([el.fontFamily, el.fontStyle, el.text])
       let verdict = verdicts.get(key)
       if (verdict === undefined) {

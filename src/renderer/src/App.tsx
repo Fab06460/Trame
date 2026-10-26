@@ -52,6 +52,9 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         const k = e.key.toLowerCase()
         void (k === 'c' ? copySelection() : k === 'x' ? cutSelection() : paste())
+      } else if (mod && e.key.toLowerCase() === 'l') {
+        e.preventDefault()
+        s.toggleLockSelected()
       } else if (mod && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         s.selectAll()

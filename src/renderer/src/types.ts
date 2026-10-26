@@ -11,6 +11,12 @@ export interface TrameElement {
   opacity: number
   /** Les éléments partageant un groupId se sélectionnent et se déplacent ensemble. */
   groupId?: string
+  /** nom du calque dans le panneau Calques (absent = nom automatique) */
+  name?: string
+  /** position verrouillée : l'élément ne se déplace, ne se redimensionne, ne pivote et ne se supprime plus */
+  locked?: boolean
+  /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */
+  hidden?: boolean
   fill: string
   // rect
   cornerRadius?: number

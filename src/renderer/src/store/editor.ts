@@ -67,6 +67,11 @@ export function parseDocument(json: string): TrameDocument {
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
       if (!isElement(e)) throw invalid('élément mal positionné')
+      // indicateurs de calque : seules les valeurs attendues sont retenues (un « locked: "oui" » ne doit rien verrouiller)
+      if (e.locked !== true) delete e.locked
+      if (e.hidden !== true) delete e.hidden
+      if (typeof e.name !== 'string' || !e.name.trim()) delete e.name
+      else e.name = e.name.slice(0, 80)
     }
   }
   return { ...doc, name: typeof doc.name === 'string' && doc.name ? doc.name : 'Sans titre' }
@@ -113,6 +118,12 @@ interface EditorState {
   updateElement: (id: string, patch: Partial<TrameElement>, commit?: boolean) => void
   beginChange: () => void
   removeSelected: () => void
+  /** Verrouille la sélection ; si tout est déjà verrouillé, la déverrouille. */
+  toggleLockSelected: () => void
+  /** Active ou retire un indicateur de calque (`hidden` / `locked`) ; l'indicateur est supprimé du fichier quand il est retiré. */
+  setLayerFlag: (id: string, flag: 'hidden' | 'locked', on: boolean) => void
+  /** Place un élément à l'indice `toIndex` de l'ordre de superposition (0 = tout au fond). */
+  reorderElement: (id: string, toIndex: number) => void
   duplicateSelected: () => void
   /**
    * Alt + glisser : laisse derrière une copie de la sélection, à la même place et juste en dessous des originaux
@@ -174,6 +185,9 @@ export const useEditor = create<EditorState>((set, get) => {
     return selectPage(get()).elements.filter((e) => ids.includes(e.id))
   }
 
+  /** Éléments sélectionnés dont la position n'est pas verrouillée : les seuls que déplacer, aligner ou supprimer peut toucher. */
+  const movable = (): TrameElement[] => selected().filter((e) => !e.locked)
+
   const moveBy = (deltas: Map<string, { dx: number; dy: number }>): void => {
     set({
       ...snapshot(),
@@ -210,7 +224,7 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedIds: cur.includes(id) ? cur.filter((x) => !members.includes(x)) : [...new Set([...cur, ...members])] })
     },
 
-    selectAll: () => set({ selectedIds: selectPage(get()).elements.map((e) => e.id) }),
+    selectAll: () => set({ selectedIds: selectPage(get()).elements.filter((e) => !e.hidden).map((e) => e.id) }),
 
     setPositions: (positions) =>
       set({
@@ -222,7 +236,7 @@ export const useEditor = create<EditorState>((set, get) => {
       }),
 
     nudgeSelected: (dx, dy) => {
-      const els = selected()
+      const els = movable()
       if (els.length) moveBy(new Map(els.map((e) => [e.id, { dx, dy }])))
     },
 
@@ -254,7 +268,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     align: (mode) => {
-      const els = selected()
+      const els = movable()
       if (!els.length) return
       // un seul élément : alignement sur la page ; sinon sur la boîte de la sélection
       const { doc } = get()
@@ -263,7 +277,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     distribute: (axis) => {
-      const els = selected()
+      const els = movable()
       if (els.length >= 3) moveBy(distributeDeltas(els, axis))
     },
 
@@ -353,14 +367,63 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     removeSelected: () => {
-      const { selectedIds } = get()
-      if (!selectedIds.length) return
+      // un élément verrouillé ne se supprime pas : il faut d'abord le déverrouiller (il reste sélectionné)
+      const doomed = movable().map((e) => e.id)
+      if (!doomed.length) return
       set({
         ...snapshot(),
-        doc: mapPage((p) => ({ ...p, elements: p.elements.filter((e) => !selectedIds.includes(e.id)) })),
-        selectedIds: [],
+        doc: mapPage((p) => ({ ...p, elements: p.elements.filter((e) => !doomed.includes(e.id)) })),
+        selectedIds: get().selectedIds.filter((id) => !doomed.includes(id)),
         dirty: true
       })
+    },
+
+    toggleLockSelected: () => {
+      const els = selected()
+      if (!els.length) return
+      const lock = !els.every((e) => e.locked) // tous verrouillés → on déverrouille, sinon on verrouille tout
+      const ids = els.map((e) => e.id)
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (!ids.includes(e.id)) return e
+            if (lock) return { ...e, locked: true }
+            const { locked: _unlocked, ...rest } = e
+            return rest
+          })
+        })),
+        dirty: true
+      })
+    },
+
+    setLayerFlag: (id, flag, on) => {
+      const cur = selectPage(get()).elements.find((e) => e.id === id)
+      if (!cur || Boolean(cur[flag]) === on) return
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (e.id !== id) return e
+            if (on) return { ...e, [flag]: true }
+            const { [flag]: _off, ...rest } = e
+            return rest
+          })
+        })),
+        dirty: true
+      })
+    },
+
+    reorderElement: (id, toIndex) => {
+      const els = [...selectPage(get()).elements]
+      const from = els.findIndex((e) => e.id === id)
+      if (from < 0) return
+      const [el] = els.splice(from, 1)
+      els.splice(Math.max(0, Math.min(els.length, toIndex)), 0, el)
+      if (els.every((e, i) => e === selectPage(get()).elements[i])) return // aucun changement : pas de cran d'historique
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: els })), dirty: true })
     },
 
     duplicateSelected: () => {

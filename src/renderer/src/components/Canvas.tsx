@@ -15,6 +15,8 @@ const PADDING = 48
 const SNAP_PX = 6
 const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'bottom-right', 'bottom-center', 'bottom-left', 'middle-left']
 const TEXT_ANCHORS = ['middle-left', 'middle-right']
+/** Sélection verrouillée : cadre visible (en pointillés) mais aucune poignée. */
+const NO_ANCHORS: string[] = []
 /** La rotation s'aimante tous les 45° (à 5° près). */
 const ROTATION_SNAPS = [0, 45, 90, 135, 180, 225, 270, 315]
 /** Bord déplacé par chaque poignée « de côté » (les coins ne s'aimantent pas : ils garderaient mal les proportions). */
@@ -161,7 +163,7 @@ export function Canvas(): React.JSX.Element {
     y: el.y,
     rotation: el.rotation,
     opacity: el.opacity,
-    draggable: editing !== el.id && !spaceDown,
+    draggable: editing !== el.id && !spaceDown && !el.locked,
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
       if (e.evt.shiftKey) toggleSelect(el.id)
@@ -173,7 +175,8 @@ export function Canvas(): React.JSX.Element {
       if (e.evt.altKey) cloneSelectedInPlace()
       else beginChange()
       const selectedIds = useEditor.getState().selectedIds
-      const moved = page.elements.filter((x) => selectedIds.includes(x.id))
+      // un élément verrouillé reste en place, même dans une sélection que l'on déplace
+      const moved = page.elements.filter((x) => selectedIds.includes(x.id) && !x.locked)
       // mémorise les positions de départ de toute la sélection pour la déplacer d'un bloc
       dragStart.current = Object.fromEntries(moved.map((x) => [x.id, { x: x.x, y: x.y }]))
       dragEls.current = moved
@@ -236,7 +239,7 @@ export function Canvas(): React.JSX.Element {
 
   /** Cibles d'aimantation : tous les éléments non sélectionnés de la page ; seuil et repères selon les réglages. */
   const snapContext = (selected: string[]): { targets: Box[]; options: Parameters<typeof snapBox>[2] } => ({
-    targets: page.elements.filter((e) => !selected.includes(e.id)).map(boundsOf),
+    targets: page.elements.filter((e) => !e.hidden && !selected.includes(e.id)).map(boundsOf),
     options: { width: doc.width, height: doc.height, guides: settings.guides ? page.guides : undefined, threshold: SNAP_PX / scale }
   })
 
@@ -267,7 +270,7 @@ export function Canvas(): React.JSX.Element {
     const st = lassoStart.current
     lassoStart.current = null
     if (!st || !lasso) return setLasso(null)
-    const hits = page.elements.filter((el) => intersects(boundsOf(el), lasso)).map((el) => el.id)
+    const hits = page.elements.filter((el) => !el.hidden && intersects(boundsOf(el), lasso)).map((el) => el.id)
     select(st.additive ? [...selectedIds, ...hits] : hits)
     setLasso(null)
   }
@@ -278,6 +281,7 @@ export function Canvas(): React.JSX.Element {
   }
 
   const editingEl = page.elements.find((e) => e.id === editing)
+  const anyLocked = page.elements.some((e) => selectedIds.includes(e.id) && e.locked)
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
@@ -313,7 +317,7 @@ export function Canvas(): React.JSX.Element {
             clipWidth={doc.width}
             clipHeight={doc.height}
           >
-            {page.elements.map((el) => {
+            {page.elements.filter((el) => !el.hidden).map((el) => {
               const p = commonProps(el)
               if (el.type === 'rect')
                 return <Rect key={el.id} {...p} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
@@ -400,10 +404,11 @@ export function Canvas(): React.JSX.Element {
 
           <Transformer
             ref={trRef}
-            rotateEnabled
+            rotateEnabled={!anyLocked}
+            borderDash={anyLocked ? [4, 4] : undefined}
             // comme Canva : les coins gardent les proportions, les côtés étirent librement ; un texte ne s'étire que en largeur
             keepRatio
-            enabledAnchors={soleText ? TEXT_ANCHORS : ALL_ANCHORS}
+            enabledAnchors={anyLocked ? NO_ANCHORS : soleText ? TEXT_ANCHORS : ALL_ANCHORS}
             rotationSnaps={ROTATION_SNAPS}
             rotationSnapTolerance={5}
             borderStroke="#7c5cff"

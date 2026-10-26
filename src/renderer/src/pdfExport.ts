@@ -47,7 +47,7 @@ export async function exportPdf(doc: TrameDocument): Promise<PdfExportResult> {
     ctx.page = pageIndex + 1
     const bg = parseColor(page.background)
     p.drawRectangle({ x: 0, y: 0, width: w, height: h, color: rgb(bg.r, bg.g, bg.b) })
-    for (const el of page.elements) await ctx.drawElement(p, el)
+    for (const el of page.elements) if (!el.hidden) await ctx.drawElement(p, el) // un calque masqué n'est jamais exporté
   }
   return { dataUrl: 'data:application/pdf;base64,' + (await pdf.saveAsBase64()), fallbacks: ctx.fallbacks }
 }

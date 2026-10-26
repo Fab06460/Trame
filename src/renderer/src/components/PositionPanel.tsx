@@ -23,6 +23,7 @@ export function PositionPanel(): React.JSX.Element | null {
   if (!els.length) return null
   const box = unionBox(els.map(boundsOf))
   const isText = single?.type === 'text'
+  const locked = els.some((e) => e.locked)
   const ratio = single && single.height > 0 ? single.width / single.height : 1
 
   const setWidth = (w: number): void => {
@@ -38,11 +39,11 @@ export function PositionPanel(): React.JSX.Element | null {
     <>
       <h3>Position et taille</h3>
       <div className="num-grid">
-        <NumberField label="X" field="x" value={box.x} suffix="px" onCommit={(v) => nudgeSelected(v - box.x, 0)} />
-        <NumberField label="Y" field="y" value={box.y} suffix="px" onCommit={(v) => nudgeSelected(0, v - box.y)} />
-        <NumberField label="L" field="width" value={single ? single.width : box.width} min={1} suffix="px" disabled={!single} onCommit={setWidth} />
-        <NumberField label="H" field="height" value={single ? single.height : box.height} min={1} suffix="px" disabled={!single || isText} onCommit={setHeight} />
-        <NumberField label="Rotation" field="rotation" value={single ? single.rotation : 0} step={1} suffix="°" disabled={!single} onCommit={(v) => single && updateElement(single.id, { rotation: v })} />
+        <NumberField label="X" field="x" value={box.x} suffix="px" disabled={locked} onCommit={(v) => nudgeSelected(v - box.x, 0)} />
+        <NumberField label="Y" field="y" value={box.y} suffix="px" disabled={locked} onCommit={(v) => nudgeSelected(0, v - box.y)} />
+        <NumberField label="L" field="width" value={single ? single.width : box.width} min={1} suffix="px" disabled={!single || locked} onCommit={setWidth} />
+        <NumberField label="H" field="height" value={single ? single.height : box.height} min={1} suffix="px" disabled={!single || isText || locked} onCommit={setHeight} />
+        <NumberField label="Rotation" field="rotation" value={single ? single.rotation : 0} step={1} suffix="°" disabled={!single || locked} onCommit={(v) => single && updateElement(single.id, { rotation: v })} />
         <button
           className={`lock${lock ? ' active' : ''}`}
           title={lock ? 'Proportions verrouillées' : 'Verrouiller les proportions'}
@@ -52,6 +53,7 @@ export function PositionPanel(): React.JSX.Element | null {
           {lock ? '🔒' : '🔓'}
         </button>
       </div>
+      {locked && <p className="hint">🔒 Position verrouillée : déverrouillez pour la modifier.</p>}
       {isText && <p className="hint">La hauteur d'un texte dépend de son contenu : elle s'ajuste seule.</p>}
     </>
   )

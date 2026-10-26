@@ -214,6 +214,124 @@ describe('cloneSelectedInPlace (Alt + glisser)', () => {
   })
 })
 
+describe('calques : verrouillage, masquage, ordre', () => {
+  it('un élément verrouillé ne se déplace pas (nudge), ne s’aligne pas, ne se supprime pas', () => {
+    const [a, b] = addRects(2)
+    S().select([a])
+    S().toggleLockSelected()
+    S().select([a, b])
+    S().nudgeSelected(50, 0)
+    expect(els().find((e) => e.id === a)!.x).toBe(0) // verrouillé : n'a pas bougé
+    expect(els().find((e) => e.id === b)!.x).toBe(250) // l'autre, si
+    S().align('right')
+    expect(els().find((e) => e.id === a)!.x).toBe(0)
+    S().removeSelected()
+    expect(ids()).toEqual([a]) // seul le verrouillé reste
+    expect(S().selectedIds).toEqual([a]) // et il reste sélectionné
+    S().removeSelected()
+    expect(ids()).toEqual([a]) // supprimer ne fait toujours rien
+  })
+
+  it('toggleLockSelected : verrouille, puis déverrouille quand tout l’est ; un cran d’historique', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().toggleLockSelected()
+    expect(els().every((e) => e.locked)).toBe(true)
+    S().toggleLockSelected()
+    expect(els().some((e) => e.locked)).toBe(false)
+    expect(els()[0]).not.toHaveProperty('locked') // pas de champ résiduel dans le fichier
+    S().undo()
+    expect(els().every((e) => e.locked)).toBe(true)
+  })
+
+  it('verrouillage mixte : on verrouille tout d’abord', () => {
+    const [a, b] = addRects(2)
+    S().select([a])
+    S().toggleLockSelected()
+    S().select([a, b])
+    S().toggleLockSelected()
+    expect(els().every((e) => e.locked)).toBe(true)
+  })
+
+  it('« tout sélectionner » ignore les éléments masqués', () => {
+    const [a, b] = addRects(2)
+    S().updateElement(b, { hidden: true })
+    S().selectAll()
+    expect(S().selectedIds).toEqual([a])
+  })
+
+  it('reorderElement place l’élément à l’indice voulu (0 = fond) et annule en un cran', () => {
+    const [a, b, c] = addRects(3)
+    S().reorderElement(c, 0)
+    expect(ids()).toEqual([c, a, b])
+    S().reorderElement(c, 2)
+    expect(ids()).toEqual([a, b, c])
+    S().undo()
+    expect(ids()).toEqual([c, a, b])
+  })
+
+  it('reorderElement sans changement ne crée pas de cran d’historique', () => {
+    const [a] = addRects(2)
+    const past = S().past.length
+    S().reorderElement(a, 0)
+    expect(S().past.length).toBe(past)
+    S().reorderElement('inconnu', 0)
+    expect(S().past.length).toBe(past)
+  })
+
+  it('renommer un calque et le masquer s’annulent', () => {
+    const [a] = addRects(1)
+    S().updateElement(a, { name: 'Fond' })
+    S().updateElement(a, { hidden: true })
+    expect(els()[0]).toMatchObject({ name: 'Fond', hidden: true })
+    S().undo()
+    S().undo()
+    expect(els()[0].name).toBeUndefined()
+  })
+})
+
+describe('calques : setLayerFlag et fichier', () => {
+  it('setLayerFlag active puis retire l’indicateur (supprimé du fichier), avec historique', () => {
+    const [a] = addRects(1)
+    S().setLayerFlag(a, 'hidden', true)
+    expect(els()[0].hidden).toBe(true)
+    S().setLayerFlag(a, 'hidden', false)
+    expect(els()[0]).not.toHaveProperty('hidden')
+    S().undo()
+    expect(els()[0].hidden).toBe(true)
+  })
+
+  it('ne crée pas de cran d’historique quand rien ne change', () => {
+    const [a] = addRects(1)
+    const past = S().past.length
+    S().setLayerFlag(a, 'locked', false)
+    S().setLayerFlag('inconnu', 'locked', true)
+    expect(S().past.length).toBe(past)
+  })
+
+  it('les indicateurs survivent à l’enregistrement et à la relecture', () => {
+    const [a, b] = addRects(2)
+    S().updateElement(a, { name: 'Fond' })
+    S().setLayerFlag(a, 'locked', true)
+    S().setLayerFlag(b, 'hidden', true)
+    const [ra, rb] = parseDocument(JSON.stringify(S().doc)).pages[0].elements
+    expect(ra).toMatchObject({ name: 'Fond', locked: true })
+    expect(rb).toMatchObject({ hidden: true })
+  })
+
+  it('à la lecture, les valeurs inattendues ne verrouillent ni ne masquent rien', () => {
+    addRects(1)
+    const d = JSON.parse(JSON.stringify(S().doc))
+    Object.assign(d.pages[0].elements[0], { locked: 'oui', hidden: 1, name: '   ' })
+    const e = parseDocument(JSON.stringify(d)).pages[0].elements[0]
+    expect(e).not.toHaveProperty('locked')
+    expect(e).not.toHaveProperty('hidden')
+    expect(e).not.toHaveProperty('name')
+    d.pages[0].elements[0].name = 'x'.repeat(200)
+    expect(parseDocument(JSON.stringify(d)).pages[0].elements[0].name).toHaveLength(80)
+  })
+})
+
 describe('repères (guides)', () => {
   it('updateGuides ajoute, déplace et supprime sur la page courante, avec historique', () => {
     S().updateGuides((g) => [...g, { orientation: 'v', position: 200 }])

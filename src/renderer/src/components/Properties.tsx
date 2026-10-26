@@ -19,7 +19,7 @@ export function Properties(): React.JSX.Element {
   const el = page.elements.find((e) => e.id === selectedIds[0])
   const pdfIssue = usePdfIssues((st) => (el ? st.issues[el.id] : undefined))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
-  const { updateElement, setBackground, setSize, moveLayer, duplicateSelected, removeSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
+  const { updateElement, setBackground, setSize, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
     useEditor.getState()
 
   if (!el || !selectedIds.length) {
@@ -61,6 +61,9 @@ export function Properties(): React.JSX.Element {
         <button onClick={() => moveLayer('bottom')} title="Arrière-plan">⤓</button>
       </div>
       <div className="row">
+        <button onClick={toggleLockSelected} title="Verrouiller / déverrouiller la position (⌘L)">
+          {page.elements.filter((e) => selectedIds.includes(e.id)).every((e) => e.locked) ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
+        </button>
         <button onClick={duplicateSelected}>Dupliquer</button>
         <button className="danger" onClick={removeSelected}>Supprimer</button>
       </div>

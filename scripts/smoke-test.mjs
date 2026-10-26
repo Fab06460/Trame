@@ -17,6 +17,36 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
+
+/** Pixel (x, y) d'un PNG 8 bits RGBA/RGB non entrelacé, en [r, g, b]. Suffit pour vérifier ce qu'un export a réellement dessiné. */
+function pngPixel(buf, px, py) {
+  let w = 0, h = 0, channels = 4
+  const idat = []
+  for (let at = 8; at < buf.length; ) {
+    const len = buf.readUInt32BE(at)
+    const type = buf.toString('latin1', at + 4, at + 8)
+    const data = buf.subarray(at + 8, at + 8 + len)
+    if (type === 'IHDR') { w = data.readUInt32BE(0); h = data.readUInt32BE(4); channels = data[9] === 2 ? 3 : 4 }
+    if (type === 'IDAT') idat.push(data)
+    at += 12 + len
+  }
+  const raw = inflateSync(Buffer.concat(idat))
+  const stride = w * channels
+  const rows = []
+  for (let y = 0, o = 0; y < h; y++) {
+    const filter = raw[o++]
+    const row = Buffer.from(raw.subarray(o, o + stride)); o += stride
+    const prev = rows[y - 1] ?? Buffer.alloc(stride)
+    for (let i = 0; i < stride; i++) {
+      const a = i >= channels ? row[i - channels] : 0, b = prev[i], c = i >= channels ? prev[i - channels] : 0
+      const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c)
+      row[i] = (row[i] + (filter === 1 ? a : filter === 2 ? b : filter === 3 ? ((a + b) >> 1) : filter === 4 ? (pa <= pb && pa <= pc ? a : pb <= pc ? b : c) : 0)) & 255
+    }
+    rows.push(row)
+  }
+  const i = px * channels
+  return [rows[py][i], rows[py][i + 1], rows[py][i + 2]]
+}
 const electronPath = createRequire(import.meta.url)(join(root, 'node_modules/electron'))
 const port = 9300 + Math.floor(Math.random() * 400)
 const tmp = await mkdtemp(join(tmpdir(), 'trame-smoke-'))
@@ -392,6 +422,109 @@ try {
   await run(`(() => { const g = document.querySelector('.guide'); g.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })) })()`)
   await sleep(250)
   check('double-clic sur un repère le supprime', (await run(`document.querySelector('.canvas-wrap').dataset.guideCount`)) === String(nBefore - 2), await guidesAttr())
+
+  // panneau Calques : liste, verrouillage, masquage (jamais exporté), renommage, réordonnancement
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440), violet #7c5cff
+  await sleep(250)
+  await click('header.toolbar button', 'Ellipse')
+  await sleep(250)
+  await click('header.toolbar button', 'Texte')
+  await sleep(300)
+  await click('.sidebar .tabs button', 'Calques')
+  await sleep(300)
+  const layerNames = () => run(`[...document.querySelectorAll('.layer .layer-name')].map(n => n.textContent.replace(/\s*(groupe|⚠)\s*$/, '').trim()).join('|')`)
+  check('3 calques, du premier plan à l\'arrière-plan', (await layerNames()) === 'Votre texte|Ellipse|Rectangle', await layerNames())
+  const rowOf = (name) => `.layer:nth-child(${['Votre texte', 'Ellipse', 'Rectangle'].indexOf(name) + 1})`
+
+  // sélectionner depuis le panneau
+  await clickSel(`${rowOf('Rectangle')} .layer-glyph`)
+  await sleep(300)
+  check('cliquer un calque le sélectionne (le panneau de position s\'affiche)', (await field('width')) === 300 && (await field('height')) === 200)
+
+  // verrouiller : le champ X est désactivé, le glisser ne déplace plus, Suppr ne supprime plus
+  await clickSel(`${rowOf('Rectangle')} .layer-flag.lock`)
+  await sleep(300)
+  check('un calque verrouillé désactive les champs de position', (await run(`document.querySelector('.panel [data-field="x"]')?.disabled`)) === true)
+  const lw = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+  const lfit = Math.max(0.01, Math.min((lw.w - 96) / 1080, (lw.h - 96) / 1080))
+  const lsx = (d) => lw.l + (lw.w - 1080 * lfit) / 2 + d * lfit
+  const lsy = (d) => lw.t + (lw.h - 1080 * lfit) / 2 + d * lfit
+  const x0 = await field('x')
+  await mouse('mousePressed', lsx(430), lsy(600))
+  for (let i = 1; i <= 8; i++) await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: lsx(430) + 20 * i, y: lsy(600) + 10 * i, button: 'left', buttons: 1 })
+  await mouse('mouseReleased', lsx(430) + 160, lsy(600) + 80)
+  await sleep(300)
+  check('glisser un élément verrouillé ne le déplace pas', (await field('x')) === x0, `${x0} → ${await field('x')}`)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 })
+  await sleep(300)
+  check('Suppr ne supprime pas un élément verrouillé', (await count('.layer')) === 3)
+  // ⌘L bascule le verrouillage de la sélection
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'l', code: 'KeyL', modifiers: 4 })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'l', code: 'KeyL', modifiers: 4 })
+  await sleep(300)
+  check('⌘L déverrouille', (await run(`document.querySelector('${rowOf('Rectangle')} .layer-flag.lock')?.getAttribute('aria-pressed')`)) === 'false')
+
+  // masquer : disparaît des miniatures, et n'est exporté ni en PNG ni en PDF
+  const exportsDir = join(tmp, 'exports')
+  const nThumb = () => run(`document.querySelectorAll('.page-item.current .thumb div div').length`)
+  const exportPng = async () => {
+    await rm(join(exportsDir, 'Sans titre.png'), { force: true })
+    await click('header.toolbar button', 'Export PNG')
+    for (let i = 0; i < 40; i++) { await sleep(250); if ((await readdir(exportsDir)).includes('Sans titre.png')) break }
+    await sleep(200)
+    return readFile(join(exportsDir, 'Sans titre.png'))
+  }
+  const exportPdfText = async () => {
+    await rm(join(exportsDir, 'Sans titre.pdf'), { force: true })
+    await click('header.toolbar button', 'Export PDF')
+    for (let i = 0; i < 40; i++) { await sleep(250); if ((await readdir(exportsDir)).includes('Sans titre.pdf')) break }
+    await sleep(200)
+    const pdf = await readFile(join(exportsDir, 'Sans titre.pdf'))
+    let all = ''
+    for (let at = 0; ; ) { const a = pdf.indexOf('stream', at); if (a < 0) break; const from = pdf[a + 6] === 0x0d ? a + 8 : a + 7; const e = pdf.indexOf('endstream', from); try { all += inflateSync(pdf.subarray(from, e)).toString('latin1') + '\n' } catch {} ; at = e + 9 }
+    return all
+  }
+  const purple = ([r, g, b]) => r > 100 && r < 150 && g > 70 && g < 110 && b > 230 // #7c5cff
+  const VIOLET_OP = `${124 / 255} ${92 / 255} 1 rg` // #7c5cff, écrit comme pdf-lib écrit les nombres
+  const visiblePx = pngPixel(await exportPng(), 400, 620) // point couvert par le rectangle seul (390–690 × 440–640) : ni l'ellipse (420–660) ni le texte (y 500–580)
+  check('calque visible : exporté en PNG (pixel violet)', purple(visiblePx), JSON.stringify(visiblePx))
+  check('calque visible : exporté en PDF', (await exportPdfText()).includes(VIOLET_OP))
+  const thumbsBefore = await nThumb()
+  await clickSel(`${rowOf('Rectangle')} .layer-flag.eye`)
+  await sleep(300)
+  check('masquer un calque le retire de l\'aperçu de la page', (await nThumb()) === thumbsBefore - 1, `${thumbsBefore} → ${await nThumb()}`)
+  const hiddenPx = pngPixel(await exportPng(), 400, 620)
+  check('calque masqué : absent du PNG exporté (pixel blanc)', hiddenPx.every((v) => v > 240), JSON.stringify(hiddenPx))
+  check('calque masqué : absent du PDF exporté', !(await exportPdfText()).includes(VIOLET_OP))
+  await clickSel(`${rowOf('Rectangle')} .layer-flag.eye`)
+  await sleep(300)
+  check('afficher à nouveau le calque le remet dans l\'export', purple(pngPixel(await exportPng(), 400, 620)))
+
+  // renommer (double-clic)
+  await run(`document.querySelector('${rowOf('Ellipse')} .layer-name').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
+  await sleep(200)
+  await typeInto('.layer-rename', 'Soleil')
+  await run(`(() => { const i = document.querySelector('.layer-rename'); i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) })()`)
+  await sleep(300)
+  check('double-clic renomme un calque', (await layerNames()) === 'Votre texte|Soleil|Rectangle', await layerNames())
+
+  // réordonner par glisser-déposer : « Rectangle » (en bas) lâché sur la ligne du haut → passe devant
+  // les événements sont envoyés l'un après l'autre (comme un vrai glisser) : React enregistre le départ avant le dépôt
+  const dnd = (type, row) => run(`(() => { const rows = document.querySelectorAll('.layer'); window.__dt ??= new DataTransfer(); rows[${row}].dispatchEvent(new DragEvent(${JSON.stringify(type)}, { bubbles: true, cancelable: true, dataTransfer: window.__dt })) })()`)
+  await dnd('dragstart', 2); await sleep(150)
+  await dnd('dragover', 0); await sleep(150)
+  await dnd('drop', 0); await sleep(150)
+  await dnd('dragend', 2)
+  await sleep(300)
+  check('glisser-déposer réordonne les calques (Rectangle passe devant)', (await layerNames()) === 'Rectangle|Votre texte|Soleil', await layerNames())
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('annuler remet l\'ordre précédent', (await layerNames()) === 'Votre texte|Soleil|Rectangle', await layerNames())
+  await click('.sidebar .tabs button', 'Modèles')
 
   // export PDF vectoriel : on ajoute du texte dans l'interface, on exporte, puis on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)

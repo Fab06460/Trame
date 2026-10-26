@@ -39,6 +39,7 @@ export async function renderPage(
   layer.add(new Konva.Rect({ width: doc.width, height: doc.height, fill: page.background }))
 
   for (const e of page.elements) {
+    if (e.hidden) continue // un calque masqué n'est jamais exporté
     const common = { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity }
     if (e.type === 'rect') {
       layer.add(new Konva.Rect({ ...common, width: e.width, height: e.height, fill: e.fill, cornerRadius: e.cornerRadius }))
