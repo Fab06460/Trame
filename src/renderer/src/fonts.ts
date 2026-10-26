@@ -39,6 +39,8 @@ export interface FontDef {
   slug: string
   /** variantes réellement embarquées : `<graisse>[-italic]` */
   variants: string[]
+  /** police ajoutée en ligne (ses octets WOFF2 sont en mémoire, pas dans l'application) */
+  installed?: boolean
 }
 
 export const SYSTEM_FONT = 'Helvetica Neue, Arial, sans-serif'
@@ -66,4 +68,78 @@ export async function loadFonts(): Promise<void> {
   )
   // ne bloque jamais le démarrage plus de 4 s
   await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 4000))])
+}
+
+// --- Polices ajoutées en ligne (voir `fontCatalog` côté principal) ----------------------------------------------------------------
+export interface ExtraFontData {
+  id: string
+  name: string
+  family: string
+  category: string
+  license: string
+  /** fichiers WOFF2 en base64, par variante */
+  data: Record<string, string>
+}
+
+const extras = new Map<string, { def: FontDef; font: ExtraFontData; faces: FontFace[] }>()
+const listeners = new Set<() => void>()
+const notify = (): void => listeners.forEach((l) => l())
+
+/** Abonnement aux ajouts et retraits de polices (le sélecteur de police se met à jour). */
+export function subscribeFonts(cb: () => void): () => void {
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+
+const GROUPS: Record<string, string> = { 'sans-serif': 'Sans', serif: 'Serif', display: 'Titre', handwriting: 'Manuscrit', monospace: 'Mono' }
+
+/** Toutes les polices utilisables : les 10 embarquées, puis celles ajoutées en ligne. */
+export const allFonts = (): FontDef[] => [...FONTS, ...[...extras.values()].map((e) => e.def)]
+
+export const extraFonts = (): ExtraFontData[] => [...extras.values()].map((e) => e.font)
+
+export const bytesOfBase64 = (b64: string): Uint8Array => {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}
+
+/** Octets WOFF2 d'une variante d'une police ajoutée (export PDF), ou null. */
+export const extraFontBytes = (id: string, variant: string): Uint8Array | null => {
+  const b64 = extras.get(id)?.font.data[variant]
+  return b64 ? bytesOfBase64(b64) : null
+}
+
+/** Rend une police ajoutée disponible : déclarée au navigateur (graisse et style par variante) puis chargée, avant tout affichage. */
+export async function registerExtraFont(font: ExtraFontData): Promise<void> {
+  if (extras.has(font.id)) return
+  const faces: FontFace[] = []
+  for (const [variant, b64] of Object.entries(font.data)) {
+    const face = new FontFace(font.name, bytesOfBase64(b64).buffer as ArrayBuffer, { weight: variant.startsWith('700') ? '700' : '400', style: variant.endsWith('italic') ? 'italic' : 'normal' })
+    try {
+      await face.load()
+      document.fonts.add(face)
+      faces.push(face)
+    } catch {
+      /* variante illisible : ignorée (la graisse normale suffit à afficher le texte) */
+    }
+  }
+  if (faces.length === 0) return
+  const variants = Object.keys(font.data)
+  extras.set(font.id, { def: { name: font.name, family: font.family, group: GROUPS[font.category] ?? 'Sans', slug: font.id, variants, installed: true }, font, faces })
+  notify()
+}
+
+/** Rend disponibles les polices embarquées dans un document ouvert (celles que ce poste n'a pas installées, sans les enregistrer). */
+export async function registerEmbeddedFonts(fonts: Record<string, { name: string; family: string; category: string; license: string; variants: Record<string, string> }> | undefined): Promise<void> {
+  for (const [id, f] of Object.entries(fonts ?? {})) await registerExtraFont({ id, name: f.name, family: f.family, category: f.category, license: f.license, data: f.variants })
+}
+
+export function unregisterExtraFont(id: string): void {
+  const e = extras.get(id)
+  if (!e) return
+  for (const f of e.faces) document.fonts.delete(f)
+  extras.delete(id)
+  notify()
 }

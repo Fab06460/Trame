@@ -9,6 +9,7 @@ import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
 import { patchListText } from '@/listText'
+import { useFonts } from '@/store/fonts'
 import { useEditedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
@@ -39,6 +40,8 @@ function ImageNode({ el, ...props }: Konva.NodeConfig & { el: TrameElement }): R
 }
 
 export function Canvas(): React.JSX.Element {
+  // une police ajoutée ou retirée : les textes sont recréés (Konva ne remesure pas un texte dont la police vient d'arriver)
+  const fontsVersion = useFonts((s) => s.version)
   const doc = useEditor((s) => s.doc)
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
@@ -353,7 +356,7 @@ export function Canvas(): React.JSX.Element {
               if (el.type === 'image') return <ImageNode key={el.id} el={el} {...p} {...strokeProps(el)} {...shadowProps(el)} width={el.width} height={el.height} />
               return (
                 <Text
-                  key={el.id}
+                  key={`${el.id}:${fontsVersion}`}
                   {...p}
                   {...strokeProps(el)}
                   {...shadowProps(el)}

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { FONTS } from '@/fonts'
+import { allFonts } from '@/fonts'
 import {
   addColor, addFont, addLogo, emptyKit, parseBrandKit, pushRecentColor, removeColor, removeFont, removeLogo, type BrandKit, type BrandLogo
 } from '@/brandKit'
@@ -65,4 +65,4 @@ export const useBrand = create<BrandState>((set, get) => {
   }
 })
 
-export const fontName = (family: string): string => FONTS.find((f) => f.family === family)?.name ?? family
+export const fontName = (family: string): string => allFonts().find((f) => f.family === family)?.name ?? family

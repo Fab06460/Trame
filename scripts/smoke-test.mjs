@@ -11,7 +11,7 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { readdirSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
@@ -106,12 +106,23 @@ const photoServer = createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' })
     return res.end(JSON.stringify({ query: { pages: { 11: page(11, 2, 'Deuxième', 'CC BY-SA 4.0'), 10: page(10, 1, 'Premier', 'CC0'), 12: page(12, 3, 'Interdit', 'CC BY-NC 4.0') } } }))
   }
+  if (url.pathname === '/v1/fonts') {
+    const font = (id, family, license, category = 'serif') => ({ id, family, subsets: ['latin'], weights: [400, 700], styles: ['normal'], category, license, defSubset: 'latin' })
+    res.writeHead(200, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify([font('zeta-test', 'Zeta Test', 'OFL-1.1'), font('pas-libre', 'Pas Libre', 'proprietary'), font('beta-sans', 'Beta Sans', 'OFL-1.1', 'sans-serif')]))
+  }
+  const fontFile = /^\/fontsource\/fonts\/([a-z-]+)@latest\/latin-(400|700)-normal\.woff2$/.exec(url.pathname)
+  if (fontFile) {
+    if (fontFile[1] !== 'zeta-test') { res.writeHead(404); return res.end() } // beta-sans : fichier introuvable
+    res.writeHead(200, { 'content-type': 'font/woff2' })
+    return res.end(readFileSync(join(root, `node_modules/@fontsource/lora/files/lora-latin-${fontFile[2]}-normal.woff2`)))
+  }
   if (url.pathname === '/img/a.png') return png(800, 400)
   if (url.pathname === '/thumb/a.png') return png(80, 40)
   res.writeHead(404); res.end()
 })
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
-const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500' }
+const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
@@ -1067,6 +1078,81 @@ try {
   check('recherche sans résultat : message dédié', (await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'))
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+
+  // polices en ligne : catalogue, aperçu, installation, utilisation, export PDF, persistance, embarquement dans le document
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Texte')
+  await sleep(500)
+  const pickFont = (value) => run(`(() => { const s = document.querySelector('[data-field="fontFamily"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(value)}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  const fontReqs = () => photoRequests.filter((r) => r.path.startsWith('/fontsource') || r.path === '/v1/fonts').length
+  check('aucune requête de polices avant d\'ouvrir le catalogue', fontReqs() === 0)
+  await pickFont('__more-fonts__')
+  for (let i = 0; i < 60 && (await nBrand('[data-font]')) === 0; i++) await sleep(250)
+  check('le catalogue s\'ouvre : 2 polices libres (la propriétaire est écartée)', (await nBrand('.modal [data-field="fontQuery"]')) === 1 && (await nBrand('[data-font]')) === 2 && (await nBrand('[data-font="pas-libre"]')) === 0)
+  await run(`document.querySelector('[data-field="fontQuery"]').focus()`)
+  await cdp('Input.insertText', { text: 'zeta' })
+  await sleep(300)
+  check('la recherche filtre par nom', (await nBrand('[data-font]')) === 1)
+  await clickSel('[data-font="zeta-test"]')
+  for (let i = 0; i < 60 && !(await run(`[...document.fonts].some(f => f.family.includes('trame-preview-zeta-test'))`)); i++) await sleep(250)
+  check('l\'aperçu charge la police temporairement (graisse normale seule)', (await nBrand('[data-font-preview]')) === 1 && photoRequests.some((r) => r.path.includes('zeta-test') && r.path.includes('400')) && !photoRequests.some((r) => r.path.includes('zeta-test') && r.path.includes('700')))
+  await clickSel('[data-action="font-install"]')
+  for (let i = 0; i < 80 && (await nBrand('[data-action="font-remove"]')) === 0; i++) await sleep(250)
+  check('l\'installation réussit (normal et gras téléchargés)', (await nBrand('[data-action="font-remove"]')) === 1 && photoRequests.some((r) => r.path.includes('zeta-test') && r.path.includes('700')))
+  await run(`document.querySelector('[data-field="fontQuery"]').select()`)
+  await cdp('Input.insertText', { text: 'beta' })
+  await sleep(300)
+  await clickSel('[data-font="beta-sans"]')
+  await sleep(500)
+  check('un aperçu impossible (404) affiche une explication au lieu de planter', (await run(`document.querySelector('[data-font-note]')?.innerText ?? ''`)).length > 0)
+  await clickSel('[data-action="fonts-close"]')
+  await sleep(300)
+  check('le catalogue se referme', (await nBrand('.modal')) === 0)
+  check('la police installée apparaît dans la liste des polices', (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].some(o => o.textContent === 'Zeta Test')`)) === true)
+  await pickFont('"Zeta Test", serif')
+  await sleep(500)
+  check('elle s\'applique au texte sélectionné', (await run(`document.querySelector('[data-field="fontFamily"]').value`)) === '"Zeta Test", serif')
+  await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
+  const fontPdf = await exportPdfText()
+  check('PDF avec une police en ligne : vrai texte (TJ), aucune image, aucun avertissement', fontPdf.includes(' TJ') && !lastPdfRaw.includes('/Subtype /Image') && !(await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '')))
+  check('le texte du PDF utilise la police ajoutée (famille Lora, d\'où viennent les octets de test)', /Lora/.test(fontPdf) || /Lora/.test(lastPdfRaw), 'pas de police Lora dans le PDF')
+  // persistance : au rechargement, la police est relue depuis le dossier de données
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(600)
+  await click('header.toolbar button', 'Texte')
+  await sleep(500)
+  check('la police installée survit au rechargement (hors ligne : aucune requête de plus)', (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].some(o => o.textContent === 'Zeta Test')`)) === true)
+  // embarquement : le document enregistré contient la police
+  await pickFont('"Zeta Test", serif')
+  await sleep(300)
+  await rm(join(tmp, 'exports', 'Sans titre.trame'), { force: true })
+  await click('header.toolbar button', 'Enregistrer')
+  for (let i = 0; i < 40 && !(await readdir(join(tmp, 'exports'))).includes('Sans titre.trame'); i++) await sleep(250)
+  const savedFont = JSON.parse(await readFile(join(tmp, 'exports', 'Sans titre.trame'), 'utf-8'))
+  check('le document enregistré embarque la police utilisée (normal + gras, WOFF2 base64)', !!savedFont.fonts?.['zeta-test']?.variants?.['400'] && !!savedFont.fonts['zeta-test'].variants['700'] && savedFont.fonts['zeta-test'].family === '"Zeta Test", serif')
+  // un poste sans la police : on la retire, on rouvre le document → elle est restituée depuis le fichier
+  await click('.sidebar .tabs button', 'Marque')
+  await clickSel('[data-action="brand-more-fonts"]')
+  for (let i = 0; i < 60 && (await nBrand('[data-font]')) === 0; i++) await sleep(250)
+  await clickSel('[data-font="zeta-test"]')
+  for (let i = 0; i < 40 && (await nBrand('[data-action="font-remove"]')) === 0; i++) await sleep(250)
+  await clickSel('[data-action="font-remove"]')
+  await sleep(500)
+  await clickSel('[data-action="fonts-close"]')
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(600)
+  check('police retirée : absente de la liste après rechargement', (await run(`window.trame.installedFonts().then(l => l.length)`)) === 0)
+  await click('.sidebar .tabs button', 'Récents')
+  for (let i = 0; i < 40 && (await nBrand('.recent-open')) === 0; i++) await sleep(250)
+  await run(`[...document.querySelectorAll('.recent-open')].find(b => b.innerText.includes('Sans titre'))?.click()`)
+  await sleep(1200)
+  await click('header.toolbar button', 'Texte')
+  await sleep(300)
+  check('rouvrir le document restitue la police embarquée, sans l\'avoir installée', (await run(`[...document.fonts].some(f => f.family.includes('Zeta Test'))`)) === true)
 
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')

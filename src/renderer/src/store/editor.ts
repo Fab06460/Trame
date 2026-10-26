@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
 import { adaptDocument } from '@/magicResize'
+import { registerEmbeddedFonts } from '@/fonts'
+import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
 import { sanitizeList } from '@/listStyle'
@@ -90,6 +92,7 @@ export function parseDocument(json: string): TrameDocument {
     }
   }
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
+  sanitizeFonts(doc)
   return { ...doc, name: cleanDocName(doc.name) }
 }
 
@@ -590,8 +593,10 @@ export const useEditor = create<EditorState>((set, get) => {
       })
     },
 
-    loadDocument: (doc, path) =>
-      set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null }),
+    loadDocument: (doc, path) => {
+      void registerEmbeddedFonts(doc.fonts)
+      set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null })
+    },
 
     newDocument: () => {
       const doc = blankDoc()

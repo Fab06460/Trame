@@ -1,4 +1,4 @@
-import { FONTS, type FontDef } from '@/fonts'
+import { allFonts, extraFontBytes, type FontDef } from '@/fonts'
 
 export interface FontChoice {
   def: FontDef
@@ -26,7 +26,7 @@ export type FontDiagnosis =
  */
 export function diagnoseFont(fontFamily: string | undefined, fontStyle: string | undefined): FontDiagnosis {
   const name = /^\s*["']?([^"',]+?)["']?\s*(?:,|$)/.exec(fontFamily ?? '')?.[1]
-  const def = FONTS.find((f) => f.name === name)
+  const def = allFonts().find((f) => f.name === name)
   if (!def) return { ok: false, reason: 'unknown-font', family: name ?? 'inconnue' }
   const style = fontStyle ?? ''
   const bold = style.includes('bold')
@@ -52,6 +52,8 @@ const loaders = import.meta.glob('../../../node_modules/@fontsource/*/files/*-la
 }) as Record<string, () => Promise<string>>
 
 export async function loadFontBytes(choice: FontChoice): Promise<Uint8Array | null> {
+  // police ajoutée en ligne : fichier WOFF2 gardé en mémoire (fontkit lit le WOFF2)
+  if (choice.def.installed) return extraFontBytes(choice.def.slug, choice.variant)
   const key = Object.keys(loaders).find((k) => k.endsWith(`/${choice.def.slug}/files/${choice.file}`))
   if (!key) return null
   const dataUrl = await loaders[key]()

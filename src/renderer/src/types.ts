@@ -122,12 +122,25 @@ export interface TramePage {
   elements: TrameElement[] // ordre = z-index croissant
 }
 
+/** Police ajoutée en ligne, embarquée dans un document. */
+export interface EmbeddedFont {
+  name: string
+  /** famille CSS stockée dans les éléments (`"Nom", serif`) */
+  family: string
+  category: string
+  license: string
+  /** `400`, `700`, `400-italic`, `700-italic` → WOFF2 en base64 */
+  variants: Record<string, string>
+}
+
 export interface TrameDocument {
   version: 2
   name: string
   width: number
   height: number
   pages: TramePage[]
+  /** polices ajoutées en ligne utilisées par le document, embarquées pour qu'il s'affiche et s'exporte partout (base64 WOFF2 par variante) */
+  fonts?: Record<string, EmbeddedFont>
   /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */
   sources?: Record<string, string>
 }

@@ -1,5 +1,6 @@
 import { useEditor, selectPage } from '@/store/editor'
-import { FONTS, SYSTEM_FONT } from '@/fonts'
+import { allFonts, SYSTEM_FONT } from '@/fonts'
+import { useFonts } from '@/store/fonts'
 import { explain } from '@/pdfFallbacks'
 import { suggestFix } from '@/pdfTextCheck'
 import { usePdfIssues } from '@/store/pdfIssues'
@@ -13,7 +14,11 @@ import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
 import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 
+const MORE_FONTS = '__more-fonts__'
+
 export function Properties(): React.JSX.Element {
+  useFonts((s) => s.version) // la liste des polices change quand on en ajoute ou retire
+  const fonts = allFonts()
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const el = page.elements.find((e) => e.id === selectedIds[0])
@@ -189,18 +194,21 @@ export function Properties(): React.JSX.Element {
             <select
               value={el.fontFamily}
               style={{ fontFamily: el.fontFamily }}
-              onChange={(e) => updateElement(el.id, { fontFamily: e.target.value })}
+              data-field="fontFamily"
+              onChange={(e) => (e.target.value === MORE_FONTS ? useFonts.getState().setDialog(true) : updateElement(el.id, { fontFamily: e.target.value }))}
             >
               {el.fontFamily === SYSTEM_FONT && <option value={SYSTEM_FONT}>Système</option>}
-              {[...new Set(FONTS.map((f) => f.group))].map((g) => (
+              {el.fontFamily && el.fontFamily !== SYSTEM_FONT && !fonts.some((f) => f.family === el.fontFamily) && <option value={el.fontFamily}>{el.fontFamily.split(',')[0].replace(/"/g, '')} (non installée)</option>}
+              {[...new Set(fonts.map((f) => f.group))].map((g) => (
                 <optgroup key={g} label={g}>
-                  {FONTS.filter((f) => f.group === g).map((f) => (
+                  {fonts.filter((f) => f.group === g).map((f) => (
                     <option key={f.name} value={f.family} style={{ fontFamily: f.family }}>
                       {f.name}
                     </option>
                   ))}
                 </optgroup>
               ))}
+              <option value={MORE_FONTS}>＋ Plus de polices en ligne…</option>
             </select>
           </label>
           {pdfIssue && (

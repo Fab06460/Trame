@@ -1,10 +1,11 @@
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net } from 'electron'
 import { join } from 'path'
-import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
-import type { PhotoSearchResult } from '../preload'
+import type { InstalledFont, PhotoSearchResult } from '../preload'
+import { ALL_VARIANTS, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { createFileInbox } from './fileInbox'
@@ -119,6 +120,10 @@ function createWindow(): void {
 ipcMain.handle('project:save', async (e, json: string, currentPath?: string, name?: string) => {
   try {
     let path = currentPath
+    if (!path && TEST_EXPORT_DIR) {
+      // tests de bout en bout : « Enregistrer » écrit dans le dossier de test (aucun dialogue natif)
+      path = join(TEST_EXPORT_DIR, `${basename(name || 'Sans titre')}.trame`)
+    }
     if (!path) {
       const win = BrowserWindow.fromWebContents(e.sender)!
       const res = await dialog.showSaveDialog(win, { defaultPath: `${name || 'Sans titre'}.trame`, filters: [FILTER] })
@@ -374,7 +379,9 @@ async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ nam
 // TRAME_OPENVERSE_URL (tests de bout en bout) remplace le serveur et autorise http://127.0.0.1.
 const OPENVERSE = process.env.TRAME_OPENVERSE_URL || OPENVERSE_BASE
 const COMMONS = process.env.TRAME_COMMONS_URL || COMMONS_BASE
-const ALLOW_LOCAL = !!process.env.TRAME_OPENVERSE_URL || !!process.env.TRAME_COMMONS_URL
+const FONTS_API_URL = process.env.TRAME_FONTS_API_URL || FONTS_API
+const FONTS_CDN_URL = process.env.TRAME_FONTS_CDN_URL || FONTS_CDN
+const ALLOW_LOCAL = !!(process.env.TRAME_OPENVERSE_URL || process.env.TRAME_COMMONS_URL || process.env.TRAME_FONTS_API_URL || process.env.TRAME_FONTS_CDN_URL)
 /** délai d'une recherche : au-delà, on bascule sur la source de secours (réglable pour les tests) */
 const SEARCH_TIMEOUT = Number(process.env.TRAME_PHOTO_TIMEOUT_MS) || 10_000
 let lastPhotos = new Map<string, Photo>()
@@ -499,6 +506,114 @@ ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dat
   }
   console.error('[photos:import]', lastError.kind, lastError.detail)
   return { ok: false, error: lastError.kind, detail: lastError.detail }
+})
+
+// --- Polices en ligne (Fontsource / Google Fonts) --------------------------------------------------------------------------------
+// Même principe que les photos : réseau dans le processus principal, sur demande. Une police installée est copiée dans le dossier de
+// données (utilisable hors ligne ensuite) ; ses octets passent à l'interface en base64 pour l'affichage et l'export PDF.
+const fontsDir = (): string => join(app.getPath('userData'), 'fonts')
+const catalogFile = (): string => join(app.getPath('userData'), 'fonts-catalog.json')
+let catalogMemo: CatalogFont[] | null = null
+
+async function loadCatalog(): Promise<{ fonts: CatalogFont[]; stale: boolean }> {
+  if (catalogMemo) return { fonts: catalogMemo, stale: false }
+  try {
+    const res = await download(`${FONTS_API_URL.replace(/\/+$/, '')}/v1/fonts`, 8_000_000, 'application/json', 20_000)
+    const fonts = parseCatalog(JSON.parse(res.bytes.toString('utf-8')))
+    if (fonts.length === 0) throw new NetworkError('unavailable', 'catalogue vide ou illisible')
+    catalogMemo = fonts
+    await writeFile(catalogFile(), JSON.stringify(fonts), 'utf-8').catch(() => {}) // copie pour le mode hors ligne
+    return { fonts, stale: false }
+  } catch (err) {
+    const cached = parseCatalog(JSON.parse(await readFile(catalogFile(), 'utf-8').catch(() => 'null')) as unknown)
+    if (cached.length) return { fonts: cached, stale: true }
+    throw err
+  }
+}
+
+/** Les polices installées (dossier de données), avec leurs octets en base64. */
+async function readInstalledFont(id: string): Promise<InstalledFont | null> {
+  try {
+    const dir = join(fontsDir(), id)
+    const meta = JSON.parse(await readFile(join(dir, 'meta.json'), 'utf-8')) as { name?: unknown; category?: unknown; license?: unknown }
+    if (typeof meta.name !== 'string' || typeof meta.category !== 'string') return null
+    const data: Record<string, string> = {}
+    for (const v of ALL_VARIANTS) {
+      const bytes = await readFile(join(dir, `${v}.woff2`)).catch(() => null)
+      if (bytes && isWoff2(bytes)) data[v] = bytes.toString('base64')
+    }
+    if (!data['400']) return null
+    return { id, name: meta.name, family: cssFamily(meta.name, meta.category), category: meta.category, license: typeof meta.license === 'string' ? meta.license : '', variants: Object.keys(data), data }
+  } catch {
+    return null
+  }
+}
+
+async function downloadVariant(id: string, v: FontVariant): Promise<Buffer> {
+  const res = await download(fontFileUrl(FONTS_CDN_URL, id, v), MAX_FONT_BYTES, 'font/woff2,*/*', 20_000)
+  if (!isWoff2(res.bytes)) throw new NetworkError('unavailable', `fichier de police invalide (${v})`)
+  return res.bytes
+}
+
+type FontsFailure = { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail: string }
+const fontsFailure = (err: unknown): FontsFailure => {
+  const e = err instanceof NetworkError ? err : new NetworkError('unavailable', String(err))
+  console.error('[fonts]', e.kind, e.detail)
+  return { ok: false, error: e.kind, detail: e.detail }
+}
+
+ipcMain.handle('fonts:catalog', async () => {
+  try {
+    return { ok: true as const, ...(await loadCatalog()) }
+  } catch (err) {
+    return fontsFailure(err)
+  }
+})
+
+ipcMain.handle('fonts:installed', async (): Promise<InstalledFont[]> => {
+  const ids = await readdir(fontsDir()).catch(() => [] as string[])
+  const out: InstalledFont[] = []
+  for (const id of ids) if (isSafeId(id)) {
+    const f = await readInstalledFont(id)
+    if (f) out.push(f)
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name))
+})
+
+ipcMain.handle('fonts:install', async (_e, id: unknown) => {
+  try {
+    if (!isSafeId(id)) throw new NetworkError('unavailable', 'identifiant de police invalide')
+    const font = (await loadCatalog()).fonts.find((f) => f.id === id)
+    if (!font) throw new NetworkError('unavailable', 'police absente du catalogue')
+    const files = await Promise.all(font.variants.map(async (v) => [v, await downloadVariant(id, v).catch((e) => (v === '400' ? Promise.reject(e) : null))] as const))
+    const dir = join(fontsDir(), id)
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'meta.json'), JSON.stringify({ id, name: font.name, category: font.category, license: font.license }), 'utf-8')
+    for (const [v, bytes] of files) if (bytes) await writeFile(join(dir, `${v}.woff2`), bytes)
+    const installed = await readInstalledFont(id)
+    if (!installed) throw new NetworkError('unavailable', "la police n'a pas pu être enregistrée")
+    return { ok: true as const, font: installed }
+  } catch (err) {
+    return fontsFailure(err)
+  }
+})
+
+/** Aperçu avant installation : la graisse normale seule, jamais enregistrée. */
+ipcMain.handle('fonts:preview', async (_e, id: unknown) => {
+  try {
+    if (!isSafeId(id)) throw new NetworkError('unavailable', 'identifiant de police invalide')
+    const font = (await loadCatalog()).fonts.find((f) => f.id === id)
+    if (!font) throw new NetworkError('unavailable', 'police absente du catalogue')
+    return { ok: true as const, name: font.name, data: (await downloadVariant(id, '400')).toString('base64') }
+  } catch (err) {
+    return fontsFailure(err)
+  }
+})
+
+ipcMain.handle('fonts:remove', async (_e, id: unknown) => {
+  if (!isSafeId(id)) return false
+  await rm(join(fontsDir(), id), { recursive: true, force: true })
+  return true
 })
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))

@@ -2,7 +2,7 @@
  * Un texte peut-il être écrit en vrai texte dans le PDF ? Une seule définition, partagée par l'export (qui en tire le repli en
  * image) et par l'éditeur (qui prévient en direct) : ils ne peuvent donc pas se contredire.
  */
-import { FONTS } from '@/fonts'
+import { FONTS, allFonts } from '@/fonts'
 import type { FontkitFont } from '@/fontkit'
 import { diagnoseFont, type FontChoice } from '@/pdfFonts'
 import type { PdfFallback } from '@/pdfFallbacks'
@@ -47,7 +47,7 @@ export function suggestFix(el: TrameElement, issue: TextIssue): { patch: Partial
     return { patch: { fontFamily: target.family }, label: `Utiliser ${target.name}` }
   }
   if (issue.reason === 'missing-variant') {
-    const def = FONTS.find((f) => f.name === issue.family)
+    const def = allFonts().find((f) => f.name === issue.family)
     if (!def) return null
     const bold = (el.fontStyle ?? '').includes('bold')
     const italic = (el.fontStyle ?? '').includes('italic')

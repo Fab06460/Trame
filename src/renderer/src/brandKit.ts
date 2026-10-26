@@ -1,5 +1,3 @@
-import { FONTS } from '@/fonts'
-
 export const MAX_COLORS = 24
 export const MAX_FONTS = 8
 export const MAX_LOGOS = 12
@@ -19,6 +17,9 @@ export interface BrandKit {
   fonts: string[]
   logos: BrandLogo[]
 }
+
+/** Famille CSS telle que stockée dans les éléments : `"Nom", serif`. La police n'a pas besoin d'être présente sur ce poste (une police en ligne peut avoir été retirée). */
+export const isFontFamily = (f: unknown): f is string => typeof f === 'string' && /^"[^"\\<>]{1,60}", [a-z-]+$/.test(f)
 
 export const emptyKit = (): BrandKit => ({ colors: [], fonts: [], logos: [] })
 
@@ -43,8 +44,7 @@ export function parseBrandKit(raw: string | null | undefined): BrandKit {
   try {
     const data = JSON.parse(raw ?? '') as Partial<Record<keyof BrandKit, unknown>>
     const colors = Array.isArray(data.colors) ? data.colors.map(normalizeColor).filter((c): c is string => !!c) : []
-    const families = new Set(FONTS.map((f) => f.family))
-    const fonts = Array.isArray(data.fonts) ? data.fonts.filter((f): f is string => typeof f === 'string' && families.has(f)) : []
+    const fonts = Array.isArray(data.fonts) ? data.fonts.filter(isFontFamily) : []
     const logos = Array.isArray(data.logos) ? data.logos.filter(isLogo).map((l) => ({ id: l.id, name: l.name.slice(0, 60), src: l.src })) : []
     return { colors: unique(colors).slice(0, MAX_COLORS), fonts: unique(fonts).slice(0, MAX_FONTS), logos: logos.slice(0, MAX_LOGOS) }
   } catch {
@@ -61,7 +61,7 @@ export function addColor(kit: BrandKit, color: string): BrandKit {
 export const removeColor = (kit: BrandKit, color: string): BrandKit => ({ ...kit, colors: kit.colors.filter((c) => c !== color) })
 
 export function addFont(kit: BrandKit, family: string): BrandKit {
-  if (kit.fonts.includes(family) || kit.fonts.length >= MAX_FONTS || !FONTS.some((f) => f.family === family)) return kit
+  if (kit.fonts.includes(family) || kit.fonts.length >= MAX_FONTS || !isFontFamily(family)) return kit
   return { ...kit, fonts: [...kit.fonts, family] }
 }
 export const removeFont = (kit: BrandKit, family: string): BrandKit => ({ ...kit, fonts: kit.fonts.filter((f) => f !== family) })

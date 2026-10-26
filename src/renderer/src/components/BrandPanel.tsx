@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FONTS } from '@/fonts'
+import { allFonts, FONTS } from '@/fonts'
+import { useFonts } from '@/store/fonts'
 import { MAX_COLORS, MAX_FONTS, MAX_LOGOS } from '@/brandKit'
 import { applyColor, applyFont, pickScreenColor, placeLogo } from '@/brandActions'
 import { fontName, useBrand } from '@/store/brand'
@@ -20,6 +21,7 @@ function Swatch({ color, kind, onRemove }: { color: string; kind: 'brand' | 'rec
 
 /** Kit de marque : couleurs, polices et logos réutilisables d'un document à l'autre, plus les couleurs récemment utilisées. */
 export function BrandPanel(): React.JSX.Element {
+  useFonts((s) => s.version)
   const kit = useBrand((s) => s.kit)
   const recent = useBrand((s) => s.recent)
   const brand = useBrand.getState()
@@ -92,7 +94,7 @@ export function BrandPanel(): React.JSX.Element {
         </div>
         <div className="row">
           <select value={family} onChange={(e) => setFamily(e.target.value)} aria-label="Police à ajouter" data-field="brandFontSelect">
-            {FONTS.map((f) => (
+            {allFonts().map((f) => (
               <option key={f.name} value={f.family}>
                 {f.name}
               </option>
@@ -102,6 +104,9 @@ export function BrandPanel(): React.JSX.Element {
             Ajouter
           </button>
         </div>
+        <button data-action="brand-more-fonts" onClick={() => useFonts.getState().setDialog(true)}>
+          Plus de polices en ligne…
+        </button>
       </section>
 
       <section>

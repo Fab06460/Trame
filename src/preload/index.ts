@@ -33,6 +33,12 @@ const api = {
   searchPhotos: (query: string, page: number, source: PhotoSourceChoice = 'auto'): Promise<PhotoSearchResult> => ipcRenderer.invoke('photos:search', query, page, source),
   /** Télécharge la photo choisie (par son identifiant dans la dernière recherche). */
   importPhoto: (id: string): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: PhotoError; detail?: string }> => ipcRenderer.invoke('photos:import', id),
+  /** Polices en ligne (catalogue Fontsource), installées dans le dossier de données de l'application. */
+  fontCatalog: (): Promise<{ ok: true; fonts: CatalogFont[]; stale: boolean } | FontsFailure> => ipcRenderer.invoke('fonts:catalog'),
+  installedFonts: (): Promise<InstalledFont[]> => ipcRenderer.invoke('fonts:installed'),
+  installFont: (id: string): Promise<{ ok: true; font: InstalledFont } | FontsFailure> => ipcRenderer.invoke('fonts:install', id),
+  previewFont: (id: string): Promise<{ ok: true; name: string; data: string } | FontsFailure> => ipcRenderer.invoke('fonts:preview', id),
+  removeFont: (id: string): Promise<boolean> => ipcRenderer.invoke('fonts:remove', id),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
@@ -93,6 +99,27 @@ const api = {
 }
 
 contextBridge.exposeInMainWorld('trame', api)
+
+export interface CatalogFont {
+  id: string
+  name: string
+  category: string
+  license: string
+  variants: string[]
+}
+export interface InstalledFont {
+  id: string
+  name: string
+  /** famille CSS stockée dans les éléments (`"Nom", serif`) */
+  family: string
+  category: string
+  license: string
+  /** `400`, `700`, `400-italic`, `700-italic` (celles qui ont été téléchargées) */
+  variants: string[]
+  /** fichiers WOFF2 en base64, par variante */
+  data: Record<string, string>
+}
+export type FontsFailure = { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail: string }
 
 export type PhotoSourceChoice = 'auto' | 'openverse' | 'commons'
 export type PhotoError = 'offline' | 'rate-limit' | 'unavailable'
