@@ -30,7 +30,7 @@ const api = {
     ipcRenderer.invoke('project:open'),
   pickPdf: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pdf:pick'),
   /** Recherche de photos libres (en ligne, via le processus principal). */
-  searchPhotos: (query: string, page: number): Promise<PhotoSearchResult> => ipcRenderer.invoke('photos:search', query, page),
+  searchPhotos: (query: string, page: number, source: PhotoSourceChoice = 'auto'): Promise<PhotoSearchResult> => ipcRenderer.invoke('photos:search', query, page, source),
   /** Télécharge la photo choisie (par son identifiant dans la dernière recherche). */
   importPhoto: (id: string): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: PhotoError; detail?: string }> => ipcRenderer.invoke('photos:import', id),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
@@ -94,6 +94,7 @@ const api = {
 
 contextBridge.exposeInMainWorld('trame', api)
 
+export type PhotoSourceChoice = 'auto' | 'openverse' | 'commons'
 export type PhotoError = 'offline' | 'rate-limit' | 'unavailable'
 export interface PhotoView {
   id: string
@@ -106,6 +107,6 @@ export interface PhotoView {
   /** miniature (data URL) */
   thumb: string
 }
-export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number } | { ok: false; error: PhotoError; detail?: string }
+export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number; source: 'openverse' | 'commons'; fallback: boolean } | { ok: false; error: PhotoError; detail?: string }
 
 export type TrameApi = typeof api

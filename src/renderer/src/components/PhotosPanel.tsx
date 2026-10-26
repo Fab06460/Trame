@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PhotoError, PhotoView } from '../../../preload'
+import type { PhotoError, PhotoSourceChoice, PhotoView } from '../../../preload'
 import { insertImage } from '@/clipboardActions'
 import { documentCredits, downscaleImage } from '@/photoImport'
 import { useEditor } from '@/store/editor'
@@ -20,6 +20,9 @@ export function PhotosPanel(): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<PhotoError | null>(null)
   const [detail, setDetail] = useState('')
+  const [choice, setChoice] = useState<PhotoSourceChoice>('auto')
+  /** source qui a réellement répondu (les pages suivantes restent sur elle) et si c'est un repli */
+  const [used, setUsed] = useState<{ source: 'openverse' | 'commons'; fallback: boolean } | null>(null)
   const [importing, setImporting] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const doc = useEditor((s) => s.doc)
@@ -30,13 +33,14 @@ export function PhotosPanel(): React.JSX.Element {
     setBusy(true)
     setError(null)
     setDetail('')
-    const res = await window.trame.searchPhotos(q, p)
+    const res = await window.trame.searchPhotos(q, p, p > 1 && used ? used.source : choice)
     setBusy(false)
     if (!res.ok) {
       setDetail(res.detail ?? '')
       return setError(res.error)
     }
     setAsked(q)
+    setUsed({ source: res.source, fallback: res.fallback })
     setPage(res.page)
     setPageCount(res.pageCount)
     setPhotos((prev) => (p === 1 ? res.photos : [...prev, ...res.photos.filter((n) => !prev.some((o) => o.id === n.id))]))
@@ -86,8 +90,16 @@ export function PhotosPanel(): React.JSX.Element {
             {busy && page === 1 ? '…' : 'Chercher'}
           </button>
         </form>
+        <label className="row">
+          <span>Source</span>
+          <select data-field="photoSource" value={choice} onChange={(e) => setChoice(e.target.value as PhotoSourceChoice)}>
+            <option value="auto">Automatique</option>
+            <option value="openverse">Openverse</option>
+            <option value="commons">Wikimedia Commons</option>
+          </select>
+        </label>
         <p className="hint">
-          Recherche en ligne via Openverse (openverse.org) : votre requête est envoyée à ce service, et à lui seul. Photos réutilisables, y compris à titre commercial. La photo choisie est copiée dans le document, qui reste utilisable hors ligne.
+          Recherche en ligne : votre requête est envoyée à Openverse (openverse.org) et, si celui-ci ne répond pas, à Wikimedia Commons (commons.wikimedia.org), et à eux seuls. Photos réutilisables, y compris à titre commercial. La photo choisie est copiée dans le document, qui reste utilisable hors ligne.
         </p>
         {error && (
           <div className="warn" role="status" data-photo-error={error}>
@@ -100,6 +112,12 @@ export function PhotosPanel(): React.JSX.Element {
       {photos.length > 0 && (
         <section>
           <h3>Résultats pour « {asked} »</h3>
+          {used && (
+            <p className="hint" data-photo-source={used.source}>
+              Source : {used.source === 'openverse' ? 'Openverse' : 'Wikimedia Commons'}
+              {used.fallback ? ' (Openverse ne répond pas pour le moment)' : ''}
+            </p>
+          )}
           <div className="grid photos">
             {photos.map((p) => (
               <button

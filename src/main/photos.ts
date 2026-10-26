@@ -8,8 +8,11 @@ export const MAX_QUERY = 100
 export const MAX_IMAGE_BYTES = 30_000_000
 export const MAX_THUMB_BYTES = 2_000_000
 
+export type PhotoSource = 'openverse' | 'commons'
+
 export interface Photo {
   id: string
+  source: PhotoSource
   title: string
   creator: string
   /** « CC BY 4.0 », « CC0 1.0 », « Domaine public »… */
@@ -89,7 +92,7 @@ export function parseSearch(json: unknown, allowLocal = false): { photos: Photo[
     if (!id || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal) || !isReusable(x.license)) continue
     const license = licenseLabel(x.license, x.license_version)
     const base = { title: str(x.title, 120), creator: str(x.creator, 120), license, landingUrl: isAllowedUrl(str(x.foreign_landing_url, 2000), allowLocal) ? str(x.foreign_landing_url, 2000) : '' }
-    photos.push({ id, ...base, licenseUrl: isAllowedUrl(str(x.license_url, 2000), allowLocal) ? str(x.license_url, 2000) : '', url, thumbnailUrl, width: posInt(x.width), height: posInt(x.height), credit: creditOf(base) })
+    photos.push({ id, source: 'openverse', ...base, licenseUrl: isAllowedUrl(str(x.license_url, 2000), allowLocal) ? str(x.license_url, 2000) : '', url, thumbnailUrl, width: posInt(x.width), height: posInt(x.height), credit: creditOf(base) })
   }
   return { photos, page: posInt(o.page) || 1, pageCount: posInt(o.page_count) || 1 }
 }
@@ -98,4 +101,67 @@ export function parseSearch(json: unknown, allowLocal = false): { photos: Photo[
 export function imageMime(contentType: string | null): 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null {
   const t = (contentType ?? '').split(';')[0].trim().toLowerCase()
   return t === 'image/jpeg' || t === 'image/png' || t === 'image/webp' || t === 'image/gif' ? t : t === 'image/jpg' ? 'image/jpeg' : null
+}
+
+// --- Wikimedia Commons (source de secours) ---------------------------------------------------------------------------------------
+export const COMMONS_BASE = 'https://commons.wikimedia.org'
+
+/**
+ * Recherche de fichiers image (espace de noms 6) avec leurs métadonnées de licence et une miniature de 400 px.
+ * `filetype:bitmap` écarte SVG, PDF et vidéos ; 20 résultats par page, la suivante par décalage.
+ */
+export function commonsUrl(base: string, query: string, page: number): string {
+  const p = Math.max(1, Math.floor(page))
+  const q = new URLSearchParams({
+    action: 'query', format: 'json', generator: 'search', gsrnamespace: '6', gsrsearch: `${query.trim().slice(0, MAX_QUERY)} filetype:bitmap`,
+    gsrlimit: String(PAGE_SIZE), gsroffset: String((p - 1) * PAGE_SIZE), prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '400',
+    iiextmetadatafilter: 'LicenseShortName|Artist|ObjectName|LicenseUrl'
+  })
+  return `${base.replace(/\/+$/, '')}/w/api.php?${q}`
+}
+
+/** Texte brut d'un champ HTML des métadonnées (balises retirées, entités courantes décodées). */
+export function stripHtml(html: unknown, max = 200): string {
+  if (typeof html !== 'string') return ''
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0*39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
+/** Libellé d'une licence de Commons si elle autorise l'usage commercial ET la modification (CC BY, CC BY-SA, CC0, domaine public), sinon null. */
+export function commonsLicense(short: unknown): string | null {
+  const s = typeof short === 'string' ? short.trim() : ''
+  if (/^CC BY(-SA)? \d/i.test(s)) return s.replace(/\s+/g, ' ').toUpperCase().replace(/^CC BY-SA/, 'CC BY-SA')
+  if (/^CC0/i.test(s)) return 'CC0 1.0'
+  if (/^(public domain|PD\b|PDM)/i.test(s)) return 'Domaine public'
+  return null
+}
+
+const COMMONS_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+
+/** Lecture tolérante d'une réponse de Commons ; une entrée sans licence réutilisable, sans type d'image ou sans adresse https est ignorée. */
+export function parseCommons(json: unknown, page: number, allowLocal = false): { photos: Photo[]; page: number; pageCount: number } {
+  const o = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>
+  const query = (o.query && typeof o.query === 'object' ? o.query : {}) as Record<string, unknown>
+  const pages = Object.values((query.pages && typeof query.pages === 'object' ? query.pages : {}) as Record<string, unknown>)
+  const ranked = pages.map((p) => (p && typeof p === 'object' ? p : {}) as Record<string, unknown>).sort((a, b) => (Number(a.index) || 0) - (Number(b.index) || 0))
+  const photos: Photo[] = []
+  for (const p of ranked) {
+    const info = (Array.isArray(p.imageinfo) && p.imageinfo[0] && typeof p.imageinfo[0] === 'object' ? p.imageinfo[0] : {}) as Record<string, unknown>
+    const meta = (info.extmetadata && typeof info.extmetadata === 'object' ? info.extmetadata : {}) as Record<string, { value?: unknown }>
+    const license = commonsLicense(meta.LicenseShortName?.value)
+    const url = str(info.url, 2000)
+    const thumbnailUrl = str(info.thumburl, 2000) || url
+    const pageId = typeof p.pageid === 'number' ? p.pageid : 0
+    if (!license || !pageId || !COMMONS_MIME.has(str(info.mime, 40)) || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal)) continue
+    const title = stripHtml(meta.ObjectName?.value, 120) || str(p.title, 200).replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, '')
+    const landing = str(info.descriptionurl, 2000)
+    const base = { title, creator: stripHtml(meta.Artist?.value, 120), license, landingUrl: isAllowedUrl(landing, allowLocal) ? landing : '' }
+    const licenseUrl = str(meta.LicenseUrl?.value, 2000)
+    photos.push({ id: `commons:${pageId}`, source: 'commons', ...base, licenseUrl: isAllowedUrl(licenseUrl, allowLocal) ? licenseUrl : '', url, thumbnailUrl, width: posInt(info.width), height: posInt(info.height), credit: creditOf(base) })
+  }
+  // la page suivante existe si l'API propose une suite
+  const more = !!(o.continue && typeof o.continue === 'object')
+  return { photos, page, pageCount: more ? page + 1 : page }
 }

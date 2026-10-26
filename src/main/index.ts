@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import { homedir } from 'os'
 import { basename, dirname } from 'path'
 import type { PhotoSearchResult } from '../preload'
-import { MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, imageMime, isAllowedUrl, parseSearch, searchUrl, type Photo } from './photos'
+import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { createFileInbox } from './fileInbox'
 import {
@@ -373,7 +373,10 @@ async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ nam
 // images déjà téléchargées (data URL) et ne peut jamais faire télécharger une adresse de son choix (seules celles d'une recherche).
 // TRAME_OPENVERSE_URL (tests de bout en bout) remplace le serveur et autorise http://127.0.0.1.
 const OPENVERSE = process.env.TRAME_OPENVERSE_URL || OPENVERSE_BASE
-const ALLOW_LOCAL = !!process.env.TRAME_OPENVERSE_URL
+const COMMONS = process.env.TRAME_COMMONS_URL || COMMONS_BASE
+const ALLOW_LOCAL = !!process.env.TRAME_OPENVERSE_URL || !!process.env.TRAME_COMMONS_URL
+/** délai d'une recherche : au-delà, on bascule sur la source de secours (réglable pour les tests) */
+const SEARCH_TIMEOUT = Number(process.env.TRAME_PHOTO_TIMEOUT_MS) || 10_000
 let lastPhotos = new Map<string, Photo>()
 
 class NetworkError extends Error {
@@ -386,13 +389,13 @@ class NetworkError extends Error {
   }
 }
 
-async function download(url: string, maxBytes: number, accept: string): Promise<{ bytes: Buffer; contentType: string | null }> {
+async function download(url: string, maxBytes: number, accept: string, timeoutMs = 20_000): Promise<{ bytes: Buffer; contentType: string | null }> {
   if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `adresse refusée : ${url.slice(0, 120)}`)
   let res: Response
   try {
     // net.fetch (pile réseau de Chromium) plutôt que le fetch de Node : le service est derrière Cloudflare, qui bloque (HTTP 403) les
     // requêtes dont l'empreinte TLS n'est pas celle d'un navigateur ; elle suit aussi le proxy du système
-    res = await net.fetch(url, { signal: AbortSignal.timeout(20_000), headers: { 'User-Agent': `Trame/${app.getVersion()} (+desktop visual editor)`, Accept: accept } })
+    res = await net.fetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: { 'User-Agent': `Trame/${app.getVersion()} (+desktop visual editor)`, Accept: accept } })
   } catch (err) {
     const cause = (err as { cause?: { code?: string; message?: string } }).cause
     throw new NetworkError('offline', `${(err as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ''}`) // pas de réseau, DNS, délai dépassé
@@ -413,46 +416,72 @@ const asDataUrl = (d: { bytes: Buffer; contentType: string | null }): string | n
 }
 
 
-ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown): Promise<PhotoSearchResult> => {
-  if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1 }
+/** Recherche chez Openverse (filtre de licences du service, puis requête minimale si le service le refuse ou plante). */
+async function searchOpenverse(query: string, page: number): Promise<ReturnType<typeof parseSearch>> {
+  const res = await download(searchUrl(OPENVERSE, query, page, true), 2_000_000, 'application/json', SEARCH_TIMEOUT).catch(async (err) => {
+    if (err instanceof NetworkError && err.kind === 'unavailable' && /^HTTP (400|5\d\d)/.test(err.detail)) return download(searchUrl(OPENVERSE, query, page, false), 2_000_000, 'application/json', SEARCH_TIMEOUT)
+    throw err
+  })
+  return parseSearch(readJson(res), ALLOW_LOCAL)
+}
+
+async function searchCommons(query: string, page: number): Promise<ReturnType<typeof parseCommons>> {
+  const res = await download(commonsUrl(COMMONS, query, page), 2_000_000, 'application/json', SEARCH_TIMEOUT)
+  return parseCommons(readJson(res), page, ALLOW_LOCAL)
+}
+
+function readJson(res: { bytes: Buffer; contentType: string | null }): unknown {
   try {
-    const pageNo = typeof page === 'number' ? page : 1
-    // d'abord avec le filtre de licences du service ; s'il le refuse ou plante (400, 5xx), requête minimale et tri ici
-    const res = await download(searchUrl(OPENVERSE, query, pageNo, true), 2_000_000, 'application/json').catch(async (err) => {
-      if (err instanceof NetworkError && err.kind === 'unavailable' && /^HTTP (400|5\d\d)/.test(err.detail)) return download(searchUrl(OPENVERSE, query, pageNo, false), 2_000_000, 'application/json')
-      throw err
-    })
-    let json: unknown
-    try {
-      json = JSON.parse(res.bytes.toString('utf-8'))
-    } catch {
-      throw new NetworkError('unavailable', `réponse illisible (type ${res.contentType ?? 'inconnu'}) : ${res.bytes.toString('utf-8').replace(/\s+/g, ' ').slice(0, 150)}`)
-    }
-    const found = parseSearch(json, ALLOW_LOCAL)
-    // miniatures téléchargées ici (6 à la fois) : l'interface ne contacte jamais le site de l'image
-    const photos: Extract<PhotoSearchResult, { ok: true }>['photos'] = []
-    const queue = [...found.photos]
-    await Promise.all(
-      Array.from({ length: 6 }, async () => {
-        for (let p = queue.shift(); p; p = queue.shift()) {
-          try {
-            const thumb = asDataUrl(await download(p.thumbnailUrl, MAX_THUMB_BYTES, 'image/*'))
-            if (thumb) photos.push({ id: p.id, title: p.title, creator: p.creator, license: p.license, credit: p.credit, width: p.width, height: p.height, thumb })
-          } catch {
-            /* une miniature indisponible : la photo est simplement absente de la liste */
-          }
-        }
-      })
-    )
-    const order = new Map(found.photos.map((p, i) => [p.id, i]))
-    photos.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-    lastPhotos = new Map(found.photos.map((p) => [p.id, p]))
-    return { ok: true, photos, page: found.page, pageCount: found.pageCount }
-  } catch (err) {
-    const e = err instanceof NetworkError ? err : new NetworkError('unavailable', String(err))
-    console.error('[photos:search]', e.kind, e.detail)
-    return { ok: false, error: e.kind, detail: e.detail }
+    return JSON.parse(res.bytes.toString('utf-8'))
+  } catch {
+    throw new NetworkError('unavailable', `réponse illisible (type ${res.contentType ?? 'inconnu'}) : ${res.bytes.toString('utf-8').replace(/\s+/g, ' ').slice(0, 150)}`)
   }
+}
+
+/** Miniatures téléchargées ici (6 à la fois) : l'interface ne contacte jamais le site d'une image. Une miniature indisponible retire la photo de la liste. */
+async function withThumbnails(found: Photo[]): Promise<Extract<PhotoSearchResult, { ok: true }>['photos']> {
+  const photos: Extract<PhotoSearchResult, { ok: true }>['photos'] = []
+  const queue = [...found]
+  await Promise.all(
+    Array.from({ length: 6 }, async () => {
+      for (let p = queue.shift(); p; p = queue.shift()) {
+        try {
+          const thumb = asDataUrl(await download(p.thumbnailUrl, MAX_THUMB_BYTES, 'image/*'))
+          if (thumb) photos.push({ id: p.id, title: p.title, creator: p.creator, license: p.license, credit: p.credit, width: p.width, height: p.height, thumb })
+        } catch {
+          /* ignorée */
+        }
+      }
+    })
+  )
+  const order = new Map(found.map((p, i) => [p.id, i]))
+  return photos.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+}
+
+/**
+ * Openverse est la source principale ; Wikimedia Commons prend le relais (source « auto ») quand Openverse est lent, en panne ou limite
+ * les requêtes — le service principal a connu des pannes (HTTP 500, délais dépassés). Une recherche sans résultat n'est PAS une panne.
+ */
+ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown, source: unknown): Promise<PhotoSearchResult> => {
+  if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1, source: 'openverse', fallback: false }
+  const pageNo = typeof page === 'number' ? page : 1
+  const wanted: PhotoSource[] = source === 'openverse' ? ['openverse'] : source === 'commons' ? ['commons'] : ['openverse', 'commons']
+  const failures: string[] = []
+  let firstError: NetworkError | null = null
+  for (const s of wanted) {
+    try {
+      const found = s === 'openverse' ? await searchOpenverse(query, pageNo) : await searchCommons(query, pageNo)
+      const photos = await withThumbnails(found.photos)
+      lastPhotos = new Map([...lastPhotos, ...found.photos.map((p): [string, Photo] => [p.id, p])])
+      return { ok: true, photos, page: found.page, pageCount: found.pageCount, source: s, fallback: s !== wanted[0] }
+    } catch (err) {
+      const e = err instanceof NetworkError ? err : new NetworkError('unavailable', String(err))
+      console.error(`[photos:search:${s}]`, e.kind, e.detail)
+      failures.push(`${s === 'openverse' ? 'Openverse' : 'Wikimedia Commons'} : ${e.detail || e.kind}`)
+      firstError ??= e
+    }
+  }
+  return { ok: false, error: firstError!.kind, detail: failures.join(' · ') }
 })
 
 /** Télécharge la photo choisie (l'original, sinon la miniature de l'API) : retourne une data URL, copiée ensuite dans le document. */

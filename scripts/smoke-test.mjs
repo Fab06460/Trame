@@ -80,6 +80,8 @@ const photoServer = createServer((req, res) => {
   const png = (w, h) => { res.writeHead(200, { 'content-type': 'image/png' }); res.end(testPng(w, h)) }
   if (url.pathname === '/v1/images/') {
     const q = url.searchParams.get('q'), page = url.searchParams.get('page')
+    if (q === 'lent') return // ne répond jamais : le délai de la recherche expire
+    if (q === 'toutpanne') { res.writeHead(500); return res.end('Server Error') }
     if (q === 'limite') { res.writeHead(429); return res.end('{}') }
     if (q === 'planteur' && url.searchParams.has('license_type')) { res.writeHead(500, { 'content-type': 'text/html' }); return res.end('<h1>Server Error (500)</h1>') }
     if (q === 'refus') { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"detail":"Accès refusé pour test"}') }
@@ -94,12 +96,22 @@ const photoServer = createServer((req, res) => {
         ]
     return res.end(JSON.stringify({ result_count: 3, page_count: 2, page_size: 2, page: Number(page), results }))
   }
+  if (url.pathname === '/w/api.php') {
+    const q = (url.searchParams.get('gsrsearch') ?? '').replace(' filetype:bitmap', '')
+    if (q === 'limite') { res.writeHead(429); return res.end('{}') }
+    if (q === 'refus') { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"detail":"Accès refusé pour test"}') }
+    if (q === 'horsligne') return req.socket.destroy()
+    if (q === 'toutpanne') { res.writeHead(500); return res.end('Server Error') }
+    const page = (id, index, title, lic) => ({ pageid: id, title: `File:${title}.png`, index, imageinfo: [{ url: `${base}/img/a.png`, thumburl: `${base}/thumb/a.png`, width: 800, height: 400, mime: 'image/png', descriptionurl: `${base}/wiki/${id}`, extmetadata: { ObjectName: { value: title }, Artist: { value: '<a href="x">Cléo &amp; Co</a>' }, LicenseShortName: { value: lic } } }] })
+    res.writeHead(200, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify({ query: { pages: { 11: page(11, 2, 'Deuxième', 'CC BY-SA 4.0'), 10: page(10, 1, 'Premier', 'CC0'), 12: page(12, 3, 'Interdit', 'CC BY-NC 4.0') } } }))
+  }
   if (url.pathname === '/img/a.png') return png(800, 400)
   if (url.pathname === '/thumb/a.png') return png(80, 40)
   res.writeHead(404); res.end()
 })
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
-const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}` }
+const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500' }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
@@ -1021,8 +1033,27 @@ try {
   await search('limite')
   for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) === 0; i++) await sleep(250)
   check('limite de requêtes (429) : message dédié', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'rate-limit')
+  // source de secours : Openverse ne répond pas (délai) → Wikimedia Commons, licences non réutilisables écartées
+  await search('lent')
+  for (let i = 0; i < 80 && (await nBrand('[data-photo]')) !== 2; i++) await sleep(250)
+  check('Openverse muet : la recherche bascule sur Wikimedia Commons et le dit', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo-source]')?.innerText ?? ''`)).includes('Wikimedia Commons (Openverse ne répond pas'))
+  check('Commons : ordre de pertinence, licences affichées, CC BY-NC écartée', (await run(`[...document.querySelectorAll('[data-photo] .photo-license')].map(e => e.innerText).join()`)) === 'CC0 1.0,CC BY-SA 4.0')
+  check('les deux sources ont été interrogées, Commons avec le filtre « bitmap »', photoRequests.some((r) => r.path === '/v1/images/' && r.query.get('q') === 'lent') && photoRequests.some((r) => r.path === '/w/api.php' && r.query.get('gsrsearch') === 'lent filetype:bitmap'))
+  await clickSel('[data-photo="commons:10"]')
+  let commonsCredit = ''
+  for (let i = 0; i < 60 && !commonsCredit; i++) { await sleep(250); commonsCredit = await run(`document.querySelector('.panel [data-field="credit"]')?.innerText ?? ''`) }
+  check('photo de Commons insérée avec son crédit (auteur sans HTML, licence)', commonsCredit.includes('« Premier » par Cléo & Co (CC0 1.0)'), commonsCredit)
+  await run(`(() => { const s = document.querySelector('[data-field="photoSource"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'commons'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await search('montagne')
+  for (let i = 0; i < 60 && (await run(`document.querySelector('[data-photo-source]')?.innerText ?? ''`)).includes('ne répond pas'); i++) await sleep(250)
+  check('source choisie explicitement : pas de bascule annoncée', !(await run(`document.querySelector('[data-photo-source]').innerText`)).includes('ne répond pas'))
+  await run(`(() => { const s = document.querySelector('[data-field="photoSource"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'auto'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await search('toutpanne')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo-detail]')) === 0; i++) await sleep(250)
+  const bothDown = await run(`document.querySelector('[data-photo-detail]')?.innerText ?? ''`)
+  check('les deux sources en panne : le détail nomme les deux', bothDown.includes('Openverse : HTTP 500') && bothDown.includes('Wikimedia Commons : HTTP 500'), bothDown)
   await search('planteur')
-  for (let i = 0; i < 40 && (await nBrand('[data-photo]')) !== 2; i++) await sleep(250)
+  for (let i = 0; i < 40 && (await nBrand('[data-photo="a1"]')) === 0; i++) await sleep(250) // résultats de CETTE recherche (ceux de la précédente ont d'autres identifiants)
   check('filtre de licences refusé (500) : requête minimale en repli, résultats non réutilisables écartés', (await nBrand('[data-photo]')) === 2 && (await nBrand('[data-photo="nc9"]')) === 0 && photoRequests.some((r) => r.query.get('q') === 'planteur' && !r.query.has('license_type')))
   await search('refus')
   for (let i = 0; i < 40 && (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) !== 'unavailable'; i++) await sleep(250)

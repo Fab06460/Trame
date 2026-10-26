@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE, creditOf, imageMime, isAllowedUrl, isReusable, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
+import { PAGE_SIZE, commonsLicense, commonsUrl, creditOf, parseCommons, stripHtml, imageMime, isAllowedUrl, isReusable, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
 
 describe('photos', () => {
   it('adresse de recherche : usage commercial + modification, page et taille bornées', () => {
@@ -81,5 +82,60 @@ describe('photos', () => {
     expect(imageMime('image/svg+xml')).toBeNull()
     expect(imageMime('text/html')).toBeNull()
     expect(imageMime(null)).toBeNull()
+  })
+})
+
+describe('Wikimedia Commons', () => {
+  // réponse réelle de l'API (3 résultats), enregistrée le 26/10/2026
+  const sample = JSON.parse(readFileSync(new URL('./commons-sample.json', import.meta.url), 'utf-8'))
+
+  it('adresse de recherche : fichiers bitmap, 20 par page, décalage pour la suite', () => {
+    const u = new URL(commonsUrl('https://commons.wikimedia.org/', ' mountain ', 3))
+    expect(u.pathname).toBe('/w/api.php')
+    expect(u.searchParams.get('generator')).toBe('search')
+    expect(u.searchParams.get('gsrsearch')).toBe('mountain filetype:bitmap')
+    expect(u.searchParams.get('gsrnamespace')).toBe('6')
+    expect(u.searchParams.get('gsroffset')).toBe('40')
+    expect(u.searchParams.get('gsrlimit')).toBe('20')
+  })
+
+  it('lit une vraie réponse : ordre de pertinence, licence, auteur sans HTML, miniature', () => {
+    const r = parseCommons(sample, 1)
+    expect(r.photos).toHaveLength(3)
+    expect(r.photos[0].id).toBe('commons:' + sample.query.pages[Object.keys(sample.query.pages).find((k) => sample.query.pages[k].index === 1)!].pageid)
+    const p = r.photos[0]
+    expect(p).toMatchObject({ source: 'commons', license: 'CC BY 4.0', title: 'Himalayas, Ama Dablam, Nepal' })
+    expect(p.creator).not.toContain('<')
+    expect(p.thumbnailUrl).toContain('thumb.wikimedia.org')
+    expect(p.url).toContain('upload.wikimedia.org')
+    expect(p.credit).toContain('« Himalayas, Ama Dablam, Nepal »')
+    expect(p.credit).toContain('(CC BY 4.0)')
+    expect(r.pageCount).toBe(2) // la réponse propose une suite
+  })
+
+  it('licences : seules celles qui autorisent usage commercial et modification', () => {
+    expect(commonsLicense('CC BY-SA 4.0')).toBe('CC BY-SA 4.0')
+    expect(commonsLicense('CC BY 2.0')).toBe('CC BY 2.0')
+    expect(commonsLicense('CC0')).toBe('CC0 1.0')
+    expect(commonsLicense('Public domain')).toBe('Domaine public')
+    expect(commonsLicense('PD-old-70')).toBe('Domaine public')
+    for (const l of ['CC BY-NC 4.0', 'CC BY-ND 4.0', 'GFDL', 'Fair use', '', undefined]) expect(commonsLicense(l)).toBeNull()
+  })
+
+  it('écarte les entrées inutilisables', () => {
+    const page = (over: object) => ({ pageid: 1, title: 'File:x.jpg', index: 1, imageinfo: [{ url: 'https://u.test/x.jpg', thumburl: 'https://t.test/x.jpg', mime: 'image/jpeg', width: 10, height: 10, extmetadata: { LicenseShortName: { value: 'CC BY 4.0' } }, ...over }] })
+    const wrap = (p: object) => ({ query: { pages: { a: p } } })
+    expect(parseCommons(wrap(page({})), 1).photos).toHaveLength(1)
+    expect(parseCommons(wrap(page({ mime: 'image/svg+xml' })), 1).photos).toHaveLength(0)
+    expect(parseCommons(wrap(page({ extmetadata: { LicenseShortName: { value: 'CC BY-NC 4.0' } } })), 1).photos).toHaveLength(0)
+    expect(parseCommons(wrap(page({ url: 'http://pas-https.test/x.jpg' })), 1).photos).toHaveLength(0)
+    expect(parseCommons(null, 1).photos).toEqual([])
+    expect(parseCommons({ query: { pages: 4 } }, 1).photos).toEqual([])
+    expect(parseCommons({}, 1).pageCount).toBe(1)
+  })
+
+  it('texte brut des métadonnées', () => {
+    expect(stripHtml('<a href="x">Vya &amp; Co</a> &quot;ok&quot;')).toBe('Vya & Co "ok"')
+    expect(stripHtml(undefined)).toBe('')
   })
 })
