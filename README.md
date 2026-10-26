@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Import de PDF : texte reconstruit en blocs modifiables, ou pages en image à annoter
 - Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette
 - Listes à puces et numérotées (retrait des lignes suivantes, texte vectoriel dans le PDF)
 - Magic Resize : changer le format de la page en adaptant le contenu

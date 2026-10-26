@@ -345,6 +345,27 @@ ipcMain.on('app:close-confirmed', () => {
   else mainWindow?.close()
 })
 
+const MAX_PDF_BYTES = 150_000_000
+
+/** Choix d'un PDF à importer : retourne son nom (sans extension) et son contenu. */
+ipcMain.handle('pdf:pick', async (): Promise<{ name: string; bytes: Uint8Array } | null> => {
+  let path: string
+  if (TEST_EXPORT_DIR) {
+    // tests de bout en bout : le fichier pick-import.pdf du dossier de test tient lieu de choix (aucun dialogue natif)
+    path = join(TEST_EXPORT_DIR, 'pick-import.pdf')
+    if (!(await stat(path).catch(() => null))) return null
+  } else {
+    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+    if (res.canceled || !res.filePaths[0]) return null
+    path = res.filePaths[0]
+  }
+  if ((await stat(path)).size > MAX_PDF_BYTES) {
+    dialog.showErrorBox('PDF trop volumineux', 'Ce PDF dépasse 150 Mo : il ne peut pas être importé.')
+    return null
+  }
+  return { name: basename(path).replace(/\.pdf$/i, ''), bytes: new Uint8Array(await readFile(path)) }
+})
+
 ipcMain.handle('image:pick', async () => {
   // tests de bout en bout : l'image « choisie » est le fichier pick-image.png du dossier de test (aucun dialogue natif)
   if (TEST_EXPORT_DIR) {

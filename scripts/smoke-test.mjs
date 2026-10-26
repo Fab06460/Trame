@@ -11,6 +11,7 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { readdirSync } from 'node:fs'
 import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
@@ -491,11 +492,14 @@ try {
   const exportsDir = join(tmp, 'exports')
   const nThumb = () => run(`document.querySelectorAll('.page-item.current .thumb div div').length`)
   const exportPng = async () => {
-    await rm(join(exportsDir, 'Sans titre.png'), { force: true })
+    // un document de plusieurs pages exporte « <nom>-page<n>.png »
+    const names = ['Sans titre.png', 'Sans titre-page1.png']
+    for (const n of names) await rm(join(exportsDir, n), { force: true })
     await click('header.toolbar button', 'Export PNG')
-    for (let i = 0; i < 40; i++) { await sleep(250); if ((await readdir(exportsDir)).includes('Sans titre.png')) break }
+    let found
+    for (let i = 0; i < 40 && !found; i++) { await sleep(250); found = names.find((n) => readdirSync(exportsDir).includes(n)) }
     await sleep(200)
-    return readFile(join(exportsDir, 'Sans titre.png'))
+    return readFile(join(exportsDir, found ?? names[0]))
   }
   let lastPdfRaw = ''
   const exportPdfText = async () => {
@@ -791,13 +795,73 @@ try {
   await sleep(300)
   check('annuler rétablit le nom précédent', (await run(`document.querySelector('.doc-name').value`)) === 'Affiche / été')
 
+  const nBrand = (sel) => run(`document.querySelectorAll('${sel}').length`)
+  // import d'un PDF : texte reconstruit en éléments modifiables, puis mode « page en image »
+  {
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
+    const src = await PDFDocument.create()
+    const helvB = await src.embedFont(StandardFonts.HelveticaBold)
+    const times = await src.embedFont(StandardFonts.TimesRoman)
+    const p1 = src.addPage([595, 842])
+    p1.drawRectangle({ x: 0, y: 742, width: 595, height: 100, color: rgb(1, 0.85, 0.2) })
+    p1.drawText('Bonjour Trame', { x: 50, y: 780, size: 36, font: helvB, color: rgb(0.1, 0.1, 0.1) })
+    for (const [i, l] of ['Premiere ligne du paragraphe de test', 'Deuxieme ligne du meme paragraphe', 'Troisieme et derniere ligne'].entries()) p1.drawText(l, { x: 50, y: 650 - i * 18, size: 14, font: times, color: rgb(0.8, 0, 0) })
+    const p2 = src.addPage([595, 842])
+    p2.drawText('Page deux', { x: 50, y: 700, size: 30, font: helvB })
+    await writeFile(join(tmp, 'exports', 'pick-import.pdf'), await src.save())
+  }
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Importer PDF')
+  for (let i = 0; i < 40 && (await nBrand('.modal')) === 0; i++) await sleep(250)
+  check('la fenêtre d\'import s\'ouvre avec les deux modes (texte modifiable par défaut)', (await nBrand('.modal')) === 1 && (await run(`document.querySelector('[data-pdf-mode="editable"]').checked`)) === true && (await nBrand('[data-pdf-mode="image"]')) === 1)
+  await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
+  await clickSel('[data-action="pdf-import"]')
+  let importInfo = ''
+  for (let i = 0; i < 120 && !importInfo; i++) { await sleep(250); importInfo = await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '') }
+  check('un résumé annonce 2 pages et des blocs de texte modifiables', importInfo.includes('PDF importé (2 pages)') && /\d+ blocs? de texte modifiables?/.test(importInfo), importInfo)
+  check('la fenêtre se referme', (await nBrand('.modal')) === 0)
+  check('le document compte 2 pages', (await nBrand('.page-item')) === 2)
+  check('la page importée affiche le titre reconstruit', (await run(`document.querySelector('.page-item.current .thumb').innerText`)).includes('Bonjour Trame'))
+  check('le document porte le nom du fichier PDF', (await run(`document.querySelector('.doc-name').value`)) === 'pick-import')
+  // les assistants d'export de ce test cherchent « Sans titre » : on rend ce nom au document
+  await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+  await cdp('Input.insertText', { text: 'Sans titre' })
+  await run(`document.querySelector('.doc-name').blur()`)
+  await sleep(300)
+  png = await exportPng()
+  check('format du document = format du PDF (595 × 842 pt à 96 dpi : 793 × 1123)', png.readUInt32BE(16) === 793 && png.readUInt32BE(20) === 1123, `${png.readUInt32BE(16)}×${png.readUInt32BE(20)}`)
+  if (process.env.SMOKE_KEEP) await writeFile(process.env.SMOKE_KEEP, png) // inspection visuelle
+  const yellow = pngPixel(png, 100, 40)
+  check('le fond de la page (bandeau jaune) est dessiné', yellow[0] > 230 && yellow[1] > 190 && yellow[2] < 120, JSON.stringify(yellow))
+  await click('.sidebar .tabs button', 'Calques')
+  await sleep(300)
+  check('calques de la page 1 : fond verrouillé + titre + paragraphe', (await nBrand('.layer')) === 3, String(await nBrand('.layer')))
+  const importedPdf = await exportPdfText()
+  check('PDF ré-exporté : texte vectoriel (TJ) par-dessus l\'image de fond', importedPdf.includes(' TJ') && lastPdfRaw.includes('/Subtype /Image'))
+  // mode « page en image » : plus aucun texte modifiable
+  await run('location.reload()') // document propre : pas de question « enregistrer ? » (dialogue natif)
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Importer PDF')
+  for (let i = 0; i < 40 && (await nBrand('.modal')) === 0; i++) await sleep(250)
+  await click('.sidebar .tabs button', 'Calques')
+  await clickSel('[data-pdf-mode="image"]')
+  await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
+  await rm(join(tmp, 'exports', 'dialog-confirm.txt'), { force: true })
+  await clickSel('[data-action="pdf-import"]')
+  for (let i = 0; i < 120 && (await nBrand('.modal')) > 0; i++) await sleep(250)
+  await sleep(500)
+  check('mode image : la page ne contient qu\'un calque (l\'image)', (await nBrand('.layer')) === 1, String(await nBrand('.layer')))
+  check('mode image : aucun texte reconstruit', !(await run(`document.querySelector('.page-item.current .thumb').innerText`)).includes('Bonjour'))
+
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
   await sleep(500)
   await click('.sidebar .tabs button', 'Marque')
   await sleep(300)
-  const nBrand = (sel) => run(`document.querySelectorAll('${sel}').length`)
   const setInput = (sel, v) => run(`(() => { const i = document.querySelector('${sel}'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(v)}); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
   await run(`window.__keep = 1`)
   const startColors = await nBrand('[data-swatch="brand"]')

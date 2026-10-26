@@ -63,7 +63,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Éditeur PDF et documents | 🟡 Partiel | Création de PDF : fait (vectoriel, texte sélectionnable). Restent, tous faisables hors-ligne : fusion/scission/réordonnancement de pages, compression, signature visuelle, import de pages PDF comme fonds. Modifier le texte d'un PDF arbitraire est un très gros chantier peu fiable : à éviter. | D1, D2, D3, D4 |
+| Éditeur PDF et documents | 🟡 Partiel | Création de PDF : fait (vectoriel, texte sélectionnable). Restent, tous faisables hors-ligne : fusion/scission/réordonnancement de pages, compression, signature visuelle, import de pages PDF comme fonds (**fait**, D3). Modifier le texte d'un PDF arbitraire est un très gros chantier peu fiable : à éviter. | D1, D2, D3, D4 |
 | Présentations et tableurs | 🟡 Partiel | Pages 16:9 et un modèle de présentation. Manquent : mode présentation plein écran, transitions, notes de l'orateur ; graphiques et tableaux (faisables sans service externe, à partir de données collées ou d'un CSV). | D5, C7 |
 | Intégrations | ⛔ Hors-ligne impossible | Slack, Teams, YouTube, Google Photos, planificateurs : des appels réseau par définition. Équivalents hors-ligne : glisser-déposer depuis le Finder, export dans un dossier choisi, feuille de partage du système. | E7, D1 |
 | Canva Offline | ✅ Fait | Satisfait par conception : application de bureau sans compte, sans serveur, polices et ressources embarquées, CSP interdisant toute ressource externe. | — |
@@ -117,7 +117,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | --- | --- | :---: | --- | --- |
 | D1 | Export : toutes les pages en PNG/JPG (dossier ou ZIP), ×2/×3, SVG | S |  | — |
 | D2 | Outils PDF : fusionner, scinder, réordonner, extraire des pages, compresser | M | pdf-lib. | — |
-| D3 | Importer un PDF (pages comme images de fond, texte extrait) | L | Moteur de rendu PDF embarqué ; l'édition du texte d'un PDF quelconque est exclue. | D2 |
+| D3 | Importer un PDF (pages comme images de fond, texte extrait) | L | **Fait** (bouton « Importer PDF ») : deux modes, texte reconstruit ou page en image. Reste : conserver la page d'origine en vectoriel à l'export (aujourd'hui l'image de fond est rastérisée), annotation d'un PDF avec réenregistrement du même fichier. | D2 |
 | D4 | Signature : visuelle (dessinée ou importée) ; numérique certifiée en option | M | La signature numérique avec certificat est un chantier à part (L). | — |
 | D5 | Mode présentation plein écran, transitions, notes de l'orateur | L |  | — |
 
