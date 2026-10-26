@@ -30,7 +30,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Règles, repères et aimantation sont faits ; il manque : dépôt de fichiers depuis le Finder. | E7 |
 | Bibliothèque de modèles | 🟡 Partiel | 6 modèles intégrés + modèles personnels (enregistrer, renommer, masquer, remplacer). « Des millions » est impossible hors-ligne (hébergement), mais une collection embarquée plus large et des packs de modèles échangeables par fichier le sont. | C2 |
 | Bibliothèque de médias | 🟡 Partiel | 12 formes vectorielles, 10 polices embarquées, import d'images locales. Photos, vidéos, pistes audio « par millions » : impossible hors-ligne. Faisable : jeu d'icônes/illustrations à licence ouverte embarqué, polices supplémentaires, bibliothèque locale (dossier surveillé, étiquettes). | C1, C3, E12 |
-| Magic Resize | ⬜ À faire | Changer le format (`setSize`) ne redimensionne rien aujourd'hui. Algorithme déterministe, aucune IA : faisable à 100 % hors-ligne. | E10 |
+| Magic Resize | ✅ Fait | Panneau Page : préréglages ou dimensions libres, case « Adapter le contenu ». Algorithme déterministe (`magicResize.ts`), aucune IA. | E10 |
 
 ### 2. Outils de retouche photo et vidéo
 
@@ -86,7 +86,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | Équivalent hors-ligne des « intégrations » de photos. | — |
 | E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | **Fait en partie** : recadrage (en %), miroirs. Restent : poignées de recadrage sur le canvas, redressement, cadres. Rendu : pixels recadrés/retournés cuits dans un canvas partagé. | — |
 | E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | **Fait** (6 réglages + 6 préréglages), cuits dans l'image, y compris pour le PDF. | E8 |
-| E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | Mise à l'échelle proportionnelle + repositionnement ; texte redimensionné ; logique pure, très testable. | — |
+| E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | **Fait** (toutes les pages : elles partagent le format du document). Voir `docs/ARCHITECTURE.md`. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S |  | — |
 | E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | L'export PDF les intègre déjà via fontkit ; attention à l'avertissement « police inconnue » et aux licences. | — |
 | E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | **Fait.** Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |

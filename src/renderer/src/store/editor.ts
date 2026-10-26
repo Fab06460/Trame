@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
+import { adaptDocument } from '@/magicResize'
 import { cleanDocName } from '@/docName'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
@@ -149,6 +150,8 @@ interface EditorState {
   updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
   setSize: (width: number, height: number) => void
   setName: (name: string) => void
+  /** change le format ; `adapt` reporte le contenu dans le nouveau format (Magic Resize) au lieu de ne toucher qu'à la taille de la page */
+  resizeDocument: (width: number, height: number, adapt: boolean) => void
   undo: () => void
   redo: () => void
   loadDocument: (doc: TrameDocument, path?: string) => void
@@ -542,6 +545,12 @@ export const useEditor = create<EditorState>((set, get) => {
 
     setSize: (width, height) =>
       set((s) => ({ ...snapshot(), doc: { ...s.doc, width, height }, dirty: true })),
+
+    resizeDocument: (width, height, adapt) =>
+      set((s) => {
+        const next = adapt ? adaptDocument(s.doc, width, height) : { ...s.doc, width, height }
+        return next.width === s.doc.width && next.height === s.doc.height ? s : { ...snapshot(), doc: next, selectedIds: [], dirty: true }
+      }),
 
     setName: (raw) =>
       set((s) => {

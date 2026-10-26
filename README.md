@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Magic Resize : changer le format de la page en adaptant le contenu
 - Nom du document modifiable (nom des exports et du fichier)
 - Images : recadrage, miroirs, filtres (luminosité, contraste, saturation, noir et blanc, sépia, flou)
 - Ombres portées et lueurs (l'ombre est une image sous un élément resté vectoriel dans le PDF)

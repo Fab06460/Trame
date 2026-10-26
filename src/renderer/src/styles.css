@@ -163,3 +163,4 @@ button.danger { color: #ff7b7b; }
 .toolbar .doc-name { width: 180px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 4px 8px; font: inherit; text-align: right; }
 .toolbar .doc-name:hover { border-color: var(--border); }
 .toolbar .doc-name:focus { border-color: var(--accent); background: #1b1c21; outline: none; text-align: left; }
+.panel label.check { flex-direction: row; align-items: center; gap: 6px; }

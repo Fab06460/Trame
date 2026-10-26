@@ -6,49 +6,26 @@ import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
 import { ImagePanel } from './ImagePanel'
+import { PageSize } from './PageSize'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
 import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 
-const PRESETS: Array<[string, number, number]> = [
-  ['Post Instagram', 1080, 1080],
-  ['Story', 1080, 1920],
-  ['Présentation 16:9', 1920, 1080],
-  ['A4 (96 dpi)', 794, 1123]
-]
-
 export function Properties(): React.JSX.Element {
-  const doc = useEditor((s) => s.doc)
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const el = page.elements.find((e) => e.id === selectedIds[0])
   const pdfIssue = usePdfIssues((st) => (el ? st.issues[el.id] : undefined))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
-  const { updateElement, setBackground, setSize, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
+  const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
     useEditor.getState()
 
   if (!el || !selectedIds.length) {
     return (
       <aside className="panel">
         <h3>Page</h3>
-        <label>
-          Format
-          <select
-            value={`${doc.width}x${doc.height}`}
-            onChange={(e) => {
-              const [w, h] = e.target.value.split('x').map(Number)
-              setSize(w, h)
-            }}
-          >
-            {PRESETS.map(([n, w, h]) => (
-              <option key={n} value={`${w}x${h}`}>{n} — {w}×{h}</option>
-            ))}
-            {!PRESETS.some(([, w, h]) => w === doc.width && h === doc.height) && (
-              <option value={`${doc.width}x${doc.height}`}>Personnalisé — {doc.width}×{doc.height}</option>
-            )}
-          </select>
-        </label>
+        <PageSize />
         <label>
           Arrière-plan
           <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} />
