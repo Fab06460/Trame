@@ -11,8 +11,8 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { mkdtemp, rm, mkdir, readFile, readdir } from 'node:fs/promises'
-import { inflateSync } from 'node:zlib'
+import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { deflateSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -47,6 +47,22 @@ function pngPixel(buf, px, py) {
   const i = px * channels
   return [rows[py][i], rows[py][i + 1], rows[py][i + 2]]
 }
+/** PNG RGB 8 bits : moitié gauche rouge, moitié droite bleue, un carré vert en haut à gauche (repère de recadrage et de miroir). */
+function testPng(w, h) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcTable[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0 }
+  const chunk = (type, data) => { const t = Buffer.from(type, 'latin1'); const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const c = Buffer.alloc(4); c.writeUInt32BE(crc(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, c]) }
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = y * (w * 3 + 1) + 1 + x * 3
+    const green = x < w / 4 && y < h / 4
+    const [r, g, b] = green ? [0, 200, 0] : x < w / 2 ? [220, 30, 30] : [30, 30, 220]
+    raw[o] = r; raw[o + 1] = g; raw[o + 2] = b
+  }
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
 const electronPath = createRequire(import.meta.url)(join(root, 'node_modules/electron'))
 const port = 9300 + Math.floor(Math.random() * 400)
 const tmp = await mkdtemp(join(tmpdir(), 'trame-smoke-'))
@@ -689,6 +705,70 @@ try {
   await sleep(300)
   check('sans ombre, le même pixel est blanc', pngPixel(await exportPng(), 450, 545).every((v) => v > 240))
   await click('.sidebar .tabs button', 'Modèles')
+
+  // images : recadrage, miroir et filtres (panneau → export image → export PDF)
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(800, 400)) // 800 × 400 → réduit à 648 × 324 au centre de la page (216–864 × 378–702)
+  await click('header.toolbar button', 'Image')
+  await sleep(700)
+  const L = [300, 560], R = [780, 560], CORNER = [240, 400] // gauche (rouge), droite (bleu), coin haut-gauche (carré vert)
+  const isRed = (p) => p[0] > 180 && p[1] < 80 && p[2] < 80
+  const isBlue = (p) => p[2] > 180 && p[0] < 80 && p[1] < 80
+  const isGreen = (p) => p[1] > 150 && p[0] < 60 && p[2] < 60
+  let png = await exportPng()
+  check('image insérée : gauche rouge, droite bleue, coin vert', isRed(pngPixel(png, ...L)) && isBlue(pngPixel(png, ...R)) && isGreen(pngPixel(png, ...CORNER)))
+  check('aucun retouche : pas de champ de recadrage rempli', (await field('cropLeft')) === 0 && (await field('cropRight')) === 0)
+  await exportPdfText()
+  check('PDF sans retouche : l\'image d\'origine (PNG) est embarquée telle quelle', lastPdfRaw.includes('/Subtype /Image'))
+
+  // miroir horizontal
+  await clickSel('.panel [data-flip="x"]')
+  await sleep(500)
+  png = await exportPng()
+  check('miroir horizontal : gauche bleue, droite rouge, carré vert en haut à droite', isBlue(pngPixel(png, ...L)) && isRed(pngPixel(png, ...R)) && isGreen(pngPixel(png, 840, 400)) && !isGreen(pngPixel(png, ...CORNER)))
+  check('le bouton miroir est enfoncé', (await run(`document.querySelector('.panel [data-flip="x"]').getAttribute('aria-pressed')`)) === 'true')
+  await clickSel('.panel [data-flip="x"]')
+  await sleep(400)
+  await clickSel('.panel [data-flip="y"]')
+  await sleep(500)
+  png = await exportPng()
+  check('miroir vertical : le carré vert passe en bas à gauche', isGreen(pngPixel(png, 240, 680)) && !isGreen(pngPixel(png, ...CORNER)))
+  await clickSel('.panel [data-flip="y"]')
+  await sleep(400)
+
+  // recadrage : on retire 50 % à gauche → seule la moitié bleue reste, au même endroit
+  await setField('cropLeft', 50)
+  await sleep(500)
+  png = await exportPng()
+  check('recadrage de 50 % à gauche : la moitié bleue reste en place, la rouge a disparu', isBlue(pngPixel(png, ...R)) && !isRed(pngPixel(png, ...L)) && pngPixel(png, ...L).every((v) => v > 240))
+  check('la boîte a été réduite, pas étirée (largeur 324)', (await field('width')) === 324, String(await field('width')))
+  await exportPdfText()
+  check('PDF recadré : une image retravaillée est embarquée', lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('.panel [data-action="crop-reset"]')
+  await sleep(500)
+  png = await exportPng()
+  check('« Rétablir l\'image entière » rend la moitié rouge', isRed(pngPixel(png, ...L)) && isBlue(pngPixel(png, ...R)) && (await field('cropLeft')) === 0)
+
+  // filtres : noir et blanc → rouge et bleu deviennent des gris (R = V = B)
+  await clickSel('.panel [data-preset="Noir & blanc"]')
+  await sleep(500)
+  png = await exportPng()
+  const gl = pngPixel(png, ...L), gr = pngPixel(png, ...R)
+  check('filtre noir et blanc : les deux moitiés sont grises (R = V = B)', Math.abs(gl[0] - gl[1]) < 6 && Math.abs(gl[1] - gl[2]) < 6 && Math.abs(gr[0] - gr[1]) < 6 && Math.abs(gr[1] - gr[2]) < 6, JSON.stringify([gl, gr]))
+  check('l\'aperçu de la page affiche aussi l\'image retouchée (canvas)', (await run(`document.querySelectorAll('.page-item.current .thumb canvas').length`)) === 1)
+  await exportPdfText()
+  check('PDF filtré : image embarquée', lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('.panel [data-action="filters-reset"]')
+  await sleep(500)
+  png = await exportPng()
+  check('« Réinitialiser les réglages » rend les couleurs', isRed(pngPixel(png, ...L)) && isBlue(pngPixel(png, ...R)))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(400)
+  png = await exportPng()
+  const undone = pngPixel(png, ...L)
+  check('annuler rétablit le filtre', Math.abs(undone[0] - undone[2]) < 6)
 
   // export PDF vectoriel : on ajoute du texte dans l'interface (document vierge : les scénarios précédents ont laissé des éléments)
   await run('location.reload()')

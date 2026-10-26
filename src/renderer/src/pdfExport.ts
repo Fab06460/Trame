@@ -16,6 +16,8 @@ import type { PdfFallback } from '@/pdfFallbacks'
 import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
 import { boundsOf } from '@/geometry'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
+import { editedPng } from '@/imageRender'
+import { hasImageEdits } from '@/imageStyle'
 import { hasShadow, shadowMargin } from '@/shadowStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
@@ -120,7 +122,7 @@ class ExportContext {
           p.pushOperators(popGraphicsState())
         }
       } else if (el.type === 'image' && el.src) {
-        const img = await this.embedImage(el.src)
+        const img = hasImageEdits(el) ? await this.pdf.embedPng(decodeDataUrl(await editedPng(el))!.bytes) : await this.embedImage(el.src)
         p.drawImage(img, { x: 0, y: -el.height, width: el.width, height: el.height, opacity: el.opacity })
         // Konva trace le contour d'une image après l'image : un rectangle, sans remplissage
         if (stroke) p.drawSvgPath(roundedRectPath(el.width, el.height, 0), { x: 0, y: 0, ...border })

@@ -10,6 +10,30 @@ export interface Shadow {
   opacity: number
 }
 
+/** Zone visible d'une image, en fractions (0 à 1) de l'image d'origine. Absent = image entière. */
+export interface Crop {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** Réglages de couleur d'une image. Tous optionnels, 0 = neutre. */
+export interface ImageFilters {
+  /** -100 à 100 */
+  brightness?: number
+  /** -100 à 100 */
+  contrast?: number
+  /** -100 (gris) à 100 (très saturé) */
+  saturation?: number
+  /** 0 à 100 : part de noir et blanc */
+  grayscale?: number
+  /** 0 à 100 */
+  sepia?: number
+  /** rayon de flou en pixels de design (0 à 40) */
+  blur?: number
+}
+
 /** Dégradé à deux couleurs. `angle` : degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas), ignoré en radial. */
 export interface Gradient {
   type: 'linear' | 'radial'
@@ -66,6 +90,13 @@ export interface TrameElement {
   path?: string
   // image
   src?: string
+  /** recadrage : la zone de l'image d'origine qui remplit la boîte de l'élément */
+  crop?: Crop
+  /** miroir horizontal / vertical (images) */
+  flipX?: boolean
+  flipY?: boolean
+  /** réglages de lumière et de couleur */
+  filters?: ImageFilters
 }
 
 /** Repère d'alignement posé par l'utilisateur : `v` = ligne verticale à x = position, `h` = ligne horizontale à y = position (pixels de design). */

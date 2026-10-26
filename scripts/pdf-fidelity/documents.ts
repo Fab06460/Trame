@@ -27,6 +27,29 @@ function pngDataUrl(): string {
   return c.toDataURL('image/png')
 }
 
+/** Image asymétrique (un repère clair en haut à gauche, un disque en bas à droite) : recadrage et miroirs se voient. */
+function photoDataUrl(): string {
+  const c = document.createElement('canvas')
+  c.width = 300
+  c.height = 200
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 300, 200)
+  grad.addColorStop(0, '#ff7a59')
+  grad.addColorStop(0.5, '#ffd166')
+  grad.addColorStop(1, '#2563eb')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 300, 200)
+  g.fillStyle = '#fff'
+  g.fillRect(20, 20, 90, 40)
+  g.fillStyle = '#16a34a'
+  g.beginPath()
+  g.arc(230, 140, 40, 0, Math.PI * 2)
+  g.fill()
+  g.fillStyle = '#7c3aed'
+  g.fillRect(140, 90, 30, 90)
+  return c.toDataURL('image/png')
+}
+
 /** Un document qui exerce tous les cas : formes, rotation, opacité, crénage, alignements, repli en image, image. */
 function mixed(): TrameDocument {
   return {
@@ -106,6 +129,21 @@ function mixed(): TrameDocument {
         { id: 'o11', type: 'rect', x: 780, y: 830, width: 230, height: 160, ...base, fill: '#ef4444', opacity: 0.6, shadow: { color: '#000000', blur: 14, offsetX: 10, offsetY: 10, opacity: 0.5 } },
         text('o12', { x: 70, y: 1010, width: 940, fontStyle: 'bold', fontSize: 52, fill: '#1e1f24', opacity: 0.5, text: 'Texte translucide', shadow: { color: '#000000', blur: 10, offsetX: 8, offsetY: 8, opacity: 0.8 } })
       ]
+    }, {
+      // page 6 : images retouchées (recadrage, miroirs, filtres) — cuites dans une image identique pour l'écran et le PDF
+      id: 'p6', background: '#f1f5f9',
+      elements: [
+        { id: 'm1', type: 'image', x: 60, y: 60, width: 300, height: 200, src: photoDataUrl(), ...base },
+        { id: 'm2', type: 'image', x: 420, y: 60, width: 150, height: 200, src: photoDataUrl(), ...base, crop: { x: 0.5, y: 0, width: 0.5, height: 1 } },
+        { id: 'm3', type: 'image', x: 630, y: 60, width: 300, height: 200, src: photoDataUrl(), ...base, flipX: true },
+        { id: 'm4', type: 'image', x: 60, y: 320, width: 300, height: 200, src: photoDataUrl(), ...base, flipY: true },
+        { id: 'm5', type: 'image', x: 420, y: 320, width: 300, height: 200, src: photoDataUrl(), ...base, filters: { sepia: 90 } },
+        { id: 'm6', type: 'image', x: 760, y: 320, width: 260, height: 173, src: photoDataUrl(), ...base, filters: { grayscale: 100, contrast: 30 } },
+        { id: 'm7', type: 'image', x: 60, y: 580, width: 300, height: 200, src: photoDataUrl(), ...base, filters: { saturation: -60, brightness: 25 } },
+        { id: 'm8', type: 'image', x: 420, y: 580, width: 300, height: 200, src: photoDataUrl(), ...base, filters: { blur: 6 } },
+        { id: 'm9', type: 'image', x: 800, y: 600, width: 200, height: 120, src: photoDataUrl(), ...base, crop: { x: 0.1, y: 0.2, width: 0.6, height: 0.5 }, flipX: true, filters: { sepia: 40, contrast: 20 }, rotation: 12, stroke: '#d6336c', strokeWidth: 8 },
+        { id: 'm10', type: 'image', x: 60, y: 840, width: 300, height: 200, src: photoDataUrl(), ...base, opacity: 0.5, flipX: true, flipY: true, filters: { brightness: -20 }, shadow: { color: '#000000', blur: 18, offsetX: 10, offsetY: 12, opacity: 0.5 } }
+      ]
     }]
   }
 }
@@ -125,7 +163,7 @@ export interface Case {
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 %
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 %
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

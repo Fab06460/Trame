@@ -1,8 +1,27 @@
 import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradient'
 import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
-import type { TramePage } from '@/types'
+import { useEditedImage } from '@/imageRender'
+import { hasImageEdits } from '@/imageStyle'
+import { useEffect, useRef } from 'react'
+import type { TrameElement, TramePage } from '@/types'
 
+/** Image d'une miniature : l'originale telle quelle, ou (si retouchée) le rendu retouché réduit dans un petit canvas. */
+function ThumbImage({ el, style }: { el: TrameElement; style: React.CSSProperties }): React.JSX.Element {
+  const edited = hasImageEdits(el)
+  const drawable = useEditedImage(edited ? el : { ...el, src: undefined })
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const c = ref.current
+    if (!c || !drawable) return
+    const k = Math.min(1, 240 / Math.max(drawable.width, drawable.height))
+    c.width = Math.max(1, Math.round(drawable.width * k))
+    c.height = Math.max(1, Math.round(drawable.height * k))
+    c.getContext('2d')!.drawImage(drawable, 0, 0, c.width, c.height)
+  }, [drawable])
+  if (!edited) return <img src={el.src} style={{ ...style, objectFit: 'fill' }} draggable={false} />
+  return <canvas ref={ref} style={style} />
+}
 
 /** Aperçu statique d'une page, en DOM : bien moins coûteux qu'un Stage Konva par miniature. */
 export function PageThumb({
@@ -78,7 +97,7 @@ export function PageThumb({
                 />
               </svg>
             )
-          if (e.type === 'image') return <img key={e.id} src={e.src} style={{ ...box, ...outline, objectFit: 'fill' }} draggable={false} />
+          if (e.type === 'image') return <ThumbImage key={e.id} el={e} style={{ ...box, ...outline }} />
           if (e.type === 'text')
             return (
               <div

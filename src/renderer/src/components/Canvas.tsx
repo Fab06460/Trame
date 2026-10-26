@@ -8,6 +8,7 @@ import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
+import { useEditedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
@@ -31,19 +32,8 @@ const SIDE_EDGES: Record<string, ChangedEdges> = {
   'bottom-center': { bottom: true }
 }
 
-function useLoadedImage(src?: string): HTMLImageElement | undefined {
-  const [img, setImg] = useState<HTMLImageElement>()
-  useEffect(() => {
-    if (!src) return setImg(undefined)
-    const i = new window.Image()
-    i.onload = () => setImg(i)
-    i.src = src
-  }, [src])
-  return img
-}
-
-function ImageNode(props: Konva.NodeConfig & { src?: string }): React.JSX.Element {
-  const img = useLoadedImage(props.src)
+function ImageNode({ el, ...props }: Konva.NodeConfig & { el: TrameElement }): React.JSX.Element {
+  const img = useEditedImage(el)
   return <KImage {...props} image={img} />
 }
 
@@ -359,7 +349,7 @@ export function Canvas(): React.JSX.Element {
                     hitFunc={boxHitFunc}
                   />
                 )
-              if (el.type === 'image') return <ImageNode key={el.id} {...p} {...strokeProps(el)} {...shadowProps(el)} src={el.src} width={el.width} height={el.height} />
+              if (el.type === 'image') return <ImageNode key={el.id} el={el} {...p} {...strokeProps(el)} {...shadowProps(el)} width={el.width} height={el.height} />
               return (
                 <Text
                   key={el.id}

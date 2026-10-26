@@ -151,6 +151,15 @@ Le formulaire « Enregistrer comme modèle » propose **Remplacer « X »** quan
 
 `clipboardActions.ts` : ⌘C / ⌘X / ⌘V sont interceptés dans `App.tsx` (hors champs de saisie) et passent par le presse-papiers **système** via IPC, ce qui permet de coller entre pages, entre documents (autre fenêtre ou fichier ouvert plus tard) et de coller une capture d'écran ou du texte venant d'une autre application. Écrire dans le presse-papiers remplace tout son contenu : la copie la plus récente l'emporte toujours. `pasteElements` (store) régénère les identifiants et les `groupId`, décale de 30 px tant que la copie se superposerait pile à un élément existant, recentre si tout est hors de la page (format différent), et crée un seul cran d'historique. Image collée : insérée à 60 % de la page au plus ; texte collé : nouveau bloc de texte (5 000 caractères max).
 
+## Retouches d'image (recadrage, miroirs, filtres)
+
+`imageStyle.ts` (pur, testé) : modèle, bornes, `cssFilter`, `recrop`, nettoyage. `imageRender.ts` : **la seule fabrication des retouches**. `editedImage(el)` rend l'image d'origine si l'élément n'a aucune retouche, sinon un canvas contenant la zone recadrée, retournée (échelle négative) et filtrée (`ctx.filter` avec la même chaîne CSS que `cssFilter`), plafonné à 4096 px. Les quatre rendus l'utilisent : `ImageNode` (hook `useEditedImage`), `createNode` (export image et replis du PDF), le PDF (`editedPng` → `embedPng` ; une image sans retouche garde son PNG/JPEG d'origine, sans perte) et les miniatures (`ThumbImage` : canvas réduit). Les retouches étant cuites dans un même canvas, écran, PNG et PDF ne peuvent pas diverger.
+
+- **Recadrer garde le contenu en place** : `recrop` conserve l'échelle de l'image, redimensionne la boîte et déplace son coin haut-gauche le long des axes *tournés* de l'élément.
+- **Flou** : réglé en pixels de design, converti en pixels du rendu (`w / el.width`) ; il fait partie de la clé de cache. Les bords s'estompent (le flou lit du transparent au-delà de l'image).
+- **Cache** : deux petits LRU (images décodées, canvas retouchés) pour que bouger un curseur ne redécode pas l'image.
+- Test de bout en bout : le processus principal lit `pick-image.png` du dossier de test à la place du dialogue « Image ».
+
 ## Ombres et lueurs
 
 `shadow` (`{ color, blur, offsetX, offsetY, opacity }`, tous types ; la lueur est une ombre sans décalage, `shadowStyle.ts` : préréglages, `hasShadow`, `shadowProps`, `shadowMargin`, `cssShadow`, nettoyage). Konva l'applique lui-même (propriétés `shadow*`, flou et décalages en pixels de design, corrigés de l'échelle de la vue). ⚠️ **Konva 10 applique l'ombre au contexte *avant* d'appeler une fonction de dessin personnalisée** (et, pour fond + contour + ombre, à la copie d'un tampon) : les formes dessinées en natif (`pathSceneFunc`) en héritent sans rien faire. Y réappliquer l'ombre la **doublerait** (pixel à 63 au lieu de 127 mesuré lors de la mise au point) ; un contrôle de bout en bout le garde.

@@ -32,6 +32,9 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "stroke": "#7c5cff",     // optionnel : couleur du contour (avec strokeWidth)
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
           "strokeDashed": true,    // optionnel : contour en tirets
+          "crop": { "x": 0.25, "y": 0, "width": 0.75, "height": 1 },  // optionnel (images) : zone visible, en fractions de l'image d'origine
+          "flipX": true, "flipY": true,                                 // optionnel (images) : miroirs
+          "filters": { "brightness": 20, "sepia": 40, "blur": 4 },       // optionnel (images) : réglages ; 0 ou absent = neutre
           "name": "Titre",         // optionnel : nom du calque (sinon automatique)
           "locked": true,          // optionnel : position verrouillée
           "hidden": true,          // optionnel : masqué (ni affiché ni exporté)
@@ -53,6 +56,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
 ```
 
 L'**ombre** (`shadow`, tous les types ; une lueur est une ombre sans décalage) : `blur` 0 à 200, `offsetX` / `offsetY` −500 à 500 (dans les axes de la **page**, même si l'élément pivote), `opacity` 0 à 1. Une ombre incomplète ou hors bornes est ignorée ou ramenée aux bornes à la lecture ; une ombre sans effet visible (opacité 0, ou ni flou ni décalage) n'est pas dessinée.
+
+Les **retouches d'image** (`crop`, `flipX`, `flipY`, `filters`, éléments `image` seulement ; l'image d'origine n'est jamais modifiée) : `crop` est la zone de l'image d'origine qui remplit la boîte de l'élément (`width` / `height` de l'élément sont donc la taille d'affichage de cette zone ; au moins 5 % de l'image dans chaque sens, image entière = champ absent). `filters` : `brightness`, `contrast`, `saturation` de −100 à 100, `grayscale` et `sepia` de 0 à 100, `blur` de 0 à 40 (pixels de design). Tout champ invalide ou neutre est retiré à la lecture. Aucune nouvelle version du format.
 
 Le **dégradé** (`gradient`, rectangles, ellipses et formes) remplace `fill` tant qu'il est présent ; `fill` est conservé (c'est la couleur retrouvée en revenant à « Uni »). `type` vaut `linear` ou `radial`, `angle` est en degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas ; ignoré en radial). À la lecture, un dégradé incomplet ou de type inconnu est retiré et l'élément garde son `fill`. Aucune nouvelle version du format.
 

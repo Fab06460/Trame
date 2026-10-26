@@ -5,6 +5,7 @@ import { suggestFix } from '@/pdfTextCheck'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
+import { ImagePanel } from './ImagePanel'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
@@ -118,6 +119,8 @@ export function Properties(): React.JSX.Element {
   return (
     <aside className="panel">
       <h3>{{ rect: 'Rectangle', ellipse: 'Ellipse', text: 'Texte', image: 'Image', path: 'Forme' }[el.type]}</h3>
+
+      {el.type === 'image' && <ImagePanel el={el} />}
 
       {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') && (
         <div className="seg" role="group" aria-label="Type de remplissage">

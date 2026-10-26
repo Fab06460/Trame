@@ -331,6 +331,11 @@ ipcMain.on('app:close-confirmed', () => {
 })
 
 ipcMain.handle('image:pick', async () => {
+  // tests de bout en bout : l'image « choisie » est le fichier pick-image.png du dossier de test (aucun dialogue natif)
+  if (TEST_EXPORT_DIR) {
+    const buf = await readFile(join(TEST_EXPORT_DIR, 'pick-image.png')).catch(() => null)
+    return buf ? `data:image/png;base64,${buf.toString('base64')}` : null
+  }
   const res = await dialog.showOpenDialog({
     properties: ['openFile'],
     filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }]

@@ -36,7 +36,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Retouche photo | ⬜ À faire | Rien aujourd'hui sur les images (pas de recadrage, filtres, cadres). Recadrage, retournement, redressement, filtres, réglages de lumière, flou, cadres : faisables hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
+| Retouche photo | 🟡 Partiel | Recadrage, miroirs et filtres faits ; restent poignées de recadrage, redressement, cadres. Recadrage, retournement, redressement, filtres, réglages de lumière, flou, cadres : faisables hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
 | Montage vidéo | 🔶 À faire, lourd | Faisable hors-ligne (lecture native, encodage avec ffmpeg embarqué, enregistrement d'écran natif d'Electron) mais c'est un produit à part entière. Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
 | Effets graphiques | ⬜ À faire | Pas d'ombre, de lueur, de contour ni de dégradé aujourd'hui. Tout est faisable hors-ligne ; en PDF ces effets obligent à une image pour l'élément concerné (voir risques). | E1, E2, E3 |
 
@@ -84,15 +84,15 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E5 | Panneau Calques : verrouiller, masquer, renommer | M | **Fait** (liste, œil, cadenas, renommage, glisser-déposer, ⌘L). Prérequis des modèles de marque verrouillés. | — |
 | E6 | Guides magnétiques, règles, grille | M | **Fait.** Règles, repères, aimantation (déplacement + côtés au redimensionnement). Logique pure testable (aimantation aux bords/centres). | — |
 | E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | Équivalent hors-ligne des « intégrations » de photos. | — |
-| E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | Rendu PDF : recadrer/retourner les pixels avant intégration. | — |
-| E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | Konva possède des filtres ; PDF : image « cuite » avec les réglages. | E8 |
+| E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | **Fait en partie** : recadrage (en %), miroirs. Restent : poignées de recadrage sur le canvas, redressement, cadres. Rendu : pixels recadrés/retournés cuits dans un canvas partagé. | — |
+| E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | **Fait** (6 réglages + 6 préréglages), cuits dans l'image, y compris pour le PDF. | E8 |
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | Mise à l'échelle proportionnelle + repositionnement ; texte redimensionné ; logique pure, très testable. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S |  | — |
 | E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | L'export PDF les intègre déjà via fontkit ; attention à l'avertissement « police inconnue » et aux licences. | — |
 | E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | **Fait.** Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |
 | E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | **Fait** (coins proportionnels, texte en largeur seule, rotation aimantée). L'aimantation des coins est volontairement exclue. Konva : `keepRatio`, `rotationSnaps`. | E6 |
 | E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | **Fait** (Alt = dupliquer, Maj = axe, ⌘ = suspendre l'aimantation). | — |
-| E16 | Retourner horizontalement / verticalement | M | Touche les 4 rendus (échelle négative). | — |
+| E16 | Retourner horizontalement / verticalement | M | **Fait pour les images** ; formes et texte à venir si besoin. | — |
 | E17 | Nom du document modifiable (barre de titre, noms d'export) | S | Aujourd'hui figé à « Sans titre » ou au nom du modèle. | — |
 | E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | | E5 |
 | E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | | E6 |

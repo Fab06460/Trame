@@ -1,6 +1,7 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
 import { konvaGradientProps } from '@/gradient'
+import { editedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
@@ -62,7 +63,7 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
     return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, sceneFunc: pathSceneFunc(e.path) })
   }
   if (e.type === 'image' && e.src) {
-    return new Konva.Image({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, image: await loadImage(e.src) })
+    return new Konva.Image({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, image: await editedImage(e) })
   }
   if (e.type === 'text') return createTextNode(e, common)
   return null

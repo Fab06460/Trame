@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
+import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
@@ -76,6 +77,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeStroke(e)
       sanitizeGradient(e)
       sanitizeShadow(e)
+      if (e.type === 'image') sanitizeImageStyle(e)
       if (e.locked !== true) delete e.locked
       if (e.hidden !== true) delete e.hidden
       if (typeof e.name !== 'string' || !e.name.trim()) delete e.name
