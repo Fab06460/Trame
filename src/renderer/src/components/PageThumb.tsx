@@ -1,3 +1,4 @@
+import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradient'
 import { dashPattern, hasStroke } from '@/strokeStyle'
 import type { TramePage } from '@/types'
 
@@ -39,9 +40,36 @@ export function PageThumb({
           if (e.type === 'path')
             return (
               <svg key={e.id} viewBox="0 0 100 100" preserveAspectRatio="none" style={box}>
+                {e.gradient && (
+                  <defs>
+                    {/* coordonnées en fraction de la boîte : l'angle suit les proportions réelles de l'élément, comme CSS */}
+                    {e.gradient.type === 'radial' ? (
+                      (() => {
+                        // cercle de rayon R dans la boîte réelle = ellipse (R·100/L, R·100/H) dans le viewBox 100 × 100 étiré
+                        const R = radialGradientCircle(e.width, e.height).r
+                        return (
+                          <radialGradient id={`g-${e.id}`} gradientUnits="userSpaceOnUse" cx={50} cy={50} r={1} gradientTransform={`translate(50 50) scale(${(R * 100) / e.width} ${(R * 100) / e.height}) translate(-50 -50)`}>
+                            <stop offset="0" stopColor={e.gradient.from} />
+                            <stop offset="1" stopColor={e.gradient.to} />
+                          </radialGradient>
+                        )
+                      })()
+                    ) : (
+                      (() => {
+                        const l = linearGradientLine(e.width, e.height, e.gradient.angle)
+                        return (
+                          <linearGradient id={`g-${e.id}`} x1={l.x0 / e.width} y1={l.y0 / e.height} x2={l.x1 / e.width} y2={l.y1 / e.height}>
+                            <stop offset="0" stopColor={e.gradient.from} />
+                            <stop offset="1" stopColor={e.gradient.to} />
+                          </linearGradient>
+                        )
+                      })()
+                    )}
+                  </defs>
+                )}
                 <path
                   d={e.path}
-                  fill={e.fill}
+                  fill={e.gradient ? `url(#g-${e.id})` : e.fill}
                   {...(hasStroke(e)
                     ? { stroke: e.stroke, strokeWidth: w, vectorEffect: 'non-scaling-stroke', strokeDasharray: e.strokeDashed ? dashPattern(w).join(' ') : undefined }
                     : {})}
@@ -79,7 +107,7 @@ export function PageThumb({
               style={{
                 ...box,
                 ...outline,
-                background: e.fill,
+                background: e.gradient ? cssGradient(e.gradient) : e.fill,
                 borderRadius: e.type === 'ellipse' ? '50%' : e.cornerRadius
               }}
             />

@@ -1,19 +1,20 @@
 import Konva from 'konva'
 import { fontkit, type FontkitFont } from '@/fontkit'
 import {
-  PDFArray, PDFDocument, PDFFont, PDFHexString, PDFImage, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
+  PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFImage, PDFName, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
   beginText, concatTransformationMatrix, endText, moveText, popGraphicsState, pushGraphicsState, rgb,
   TextRenderingMode, setCharacterSpacing, setDashPattern, setFillingColor, setFontAndSize, setGraphicsState, setLineWidth,
-  setStrokingColor, setTextRenderingMode
+  appendBezierCurve, clip, closePath, endPath, lineTo, moveTo, setStrokingColor, setTextRenderingMode
 } from 'pdf-lib'
 import { createNode, createTextNode, loadImage } from '@/exportPages'
 import {
-  PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, tjAdjustment
+  PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, svgPathToSegments, tjAdjustment
 } from '@/pdfMath'
 import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
 import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
 import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
+import { linearGradientLine, radialGradientCircle } from '@/gradient'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -85,16 +86,23 @@ class ExportContext {
             ...(el.strokeDashed ? { borderDashArray: dashPattern(el.strokeWidth as number) } : {})
           }
         : {}
+      /** Peint la forme : dégradé (détourage + shading) s'il y en a un et qu'on sait le détourer, sinon couleur unie ; puis contour. */
+      const paintShape = (d: string): void => {
+        const gradientDone = !!el.gradient && this.paintGradient(p, el, d)
+        if (!gradientDone) p.drawSvgPath(d, { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
+        // dégradé déjà peint : seul le contour reste à tracer. Sans fond ni contour, drawSvgPath tracerait quand même un trait fin par défaut.
+        else if (stroke) p.drawSvgPath(d, { x: 0, y: 0, ...border })
+      }
       if (el.type === 'rect') {
-        p.drawSvgPath(roundedRectPath(el.width, el.height, el.cornerRadius), { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
+        paintShape(roundedRectPath(el.width, el.height, el.cornerRadius))
       } else if (el.type === 'ellipse') {
-        p.drawSvgPath(ellipsePath(el.width, el.height), { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
+        paintShape(ellipsePath(el.width, el.height))
       } else if (el.type === 'path' && el.path) {
         // Le chemin vit dans un viewBox 100×100. On étire ses COORDONNÉES vers la boîte de l'élément (et non le dessin) : un trait
         // dessiné dans un repère étiré aurait une épaisseur différente en largeur et en hauteur.
         const scaled = scalePath(el.path, el.width / 100, el.height / 100)
         if (scaled) {
-          p.drawSvgPath(scaled, { x: 0, y: 0, color: fill, opacity: el.opacity, ...border })
+          paintShape(scaled)
         } else {
           p.pushOperators(pushGraphicsState(), concatTransformationMatrix(el.width / 100, 0, 0, el.height / 100, 0, 0))
           p.drawSvgPath(el.path, { x: 0, y: 0, color: fill, opacity: el.opacity })
@@ -144,6 +152,51 @@ class ExportContext {
       this.fonts.set(key, loaded)
     }
     return this.fonts.get(key)!
+  }
+
+  /**
+   * Dégradé : objet « shading » PDF natif (axial ou radial, deux couleurs, prolongé au-delà des extrémités) peint dans le détourage
+   * de la forme (`W n`, puis `sh`). Le chemin est écrit dans le repère SVG (y vers le bas) puis le repère est rétabli : le détourage,
+   * lui, reste acquis. Retourne false si le chemin n'est pas convertible (l'appelant peint alors la couleur unie).
+   */
+  private paintGradient(p: PDFPage, el: TrameElement, pathD: string): boolean {
+    const g = el.gradient
+    const segments = g ? svgPathToSegments(pathD) : null
+    if (!g || !segments) return false
+    const c0 = parseColor(g.from)
+    const c1 = parseColor(g.to)
+    const fn = this.pdf.context.obj({ FunctionType: 2, Domain: [0, 1], C0: [c0.r, c0.g, c0.b], C1: [c1.r, c1.g, c1.b], N: 1 })
+    // coordonnées dans le repère local de l'élément (y vers le HAUT) : on inverse y par rapport au repère de l'élément (y vers le bas)
+    let shading: PDFDict
+    if (g.type === 'radial') {
+      const { cx, cy, r } = radialGradientCircle(el.width, el.height)
+      shading = this.pdf.context.obj({ ShadingType: 3, ColorSpace: 'DeviceRGB', Coords: [cx, -cy, 0, cx, -cy, r], Function: fn, Extend: [true, true] }) as PDFDict
+    } else {
+      const l = linearGradientLine(el.width, el.height, g.angle)
+      shading = this.pdf.context.obj({ ShadingType: 2, ColorSpace: 'DeviceRGB', Coords: [l.x0, -l.y0, l.x1, -l.y1], Function: fn, Extend: [true, true] }) as PDFDict
+    }
+    const resources = p.node.Resources() ?? (p.node.set(PDFName.of('Resources'), this.pdf.context.obj({})), p.node.Resources()!)
+    let dict = resources.lookupMaybe(PDFName.of('Shading'), PDFDict)
+    if (!dict) {
+      dict = this.pdf.context.obj({})
+      resources.set(PDFName.of('Shading'), dict)
+    }
+    const name = PDFName.of(`Sh${dict.keys().length + 1}`)
+    dict.set(name, this.pdf.context.register(shading))
+
+    const flip = concatTransformationMatrix(1, 0, 0, -1, 0, 0)
+    const ops = [pushGraphicsState()]
+    if (el.opacity < 1) ops.push(setGraphicsState(this.gstate(p, el.opacity)))
+    ops.push(flip)
+    for (const sg of segments) {
+      if (sg.op === 'M') ops.push(moveTo(sg.x, sg.y))
+      else if (sg.op === 'L') ops.push(lineTo(sg.x, sg.y))
+      else if (sg.op === 'C') ops.push(appendBezierCurve(sg.x1, sg.y1, sg.x2, sg.y2, sg.x, sg.y))
+      else ops.push(closePath())
+    }
+    ops.push(clip(), endPath(), flip, PDFOperator.of(PDFOperatorNames.ShadingFill, [name]), popGraphicsState())
+    p.pushOperators(...ops)
+    return true
   }
 
   private gstate(p: PDFPage, opacity: number): ReturnType<PDFPage['node']['newExtGState']> {

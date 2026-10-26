@@ -75,6 +75,20 @@ function mixed(): TrameDocument {
         text('k7', { x: 60, y: 620, width: 960, fontStyle: 'bold', fontSize: 130, fill: '#ffd166', stroke: '#1e1f24', strokeWidth: 5, text: 'Contour' }),
         text('k8', { x: 60, y: 820, width: 960, fontSize: 60, fontFamily: '"Playfair Display", serif', fontStyle: 'italic', align: 'center', stroke: '#7c5cff', strokeWidth: 1.5, text: 'Lettres cernées, fines' })
       ]
+    }, {
+      // page 4 : dégradés (angles, radial, forme étirée, avec contour, avec opacité)
+      id: 'p4', background: '#ffffff',
+      elements: [
+        { id: 'd1', type: 'rect', x: 60, y: 60, width: 300, height: 200, ...base, fill: '#000', gradient: { type: 'linear', from: '#7c5cff', to: '#38bdf8', angle: 90 } },
+        { id: 'd2', type: 'rect', x: 400, y: 60, width: 300, height: 200, cornerRadius: 40, ...base, fill: '#000', gradient: { type: 'linear', from: '#ff3d71', to: '#ffd166', angle: 135 } },
+        { id: 'd3', type: 'ellipse', x: 740, y: 60, width: 280, height: 200, ...base, fill: '#000', gradient: { type: 'radial', from: '#ffffff', to: '#0f172a', angle: 0 } },
+        { id: 'd4', type: 'path', x: 60, y: 320, width: 360, height: 220, path: SHAPES_STAR, ...base, fill: '#000', gradient: { type: 'linear', from: '#fde047', to: '#ea580c', angle: 200 } },
+        { id: 'd5', type: 'path', x: 460, y: 300, width: 260, height: 260, path: SHAPES_HEART, ...base, fill: '#000', gradient: { type: 'radial', from: '#fecdd3', to: '#be123c', angle: 0 } },
+        { id: 'd6', type: 'rect', x: 760, y: 320, width: 260, height: 220, cornerRadius: 30, ...base, fill: '#000', gradient: { type: 'linear', from: '#34d399', to: '#065f46', angle: 0 }, stroke: '#1e1f24', strokeWidth: 8, strokeDashed: true },
+        { id: 'd7', type: 'rect', x: 60, y: 620, width: 460, height: 300, ...base, fill: '#000', opacity: 0.55, rotation: -6, gradient: { type: 'linear', from: '#2563eb', to: '#db2777', angle: 45 } },
+        { id: 'd8', type: 'ellipse', x: 560, y: 600, width: 220, height: 340, ...base, fill: '#000', gradient: { type: 'linear', from: '#f472b6', to: '#a78bfa', angle: 180 } },
+        { id: 'd9', type: 'rect', x: 820, y: 620, width: 200, height: 300, ...base, fill: '#000', gradient: { type: 'radial', from: '#fff7ed', to: '#c2410c', angle: 0 } }
+      ]
     }]
   }
 }
@@ -94,7 +108,7 @@ export interface Case {
 }
 
 export const cases = (): Case[] => [
-  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9] }, // mesuré : 0,92 / 1,24 / 0,55 %
+  { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 %
   ...TEMPLATES.map((t): Case => ({
     name: t.id,
     doc: instantiate(t),

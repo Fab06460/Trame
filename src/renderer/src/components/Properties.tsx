@@ -7,6 +7,7 @@ import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
+import { defaultGradient } from '@/gradient'
 
 const PRESETS: Array<[string, number, number]> = [
   ['Post Instagram', 1080, 1080],
@@ -117,11 +118,86 @@ export function Properties(): React.JSX.Element {
     <aside className="panel">
       <h3>{{ rect: 'Rectangle', ellipse: 'Ellipse', text: 'Texte', image: 'Image', path: 'Forme' }[el.type]}</h3>
 
-      {el.type !== 'image' && (
-        <label>
-          Couleur
-          <input type="color" value={el.fill} onPointerDown={beginChange} onChange={(e) => live({ fill: e.target.value })} />
-        </label>
+      {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') && (
+        <div className="seg" role="group" aria-label="Type de remplissage">
+          <button
+            data-fill="solid"
+            aria-pressed={!el.gradient}
+            className={!el.gradient ? 'active' : ''}
+            // revenir à une couleur unie garde la première couleur du dégradé (pas de saut de couleur)
+            onClick={() => el.gradient && updateElement(el.id, { gradient: undefined, fill: el.gradient.from })}
+          >
+            Uni
+          </button>
+          <button
+            data-fill="gradient"
+            aria-pressed={!!el.gradient}
+            className={el.gradient ? 'active' : ''}
+            onClick={() => !el.gradient && updateElement(el.id, { gradient: defaultGradient(el.fill) })}
+          >
+            Dégradé
+          </button>
+        </div>
+      )}
+
+      {el.gradient && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') ? (
+        <>
+          <label>
+            Type
+            <select
+              data-field="gradType"
+              value={el.gradient.type}
+              onChange={(e) => updateElement(el.id, { gradient: { ...el.gradient!, type: e.target.value as 'linear' | 'radial' } })}
+            >
+              <option value="linear">Linéaire</option>
+              <option value="radial">Radial</option>
+            </select>
+          </label>
+          <div className="stroke-row">
+            <input
+              type="color"
+              data-field="gradFrom"
+              title="Première couleur"
+              value={el.gradient.from}
+              onPointerDown={beginChange}
+              onChange={(e) => live({ gradient: { ...el.gradient!, from: e.target.value } })}
+            />
+            <button
+              data-flag="gradSwap"
+              title="Inverser les couleurs"
+              onClick={() => updateElement(el.id, { gradient: { ...el.gradient!, from: el.gradient!.to, to: el.gradient!.from } })}
+            >
+              ⇄
+            </button>
+            <input
+              type="color"
+              data-field="gradTo"
+              title="Seconde couleur"
+              value={el.gradient.to}
+              onPointerDown={beginChange}
+              onChange={(e) => live({ gradient: { ...el.gradient!, to: e.target.value } })}
+            />
+          </div>
+          {el.gradient.type === 'linear' && (
+            <NumberField
+              label="Angle"
+              field="gradAngle"
+              value={el.gradient.angle}
+              min={0}
+              max={360}
+              step={5}
+              suffix="°"
+              onCommit={(v) => updateElement(el.id, { gradient: { ...el.gradient!, angle: ((v % 360) + 360) % 360 } })}
+            />
+          )}
+        </>
+      ) : (
+        el.type !== 'image' && (
+          <label>
+            Couleur
+            <input type="color" value={el.fill} onPointerDown={beginChange} onChange={(e) => live({ fill: e.target.value })} />
+          </label>
+        )
       )}
 
       {el.type === 'text' && (

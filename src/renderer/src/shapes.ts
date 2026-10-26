@@ -1,4 +1,6 @@
 import type Konva from 'konva'
+import { linearGradientLine, radialGradientCircle } from '@/gradient'
+import type { Gradient } from '@/types'
 
 export interface ShapeDef {
   id: string
@@ -52,6 +54,22 @@ function stretched(d: string, w: number, h: number): Path2D {
   return p
 }
 
+/** Remplissage natif : le dégradé de la forme s'il y en a un, sinon sa couleur unie. */
+function nativeFill(c: CanvasRenderingContext2D, g: Gradient | undefined, w: number, h: number, fallback: string): string | CanvasGradient {
+  if (!g) return fallback
+  let grad: CanvasGradient
+  if (g.type === 'radial') {
+    const r = radialGradientCircle(w, h)
+    grad = c.createRadialGradient(r.cx, r.cy, 0, r.cx, r.cy, r.r)
+  } else {
+    const l = linearGradientLine(w, h, g.angle)
+    grad = c.createLinearGradient(l.x0, l.y0, l.x1, l.y1)
+  }
+  grad.addColorStop(0, g.from)
+  grad.addColorStop(1, g.to)
+  return grad
+}
+
 /**
  * Dessin d'une forme vectorielle dans la boîte width×height du nœud Konva (fond puis contour éventuel).
  * Partagé entre l'éditeur et l'export hors écran.
@@ -61,7 +79,7 @@ export function pathSceneFunc(d: string) {
     const p = stretched(d, shape.width(), shape.height())
     const c = ctx._context
     c.save()
-    c.fillStyle = shape.fill() as string
+    c.fillStyle = nativeFill(c, shape.getAttr('trameGradient') as Gradient | undefined, shape.width(), shape.height(), shape.fill() as string)
     c.fill(p)
     if (shape.strokeEnabled() && shape.strokeWidth() > 0) {
       c.lineWidth = shape.strokeWidth()

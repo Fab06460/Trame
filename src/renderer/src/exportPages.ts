@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
+import { konvaGradientProps } from '@/gradient'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
@@ -36,7 +37,7 @@ export const loadImage = (src: string): Promise<HTMLImageElement> =>
  */
 export async function createNode(e: TrameElement, common: Konva.NodeConfig): Promise<Konva.Shape | null> {
   if (e.type === 'rect') {
-    return new Konva.Rect({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, cornerRadius: e.cornerRadius })
+    return new Konva.Rect({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, ...konvaGradientProps(e.gradient, e.width, e.height), cornerRadius: e.cornerRadius })
   }
   if (e.type === 'ellipse') {
     return new Konva.Shape({
@@ -45,6 +46,7 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
       width: e.width,
       height: e.height,
       fill: e.fill,
+      ...konvaGradientProps(e.gradient, e.width, e.height),
       sceneFunc: (ctx: Konva.Context, shape: Konva.Shape) => {
         ctx.beginPath()
         ctx.ellipse(shape.width() / 2, shape.height() / 2, shape.width() / 2, shape.height() / 2, 0, 0, Math.PI * 2)
@@ -54,7 +56,7 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
     })
   }
   if (e.type === 'path' && e.path) {
-    return new Konva.Shape({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, sceneFunc: pathSceneFunc(e.path) })
+    return new Konva.Shape({ ...common, ...strokeProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, sceneFunc: pathSceneFunc(e.path) })
   }
   if (e.type === 'image' && e.src) {
     return new Konva.Image({ ...common, ...strokeProps(e), width: e.width, height: e.height, image: await loadImage(e.src) })

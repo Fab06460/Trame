@@ -27,6 +27,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "opacity": 1,
           "fill": "#1e1f24",
           "groupId": "k3J9aa01",   // optionnel : même valeur = même groupe
+          "gradient": { "type": "linear", "from": "#7c5cff", "to": "#38bdf8", "angle": 135 },  // optionnel : remplace fill
           "stroke": "#7c5cff",     // optionnel : couleur du contour (avec strokeWidth)
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
           "strokeDashed": true,    // optionnel : contour en tirets
@@ -49,6 +50,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
   ]
 }
 ```
+
+Le **dégradé** (`gradient`, rectangles, ellipses et formes) remplace `fill` tant qu'il est présent ; `fill` est conservé (c'est la couleur retrouvée en revenant à « Uni »). `type` vaut `linear` ou `radial`, `angle` est en degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas ; ignoré en radial). À la lecture, un dégradé incomplet ou de type inconnu est retiré et l'élément garde son `fill`. Aucune nouvelle version du format.
 
 Le **contour** (`stroke`, `strokeWidth`, `strokeDashed`) existe pour tous les types ; il n'est conservé à la lecture que si la couleur est une chaîne non vide **et** l'épaisseur strictement positive (sinon les trois champs sont retirés). Pour un texte, c'est le contour des lettres.
 

@@ -1,5 +1,13 @@
 export type ElementType = 'rect' | 'ellipse' | 'text' | 'image' | 'path'
 
+/** Dégradé à deux couleurs. `angle` : degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas), ignoré en radial. */
+export interface Gradient {
+  type: 'linear' | 'radial'
+  from: string
+  to: string
+  angle: number
+}
+
 export interface TrameElement {
   id: string
   type: ElementType
@@ -18,6 +26,8 @@ export interface TrameElement {
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */
   hidden?: boolean
   fill: string
+  /** dégradé de remplissage (rectangle, ellipse, forme) : remplace `fill` tant qu'il est présent */
+  gradient?: Gradient
   /** couleur du contour (absent = pas de contour) */
   stroke?: string
   /** épaisseur du contour en pixels de design, centré sur le bord de l'élément (absent ou 0 = pas de contour) */

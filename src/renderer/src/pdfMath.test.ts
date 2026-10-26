@@ -123,3 +123,42 @@ describe('decodeDataUrl', () => {
     expect(decodeDataUrl(undefined)).toBeNull()
   })
 })
+
+import { svgPathToSegments } from '@/pdfMath'
+import { SHAPES } from '@/shapes'
+
+describe('svgPathToSegments', () => {
+  it('M, L, Z', () => {
+    expect(svgPathToSegments('M0 0 L10 0 L10 10 Z')).toEqual([
+      { op: 'M', x: 0, y: 0 }, { op: 'L', x: 10, y: 0 }, { op: 'L', x: 10, y: 10 }, { op: 'Z' }
+    ])
+  })
+  it('H et V utilisent le point courant', () => {
+    expect(svgPathToSegments('M5 5 H20 V30 H0 Z')).toEqual([
+      { op: 'M', x: 5, y: 5 }, { op: 'L', x: 20, y: 5 }, { op: 'L', x: 20, y: 30 }, { op: 'L', x: 0, y: 30 }, { op: 'Z' }
+    ])
+  })
+  it('paires supplémentaires d\'un M = lignes', () => {
+    expect(svgPathToSegments('M0 0 10 10 20 0')).toEqual([{ op: 'M', x: 0, y: 0 }, { op: 'L', x: 10, y: 10 }, { op: 'L', x: 20, y: 0 }])
+  })
+  it('Q devient une cubique équivalente (mêmes extrémités, contrôles aux 2/3)', () => {
+    const s = svgPathToSegments('M0 0 Q30 60 60 0')!
+    expect(s[1]).toEqual({ op: 'C', x1: 20, y1: 40, x2: 40, y2: 40, x: 60, y: 0 })
+  })
+  it('C est repris tel quel', () => {
+    expect(svgPathToSegments('M0 0 C1 2 3 4 5 6')![1]).toEqual({ op: 'C', x1: 1, y1: 2, x2: 3, y2: 4, x: 5, y: 6 })
+  })
+  it('Z ramène au début du sous-chemin pour un H/V qui suit', () => {
+    const s = svgPathToSegments('M10 10 L20 10 Z V50')!
+    expect(s.at(-1)).toEqual({ op: 'L', x: 10, y: 50 })
+  })
+  it('relatif, arcs, S/T, entrées vides ou incomplètes : null', () => {
+    for (const bad of ['m0 0 l1 1', 'M0 0 A1 1 0 0 1 5 5', 'M0 0 S1 1 2 2', '', 'M10 L5 5', 'L1 2']) expect(svgPathToSegments(bad), bad).toBeNull()
+  })
+  it('toutes les formes intégrées, les rectangles arrondis et les ellipses sont convertibles', () => {
+    for (const shape of SHAPES) expect(svgPathToSegments(shape.path), shape.id).not.toBeNull()
+    expect(svgPathToSegments(roundedRectPath(120, 80, 20))).not.toBeNull()
+    expect(svgPathToSegments(roundedRectPath(120, 80, 0))).not.toBeNull()
+    expect(svgPathToSegments(ellipsePath(120, 80))).not.toBeNull()
+  })
+})

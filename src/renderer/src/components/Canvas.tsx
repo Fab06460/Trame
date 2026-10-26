@@ -7,6 +7,7 @@ import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { konvaGradientProps } from '@/gradient'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import { ZoomControls } from './ZoomControls'
@@ -322,13 +323,14 @@ export function Canvas(): React.JSX.Element {
             {page.elements.filter((el) => !el.hidden).map((el) => {
               const p = commonProps(el)
               if (el.type === 'rect')
-                return <Rect key={el.id} {...p} {...strokeProps(el)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
+                return <Rect key={el.id} {...p} {...strokeProps(el)} {...konvaGradientProps(el.gradient, el.width, el.height)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
               if (el.type === 'ellipse')
                 return (
                   <Shape
                     key={el.id}
                     {...p}
                     {...strokeProps(el)}
+                    {...konvaGradientProps(el.gradient, el.width, el.height)}
                     width={el.width}
                     height={el.height}
                     fill={el.fill}
@@ -349,6 +351,7 @@ export function Canvas(): React.JSX.Element {
                     width={el.width}
                     height={el.height}
                     fill={el.fill}
+                    trameGradient={el.gradient}
                     sceneFunc={pathSceneFunc(el.path)}
                     hitFunc={boxHitFunc}
                   />

@@ -8,6 +8,7 @@
 
 - Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application
+- Dégradés linéaires et radiaux (formes, rectangles, ellipses), vectoriels dans le PDF
 - Contour (couleur, épaisseur, tirets) sur formes, images et lettres
 - Typographie : interlettrage, interligne, souligné, barré, majuscules, avec export PDF fidèle
 - Panneau Calques : ordre de superposition par glisser-déposer, masquer, verrouiller (⌘L), renommer

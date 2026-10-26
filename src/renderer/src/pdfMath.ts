@@ -122,3 +122,74 @@ export function decodeDataUrl(url: string | undefined): DataUrlParts | null {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
   return { mime: m[1], bytes }
 }
+
+export type Segment =
+  | { op: 'M' | 'L'; x: number; y: number }
+  | { op: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
+  | { op: 'Z' }
+
+/**
+ * Convertit un chemin SVG en segments absolus (M, L, C, Z) : H et V deviennent des L, les courbes quadratiques Q des cubiques C.
+ * Sert à écrire le chemin en opérateurs PDF (détourage d'un dégradé). Ne gère que les commandes **absolues** (celles que produit
+ * notre code) ; retourne null pour tout autre chose (relatives, arcs, S/T) : l'appelant choisit alors un repli.
+ */
+export function svgPathToSegments(d: string): Segment[] | null {
+  const tokens = d.match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/g)
+  if (!tokens) return null
+  const out: Segment[] = []
+  let cmd = ''
+  let args: number[] = []
+  let cur = { x: 0, y: 0 }
+  let start = { x: 0, y: 0 }
+
+  const flush = (): boolean => {
+    if (!cmd) return true
+    if (cmd === 'Z') {
+      out.push({ op: 'Z' })
+      cur = start
+      return true
+    }
+    const per: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, Q: 4 }
+    const n = per[cmd]
+    if (!n || args.length === 0 || args.length % n !== 0) return false
+    for (let i = 0; i < args.length; i += n) {
+      const a = args.slice(i, i + n)
+      if (cmd === 'M') {
+        // les paires suivantes d'un M sont des L implicites
+        const seg = i === 0 ? ('M' as const) : ('L' as const)
+        out.push({ op: seg, x: a[0], y: a[1] })
+        cur = { x: a[0], y: a[1] }
+        if (i === 0) start = cur
+      } else if (cmd === 'L') {
+        out.push({ op: 'L', x: a[0], y: a[1] })
+        cur = { x: a[0], y: a[1] }
+      } else if (cmd === 'H') {
+        out.push({ op: 'L', x: a[0], y: cur.y })
+        cur = { x: a[0], y: cur.y }
+      } else if (cmd === 'V') {
+        out.push({ op: 'L', x: cur.x, y: a[0] })
+        cur = { x: cur.x, y: a[0] }
+      } else if (cmd === 'C') {
+        out.push({ op: 'C', x1: a[0], y1: a[1], x2: a[2], y2: a[3], x: a[4], y: a[5] })
+        cur = { x: a[4], y: a[5] }
+      } else {
+        // Q : cubique équivalente, points de contrôle aux deux tiers du segment [départ, contrôle] et [arrivée, contrôle]
+        const [qx, qy, x, y] = a
+        out.push({ op: 'C', x1: cur.x + (2 / 3) * (qx - cur.x), y1: cur.y + (2 / 3) * (qy - cur.y), x2: x + (2 / 3) * (qx - x), y2: y + (2 / 3) * (qy - y), x, y })
+        cur = { x, y }
+      }
+    }
+    return true
+  }
+
+  for (const t of tokens) {
+    if (/^[a-zA-Z]$/.test(t)) {
+      if (!flush()) return null
+      cmd = t
+      args = []
+      if (!/^[MLHVCQZ]$/.test(t)) return null // relatif, arc, S, T : non géré
+    } else args.push(Number(t))
+  }
+  // un chemin SVG valide commence par M
+  return flush() && out.length && out[0].op === 'M' ? out : null
+}
