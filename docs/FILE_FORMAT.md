@@ -7,7 +7,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
 ```jsonc
 {
   "version": 2,
-  "name": "Sans titre",
+  "name": "Sans titre",   // nom du document (80 caractères max) ; nom des exports, « / \ : * ? " < > | » y deviennent « - »
   "width": 1080,            // pixels de design, communs à toutes les pages
   "height": 1080,
   "pages": [

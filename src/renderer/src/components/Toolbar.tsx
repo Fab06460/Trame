@@ -4,6 +4,8 @@ import { newProject, openProject, saveProject } from '@/fileActions'
 import { renderPage } from '@/exportPages'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
+import { fileSafeName } from '@/docName'
+import { DocName } from './DocName'
 import { usePdfIssues } from '@/store/pdfIssues'
 
 export function Toolbar(): React.JSX.Element {
@@ -25,13 +27,13 @@ export function Toolbar(): React.JSX.Element {
     // rendu hors écran à la taille réelle du design : indépendant du zoom et de la position de la vue
     const { doc, pageId } = useEditor.getState()
     const url = await renderPage(doc, doc.pages.find((p) => p.id === pageId) ?? doc.pages[0], type)
-    await window.trame.saveExport(url, `${name}${pageCount > 1 ? `-page${pageNo}` : ''}.${type === 'image/png' ? 'png' : 'jpg'}`)
+    await window.trame.saveExport(url, `${fileSafeName(name)}${pageCount > 1 ? `-page${pageNo}` : ''}.${type === 'image/png' ? 'png' : 'jpg'}`)
   }
 
   const exportPdfFile = async (): Promise<void> => {
     const { doc } = useEditor.getState()
     const { dataUrl, fallbacks } = await exportPdf(doc)
-    const saved = await window.trame.saveExport(dataUrl, `${doc.name}.pdf`)
+    const saved = await window.trame.saveExport(dataUrl, `${fileSafeName(doc.name)}.pdf`)
     // On prévient APRÈS l'enregistrement (rien n'est perdu) des textes qui n'ont pas pu être écrits en vrai texte
     const warning = saved ? describeFallbacks(fallbacks, doc.pages.length) : null
     if (warning) await window.trame.showInfo(warning.message, warning.detail)
@@ -53,6 +55,7 @@ export function Toolbar(): React.JSX.Element {
       <button onClick={() => addElement({ type: 'ellipse' })}>Ellipse</button>
       <button onClick={addImage}>Image</button>
       <span className="spacer" />
+      <DocName />
       <button
         onClick={exportPdfFile}
         className={pdfIssueCount ? 'has-warning' : ''}

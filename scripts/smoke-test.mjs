@@ -770,6 +770,26 @@ try {
   const undone = pngPixel(png, ...L)
   check('annuler rétablit le filtre', Math.abs(undone[0] - undone[2]) < 6)
 
+  // nom du document : champ de la barre d'outils → nom des exports (caractères interdits remplacés) ; annuler le rétablit
+  check('le nom par défaut est « Sans titre »', (await run(`document.querySelector('.doc-name').value`)) === 'Sans titre')
+  await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+  await cdp('Input.insertText', { text: 'Affiche / été' })
+  await run(`document.querySelector('.doc-name').blur()`)
+  await sleep(400)
+  check('le titre de la fenêtre reprend le nom', (await run('document.title')).startsWith('Affiche / été'))
+  await click('header.toolbar button', 'Export PNG')
+  let named = false
+  for (let i = 0; i < 40 && !named; i++) { await sleep(250); named = (await readdir(exportsDir)).includes('Affiche - été.png') }
+  check('l\'export PNG porte le nom du document (« / » remplacé par « - »)', named, (await readdir(exportsDir)).join(', '))
+  await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+  await cdp('Input.insertText', { text: '   ' })
+  await run(`document.querySelector('.doc-name').blur()`)
+  await sleep(300)
+  check('un nom vide redevient « Sans titre »', (await run(`document.querySelector('.doc-name').value`)) === 'Sans titre')
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check('annuler rétablit le nom précédent', (await run(`document.querySelector('.doc-name').value`)) === 'Affiche / été')
+
   // export PDF vectoriel : on ajoute du texte dans l'interface (document vierge : les scénarios précédents ont laissé des éléments)
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)

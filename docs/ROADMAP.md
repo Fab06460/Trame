@@ -93,7 +93,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | **Fait** (coins proportionnels, texte en largeur seule, rotation aimantée). L'aimantation des coins est volontairement exclue. Konva : `keepRatio`, `rotationSnaps`. | E6 |
 | E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | **Fait** (Alt = dupliquer, Maj = axe, ⌘ = suspendre l'aimantation). | — |
 | E16 | Retourner horizontalement / verticalement | M | **Fait pour les images** ; formes et texte à venir si besoin. | — |
-| E17 | Nom du document modifiable (barre de titre, noms d'export) | S | Aujourd'hui figé à « Sans titre » ou au nom du modèle. | — |
+| E17 | Nom du document modifiable (barre de titre, noms d'export) | S | **Fait** : champ dans la barre d'outils (`docName.ts`, `DocName.tsx`) ; nom des exports et de « Enregistrer sous » ; annulable. | — |
 | E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | | E5 |
 | E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | | E6 |
 | E20 | Recherche / remplacement de texte dans le document | S | | — |

@@ -1,9 +1,10 @@
+import { fileSafeName } from '@/docName'
 import { parseDocument, useEditor } from '@/store/editor'
 
 /** Enregistre le document. `saveAs` force le choix d'un nouvel emplacement. Retourne false si annulé ou en échec. */
 export async function saveProject(saveAs = false): Promise<boolean> {
   const { doc, filePath, markSaved } = useEditor.getState()
-  const path = await window.trame.saveProject(JSON.stringify(doc), saveAs ? undefined : filePath, doc.name)
+  const path = await window.trame.saveProject(JSON.stringify(doc), saveAs ? undefined : filePath, fileSafeName(doc.name))
   if (!path) return false
   markSaved(path)
   return true

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
+import { cleanDocName } from '@/docName'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
@@ -84,7 +85,7 @@ export function parseDocument(json: string): TrameDocument {
       else e.name = e.name.slice(0, 80)
     }
   }
-  return { ...doc, name: typeof doc.name === 'string' && doc.name ? doc.name : 'Sans titre' }
+  return { ...doc, name: cleanDocName(doc.name) }
 }
 
 export const selectPage = (s: Pick<EditorState, 'doc' | 'pageId'>): TramePage =>
@@ -147,6 +148,7 @@ interface EditorState {
   /** Modifie les repères de la page courante. `commit=false` pour un geste continu (après un `beginChange`). */
   updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
   setSize: (width: number, height: number) => void
+  setName: (name: string) => void
   undo: () => void
   redo: () => void
   loadDocument: (doc: TrameDocument, path?: string) => void
@@ -540,6 +542,12 @@ export const useEditor = create<EditorState>((set, get) => {
 
     setSize: (width, height) =>
       set((s) => ({ ...snapshot(), doc: { ...s.doc, width, height }, dirty: true })),
+
+    setName: (raw) =>
+      set((s) => {
+        const name = cleanDocName(raw)
+        return name === s.doc.name ? s : { ...snapshot(), doc: { ...s.doc, name }, dirty: true }
+      }),
 
     undo: () => {
       const { past, doc, future, selectedIds } = get()
