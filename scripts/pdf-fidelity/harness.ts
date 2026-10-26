@@ -1,4 +1,5 @@
 import { exportPdf } from '@/pdfExport'
+import { exportPptx } from '@/pptxExport'
 import { renderPage } from '@/exportPages'
 import { loadFonts } from '@/fonts'
 import { cases } from './documents'
@@ -16,6 +17,9 @@ async function main(): Promise<void> {
     const { dataUrl: pdf, fallbacks } = await exportPdf(c.doc)
     const ms = Math.round(performance.now() - t0)
     fs.writeFileSync(`${OUT}/${c.name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+    // PPTX : produit pour inspection (Keynote, Quick Look) ; sa fidélité ne se mesure pas pixel à pixel
+    const { dataUrl: pptx } = await exportPptx(c.doc)
+    fs.writeFileSync(`${OUT}/${c.name}.pptx`, Buffer.from(pptx.split(',')[1], 'base64'))
     for (const [i, page] of c.doc.pages.entries()) {
       const png = await renderPage(c.doc, page, 'image/png')
       fs.writeFileSync(`${OUT}/${c.name}-konva-${i + 1}.png`, Buffer.from(png.split(',')[1], 'base64'))

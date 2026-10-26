@@ -2,6 +2,7 @@ import { useEditor } from '@/store/editor'
 import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
 import { renderPage } from '@/exportPages'
+import { exportPptx } from '@/pptxExport'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { fileSafeName } from '@/docName'
@@ -40,6 +41,20 @@ export function Toolbar(): React.JSX.Element {
     if (warning) await window.trame.showInfo(warning.message, warning.detail)
   }
 
+  const exportPptxFile = async (): Promise<void> => {
+    const { doc } = useEditor.getState()
+    const { dataUrl, rasterized } = await exportPptx(doc)
+    const saved = await window.trame.saveExport(dataUrl, `${fileSafeName(doc.name)}.pptx`)
+    // comme pour le PDF : on prévient APRÈS l'enregistrement de ce qui n'est pas resté modifiable dans PowerPoint
+    if (saved && rasterized.length) {
+      const causes = [...new Set(rasterized.map((r) => r.reason))].join(', ')
+      await window.trame.showInfo(
+        `${rasterized.length} élément${rasterized.length > 1 ? 's exportés' : ' exporté'} sous forme d'image`,
+        `PowerPoint ne sait pas reproduire en objet modifiable : ${causes}. Ils sont placés en image à la même position.\nLes polices de Trame (Inter, Montserrat…) doivent être installées sur l'ordinateur qui ouvre le fichier, sinon PowerPoint les remplace.`
+      )
+    }
+  }
+
   return (
     <header className="toolbar">
       <div className="brand">Trame</div>
@@ -69,6 +84,7 @@ export function Toolbar(): React.JSX.Element {
       >
         Export PDF{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''}
       </button>
+      <button onClick={() => void exportPptxFile()} title="Exporter en présentation PowerPoint (Keynote, Google Slides et Canva savent l'ouvrir)">Export PPTX</button>
       <button onClick={() => exportAs('image/jpeg')}>Export JPG</button>
       <button className="primary" onClick={() => exportAs('image/png')}>Export PNG</button>
     </header>

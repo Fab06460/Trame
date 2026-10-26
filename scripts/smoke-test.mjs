@@ -868,6 +868,39 @@ try {
   check('PDF annoté : le texte d\'origine est toujours là (objet formulaire)', lastPdfRaw.includes('/Subtype /Form') && (hexOrLiteral(annotated) || hexOrLiteral(lastPdfRaw)))
   check('PDF annoté : l\'annotation ajoutée est du vrai texte (TJ)', annotated.includes(' TJ'))
 
+  // export PPTX : objets modifiables (texte, rectangle) + repli en image (dégradé) ; fichier relu en ZIP
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle')
+  await sleep(300)
+  await clickSel('.panel [data-fill="gradient"]')
+  await sleep(300)
+  await click('header.toolbar button', 'Rectangle')
+  await sleep(300)
+  await click('header.toolbar button', 'Texte')
+  await sleep(300)
+  await clickSel('.panel [data-list="bullet"]')
+  await sleep(300)
+  await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
+  await rm(join(exportsDir, 'Sans titre.pptx'), { force: true })
+  await click('header.toolbar button', 'Export PPTX')
+  for (let i = 0; i < 80 && !(await readdir(exportsDir)).includes('Sans titre.pptx'); i++) await sleep(250)
+  const pptxBuf = await readFile(join(exportsDir, 'Sans titre.pptx'))
+  if (process.env.SMOKE_KEEP_PPTX) await writeFile(process.env.SMOKE_KEEP_PPTX, pptxBuf) // inspection visuelle
+  check('le fichier PPTX est une archive ZIP (signature PK)', pptxBuf.subarray(0, 2).toString('latin1') === 'PK')
+  const { default: JSZip } = await import('jszip')
+  const zip = await JSZip.loadAsync(pptxBuf)
+  const slideXml = await zip.file('ppt/slides/slide1.xml').async('string')
+  check('la diapositive contient un rectangle et une zone de texte modifiables', slideXml.includes('prst="rect"') && slideXml.includes('<a:t>'), slideXml.slice(0, 200))
+  check('le texte de la liste est une puce PowerPoint (buChar)', slideXml.includes('buChar'))
+  check('le dégradé est exporté en image (une image dans la diapositive)', slideXml.includes('<p:pic>'))
+  check('la présentation a la taille du document (1080 px = 11,25 pouces)', (await zip.file('ppt/presentation.xml').async('string')).includes('sldSz cx="10287000"'))
+  let pptxInfo = ''
+  for (let i = 0; i < 40 && !pptxInfo; i++) { await sleep(250); pptxInfo = await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '') }
+  check('un message prévient qu\'un élément (dégradé) est exporté en image', pptxInfo.includes('1 élément exporté sous forme d\'image') && pptxInfo.includes('dégradé'), pptxInfo)
+  await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true }) // les scénarios suivants testent l'absence d'avertissement
+
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
