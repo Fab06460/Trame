@@ -132,7 +132,11 @@ interface EditorState {
   duplicatePage: (id: string) => void
   removePage: (id: string) => void
   movePage: (id: string, to: number) => void
-  addElement: (partial: Partial<TrameElement> & Pick<TrameElement, 'type'>) => void
+  /** `edit` : un texte créé par l'utilisateur s'ouvre directement en saisie, son contenu par défaut sélectionné (le premier caractère tapé le remplace) */
+  addElement: (partial: Partial<TrameElement> & Pick<TrameElement, 'type'>, opts?: { edit?: boolean }) => void
+  /** identifiant du texte à passer en saisie dès que le canvas l'affiche (consommé par le canvas) */
+  editRequest: string | null
+  clearEditRequest: () => void
   /** commit=false pour les mises à jour continues (drag, saisie) : un seul point d'historique via beginChange. */
   updateElement: (id: string, patch: Partial<TrameElement>, commit?: boolean) => void
   beginChange: () => void
@@ -353,7 +357,10 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ ...snapshot(), doc: { ...doc, pages }, dirty: true })
     },
 
-    addElement: (partial) => {
+    editRequest: null,
+    clearEditRequest: () => set({ editRequest: null }),
+
+    addElement: (partial, opts) => {
       const { doc } = get()
       const base = defaults[partial.type]
       const width = partial.width ?? base.width ?? 200
@@ -374,6 +381,7 @@ export const useEditor = create<EditorState>((set, get) => {
         ...snapshot(),
         doc: mapPage((p) => ({ ...p, elements: [...p.elements, el] })),
         selectedIds: [el.id],
+        editRequest: opts?.edit && el.type === 'text' ? el.id : null,
         dirty: true
       })
     },

@@ -114,7 +114,7 @@ export function Sidebar(): React.JSX.Element {
                   key={p.label}
                   className="text-preset"
                   style={{ fontSize: Math.min(p.fontSize / 3.5, 28), fontWeight: p.fontStyle === 'bold' ? 700 : 400 }}
-                  onClick={() => addElement({ type: 'text', text: p.text, fontSize: p.fontSize, fontStyle: p.fontStyle, height: p.fontSize * 1.2 })}
+                  onClick={() => addElement({ type: 'text', text: p.text, fontSize: p.fontSize, fontStyle: p.fontStyle, height: p.fontSize * 1.2 }, { edit: true })}
                 >
                   {p.label}
                 </button>

@@ -69,7 +69,7 @@ export function Toolbar(): React.JSX.Element {
       <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>
       <button disabled={!canRedo} onClick={redo} title="Rétablir (⇧⌘Z)">↪︎</button>
       <span className="sep" />
-      <button onClick={() => addElement({ type: 'text' })}>Texte</button>
+      <button onClick={() => addElement({ type: 'text' }, { edit: true })}>Texte</button>
       <button onClick={() => addElement({ type: 'rect' })}>Rectangle</button>
       <button onClick={() => addElement({ type: 'ellipse' })}>Ellipse</button>
       <button onClick={addImage}>Image</button>

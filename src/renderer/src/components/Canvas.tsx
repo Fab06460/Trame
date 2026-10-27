@@ -278,6 +278,15 @@ export function Canvas(): React.JSX.Element {
     setEditing(id)
   }
 
+  // un texte qui vient d'être créé s'ouvre directement en saisie
+  const editRequest = useEditor((s) => s.editRequest)
+  useEffect(() => {
+    if (!editRequest) return
+    if (page.elements.some((e) => e.id === editRequest)) startTextEdit(editRequest)
+    useEditor.getState().clearEditRequest()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRequest])
+
   const editingEl = page.elements.find((e) => e.id === editing)
   const anyLocked = page.elements.some((e) => selectedIds.includes(e.id) && e.locked)
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
@@ -453,6 +462,8 @@ export function Canvas(): React.JSX.Element {
         <textarea
           className="text-editor"
           autoFocus
+          // tout le texte est sélectionné à l'ouverture : on tape directement, sans effacer le texte par défaut
+          onFocus={(e) => e.currentTarget.select()}
           defaultValue={editingEl.text}
           style={{
             left: offX + editingEl.x * scale,

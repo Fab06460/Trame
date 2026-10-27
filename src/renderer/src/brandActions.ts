@@ -22,7 +22,7 @@ export function applyColor(color: string): void {
 export function applyFont(family: string): void {
   const s = useEditor.getState()
   const texts = selectPage(s).elements.filter((e) => s.selectedIds.includes(e.id) && e.type === 'text')
-  if (!texts.length) return s.addElement({ type: 'text', fontFamily: family })
+  if (!texts.length) return s.addElement({ type: 'text', fontFamily: family }, { edit: true })
   s.beginChange()
   for (const e of texts) s.updateElement(e.id, { fontFamily: family }, false)
 }
