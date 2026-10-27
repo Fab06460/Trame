@@ -216,6 +216,12 @@ Onglet « Marque » (`BrandPanel.tsx`). Le kit (`brandKit.ts`, pur et testé : c
 - **PDF** : `drawTextVector` écrit le corps (lignes de `textArr`, décalées du retrait) et les marqueurs (à `x = 0` sur la ligne de base de leur ligne) dans le même bloc `BT`/`ET` ; soulignement et barré ne concernent que le corps. `checkText` ajoute les caractères des marqueurs (« • », chiffres, « . ») à ceux que la police doit posséder.
 - **Miniatures** : une rangée flex par paragraphe (colonne de marqueur + texte).
 
+## Rechercher et remplacer
+
+⌘F ou le bouton 🔍 ouvre un panneau flottant (`FindPanel.tsx`, réglages dans `store/find.ts`). `textSearch.ts` (pur, testé) : `findMatches` plie le texte et la requête (minuscules ; accents retirés par normalisation NFD si « Sans accents ») **en gardant, pour chaque caractère plié, la position du caractère d'origine** : une occurrence se reporte exactement dans l'original même quand le pliage change la longueur (accents combinants, lettres hors plan de base, émojis). Un accent combinant appartient à sa lettre : « cafe » ne trouve pas « café » décomposé quand les accents comptent, et l'englobe quand ils sont ignorés. « Mot entier » : ni lettre, ni chiffre, ni « _ » avant ou après (Unicode). La requête est **littérale** (jamais une expression régulière) et le texte de remplacement n'est jamais interprété (`$1`, `\n`). `findInDocument` parcourt les pages puis les éléments dans l'ordre de superposition (calques masqués ignorés), avec un extrait autour de chaque occurrence ; `replacementsFor` calcule le nouveau texte de chaque élément touché.
+- **Remplacer** l'occurrence courante ou **Tout remplacer** passent par `replaceTexts` (store) : **un seul cran d'historique** pour tout le remplacement, toutes pages comprises ; un texte **figé par le modèle** est ignoré et compté (« n éléments figés ignorés »), un texte « à remplir » est remplacé. Portée : tout le document ou la page courante. Entrée / Maj+Entrée naviguent (la page change et l'élément est sélectionné) ; Échap ferme.
+- Tests : `textSearch.test.ts` (13 cas), remplacement dans `store/protection.test.ts`, et un scénario de bout en bout (⌘F, 3 occurrences sur 2 pages, navigation, casse, remplacer, tout remplacer, un seul ⌘Z, mot entier).
+
 ## Mode présentation
 
 Bouton « ▶ Présenter », **F5** ou **⌘⇧P** : les pages en plein écran depuis la page courante. `PresentationMode.tsx` + `store/presentation.ts` (le **document est figé au lancement** : rien ne se modifie pendant qu'on présente ; à la sortie, l'éditeur revient sur la page où l'on s'est arrêté).

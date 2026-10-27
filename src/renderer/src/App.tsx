@@ -5,6 +5,8 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { PdfImportDialog } from '@/components/PdfImportDialog'
+import { FindPanel } from '@/components/FindPanel'
+import { useFind } from '@/store/find'
 import { PresentationMode } from '@/components/PresentationMode'
 import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
@@ -20,6 +22,12 @@ export default function App(): React.JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       const t = e.target as HTMLElement
       const k = e.key.toLowerCase()
+      // ⌘F : rechercher et remplacer dans les textes
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && k === 'f' && !usePresentation.getState().active) {
+        e.preventDefault()
+        useFind.getState().show()
+        return
+      }
       // F5 ou ⌘⇧P : présenter depuis la page courante
       if ((e.key === 'F5' || ((e.metaKey || e.ctrlKey) && e.shiftKey && k === 'p')) && !usePresentation.getState().active) {
         e.preventDefault()
@@ -124,6 +132,7 @@ export default function App(): React.JSX.Element {
       <PdfImportDialog />
       <FontCatalogDialog />
       <ExportPagesDialog />
+      <FindPanel />
       <PresentationMode />
       <main className="workspace">
         <Sidebar />

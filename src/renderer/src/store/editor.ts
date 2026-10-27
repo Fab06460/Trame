@@ -145,6 +145,8 @@ interface EditorState {
   updateElement: (id: string, patch: Partial<TrameElement>, commit?: boolean) => void
   beginChange: () => void
   removeSelected: () => void
+  /** Remplace le texte de plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément figé par le modèle est ignoré et compté. */
+  replaceTexts: (changes: Array<{ elementId: string; text: string }>) => { replaced: number; skipped: number }
   /** modèle de marque : vrai pendant la modification du modèle (les éléments protégés sont alors modifiables) */
   templateUnlocked: boolean
   setTemplateUnlocked: (unlocked: boolean) => void
@@ -426,6 +428,28 @@ export const useEditor = create<EditorState>((set, get) => {
         selectedIds: get().selectedIds.filter((id) => !doomed.includes(id)),
         dirty: true
       })
+    },
+
+    replaceTexts: (changes) => {
+      const enforced = enforcedNow()
+      const wanted = new Map(changes.map((c) => [c.elementId, c.text]))
+      let replaced = 0
+      let skipped = 0
+      const pages = get().doc.pages.map((p) => ({
+        ...p,
+        elements: p.elements.map((e) => {
+          const text = wanted.get(e.id)
+          if (text === undefined || text === e.text) return e
+          if (!allowedPatch(e, { text }, enforced)) {
+            skipped += 1
+            return e
+          }
+          replaced += 1
+          return { ...e, text }
+        })
+      }))
+      if (replaced > 0) set({ ...snapshot(), doc: { ...get().doc, pages }, dirty: true })
+      return { replaced, skipped }
     },
 
     templateUnlocked: false,

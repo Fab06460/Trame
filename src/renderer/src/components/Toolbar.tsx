@@ -9,6 +9,7 @@ import { fileSafeName } from '@/docName'
 import { DocName } from './DocName'
 import { importPptxFile } from '@/pptxImport/actions'
 import { startPdfImport } from '@/pdfImport/actions'
+import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
 import { useExportPages } from '@/store/exportPages'
 import { usePdfIssues } from '@/store/pdfIssues'
@@ -70,6 +71,7 @@ export function Toolbar(): React.JSX.Element {
       <span className="sep" />
       <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>
       <button disabled={!canRedo} onClick={redo} title="Rétablir (⇧⌘Z)">↪︎</button>
+      <button onClick={() => useFind.getState().show()} title="Rechercher et remplacer dans les textes (⌘F)" aria-label="Rechercher et remplacer">🔍︎</button>
       <span className="sep" />
       <button onClick={() => addElement({ type: 'text' }, { edit: true })}>Texte</button>
       <button onClick={() => addElement({ type: 'rect' })}>Rectangle</button>

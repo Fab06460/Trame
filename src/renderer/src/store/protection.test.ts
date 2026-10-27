@@ -120,3 +120,40 @@ describe('protection des éléments d\'un modèle (store)', () => {
     expect(parsed.pages[0].elements.map((e) => e.protect)).toEqual(['fixed', undefined])
   })
 })
+
+describe('remplacement de texte (store)', () => {
+  const two = (): void =>
+    s().loadDocument({
+      version: 2, name: 't', width: 500, height: 500,
+      pages: [
+        { id: 'p1', background: '#fff', elements: [el('a', { type: 'text', text: 'un chat' }), el('b', { type: 'text', text: 'chat noir', protect: 'fixed' }), el('c', { type: 'text', text: 'le chat', protect: 'fill' })] },
+        { id: 'p2', background: '#fff', elements: [el('d', { type: 'text', text: 'deux chats' })] }
+      ]
+    })
+  const text = (id: string): string | undefined => s().doc.pages.flatMap((p) => p.elements).find((e) => e.id === id)?.text
+
+  it('remplace sur plusieurs pages en un seul cran d\'historique', () => {
+    two()
+    const r = s().replaceTexts([{ elementId: 'a', text: 'un chien' }, { elementId: 'd', text: 'deux chiens' }])
+    expect(r).toEqual({ replaced: 2, skipped: 0 })
+    expect([text('a'), text('d')]).toEqual(['un chien', 'deux chiens'])
+    s().undo()
+    expect([text('a'), text('d')]).toEqual(['un chat', 'deux chats'])
+  })
+
+  it('modèle verrouillé : un texte figé est ignoré et compté, un texte « à remplir » est remplacé', () => {
+    two()
+    s().setTemplateUnlocked(false)
+    const r = s().replaceTexts([{ elementId: 'b', text: 'chien noir' }, { elementId: 'c', text: 'le chien' }])
+    expect(r).toEqual({ replaced: 1, skipped: 1 })
+    expect(text('b')).toBe('chat noir')
+    expect(text('c')).toBe('le chien')
+  })
+
+  it('aucun changement : pas de cran d\'historique', () => {
+    two()
+    const before = s().past.length
+    expect(s().replaceTexts([{ elementId: 'a', text: 'un chat' }])).toEqual({ replaced: 0, skipped: 0 })
+    expect(s().past.length).toBe(before)
+  })
+})
