@@ -98,6 +98,14 @@ const api = {
     ipcRenderer.on('app:before-close', listener)
     return () => ipcRenderer.removeListener('app:before-close', listener)
   },
+  /** Plein écran (mode présentation). */
+  setFullScreen: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:fullscreen', on),
+  /** Appelé quand la fenêtre quitte le plein écran (y compris par le bouton du système). */
+  onLeaveFullScreen: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('window:left-fullscreen', listener)
+    return () => ipcRenderer.removeListener('window:left-fullscreen', listener)
+  },
   confirmClose: (): void => ipcRenderer.send('app:close-confirmed')
 }
 

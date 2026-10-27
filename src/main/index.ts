@@ -94,6 +94,8 @@ function createWindow(): void {
   })
 
   mainWindow = win
+  // le mode présentation passe en plein écran ; si l'utilisateur en sort autrement (bouton système), l'interface le sait
+  win.on('leave-full-screen', () => win.webContents.send('window:left-fullscreen'))
   win.webContents.on('did-start-loading', () => fileInbox.onRendererGone())
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
@@ -659,6 +661,14 @@ ipcMain.handle('fonts:remove', async (_e, id: unknown) => {
   if (!isSafeId(id)) return false
   await rm(join(fontsDir(), id), { recursive: true, force: true })
   return true
+})
+
+/** Plein écran du mode présentation (inactif pendant les tests de bout en bout : l'animation système bloquerait le pilotage). */
+ipcMain.handle('window:fullscreen', (e, on: unknown) => {
+  const win = BrowserWindow.fromWebContents(e.sender)
+  if (!win || TEST_EXPORT_DIR) return false
+  win.setFullScreen(on === true)
+  return win.isFullScreen()
 })
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))

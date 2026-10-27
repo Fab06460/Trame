@@ -5,6 +5,8 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { PdfImportDialog } from '@/components/PdfImportDialog'
+import { PresentationMode } from '@/components/PresentationMode'
+import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
@@ -18,6 +20,12 @@ export default function App(): React.JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       const t = e.target as HTMLElement
       const k = e.key.toLowerCase()
+      // F5 ou ⌘⇧P : présenter depuis la page courante
+      if ((e.key === 'F5' || ((e.metaKey || e.ctrlKey) && e.shiftKey && k === 'p')) && !usePresentation.getState().active) {
+        e.preventDefault()
+        usePresentation.getState().start()
+        return
+      }
       // raccourcis fichier : actifs même pendant la saisie de texte
       if ((e.metaKey || e.ctrlKey) && ['s', 'o', 'n'].includes(k)) {
         e.preventDefault()
@@ -116,6 +124,7 @@ export default function App(): React.JSX.Element {
       <PdfImportDialog />
       <FontCatalogDialog />
       <ExportPagesDialog />
+      <PresentationMode />
       <main className="workspace">
         <Sidebar />
         <div className="center">

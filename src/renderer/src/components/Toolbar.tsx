@@ -9,6 +9,7 @@ import { fileSafeName } from '@/docName'
 import { DocName } from './DocName'
 import { importPptxFile } from '@/pptxImport/actions'
 import { startPdfImport } from '@/pdfImport/actions'
+import { usePresentation } from '@/store/presentation'
 import { useExportPages } from '@/store/exportPages'
 import { usePdfIssues } from '@/store/pdfIssues'
 
@@ -88,6 +89,7 @@ export function Toolbar(): React.JSX.Element {
         Export PDF{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''}
       </button>
       <button onClick={() => void exportPptxFile()} title="Exporter en présentation PowerPoint (Keynote, Google Slides et Canva savent l'ouvrir)">Export PPTX</button>
+      <button onClick={() => usePresentation.getState().start()} title="Présenter en plein écran depuis la page courante (F5)">▶ Présenter</button>
       <button onClick={() => useExportPages.getState().setOpen(true)} title="Exporter plusieurs pages en images (archive ZIP), en PNG ou JPG, à la taille voulue">Export des pages…</button>
       <button onClick={() => exportAs('image/jpeg')}>Export JPG</button>
       <button className="primary" onClick={() => exportAs('image/png')}>Export PNG</button>
