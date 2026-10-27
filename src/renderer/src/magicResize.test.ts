@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { boundsOf } from '@/geometry'
-import { adaptDocument } from '@/magicResize'
+import { adaptDocument, sanitizeFrame } from '@/magicResize'
 import type { TrameDocument, TrameElement } from '@/types'
 
 const el = (o: Partial<TrameElement>): TrameElement =>
@@ -108,5 +108,63 @@ describe('magicResize', () => {
     adaptDocument(base, 500, 500)
     expect(base.pages[0].elements[0].x).toBe(100)
     expect(base.width).toBe(1000)
+  })
+
+  describe('aller-retour entre formats', () => {
+    const base = (): TrameDocument => {
+      const d = doc([
+        el({ id: 'bg', x: 0, y: 0, width: 1000, height: 1000, fill: '#eee' }),
+        el({ id: 'circle', x: 700, y: -50, width: 400, height: 400 }),
+        el({ id: 'star', x: 800, y: 50, width: 50, height: 50 }),
+        el({ id: 'title', type: 'text', x: 120, y: 400, width: 600, height: 120, fontSize: 90 }),
+        el({ id: 'btn', x: 120, y: 700, width: 300, height: 100, cornerRadius: 50, strokeWidth: 4 })
+      ])
+      d.pages[0].guides = [{ orientation: 'v', position: 120 }]
+      return d
+    }
+    const same = (a: TrameElement, b: TrameElement): void => {
+      for (const k of ['x', 'y', 'width', 'height', 'fontSize', 'strokeWidth', 'cornerRadius'] as const) expect(a[k] ?? 0).toBeCloseTo((b[k] ?? 0) as number, 6)
+    }
+
+    it('carré → Story → carré : les éléments retrouvent exactement leur taille et leur place', () => {
+      const d0 = base()
+      const back = adaptDocument(adaptDocument(d0, 1080, 1920), 1000, 1000)
+      d0.pages[0].elements.forEach((e, i) => same(at(back, i), e))
+      expect(back.pages[0].guides![0].position).toBeCloseTo(120, 6)
+      expect(back.layoutFrame).toBeUndefined() // retour au format d'origine : plus de cadre à mémoriser
+    })
+
+    it('plusieurs formats d\'affilée puis retour : toujours sans perte', () => {
+      const d0 = base()
+      const there = [[1080, 1920], [794, 1123], [1920, 1080], [1200, 630]].reduce((d, [w, h]) => adaptDocument(d, w, h), d0)
+      const back = adaptDocument(there, 1000, 1000)
+      d0.pages[0].elements.forEach((e, i) => same(at(back, i), e))
+    })
+
+    it('le cadre de la composition est mémorisé dans le nouveau format (centré, à l\'échelle)', () => {
+      const d = adaptDocument(base(), 1000, 2000)
+      expect(d.layoutFrame).toEqual({ x: 0, y: 500, width: 1000, height: 1000 })
+    })
+
+    it('Story → 16:9 : la composition garde sa taille d\'origine (carré de 1 000 px) au lieu de rétrécir avec ses bandes', () => {
+      const d = adaptDocument(adaptDocument(base(), 1000, 2000), 1920, 1080)
+      // le cadre est un carré de 1 080 (échelle 1,08 de 1 000 vers 1 080 de haut), centré
+      expect(d.layoutFrame!.width).toBeCloseTo(1080)
+      expect(d.layoutFrame!.height).toBeCloseTo(1080)
+      expect(d.layoutFrame!.x).toBeCloseTo(420)
+      expect(at(d, 3).fontSize).toBeCloseTo(90 * 1.08)
+    })
+
+    it('un cadre invalide est retiré à la lecture', () => {
+      const bad: { layoutFrame?: unknown } = { layoutFrame: { x: 0, y: 0, width: -3, height: 10 } }
+      sanitizeFrame(bad)
+      expect('layoutFrame' in bad).toBe(false)
+      const ok: { layoutFrame?: unknown } = { layoutFrame: { x: 10, y: 20, width: 300, height: 400 } }
+      sanitizeFrame(ok)
+      expect(ok.layoutFrame).toEqual({ x: 10, y: 20, width: 300, height: 400 })
+      const nan: { layoutFrame?: unknown } = { layoutFrame: 'oops' }
+      sanitizeFrame(nan)
+      expect('layoutFrame' in nan).toBe(false)
+    })
   })
 })

@@ -139,6 +139,8 @@ export interface TrameDocument {
   width: number
   height: number
   pages: TramePage[]
+  /** cadre (dans la page) où vit la composition d'origine après un ou plusieurs Magic Resize : absent = toute la page. Permet de revenir à un format sans rétrécir le contenu. */
+  layoutFrame?: { x: number; y: number; width: number; height: number }
   /** polices ajoutées en ligne utilisées par le document, embarquées pour qu'il s'affiche et s'exporte partout (base64 WOFF2 par variante) */
   fonts?: Record<string, EmbeddedFont>
   /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */

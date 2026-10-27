@@ -28,6 +28,13 @@ const centerOf = (e: TrameElement): { x: number; y: number } => {
   }
 }
 
+export interface Frame {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /** Un bloc dont un bord est à moins de cette part de la page du bord de la page lui reste collé (fonds, bandeaux, décors qui débordent). */
 const EDGE = 0.04
 
@@ -38,13 +45,13 @@ const EDGE = 0.04
  */
 type AxisKind = 'stretch' | 'start' | 'end' | 'free'
 
-function placeOnAxis(start: number, size: number, total: number, newTotal: number, s: number, offset: number, canStretch: boolean): { pos: number; size: number; kind: AxisKind } {
+function placeOnAxis(start: number, size: number, total: number, newTotal: number, s: number, offset: number, frameStart: number, canStretch: boolean): { pos: number; size: number; kind: AxisKind } {
   const before = start
   const after = total - (start + size)
   if (canStretch && size >= total * SPANS) return { pos: 0, size: newTotal, kind: 'stretch' }
   if (before <= EDGE * total && before <= after) return { pos: before * s, size: size * s, kind: 'start' }
   if (after <= EDGE * total) return { pos: newTotal - after * s - size * s, size: size * s, kind: 'end' }
-  return { pos: offset + start * s, size: size * s, kind: 'free' }
+  return { pos: offset + (start - frameStart) * s, size: size * s, kind: 'free' }
 }
 
 /**
@@ -58,12 +65,12 @@ function placeOnAxis(start: number, size: number, total: number, newTotal: numbe
  * - un groupe se déplace d'un bloc (ses membres gardent leurs écarts, à l'échelle `s`) ;
  * - les repères suivent la composition.
  */
-export function adaptPage(page: TramePage, from: { width: number; height: number }, to: { width: number; height: number }): TramePage {
-  const sx = to.width / from.width
-  const sy = to.height / from.height
-  const s = Math.min(sx, sy)
-  const ox = (to.width - from.width * s) / 2
-  const oy = (to.height - from.height * s) / 2
+export function adaptPage(page: TramePage, from: { width: number; height: number }, to: { width: number; height: number }, frame: Frame = { x: 0, y: 0, width: from.width, height: from.height }): TramePage {
+  // l'échelle et le centrage sont ceux du CADRE de la composition (toute la page au départ), pas de la page entière : en revenant à un
+  // format déjà quitté, la composition reprend sa taille au lieu de rétrécir avec les bandes qui l'entouraient
+  const s = Math.min(to.width / frame.width, to.height / frame.height)
+  const ox = (to.width - frame.width * s) / 2
+  const oy = (to.height - frame.height * s) / 2
 
   const blocks = new Map<string, TrameElement[]>()
   for (const e of page.elements) {
@@ -76,7 +83,7 @@ export function adaptPage(page: TramePage, from: { width: number; height: number
   const placed: Placed[] = [...blocks.values()].map((members) => {
     const box = unionBox(members.map(boundsOf))
     const single = members.length === 1 && members[0].rotation === 0
-    return { members, box, single, px: placeOnAxis(box.x, box.width, from.width, to.width, s, ox, single), py: placeOnAxis(box.y, box.height, from.height, to.height, s, oy, single) }
+    return { members, box, single, px: placeOnAxis(box.x, box.width, from.width, to.width, s, ox, frame.x, single), py: placeOnAxis(box.y, box.height, from.height, to.height, s, oy, frame.y, single) }
   })
   const centreOf = (b: Placed['box']): { x: number; y: number } => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 })
   const contains = (a: Placed['box'], b: Placed['box']): boolean => b.x >= a.x - 1 && b.y >= a.y - 1 && b.x + b.width <= a.x + a.width + 1 && b.y + b.height <= a.y + a.height + 1
@@ -120,7 +127,7 @@ export function adaptPage(page: TramePage, from: { width: number; height: number
 
   return {
     ...page,
-    guides: page.guides?.map((g) => ({ ...g, position: g.orientation === 'v' ? ox + g.position * s : oy + g.position * s })),
+    guides: page.guides?.map((g) => ({ ...g, position: g.orientation === 'v' ? ox + (g.position - frame.x) * s : oy + (g.position - frame.y) * s })),
     elements: page.elements.map((e) => moved.get(e.id) ?? e)
   }
 }
@@ -130,5 +137,20 @@ export function adaptDocument(doc: TrameDocument, width: number, height: number)
   const w = Math.round(Math.min(SIZE_LIMITS.max, Math.max(SIZE_LIMITS.min, width)))
   const h = Math.round(Math.min(SIZE_LIMITS.max, Math.max(SIZE_LIMITS.min, height)))
   const from = { width: doc.width, height: doc.height }
-  return { ...doc, width: w, height: h, pages: doc.pages.map((p) => adaptPage(p, from, { width: w, height: h })) }
+  if (w === from.width && h === from.height) return doc
+  const frame: Frame = doc.layoutFrame ?? { x: 0, y: 0, width: from.width, height: from.height }
+  const s = Math.min(w / frame.width, h / frame.height)
+  const next: Frame = { x: (w - frame.width * s) / 2, y: (h - frame.height * s) / 2, width: frame.width * s, height: frame.height * s }
+  const { layoutFrame: _drop, ...rest } = doc
+  void _drop
+  const whole = Math.abs(next.x) < 0.5 && Math.abs(next.y) < 0.5 && Math.abs(next.width - w) < 0.5 && Math.abs(next.height - h) < 0.5
+  return { ...rest, width: w, height: h, pages: doc.pages.map((p) => adaptPage(p, from, { width: w, height: h }, frame)), ...(whole ? {} : { layoutFrame: next }) }
+}
+
+/** Nettoyage à la lecture : un cadre invalide (ou qui couvre toute la page) est retiré. Modifie en place. */
+export function sanitizeFrame(doc: { layoutFrame?: unknown; width?: unknown; height?: unknown }): void {
+  const f = doc.layoutFrame as Partial<Frame> | undefined
+  if (f === undefined) return
+  const ok = !!f && [f.x, f.y, f.width, f.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && (f.width as number) > 0 && (f.height as number) > 0 && (f.width as number) <= SIZE_LIMITS.max * 2 && (f.height as number) <= SIZE_LIMITS.max * 2 && Math.abs(f.x as number) <= SIZE_LIMITS.max * 2 && Math.abs(f.y as number) <= SIZE_LIMITS.max * 2
+  if (!ok) delete doc.layoutFrame
 }

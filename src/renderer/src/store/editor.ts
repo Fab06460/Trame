@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
 import { adaptDocument } from '@/magicResize'
 import { registerEmbeddedFonts } from '@/fonts'
+import { sanitizeFrame } from '@/magicResize'
 import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
@@ -93,6 +94,7 @@ export function parseDocument(json: string): TrameDocument {
   }
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
   sanitizeFonts(doc)
+  sanitizeFrame(doc)
   return { ...doc, name: cleanDocName(doc.name) }
 }
 
@@ -563,7 +565,10 @@ export const useEditor = create<EditorState>((set, get) => {
 
     resizeDocument: (width, height, adapt) =>
       set((s) => {
-        const next = adapt ? adaptDocument(s.doc, width, height) : { ...s.doc, width, height }
+        // sans adaptation, le contenu ne bouge pas : l'ancien cadre de composition n'a plus de sens
+        const { layoutFrame: _drop, ...plain } = s.doc
+        void _drop
+        const next = adapt ? adaptDocument(s.doc, width, height) : { ...plain, width, height }
         return next.width === s.doc.width && next.height === s.doc.height ? s : { ...snapshot(), doc: next, selectedIds: [], dirty: true }
       }),
 
