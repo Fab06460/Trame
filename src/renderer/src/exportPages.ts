@@ -79,7 +79,9 @@ export async function renderPage(
   page: TramePage,
   type: 'image/png' | 'image/jpeg' = 'image/png',
   /** Si fourni, réduit le rendu pour que le grand côté fasse au plus `maxSize` pixels (miniatures). */
-  maxSize?: number
+  maxSize?: number,
+  /** `scale` : multiple de la taille du design (export en haute résolution) ; `quality` : JPEG, de 0 à 1 */
+  options: { scale?: number; quality?: number } = {}
 ): Promise<string> {
   const container = document.createElement('div')
   const stage = new Konva.Stage({ container, width: doc.width, height: doc.height })
@@ -94,8 +96,8 @@ export async function renderPage(
   }
 
   layer.draw()
-  const pixelRatio = maxSize ? Math.min(1, maxSize / Math.max(doc.width, doc.height)) : 1
-  const url = stage.toDataURL({ mimeType: type, quality: 0.85, pixelRatio })
+  const pixelRatio = maxSize ? Math.min(1, maxSize / Math.max(doc.width, doc.height)) : (options.scale ?? 1)
+  const url = stage.toDataURL({ mimeType: type, quality: options.quality ?? 0.85, pixelRatio })
   stage.destroy()
   return url
 }

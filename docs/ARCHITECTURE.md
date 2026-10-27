@@ -216,6 +216,10 @@ Onglet « Marque » (`BrandPanel.tsx`). Le kit (`brandKit.ts`, pur et testé : c
 - **PDF** : `drawTextVector` écrit le corps (lignes de `textArr`, décalées du retrait) et les marqueurs (à `x = 0` sur la ligne de base de leur ligne) dans le même bloc `BT`/`ET` ; soulignement et barré ne concernent que le corps. `checkText` ajoute les caractères des marqueurs (« • », chiffres, « . ») à ceux que la police doit posséder.
 - **Miniatures** : une rangée flex par paragraphe (colonne de marqueur + texte).
 
+## Export des pages en images (PNG / JPG, ZIP)
+
+Bouton « Export des pages… » (fenêtre `ExportPagesDialog.tsx`, état `store/exportPages.ts`). `pageExport.ts` (pur, testé) : `parsePageRange` (« 1-3, 5 », séparateurs `,` `;` espace, ordre libre, doublons fusionnés, erreurs en français : page inexistante, plage inversée, saisie invalide), `pageFileName` (`<nom>-page-<n>.<ext>`, numéro complété de zéros selon le nombre de pages pour garder l'ordre alphabétique), `effectiveScale` (échelle demandée réduite pour que le grand côté reste ≤ 8 000 px ; la fenêtre affiche la taille réelle de chaque échelle et un message si elle est réduite). `pageExportActions.ts` : chaque page est rendue hors écran par `renderPage` (taille du design × échelle, qualité JPEG réglable de 50 à 100 %) ; **une seule page → un fichier image ; plusieurs → une archive ZIP** (JSZip, `STORE` : des images déjà compressées ne se recompressent pas), enregistrée par `export:save` comme les autres exports. Les réglages (format, taille, qualité) sont mémorisés pendant la session. Les boutons « Export PNG » et « Export JPG » de la barre d'outils restent l'export rapide de la page courante.
+
 ## Modèles de marque verrouillés
 
 `protect` sur un élément : `fixed` (**figé** : ni déplacé, ni redimensionné, ni modifié, ni masqué, ni supprimé, ni dupliqué) ou `fill` (**à remplir** : son contenu — texte, image, couleur, style — reste modifiable ; sa position, sa taille, sa présence et son ordre ne le sont plus). Absent = libre. `protection.ts` (pur, testé) : `isEnforced(doc, unlocked)`, `positionLocked`, `contentLocked`, `allowedPatch`.

@@ -1317,6 +1317,71 @@ try {
   await run(`document.querySelector('[data-action="template-unlock"]')?.click()`)
   await sleep(200)
 
+  // export de toutes les pages : ZIP, plages de pages, format, taille
+  await run('location.reload()')
+  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle') // page 1 : rectangle au centre
+  await sleep(300)
+  await clickSel('.add-page') // page 2 : vide
+  await sleep(300)
+  await clickSel('.add-page') // page 3 : ellipse
+  await sleep(300)
+  await click('header.toolbar button', 'Ellipse')
+  await sleep(300)
+  check('le document compte 3 pages', (await nBrand('.page-item')) === 3)
+  const zipDir = join(tmp, 'exports')
+  const exportZip = async (name) => {
+    await rm(join(zipDir, name), { force: true })
+    await clickSel('[data-action="export-run"]')
+    for (let i = 0; i < 80 && !readdirSync(zipDir).includes(name); i++) await sleep(250)
+    await sleep(300)
+    return readdirSync(zipDir).includes(name) ? JSZipLib.loadAsync(await readFile(join(zipDir, name))) : null
+  }
+  const { default: JSZipLib } = await import('jszip')
+  await click('header.toolbar button', 'Export des pages')
+  for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+  check('la fenêtre propose toutes les pages par défaut (3 pages → archive ZIP)', (await run(`document.querySelector('[data-export-which="all"]').checked`)) === true && (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('3 pages : 1, 2, 3') && (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('ZIP'))
+  let pagesZip = await exportZip('Sans titre.zip')
+  check('le ZIP contient une image PNG par page, nommées dans l\'ordre', !!pagesZip && Object.keys(pagesZip.files).sort().join() === 'Sans titre-page-1.png,Sans titre-page-2.png,Sans titre-page-3.png', pagesZip ? Object.keys(pagesZip.files).join() : 'aucun ZIP')
+  const pageImgs = pagesZip ? await Promise.all([1, 2, 3].map((n) => pagesZip.file(`Sans titre-page-${n}.png`).async('nodebuffer'))) : []
+  check('chaque page est rendue à sa taille (1080 × 1080) avec son propre contenu', pageImgs.length === 3 && pageImgs.every((b) => b.readUInt32BE(16) === 1080 && b.readUInt32BE(20) === 1080) && !pngPixel(pageImgs[0], 540, 540).every((v) => v > 240) && pngPixel(pageImgs[1], 540, 540).every((v) => v > 240) && !pngPixel(pageImgs[2], 540, 540).every((v) => v > 240))
+  check('la fenêtre se referme après l\'export', (await nBrand('[data-action="export-run"]')) === 0)
+  // plage de pages + JPG + ×2
+  await click('header.toolbar button', 'Export des pages')
+  for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+  await clickSel('[data-export-format="jpg"]')
+  await run(`(() => { const s = document.querySelector('[data-field="exportScale"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, '2'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await run(`document.querySelector('[data-field="exportRange"]').focus()`)
+  await cdp('Input.insertText', { text: '2-3' })
+  await sleep(300)
+  check('la saisie « 2-3 » est comprise (2 pages)', (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('2 pages : 2, 3'))
+  pagesZip = await exportZip('Sans titre.zip')
+  check('JPG, pages 2 à 3 : deux fichiers .jpg', !!pagesZip && Object.keys(pagesZip.files).sort().join() === 'Sans titre-page-2.jpg,Sans titre-page-3.jpg', pagesZip ? Object.keys(pagesZip.files).join() : 'aucun ZIP')
+  const jpg = pagesZip ? await pagesZip.file('Sans titre-page-2.jpg').async('nodebuffer') : Buffer.alloc(0)
+  check('le fichier est un vrai JPEG (signature FF D8)', jpg[0] === 0xff && jpg[1] === 0xd8)
+  check('échelle ×2 : 2 160 × 2 160 px', await (async () => { let w = 0, h = 0; for (let i = 2; i < jpg.length - 9; ) { if (jpg[i] !== 0xff) { i++; continue } const m = jpg[i + 1]; if (m >= 0xc0 && m <= 0xc3) { h = jpg.readUInt16BE(i + 5); w = jpg.readUInt16BE(i + 7); break } i += 2 + jpg.readUInt16BE(i + 2) } return w === 2160 && h === 2160 })())
+  // une seule page → un fichier image, pas de ZIP
+  await click('header.toolbar button', 'Export des pages')
+  for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+  await clickSel('[data-export-format="png"]') // la fenêtre se souvient de ses réglages (ici JPG ×2 de l'export précédent)
+  await clickSel('[data-export-which="current"]')
+  await rm(join(zipDir, 'Sans titre-page-3.png'), { force: true })
+  await clickSel('[data-action="export-run"]')
+  for (let i = 0; i < 60 && !readdirSync(zipDir).includes('Sans titre-page-3.png'); i++) await sleep(250)
+  check('une seule page : un fichier PNG direct (page courante = 3), sans archive', readdirSync(zipDir).includes('Sans titre-page-3.png'))
+  for (let i = 0; i < 40 && (await nBrand('[data-action="export-run"]')) !== 0; i++) await sleep(250)
+  // saisie invalide : message, export impossible
+  await click('header.toolbar button', 'Export des pages')
+  for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+  await clickSel('[data-export-which="range"]')
+  await run(`document.querySelector('[data-field="exportRange"]').focus(); document.querySelector('[data-field="exportRange"]').select()`)
+  await cdp('Input.insertText', { text: '9' })
+  await sleep(300)
+  check('une page inexistante est signalée et bloque l\'export', (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('La page 9 n\'existe pas') && (await run(`document.querySelector('[data-action="export-run"]').disabled`)) === true)
+  await clickSel('[data-action="export-cancel"]')
+  await sleep(300)
+
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')
   for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)

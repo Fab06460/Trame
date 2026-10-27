@@ -5,6 +5,7 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { PdfImportDialog } from '@/components/PdfImportDialog'
+import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
@@ -114,6 +115,7 @@ export default function App(): React.JSX.Element {
       <Toolbar />
       <PdfImportDialog />
       <FontCatalogDialog />
+      <ExportPagesDialog />
       <main className="workspace">
         <Sidebar />
         <div className="center">
