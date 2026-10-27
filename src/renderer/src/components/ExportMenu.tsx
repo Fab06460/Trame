@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { fileSafeName } from '@/docName'
 import { renderPage } from '@/exportPages'
 import { pageFileName } from '@/pageExport'
@@ -8,6 +8,7 @@ import { exportPptx } from '@/pptxExport'
 import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { useDismiss } from './useDismiss'
 
 async function exportImage(type: 'image/png' | 'image/jpeg'): Promise<void> {
   // rendu hors écran à la taille réelle du design : indépendant du zoom et de la position de la vue
@@ -53,25 +54,8 @@ export function ExportMenu(): React.JSX.Element {
   const pageCount = useEditor((s) => s.doc.pages.length)
   const pageNo = useEditor((s) => s.doc.pages.findIndex((p) => p.id === s.pageId) + 1)
 
-  // fermeture : clic ailleurs, Échap, ou choix d'une entrée
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent): void => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        setOpen(false)
-      }
-    }
-    window.addEventListener('mousedown', onDown)
-    window.addEventListener('keydown', onKey, true)
-    return () => {
-      window.removeEventListener('mousedown', onDown)
-      window.removeEventListener('keydown', onKey, true)
-    }
-  }, [open])
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(open, root, close)
 
   const choose = (action: () => void | Promise<void>): void => {
     setOpen(false)

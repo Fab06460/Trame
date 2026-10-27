@@ -253,3 +253,5 @@ button.danger { color: #ff7b7b; }
 .export-popup button:hover, .export-popup button:focus-visible { background: rgba(124, 92, 255, 0.22); }
 .export-popup button span { font-size: 11px; color: var(--muted); font-weight: 400; }
 .export-sep { height: 1px; margin: 4px 6px; background: var(--border); }
+
+.export-popup.left { right: auto; left: 0; }

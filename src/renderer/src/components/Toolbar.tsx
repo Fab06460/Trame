@@ -3,8 +3,7 @@ import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
 import { DocName } from './DocName'
 import { ExportMenu } from './ExportMenu'
-import { importPptxFile } from '@/pptxImport/actions'
-import { startPdfImport } from '@/pdfImport/actions'
+import { ImportMenu } from './ImportMenu'
 import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
 
@@ -25,8 +24,7 @@ export function Toolbar(): React.JSX.Element {
       <button onClick={newProject} title="Nouveau (⌘N)">Nouveau</button>
       <button onClick={openProject} title="Ouvrir (⌘O)">Ouvrir</button>
       <button onClick={() => saveProject()} title="Enregistrer (⌘S)">Enregistrer{dirty ? ' •' : ''}</button>
-      <button onClick={() => void startPdfImport()} title="Importer un PDF comme nouveau document">Importer PDF</button>
-      <button onClick={() => void importPptxFile()} title="Importer une présentation PowerPoint (.pptx) comme nouveau document">Importer PPTX</button>
+      <ImportMenu />
       <button onClick={() => saveProject(true)} title="Enregistrer sous (⇧⌘S)">Enregistrer sous…</button>
       <span className="sep" />
       <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>
