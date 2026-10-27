@@ -306,6 +306,12 @@ try {
   // modèles : masquer / restaurer, renommer, rétablir l'original, remplacer après modification (parcours dans l'interface)
   const count = (sel) => run(`document.querySelectorAll(${JSON.stringify(sel)}).length`)
   const clickSel = (sel) => run(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true })()`)
+  // menu « Exporter ▾ » : on l'ouvre puis on choisit l'entrée (pdf | pptx | png | jpg | pages)
+  const exportVia = async (kind) => {
+    await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
+    for (let i = 0; i < 20 && !(await run(`document.querySelector('[data-export="${kind}"]') ? 1 : 0`)); i++) await sleep(50)
+    return clickSel(`[data-export="${kind}"]`)
+  }
   const typeInto = (sel, value) =>
     run(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); if (!i) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
   const pressEnter = (sel) => run(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); if (!i) return false; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return true })()`)
@@ -550,9 +556,9 @@ try {
   const nThumb = () => run(`document.querySelectorAll('.page-item.current .thumb div div').length`)
   const exportPng = async () => {
     // un document de plusieurs pages exporte « <nom>-page<n>.png »
-    const names = ['Sans titre.png', 'Sans titre-page1.png']
+    const names = ['Sans titre.png', 'Sans titre-page-1.png', 'Sans titre-page1.png']
     for (const n of names) await rm(join(exportsDir, n), { force: true })
-    await click('header.toolbar button', 'Export PNG')
+    await exportVia('png')
     let found
     for (let i = 0; i < 40 && !found; i++) { await sleep(250); found = names.find((n) => readdirSync(exportsDir).includes(n)) }
     await sleep(200)
@@ -561,7 +567,7 @@ try {
   let lastPdfRaw = ''
   const exportPdfText = async () => {
     await rm(join(exportsDir, 'Sans titre.pdf'), { force: true })
-    await click('header.toolbar button', 'Export PDF')
+    await exportVia('pdf')
     for (let i = 0; i < 40; i++) { await sleep(250); if ((await readdir(exportsDir)).includes('Sans titre.pdf')) break }
     await sleep(200)
     const pdf = await readFile(join(exportsDir, 'Sans titre.pdf'))
@@ -839,7 +845,7 @@ try {
   await run(`document.querySelector('.doc-name').blur()`)
   await sleep(400)
   check('le titre de la fenêtre reprend le nom', (await run('document.title')).startsWith('Affiche / été'))
-  await click('header.toolbar button', 'Export PNG')
+  await exportVia('png')
   let named = false
   for (let i = 0; i < 40 && !named; i++) { await sleep(250); named = (await readdir(exportsDir)).includes('Affiche - été.png') }
   check('l\'export PNG porte le nom du document (« / » remplacé par « - »)', named, (await readdir(exportsDir)).join(', '))
@@ -941,7 +947,7 @@ try {
   await sleep(300)
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
   await rm(join(exportsDir, 'Sans titre.pptx'), { force: true })
-  await click('header.toolbar button', 'Export PPTX')
+  await exportVia('pptx')
   for (let i = 0; i < 80 && !(await readdir(exportsDir)).includes('Sans titre.pptx'); i++) await sleep(250)
   const pptxBuf = await readFile(join(exportsDir, 'Sans titre.pptx'))
   if (process.env.SMOKE_KEEP_PPTX) await writeFile(process.env.SMOKE_KEEP_PPTX, pptxBuf) // inspection visuelle
@@ -995,7 +1001,7 @@ try {
   check('une police absente (Montserrat est embarquée) ne provoque pas d\'avertissement', !importedInfo.includes('Montserrat'), importedInfo)
   // aller-retour : on exporte ce document en PPTX, on le ré-importe
   await rm(join(exportsDir, 'Sans titre.pptx'), { force: true })
-  await click('header.toolbar button', 'Export PPTX')
+  await exportVia('pptx')
   for (let i = 0; i < 80 && !(await readdir(exportsDir)).includes('Sans titre.pptx'); i++) await sleep(250)
   await writeFile(join(exportsDir, 'pick-import.pptx'), await readFile(join(exportsDir, 'Sans titre.pptx')))
   await run('location.reload()')
@@ -1339,7 +1345,7 @@ try {
     return readdirSync(zipDir).includes(name) ? JSZipLib.loadAsync(await readFile(join(zipDir, name))) : null
   }
   const { default: JSZipLib } = await import('jszip')
-  await click('header.toolbar button', 'Export des pages')
+  await exportVia('pages')
   for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
   check('la fenêtre propose toutes les pages par défaut (3 pages → archive ZIP)', (await run(`document.querySelector('[data-export-which="all"]').checked`)) === true && (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('3 pages : 1, 2, 3') && (await run(`document.querySelector('[data-export-summary]').innerText`)).includes('ZIP'))
   let pagesZip = await exportZip('Sans titre.zip')
@@ -1348,7 +1354,7 @@ try {
   check('chaque page est rendue à sa taille (1080 × 1080) avec son propre contenu', pageImgs.length === 3 && pageImgs.every((b) => b.readUInt32BE(16) === 1080 && b.readUInt32BE(20) === 1080) && !pngPixel(pageImgs[0], 540, 540).every((v) => v > 240) && pngPixel(pageImgs[1], 540, 540).every((v) => v > 240) && !pngPixel(pageImgs[2], 540, 540).every((v) => v > 240))
   check('la fenêtre se referme après l\'export', (await nBrand('[data-action="export-run"]')) === 0)
   // plage de pages + JPG + ×2
-  await click('header.toolbar button', 'Export des pages')
+  await exportVia('pages')
   for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
   await clickSel('[data-export-format="jpg"]')
   await run(`(() => { const s = document.querySelector('[data-field="exportScale"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, '2'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
@@ -1362,7 +1368,7 @@ try {
   check('le fichier est un vrai JPEG (signature FF D8)', jpg[0] === 0xff && jpg[1] === 0xd8)
   check('échelle ×2 : 2 160 × 2 160 px', await (async () => { let w = 0, h = 0; for (let i = 2; i < jpg.length - 9; ) { if (jpg[i] !== 0xff) { i++; continue } const m = jpg[i + 1]; if (m >= 0xc0 && m <= 0xc3) { h = jpg.readUInt16BE(i + 5); w = jpg.readUInt16BE(i + 7); break } i += 2 + jpg.readUInt16BE(i + 2) } return w === 2160 && h === 2160 })())
   // une seule page → un fichier image, pas de ZIP
-  await click('header.toolbar button', 'Export des pages')
+  await exportVia('pages')
   for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
   await clickSel('[data-export-format="png"]') // la fenêtre se souvient de ses réglages (ici JPG ×2 de l'export précédent)
   await clickSel('[data-export-which="current"]')
@@ -1372,7 +1378,7 @@ try {
   check('une seule page : un fichier PNG direct (page courante = 3), sans archive', readdirSync(zipDir).includes('Sans titre-page-3.png'))
   for (let i = 0; i < 40 && (await nBrand('[data-action="export-run"]')) !== 0; i++) await sleep(250)
   // saisie invalide : message, export impossible
-  await click('header.toolbar button', 'Export des pages')
+  await exportVia('pages')
   for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
   await clickSel('[data-export-which="range"]')
   await run(`document.querySelector('[data-field="exportRange"]').focus(); document.querySelector('[data-field="exportRange"]').select()`)
@@ -1497,6 +1503,24 @@ try {
   await clickSel('[data-find-option="word"]')
   await escKey()
   check('Échap ferme le panneau', (await nBrand('[role="search"]')) === 0)
+
+  // menu « Exporter ▾ » : une seule entrée dans la barre, cinq exports, fermeture par Échap et par clic ailleurs
+  const toolbarExportButtons = await run(`[...document.querySelectorAll('header.toolbar button')].filter(b => /^Export/.test(b.textContent.trim())).map(b => b.textContent.trim())`)
+  check('la barre d\'outils n\'a plus qu\'un seul bouton d\'export (« Exporter ▾ »)', toolbarExportButtons.length === 1 && toolbarExportButtons[0].startsWith('Exporter'), JSON.stringify(toolbarExportButtons))
+  check('le menu est fermé au départ', (await nBrand('[role="menu"]')) === 0)
+  await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
+  await sleep(250)
+  check('le menu propose PDF, PowerPoint, PNG, JPG et images de plusieurs pages', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,png,jpg,pages')
+  check('le bouton annonce le menu ouvert (accessibilité)', (await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter')).getAttribute('aria-expanded')`)) === 'true')
+  await escKey()
+  check('Échap ferme le menu', (await nBrand('[role="menu"]')) === 0)
+  await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
+  await sleep(250)
+  const outside = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { x: r.right - 40, y: r.top + 80 } })()`)
+  for (const type of ['mousePressed', 'mouseReleased']) await cdp('Input.dispatchMouseEvent', { type, x: outside.x, y: outside.y, button: 'left', clickCount: 1 })
+  await sleep(250)
+  check('un clic ailleurs ferme le menu', (await nBrand('[role="menu"]')) === 0)
+  check('choisir une entrée ferme le menu et lance l\'export', await (async () => { const pngs = () => readdirSync(zipDir).filter((f) => /^Sans titre-page-?\d\.png$/.test(f)); for (const f of pngs()) await rm(join(zipDir, f), { force: true }); await exportVia('png'); for (let i = 0; i < 40 && pngs().length === 0; i++) await sleep(250); return pngs().length === 1 && (await nBrand('[role="menu"]')) === 0 })())
 
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
   await run('location.reload()')
@@ -1639,7 +1663,7 @@ try {
   // puis on exporte et on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
   await sleep(300)
-  check("bouton « Export PDF »", (await click('header.toolbar button', 'Export PDF')) === true)
+  check("menu « Exporter » → entrée PDF", (await exportVia('pdf')) === true)
   let pdfFile
   for (let i = 0; i < 40 && !pdfFile; i++) {
     await sleep(250)
@@ -1687,7 +1711,7 @@ try {
     check('double-clic dans le Finder (appli ouverte) : le projet s\'ouvre', (await run('document.title')).startsWith('ouvert-par-finder'), await run('document.title'))
     // export PDF de ce document : les 2 textes retombent en image, l'utilisateur doit en être prévenu avec la cause
     await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
-    await click('header.toolbar button', 'Export PDF')
+    await exportVia('pdf')
     let info = ''
     for (let i = 0; i < 40 && !info; i++) {
       await sleep(250)
@@ -1698,8 +1722,8 @@ try {
     check("le message indique la marche à suivre (menu « Police »)", info.includes('menu « Police »'))
 
     // avertissement en direct dans l'éditeur : compteur sur le bouton, encart du panneau, correction en un clic
-    const pdfBtn = () => run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.includes('Export PDF'))?.textContent.trim()`)
-    check('le bouton « Export PDF » signale les 2 textes concernés', (await pdfBtn()) === 'Export PDF ⚠ 2', await pdfBtn())
+    const pdfBtn = () => run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.textContent.trim()`)
+    check('le bouton « Exporter » signale les 2 textes concernés', (await pdfBtn()) === 'Exporter ⚠ 2 ▾', await pdfBtn())
     // clic sur le premier texte (même calcul d'ajustement que le canvas : marge 48, document 400 × 200)
     const geo = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
     const fit = Math.min((geo.w - 96) / 400, (geo.h - 96) / 200)
@@ -1710,8 +1734,8 @@ try {
     const warn = await run(`document.querySelector('.panel .warn')?.innerText ?? ''`)
     check("le panneau explique pourquoi (police « Helvetica Neue » non embarquée)", warn.includes('Helvetica Neue') && warn.includes('Exporté en image'), warn)
     check('le panneau propose la correction « Utiliser Inter »', (await click('.panel .warn-fix', 'Utiliser Inter')) === true)
-    for (let i = 0; i < 30 && (await pdfBtn()) !== 'Export PDF ⚠ 1'; i++) await sleep(200)
-    check("après la correction, il ne reste qu'un texte signalé (le caractère absent)", (await pdfBtn()) === 'Export PDF ⚠ 1', await pdfBtn())
+    for (let i = 0; i < 30 && (await pdfBtn()) !== 'Exporter ⚠ 1 ▾'; i++) await sleep(200)
+    check("après la correction, il ne reste qu'un texte signalé (le caractère absent)", (await pdfBtn()) === 'Exporter ⚠ 1 ▾', await pdfBtn())
     check("l'encart disparaît du texte corrigé", (await run(`document.querySelector('.panel .warn') ? 1 : 0`)) === 0)
   } else {
     console.log('- ouverture depuis le Finder (appli ouverte) : ignorée (macOS, aucune autre instance d\'Electron)')

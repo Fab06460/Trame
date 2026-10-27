@@ -14,6 +14,7 @@
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
 - Mode présentation plein écran (F5) : navigation clavier et souris, écran noir, lecture automatique en boucle
+- Menu « Exporter » unique : PDF, PowerPoint, PNG, JPG, images de plusieurs pages
 - Export de toutes les pages (ou d'une sélection) en PNG / JPG, jusqu'à ×3, en archive ZIP
 - Export PowerPoint (.pptx) : textes, formes et images modifiables dans PowerPoint, Keynote ou Google Slides
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export)
