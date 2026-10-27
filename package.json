@@ -15,6 +15,7 @@
     "dist": "electron-vite build && electron-builder --mac",
     "smoke": "electron-vite build && node scripts/smoke-test.mjs",
     "fidelity": "node scripts/pdf-fidelity/run.mjs",
+    "resize-gallery": "node scripts/pdf-fidelity/run-gallery.mjs",
     "release:check": "node scripts/release-mac.mjs --check",
     "release:mac": "node scripts/release-mac.mjs"
   },

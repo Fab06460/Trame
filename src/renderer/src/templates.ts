@@ -131,8 +131,8 @@ export const TEMPLATES: Template[] = [
         background: '#f5f3ff',
         elements: [
           shape('rect', { x: 0, y: 0, width: 48, height: 1080 }, '#7c5cff'),
-          text(160, 340, 1500, 'Titre de la présentation', 150, '#1e1f24', { height: 200 }),
-          text(160, 600, 1300, 'Sous-titre ou nom de l’intervenant', 64, '#6b6b80', { fontStyle: 'normal' }),
+          text(160, 280, 1600, 'Titre de la présentation', 130, '#1e1f24', { height: 280 }),
+          text(160, 640, 1300, 'Sous-titre ou nom de l’intervenant', 64, '#6b6b80', { fontStyle: 'normal' }),
           icon('hexagon', { x: 1500, y: 700, ...sq(260) }, '#7c5cff', { opacity: 0.25 })
         ]
       },

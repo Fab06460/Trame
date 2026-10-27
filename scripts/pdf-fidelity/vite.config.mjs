@@ -7,5 +7,5 @@ export default {
   base: './',
   resolve: { alias: { '@': resolve(root, 'src/renderer/src') } },
   server: { fs: { strict: false } },
-  build: { outDir: resolve(import.meta.dirname, '.build'), emptyOutDir: true, target: 'esnext', chunkSizeWarningLimit: 4000 }
+  build: { rollupOptions: { input: resolve(import.meta.dirname, process.env.FIDELITY_GALLERY ? 'gallery.html' : 'index.html') }, outDir: resolve(import.meta.dirname, '.build'), emptyOutDir: true, target: 'esnext', chunkSizeWarningLimit: 4000 }
 }

@@ -9,7 +9,7 @@ app.whenReady().then(async () => {
     height: 1200,
     webPreferences: { nodeIntegration: true, contextIsolation: false, sandbox: false }
   })
-  await win.loadFile(path.join(__dirname, '.build/index.html'))
+  await win.loadFile(path.join(__dirname, '.build', process.env.FIDELITY_PAGE || 'index.html'))
   let title = ''
   for (let i = 0; i < 240 && title !== 'DONE' && title !== 'ERROR'; i++) {
     title = await win.webContents.executeJavaScript('document.title')

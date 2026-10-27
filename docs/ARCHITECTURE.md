@@ -218,7 +218,14 @@ Onglet « Marque » (`BrandPanel.tsx`). Le kit (`brandKit.ts`, pur et testé : c
 
 ## Magic Resize
 
-`magicResize.ts` (pur, testé) : `adaptDocument(doc, w, h)` renvoie un nouveau document, appelé par l'action `resizeDocument(w, h, adapt)` (un cran d'historique ; sans `adapt`, seule la taille de la page change). Règles : (1) toutes les tailles en pixels (boîte, police, interlettrage, contour, arrondi, ombre, flou) sont multipliées par l'échelle **uniforme** `min(sx, sy)` — aucune déformation ; (2) les **centres** sont multipliés par `sx` / `sy`, ce qui étale la mise en page sur le nouveau format ; (3) un groupe est traité comme un bloc (centre du bloc déplacé, écarts internes mis à l'échelle) ; (4) un élément non pivoté couvrant ≥ 97 % d'une dimension (fond, bandeau) couvre la même dimension du nouveau format ; (5) un bloc est ramené dans la page s'il y tient ; (6) les repères suivent leur axe. Les dimensions sont bornées à 16–8000 px. Limite : la hauteur d'un texte est celle enregistrée (le texte se réagence à la largeur mise à l'échelle) et deux éléments voisins peuvent se chevaucher après un changement de proportions très marqué.
+`magicResize.ts` (pur, testé) : `adaptDocument(doc, w, h)` renvoie un nouveau document, appelé par l'action `resizeDocument(w, h, adapt)` (un cran d'historique ; sans `adapt`, seule la taille de la page change). **Principe : la composition reste d'un seul tenant.** Une première version déplaçait chaque élément indépendamment (centres étirés) : sur les modèles livrés le texte sortait de sa carte et un grand cercle recouvrait le titre. La version actuelle :
+1. multiplie toutes les tailles en pixels (boîte, police, interlettrage, contour, arrondi, ombre, flou) par l'échelle **uniforme** `s = min(sx, sy)` — aucune déformation ;
+2. **centre** la composition ainsi mise à l'échelle dans le nouveau format (bandes de la couleur de fond de part et d'autre) : les écarts entre éléments sont ceux du modèle ;
+3. laisse **collé à son bord** tout bloc dont un bord est à moins de 4 % de la page du bord de la page (décors qui débordent, barres), à sa distance mise à l'échelle ;
+4. fait occuper **toute la dimension** du nouveau format à un élément non pivoté qui couvre ≥ 97 % de cette dimension (fond, bandeau) ;
+5. fait **suivre** leur hôte, axe par axe, aux petits éléments entièrement contenus dans un décor collé à un bord (une étoile sur un grand cercle) ;
+6. traite un groupe comme un bloc ; les repères suivent la composition. Dimensions bornées à 16–8000 px.
+Évaluation : `npm run resize-gallery` produit une **planche-contact par modèle** (format d'origine puis Story, 16:9, Facebook, A4, carré) pour juger à l'œil ; c'est ainsi que l'algorithme a été comparé à la version précédente. Limite assumée : la mise en page n'est pas **recomposée** (un texte ne passe pas à la ligne différemment, on ne redistribue pas l'espace libre) : d'un carré vers un format très allongé, le résultat est le modèle centré avec de larges marges.
 
 ## Retouches d'image (recadrage, miroirs, filtres)
 
