@@ -1,5 +1,6 @@
 import { useEditor } from '@/store/editor'
-import { FILTER_LIMITS, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
+import { downscaleImage } from '@/photoImport'
+import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
 
@@ -32,8 +33,26 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
     updateElement(el.id, { filters: Object.keys(next).length ? next : undefined }, !live)
   }
 
+  // remplace l'image en gardant la place et la taille de la boîte : la nouvelle image est recadrée pour la couvrir (sans déformation)
+  const replaceImage = async (): Promise<void> => {
+    const src = await window.trame.pickImage()
+    if (!src) return
+    const small = await downscaleImage(src)
+    const size = await new Promise<{ w: number; h: number } | null>((resolve) => {
+      const i = new window.Image()
+      i.onload = () => resolve({ w: i.naturalWidth, h: i.naturalHeight })
+      i.onerror = () => resolve(null)
+      i.src = small
+    })
+    if (!size) return
+    updateElement(el.id, { src: small, crop: coverCrop(el.width, el.height, size.w, size.h), credit: undefined, pdfSource: undefined, filters: undefined, flipX: undefined, flipY: undefined })
+  }
+
   return (
     <>
+      <button data-action="replace-image" title="Garde la place et la taille de cette image ; la nouvelle est recadrée pour la couvrir" onClick={() => void replaceImage()}>
+        Remplacer l'image…
+      </button>
       <div className="row">
         <button data-flip="x" aria-pressed={!!el.flipX} className={el.flipX ? 'active' : ''} title="Retourner horizontalement" onClick={() => updateElement(el.id, { flipX: el.flipX ? undefined : true })}>
           ⇋

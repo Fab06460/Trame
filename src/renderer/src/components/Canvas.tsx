@@ -9,6 +9,7 @@ import { useView } from '@/store/view'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
 import { patchListText } from '@/listText'
+import { contentLocked, isEnforced, positionLocked } from '@/protection'
 import { useFonts } from '@/store/fonts'
 import { useEditedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
@@ -40,6 +41,8 @@ function ImageNode({ el, ...props }: Konva.NodeConfig & { el: TrameElement }): R
 }
 
 export function Canvas(): React.JSX.Element {
+  // modèle de marque : les éléments protégés se comportent comme des éléments verrouillés tant que le modèle n'est pas en modification
+  const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   // une police ajoutée ou retirée : les textes sont recréés (Konva ne remesure pas un texte dont la police vient d'arriver)
   const fontsVersion = useFonts((s) => s.version)
   const doc = useEditor((s) => s.doc)
@@ -161,7 +164,7 @@ export function Canvas(): React.JSX.Element {
     y: el.y,
     rotation: el.rotation,
     opacity: el.opacity,
-    draggable: editing !== el.id && !spaceDown && !el.locked,
+    draggable: editing !== el.id && !spaceDown && !positionLocked(el, enforced),
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
       if (e.evt.shiftKey) toggleSelect(el.id)
@@ -174,7 +177,7 @@ export function Canvas(): React.JSX.Element {
       else beginChange()
       const selectedIds = useEditor.getState().selectedIds
       // un élément verrouillé reste en place, même dans une sélection que l'on déplace
-      const moved = page.elements.filter((x) => selectedIds.includes(x.id) && !x.locked)
+      const moved = page.elements.filter((x) => selectedIds.includes(x.id) && !positionLocked(x, enforced))
       // mémorise les positions de départ de toute la sélection pour la déplacer d'un bloc
       dragStart.current = Object.fromEntries(moved.map((x) => [x.id, { x: x.x, y: x.y }]))
       dragEls.current = moved
@@ -288,7 +291,7 @@ export function Canvas(): React.JSX.Element {
   }, [editRequest])
 
   const editingEl = page.elements.find((e) => e.id === editing)
-  const anyLocked = page.elements.some((e) => selectedIds.includes(e.id) && e.locked)
+  const anyLocked = page.elements.some((e) => selectedIds.includes(e.id) && positionLocked(e, enforced))
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
@@ -384,8 +387,8 @@ export function Canvas(): React.JSX.Element {
                   ref={(n: Konva.Text | null) => {
                     if (n) patchListText(n)
                   }}
-                  onDblClick={() => startTextEdit(el.id)}
-                  onDblTap={() => startTextEdit(el.id)}
+                  onDblClick={() => !contentLocked(el, enforced) && startTextEdit(el.id)}
+                  onDblTap={() => !contentLocked(el, enforced) && startTextEdit(el.id)}
                 />
               )
             })}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { boundsOf, unionBox } from '@/geometry'
+import { isEnforced, positionLocked } from '@/protection'
 import { selectPage, useEditor } from '@/store/editor'
 import { NumberField } from './NumberField'
 
@@ -12,6 +13,7 @@ export function PositionPanel(): React.JSX.Element | null {
   // Zustand 5 exige des sélecteurs à résultat stable : on lit les valeurs brutes, le filtrage se fait au rendu
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
+  const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   const els = page.elements.filter((e) => selectedIds.includes(e.id))
   const { nudgeSelected, updateElement } = useEditor.getState()
   const single = els.length === 1 ? els[0] : null
@@ -23,7 +25,8 @@ export function PositionPanel(): React.JSX.Element | null {
   if (!els.length) return null
   const box = unionBox(els.map(boundsOf))
   const isText = single?.type === 'text'
-  const locked = els.some((e) => e.locked)
+  const byTemplate = els.some((e) => !e.locked && enforced && e.protect)
+  const locked = els.some((e) => positionLocked(e, enforced))
   const ratio = single && single.height > 0 ? single.width / single.height : 1
 
   const setWidth = (w: number): void => {
@@ -53,7 +56,7 @@ export function PositionPanel(): React.JSX.Element | null {
           {lock ? '🔒' : '🔓'}
         </button>
       </div>
-      {locked && <p className="hint">🔒 Position verrouillée : déverrouillez pour la modifier.</p>}
+      {locked && <p className="hint">{byTemplate ? '🏷 Position fixée par le modèle (« Modifier le modèle » pour la changer).' : '🔒 Position verrouillée : déverrouillez pour la modifier.'}</p>}
       {isText && <p className="hint">La hauteur d'un texte dépend de son contenu : elle s'ajuste seule.</p>}
     </>
   )

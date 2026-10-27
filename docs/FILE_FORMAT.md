@@ -33,6 +33,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
           "strokeDashed": true,    // optionnel : contour en tirets
           "credit": "« Montagne » par Ada (CC BY 4.0) — https://…",  // optionnel (images) : crédit d'une photo en ligne
+          "protect": "fixed",       // optionnel : "fixed" (figé par le modèle) ou "fill" (à remplir : contenu modifiable, position fixée) ; absent = libre
           "pdfSource": { "id": "a1B2c3D4", "page": 1 },  // optionnel (images) : page d'origine d'un PDF importé (voir « sources »)
           "crop": { "x": 0.25, "y": 0, "width": 0.75, "height": 1 },  // optionnel (images) : zone visible, en fractions de l'image d'origine
           "flipX": true, "flipY": true,                                 // optionnel (images) : miroirs
@@ -59,6 +60,8 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
 ```
 
 L'**ombre** (`shadow`, tous les types ; une lueur est une ombre sans décalage) : `blur` 0 à 200, `offsetX` / `offsetY` −500 à 500 (dans les axes de la **page**, même si l'élément pivote), `opacity` 0 à 1. Une ombre incomplète ou hors bornes est ignorée ou ramenée aux bornes à la lecture ; une ombre sans effet visible (opacité 0, ou ni flou ni décalage) n'est pas dessinée.
+
+La **protection** (`protect`, tout type d'élément) : `fixed` ou `fill`, toute autre valeur est retirée à la lecture. Tant qu'un élément est protégé, le document est « verrouillé » à l'ouverture (voir `docs/ARCHITECTURE.md`) ; ce n'est pas une sécurité. Aucune nouvelle version du format.
 
 Le **cadre de composition** (`layoutFrame`, racine du document, optionnel) : `{ x, y, width, height }` en pixels de design, le rectangle de la page où vit la composition d'origine après un ou plusieurs Magic Resize (absent = toute la page). Il permet de revenir à un format sans rétrécir le contenu ; invalide, il est ignoré à la lecture. Aucune nouvelle version du format.
 

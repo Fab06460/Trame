@@ -9,6 +9,8 @@ import { NumberField } from './NumberField'
 import { ImagePanel } from './ImagePanel'
 import { useBrand } from '@/store/brand'
 import { PageSize } from './PageSize'
+import { ProtectionControls, TemplateBanner } from './TemplatePanel'
+import { contentLocked, isEnforced } from '@/protection'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
 import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
@@ -23,6 +25,8 @@ export function Properties(): React.JSX.Element {
   const selectedIds = useEditor((s) => s.selectedIds)
   const el = page.elements.find((e) => e.id === selectedIds[0])
   const pdfIssue = usePdfIssues((st) => (el ? st.issues[el.id] : undefined))
+  const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
+  const selection = page.elements.filter((e) => selectedIds.includes(e.id))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
   const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
     useEditor.getState()
@@ -30,6 +34,7 @@ export function Properties(): React.JSX.Element {
   if (!el || !selectedIds.length) {
     return (
       <aside className="panel">
+        <TemplateBanner />
         <h3>Page</h3>
         <PageSize />
         <label>
@@ -39,6 +44,21 @@ export function Properties(): React.JSX.Element {
       </aside>
     )
   }
+
+  // élément figé par le modèle : rien à modifier ici (le bandeau propose « Modifier le modèle »)
+  if (selection.some((e) => contentLocked(e, enforced))) {
+    return (
+      <aside className="panel">
+        <TemplateBanner />
+        <h3>{selection.length > 1 ? `${selection.length} éléments` : 'Élément du modèle'}</h3>
+        <p className="hint" data-template-notice>
+          🔐 {selection.length > 1 ? 'La sélection contient des éléments figés par le modèle.' : 'Cet élément est figé par le modèle : il ne peut être ni modifié, ni déplacé, ni supprimé.'}
+        </p>
+        <p className="hint">Les éléments « à remplir » et les éléments libres restent modifiables.</p>
+      </aside>
+    )
+  }
+  const protectedSel = enforced && selection.some((e) => e.protect)
 
   const layerButtons = (
     <>
@@ -50,11 +70,11 @@ export function Properties(): React.JSX.Element {
         <button onClick={() => moveLayer('bottom')} title="Arrière-plan">⤓</button>
       </div>
       <div className="row">
-        <button onClick={toggleLockSelected} title="Verrouiller / déverrouiller la position (⌘L)">
+        <button disabled={protectedSel} onClick={toggleLockSelected} title="Verrouiller / déverrouiller la position (⌘L)">
           {page.elements.filter((e) => selectedIds.includes(e.id)).every((e) => e.locked) ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
         </button>
-        <button onClick={duplicateSelected}>Dupliquer</button>
-        <button className="danger" onClick={removeSelected}>Supprimer</button>
+        <button disabled={protectedSel} onClick={duplicateSelected}>Dupliquer</button>
+        <button className="danger" disabled={protectedSel} onClick={removeSelected}>Supprimer</button>
       </div>
     </>
   )
@@ -82,6 +102,7 @@ export function Properties(): React.JSX.Element {
   if (selectedIds.length > 1) {
     return (
       <aside className="panel">
+        <TemplateBanner />
         <h3>{selectedIds.length} éléments</h3>
         <div className="row">
           <button onClick={groupSelected} disabled={grouped && new Set(page.elements.filter((e) => selectedIds.includes(e.id)).map((e) => e.groupId)).size === 1}>
@@ -92,6 +113,7 @@ export function Properties(): React.JSX.Element {
         <PositionPanel />
         {alignButtons}
         {layerButtons}
+        <ProtectionControls />
       </aside>
     )
   }
@@ -101,6 +123,7 @@ export function Properties(): React.JSX.Element {
 
   return (
     <aside className="panel">
+      <TemplateBanner />
       <h3>{{ rect: 'Rectangle', ellipse: 'Ellipse', text: 'Texte', image: 'Image', path: 'Forme' }[el.type]}</h3>
 
       {el.type === 'image' && <ImagePanel el={el} />}
@@ -393,6 +416,7 @@ export function Properties(): React.JSX.Element {
       <PositionPanel />
       {alignButtons}
       {layerButtons}
+      <ProtectionControls />
     </aside>
   )
 }

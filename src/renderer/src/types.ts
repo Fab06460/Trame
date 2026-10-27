@@ -45,6 +45,9 @@ export interface Gradient {
 /** Liste d'un texte : un paragraphe (ligne saisie) = un élément de la liste. */
 export type ListKind = 'bullet' | 'number'
 
+/** Protection d'un élément de modèle : `fixed` = figé, `fill` = à remplir (contenu modifiable, ni déplacé ni supprimé). */
+export type Protection = 'fixed' | 'fill'
+
 export interface TrameElement {
   id: string
   type: ElementType
@@ -58,6 +61,8 @@ export interface TrameElement {
   groupId?: string
   /** nom du calque dans le panneau Calques (absent = nom automatique) */
   name?: string
+  /** protection par le modèle (voir `protection.ts`) ; absent = élément libre */
+  protect?: Protection
   /** position verrouillée : l'élément ne se déplace, ne se redimensionne, ne pivote et ne se supprime plus */
   locked?: boolean
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */

@@ -16,6 +16,7 @@
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export)
 - Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette
 - Listes à puces et numérotées (retrait des lignes suivantes, texte vectoriel dans le PDF)
+- Modèles de marque verrouillés : éléments figés ou à remplir, remplacement d'image en gardant la place
 - Magic Resize : changer le format de la page en adaptant le contenu (composition conservée et centrée, décors gardés sur leurs bords)
 - Nom du document modifiable (nom des exports et du fichier)
 - Images : recadrage, miroirs, filtres (luminosité, contraste, saturation, noir et blanc, sépia, flou)

@@ -132,3 +132,20 @@ export function sanitizeImageStyle(element: object): void {
     else delete e.filters
   }
 }
+
+/**
+ * Recadrage « couvrir » : la zone de l'image (centrée) qui remplit exactement une boîte de proportions données, sans déformation.
+ * Sert à remplacer une image en gardant sa place et sa taille. Retourne undefined si les proportions sont (presque) les mêmes.
+ */
+export function coverCrop(boxW: number, boxH: number, imgW: number, imgH: number): Crop | undefined {
+  if (boxW <= 0 || boxH <= 0 || imgW <= 0 || imgH <= 0) return undefined
+  const box = boxW / boxH
+  const img = imgW / imgH
+  if (Math.abs(box - img) / box < 0.005) return undefined
+  if (img > box) {
+    const width = box / img // image plus large que la boîte : on garde le milieu en largeur
+    return clampCrop({ x: (1 - width) / 2, y: 0, width, height: 1 })
+  }
+  const height = img / box // image plus haute : on garde le milieu en hauteur
+  return clampCrop({ x: 0, y: (1 - height) / 2, width: 1, height })
+}

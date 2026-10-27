@@ -4,6 +4,7 @@ import { sanitizeGradient } from '@/gradient'
 import { adaptDocument } from '@/magicResize'
 import { registerEmbeddedFonts } from '@/fonts'
 import { sanitizeFrame } from '@/magicResize'
+import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/protection'
 import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
@@ -13,7 +14,7 @@ import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
-import type { Guide, TrameDocument, TrameElement, TramePage } from '@/types'
+import type { Guide, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 
 const HISTORY_LIMIT = 100
 
@@ -87,6 +88,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeList(e)
       if (e.type === 'image') sanitizeImageStyle(e)
       if (e.locked !== true) delete e.locked
+      sanitizeProtection(e)
       if (e.hidden !== true) delete e.hidden
       if (typeof e.name !== 'string' || !e.name.trim()) delete e.name
       else e.name = e.name.slice(0, 80)
@@ -143,6 +145,11 @@ interface EditorState {
   updateElement: (id: string, patch: Partial<TrameElement>, commit?: boolean) => void
   beginChange: () => void
   removeSelected: () => void
+  /** modèle de marque : vrai pendant la modification du modèle (les éléments protégés sont alors modifiables) */
+  templateUnlocked: boolean
+  setTemplateUnlocked: (unlocked: boolean) => void
+  /** marque les éléments sélectionnés « figé » / « à remplir » (ou libre) ; ouvre la modification du modèle */
+  setProtection: (protect: Protection | undefined) => void
   /** Verrouille la sélection ; si tout est déjà verrouillé, la déverrouille. */
   toggleLockSelected: () => void
   /** Active ou retire un indicateur de calque (`hidden` / `locked`) ; l'indicateur est supprimé du fichier quand il est retiré. */
@@ -213,8 +220,13 @@ export const useEditor = create<EditorState>((set, get) => {
     return selectPage(get()).elements.filter((e) => ids.includes(e.id))
   }
 
-  /** Éléments sélectionnés dont la position n'est pas verrouillée : les seuls que déplacer, aligner ou supprimer peut toucher. */
-  const movable = (): TrameElement[] => selected().filter((e) => !e.locked)
+  const enforcedNow = (): boolean => isEnforced(get().doc, get().templateUnlocked)
+
+  /** Éléments sélectionnés dont la position n'est pas verrouillée (calque ou modèle) : les seuls que déplacer, aligner ou supprimer peut toucher. */
+  const movable = (): TrameElement[] => {
+    const enforced = enforcedNow()
+    return selected().filter((e) => !positionLocked(e, enforced))
+  }
 
   const moveBy = (deltas: Map<string, { dx: number; dy: number }>): void => {
     set({
@@ -269,6 +281,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     groupSelected: () => {
+      if (enforcedNow() && selected().some((e) => e.protect)) return
       const ids = get().selectedIds
       if (ids.length < 2) return
       const groupId = nanoid(8)
@@ -280,6 +293,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     ungroupSelected: () => {
+      if (enforcedNow() && selected().some((e) => e.protect)) return
       const ids = get().selectedIds
       set({
         ...snapshot(),
@@ -390,7 +404,11 @@ export const useEditor = create<EditorState>((set, get) => {
 
     beginChange: () => set(snapshot()),
 
-    updateElement: (id, patch, commit = true) => {
+    updateElement: (id, requested, commit = true) => {
+      // élément protégé par le modèle : seules les modifications de contenu passent (figé : aucune)
+      const target = selectPage(get()).elements.find((e) => e.id === id)
+      const patch = target ? allowedPatch(target, requested, enforcedNow()) : requested
+      if (!patch) return
       if (commit) set(snapshot())
       set((s) => ({
         doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
@@ -410,8 +428,32 @@ export const useEditor = create<EditorState>((set, get) => {
       })
     },
 
+    templateUnlocked: false,
+    setTemplateUnlocked: (templateUnlocked) => set({ templateUnlocked }),
+    setProtection: (protect) => {
+      if (enforcedNow()) return // modèle verrouillé : on commence par « Modifier le modèle »
+      const ids = get().selectedIds
+      if (!ids.length) return
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (!ids.includes(e.id)) return e
+            if (protect) return { ...e, protect }
+            const { protect: _off, ...rest } = e
+            return rest
+          })
+        })),
+        // on est en train de bâtir le modèle : les éléments protégés restent modifiables jusqu'à « Terminer »
+        templateUnlocked: protect ? true : get().templateUnlocked,
+        dirty: true
+      })
+    },
+
     toggleLockSelected: () => {
-      const els = selected()
+      const enforced = enforcedNow()
+      const els = selected().filter((e) => !(enforced && e.protect)) // le verrou de calque d'un élément protégé ne se change pas
       if (!els.length) return
       const lock = !els.every((e) => e.locked) // tous verrouillés → on déverrouille, sinon on verrouille tout
       const ids = els.map((e) => e.id)
@@ -432,7 +474,7 @@ export const useEditor = create<EditorState>((set, get) => {
 
     setLayerFlag: (id, flag, on) => {
       const cur = selectPage(get()).elements.find((e) => e.id === id)
-      if (!cur || Boolean(cur[flag]) === on) return
+      if (!cur || Boolean(cur[flag]) === on || (enforcedNow() && cur.protect)) return
       set({
         ...snapshot(),
         doc: mapPage((p) => ({
@@ -451,7 +493,7 @@ export const useEditor = create<EditorState>((set, get) => {
     reorderElement: (id, toIndex) => {
       const els = [...selectPage(get()).elements]
       const from = els.findIndex((e) => e.id === id)
-      if (from < 0) return
+      if (from < 0 || (enforcedNow() && els[from].protect)) return
       const [el] = els.splice(from, 1)
       els.splice(Math.max(0, Math.min(els.length, toIndex)), 0, el)
       if (els.every((e, i) => e === selectPage(get()).elements[i])) return // aucun changement : pas de cran d'historique
@@ -459,7 +501,8 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     duplicateSelected: () => {
-      const els = selected()
+      const enforced = enforcedNow()
+      const els = selected().filter((e) => !(enforced && e.protect)) // un élément protégé ne se duplique pas tant que le modèle est verrouillé
       if (!els.length) return
       // chaque groupe dupliqué reçoit un nouvel identifiant de groupe
       const groupMap = new Map<string, string>()
@@ -480,7 +523,8 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     cloneSelectedInPlace: () => {
-      const ids = get().selectedIds
+      const enforced = enforcedNow()
+      const ids = selected().filter((e) => !(enforced && e.protect)).map((e) => e.id)
       if (!ids.length) return
       const groupMap = new Map<string, string>()
       const copyOf = (e: TrameElement): TrameElement => {
@@ -498,7 +542,9 @@ export const useEditor = create<EditorState>((set, get) => {
       })
     },
 
-    pasteElements: (elements) => {
+    pasteElements: (pasted) => {
+      // une copie est un nouvel élément : il ne garde jamais la protection du modèle d'où il vient
+      const elements = pasted.map(({ protect: _p, ...rest }) => rest as TrameElement)
       if (!elements.length) return
       const { doc } = get()
       const existing = selectPage(get()).elements
@@ -537,7 +583,7 @@ export const useEditor = create<EditorState>((set, get) => {
 
     moveLayer: (dir) => {
       const ids = get().selectedIds
-      if (!ids.length) return
+      if (!ids.length || (enforcedNow() && selected().some((e) => e.protect))) return
       let els = [...selectPage(get()).elements]
       const isSel = (e: TrameElement): boolean => ids.includes(e.id)
       if (dir === 'top') els = [...els.filter((e) => !isSel(e)), ...els.filter(isSel)]
@@ -608,11 +654,13 @@ export const useEditor = create<EditorState>((set, get) => {
 
     loadDocument: (doc, path) => {
       void registerEmbeddedFonts(doc.fonts)
+      set({ templateUnlocked: false })
       set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null })
     },
 
     newDocument: () => {
       const doc = blankDoc()
+      set({ templateUnlocked: false })
       set({ doc, pageId: doc.pages[0].id, filePath: undefined, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null })
     },
 

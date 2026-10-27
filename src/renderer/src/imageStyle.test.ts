@@ -73,3 +73,28 @@ describe('imageStyle', () => {
     expect(ok.crop).toEqual({ x: 0.2, y: 0.1, width: 0.5, height: 0.5 })
   })
 })
+
+import { coverCrop } from '@/imageStyle'
+
+describe('coverCrop', () => {
+  it('image plus large que la boîte : on garde le milieu en largeur', () => {
+    const c = coverCrop(100, 100, 400, 200)!
+    expect(c.height).toBe(1)
+    expect(c.width).toBeCloseTo(0.5)
+    expect(c.x).toBeCloseTo(0.25)
+  })
+  it('image plus haute que la boîte : on garde le milieu en hauteur', () => {
+    const c = coverCrop(200, 100, 100, 300)!
+    expect(c.width).toBe(1)
+    expect(c.height).toBeCloseTo(1 / 6) // 100 px de large pour une boîte deux fois plus large que haute : 50 px de haut sur 300
+    expect(c.y).toBeCloseTo((1 - 1 / 6) / 2)
+  })
+  it('mêmes proportions : pas de recadrage ; valeurs invalides aussi', () => {
+    expect(coverCrop(200, 100, 400, 200)).toBeUndefined()
+    expect(coverCrop(0, 100, 400, 200)).toBeUndefined()
+  })
+  it('le recadrage couvre exactement la boîte (mêmes proportions que la boîte)', () => {
+    const c = coverCrop(300, 200, 1000, 1000)!
+    expect((c.width * 1000) / (c.height * 1000)).toBeCloseTo(300 / 200)
+  })
+})

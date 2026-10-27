@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { dropIndex, layerLabel } from '@/layers'
+import { isEnforced } from '@/protection'
 import { selectPage, useEditor } from '@/store/editor'
 import { usePdfIssues } from '@/store/pdfIssues'
 import type { TrameElement } from '@/types'
@@ -14,6 +15,7 @@ export function LayersPanel(): React.JSX.Element {
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const pdfIssues = usePdfIssues((s) => s.issues)
+  const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   const { select, toggleSelect, setLayerFlag, updateElement, reorderElement } = useEditor.getState()
   const [dragId, setDragId] = useState<string | null>(null)
   const [overRow, setOverRow] = useState<number | null>(null)
@@ -52,6 +54,7 @@ export function LayersPanel(): React.JSX.Element {
           onClick={(e) => (e.shiftKey ? toggleSelect(el.id) : select([el.id]))}
         >
           <button
+            disabled={enforced && !!el.protect}
             className={`layer-flag eye${el.hidden ? ' off' : ''}`}
             title={el.hidden ? 'Afficher' : 'Masquer (ni affiché ni exporté)'}
             aria-pressed={!el.hidden}
@@ -84,10 +87,12 @@ export function LayersPanel(): React.JSX.Element {
             <span className="layer-name" title="Double-clic pour renommer" onDoubleClick={() => setRenaming(el.id)}>
               {layerLabel(el)}
               {el.groupId ? <em className="layer-tag" title="Fait partie d'un groupe"> groupe</em> : null}
+              {el.protect ? <em className="layer-protect" data-layer-protect={el.protect} title={el.protect === 'fixed' ? 'Figé par le modèle' : 'À remplir (contenu modifiable, position fixée)'}>{el.protect === 'fixed' ? '🔐' : '🏷'}</em> : null}
               {pdfIssues[el.id] ? <em className="layer-tag warn-tag" title="Sera exporté en image dans le PDF"> ⚠</em> : null}
             </span>
           )}
           <button
+            disabled={enforced && !!el.protect}
             className={`layer-flag lock${el.locked ? ' on' : ''}`}
             title={el.locked ? 'Déverrouiller' : 'Verrouiller la position'}
             aria-pressed={!!el.locked}

@@ -109,7 +109,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | C3 | Bibliothèque de médias locale (dossier surveillé, étiquettes, recherche) | M |  | E7 |
 | C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | Algorithme (quantification de couleurs), sans IA. | E11 |
 | C5 | Kit de marque local : couleurs, logos, polices (plusieurs kits) | M | **Fait pour un kit** (voir `docs/ARCHITECTURE.md`). | E11, E12 |
-| C6 | Modèles de marque : éléments verrouillés / modifiables | M |  | E5, C5 |
+| C6 | Modèles de marque : éléments verrouillés / modifiables | M | **Fait** : éléments figés ou à remplir, modification du modèle, remplacement d'image. Aide à la cohérence, pas une sécurité. | E5, C5 |
 | C7 | Graphiques (barres, courbes, secteurs) et tableaux à partir de données collées ou CSV | L | Nouveau type d'élément : 4 rendus à écrire. | — |
 
 ### Phase 3 — Documents (export, outils PDF, signature, présentation)
