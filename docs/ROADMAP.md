@@ -116,7 +116,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| D1 | Export : toutes les pages en PNG/JPG (dossier ou ZIP), ×2/×3, SVG | S |  | — |
+| D1 | Export : toutes les pages en PNG/JPG (dossier ou ZIP), ×2/×3, SVG | S | **Fait** (sélection de pages, PNG ou JPG, ×1 à ×3, ZIP). Reste : SVG, export dans un dossier. | — |
 | D2 | Outils PDF : fusionner, scinder, réordonner, extraire des pages, compresser | M | pdf-lib. | — |
 | D3 | Importer un PDF (pages comme images de fond, texte extrait) | L | **Fait** (bouton « Importer PDF ») : deux modes, texte reconstruit ou page en image. **Annotation vectorielle faite** (mode « page en image »). Reste : remplacer des pages (fusion/scission), réenregistrer en écrasant le PDF d'origine. | D2 |
 | D4 | Signature : visuelle (dessinée ou importée) ; numérique certifiée en option | M | La signature numérique avec certificat est un chantier à part (L). | — |
