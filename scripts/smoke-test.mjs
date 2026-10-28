@@ -219,9 +219,16 @@ try {
   // Un échange sans réponse ferait attendre le test indéfiniment sans rien dire : on l'abandonne en nommant la commande.
   const answer = (i, label) =>
     new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         pending.delete(i)
-        reject(new Error(`CDP sans réponse après 60 s : ${label.slice(0, 300)}`))
+        // la page est-elle figée, ou seule cette réponse s'est-elle perdue ? on lui pose une question triviale
+        const probe = await new Promise((r) => {
+          const j = ++id
+          const t = setTimeout(() => r('la page ne répond plus'), 5000)
+          pending.set(j, (d) => (clearTimeout(t), r(`la page répond (${JSON.stringify(d.result?.result?.value)}) : réponse perdue`)))
+          ws.send(JSON.stringify({ id: j, method: 'Runtime.evaluate', params: { expression: '1+1', returnByValue: true } }))
+        })
+        reject(new Error(`CDP sans réponse après 60 s : ${label.slice(0, 300)} — ${probe}`))
       }, 60000)
       pending.set(i, (d) => {
         clearTimeout(timer)
@@ -241,6 +248,18 @@ try {
     ws.send(JSON.stringify({ id: i, method, params }))
     return reply
   }
+  // Recharge l'application et attend le NOUVEAU document : juste après `reload()`, l'ancien est encore là (avec sa barre d'outils) et
+  // une commande lancée à ce moment-là serait perdue quand la navigation le détruit.
+  const reloadApp = async () => {
+    await run(`window.__beforeReload = true; setTimeout(() => location.reload(), 50); 1`)
+    for (let i = 0; i < 80; i++) {
+      await sleep(250)
+      const ready = await Promise.race([run(`!window.__beforeReload && document.querySelector('header.toolbar') ? 1 : 0`).catch(() => 0), sleep(3000).then(() => 0)])
+      if (ready === 1) return
+    }
+    throw new Error("l'application ne s'est pas rechargée")
+  }
+
   // La page se comporte comme si sa fenêtre avait le focus du système, même quand une autre application est au premier plan :
   // sans cela, focus() / blur() ne déclenchent aucun événement et les champs ne se valident plus (test dépendant du bureau).
   await cdp('Emulation.setFocusEmulationEnabled', { enabled: true })
@@ -299,8 +318,7 @@ try {
   check('métadonnées : 1 page, 1080 × 1080', saved[0]?.pageCount === 1 && saved[0]?.width === 1080 && saved[0]?.height === 1080)
   check('le modèle apparaît dans la liste de l’interface', (await run(`document.querySelectorAll('.user-template').length`)) === 1)
   // application du modèle : après rechargement le document est propre, donc pas de confirmation native
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await click('.sidebar .tabs button', 'Modèles')
   for (let i = 0; i < 20 && (await run(`document.querySelectorAll('.user-template').length`)) === 0; i++) await sleep(200)
   check('le modèle survit au rechargement (persistance)', (await run(`document.querySelectorAll('.user-template').length`)) === 1)
@@ -426,8 +444,7 @@ try {
   check('après rotation de 90°, X/Y suivent la boîte visible (X = 390 − hauteur)', (await field('x')) === 150 && (await field('y')) === 440, JSON.stringify([await field('x'), await field('y')]))
 
   // règles, repères et aimantation : parcours à la souris (événements réels envoyés au navigateur)
-  await run('location.reload()') // document vierge de 1 080 × 1 080 : géométrie connue
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp() // document vierge de 1 080 × 1 080 : géométrie connue
   await sleep(500)
   await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440)
   await sleep(500)
@@ -530,8 +547,7 @@ try {
   check('double-clic sur un repère le supprime', (await run(`document.querySelector('.canvas-wrap').dataset.guideCount`)) === String(nBefore - 2), await guidesAttr())
 
   // panneau Calques : liste, verrouillage, masquage (jamais exporté), renommage, réordonnancement
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440), violet #7c5cff
   await sleep(250)
@@ -642,8 +658,7 @@ try {
   await click('.sidebar .tabs button', 'Modèles')
 
   // typographie : interlettrage, interligne, souligné, barré, majuscules (panneau « Propriétés » → PDF)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Texte') // « Votre texte », Inter gras 64
   await sleep(400)
@@ -675,8 +690,7 @@ try {
   check('retirer une option la désactive', (await run(`document.querySelector('.panel [data-flag="uppercase"]').getAttribute('aria-pressed')`)) === 'false')
 
   // contour : épaisseur, couleur, tirets (panneau « Propriétés » → aperçu → PDF)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle')
   await sleep(400)
@@ -703,8 +717,7 @@ try {
   await sleep(150)
 
   // dégradé : activation, type, angle, inversion (panneau → aperçu → PDF)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle') // violet uni #7c5cff
   await sleep(400)
@@ -737,8 +750,7 @@ try {
   check('annuler rétablit le dégradé', (await fillMode()) === 'true')
 
   // ombre et lueur : panneau → aperçu → PDF (ombre = image sous un élément resté vectoriel)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle')
   await sleep(400)
@@ -775,8 +787,7 @@ try {
   check('texte avec ombre : l\'ombre est une image et le texte reste du vrai texte (TJ)', lastPdfRaw.includes('/Subtype /Image') && textShadowPdf.includes(' TJ'))
 
   // forme vectorielle (dessin natif) : son ombre doit figurer dans l'export image (aucun autre contrôle ne la voit : la fidélité compare Konva à Konva)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('.sidebar .tabs button', 'Éléments')
   await sleep(300)
@@ -801,8 +812,7 @@ try {
   await click('.sidebar .tabs button', 'Modèles')
 
   // images : recadrage, miroir et filtres (panneau → export image → export PDF)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(800, 400)) // 800 × 400 → réduit à 648 × 324 au centre de la page (216–864 × 378–702)
   await click('header.toolbar button', 'Image')
@@ -900,8 +910,7 @@ try {
     p2.drawText('Page deux', { x: 50, y: 700, size: 30, font: helvB })
     await writeFile(join(tmp, 'exports', 'pick-import.pdf'), await src.save())
   }
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await importVia('pdf')
   for (let i = 0; i < 40 && (await nBrand('.modal')) === 0; i++) await sleep(250)
@@ -931,8 +940,7 @@ try {
   const importedPdf = await exportPdfText()
   check('PDF ré-exporté : texte vectoriel (TJ) par-dessus l\'image de fond', importedPdf.includes(' TJ') && lastPdfRaw.includes('/Subtype /Image'))
   // mode « page en image » : plus aucun texte modifiable
-  await run('location.reload()') // document propre : pas de question « enregistrer ? » (dialogue natif)
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp() // document propre : pas de question « enregistrer ? » (dialogue natif)
   await sleep(500)
   await importVia('pdf')
   for (let i = 0; i < 40 && (await nBrand('.modal')) === 0; i++) await sleep(250)
@@ -959,8 +967,7 @@ try {
   check('PDF annoté : l\'annotation ajoutée est du vrai texte (TJ)', annotated.includes(' TJ'))
 
   // export PPTX : objets modifiables (texte, rectangle) + repli en image (dégradé) ; fichier relu en ZIP
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle')
   await sleep(300)
@@ -1005,8 +1012,7 @@ try {
     deck.addSlide().addText('Deux', { x: 1, y: 1, w: 3, h: 1, fontSize: 30, color: '000000' })
     await writeFile(join(tmp, 'exports', 'pick-import.pptx'), Buffer.from(await deck.write({ outputType: 'nodebuffer' })))
   }
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
   await importVia('pptx')
@@ -1031,8 +1037,7 @@ try {
   await exportVia('pptx')
   for (let i = 0; i < 80 && !(await readdir(exportsDir)).includes('Sans titre.pptx'); i++) await sleep(250)
   await writeFile(join(exportsDir, 'pick-import.pptx'), await readFile(join(exportsDir, 'Sans titre.pptx')))
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await importVia('pptx')
   for (let i = 0; i < 120 && (await nBrand('.page-item')) !== 2; i++) await sleep(250)
@@ -1048,8 +1053,7 @@ try {
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
   // photos en ligne : recherche (faux serveur Openverse), insertion, repli sur la miniature, pagination, erreurs, crédits
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('.sidebar .tabs button', 'Photos')
   await sleep(300)
@@ -1114,12 +1118,10 @@ try {
   await search('vide')
   for (let i = 0; i < 40 && !(await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'); i++) await sleep(250)
   check('recherche sans résultat : message dédié', (await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'))
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
 
   // polices en ligne : catalogue, aperçu, installation, utilisation, export PDF, persistance, embarquement dans le document
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
@@ -1157,8 +1159,7 @@ try {
   check('PDF avec une police en ligne : vrai texte (TJ), aucune image, aucun avertissement', fontPdf.includes(' TJ') && !lastPdfRaw.includes('/Subtype /Image') && !(await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '')))
   check('le texte du PDF utilise la police ajoutée (famille Lora, d\'où viennent les octets de test)', /Lora/.test(fontPdf) || /Lora/.test(lastPdfRaw), 'pas de police Lora dans le PDF')
   // persistance : au rechargement, la police est relue depuis le dossier de données
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(600)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
@@ -1180,8 +1181,7 @@ try {
   await clickSel('[data-action="font-remove"]')
   await sleep(500)
   await clickSel('[data-action="fonts-close"]')
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(600)
   check('police retirée : absente de la liste après rechargement', (await run(`window.trame.installedFonts().then(l => l.length)`)) === 0)
   await click('.sidebar .tabs button', 'Récents')
@@ -1200,8 +1200,7 @@ try {
     await writeFile(join(exportsDir, 'pick-font-3-invalide.ttf'), 'ceci est du texte et non une police')
     await writeFile(join(exportsDir, 'pick-font-4-lora.woff2'), readFileSync(join(root, 'node_modules/@fontsource/lora/files/lora-latin-400-normal.woff2')))
   }
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(600)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
@@ -1230,8 +1229,7 @@ try {
   for (let i = 0; i < 40 && !(await readdir(join(tmp, 'exports'))).includes('Sans titre.trame'); i++) await sleep(250)
   const savedOwn = JSON.parse(await readFile(join(tmp, 'exports', 'Sans titre.trame'), 'utf-8'))
   check('le document embarque la police importée (normal + gras, base64)', !!savedOwn.fonts?.['perso-liberation-sans']?.variants?.['400'] && !!savedOwn.fonts['perso-liberation-sans'].variants['700'] && !savedOwn.fonts['perso-lora-perso'])
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(600)
   check('les polices importées survivent au rechargement (relues du dossier de données)', (await run(`window.trame.installedFonts().then(l => l.filter(f => f.custom).map(f => f.name).sort().join())`)) === 'Liberation Sans,Lora (perso)')
   // retrait puis réouverture : le document restitue sa police
@@ -1250,8 +1248,7 @@ try {
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
   // création d'un texte : il s'ouvre directement en saisie, le texte par défaut sélectionné
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
@@ -1277,8 +1274,7 @@ try {
 
   // modèles de marque : éléments figés / à remplir, verrouillage, remplacement d'image, persistance
   await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(800, 400))
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   const esc = async () => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await sleep(250) }
   const state = () => run(`document.querySelector('[data-template-state]')?.dataset.templateState ?? 'aucun'`)
@@ -1339,8 +1335,7 @@ try {
   for (let i = 0; i < 40 && !(await readdir(join(tmp, 'exports'))).includes('Sans titre.trame'); i++) await sleep(250)
   const savedTpl = JSON.parse(await readFile(join(tmp, 'exports', 'Sans titre.trame'), 'utf-8'))
   check('le fichier enregistre les protections (figé / à remplir)', savedTpl.pages[0].elements.filter((e) => e.protect === 'fixed').length === 1 && savedTpl.pages[0].elements.filter((e) => e.protect === 'fill').length === 2)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('.sidebar .tabs button', 'Récents')
   for (let i = 0; i < 40 && (await nBrand('.recent-open')) === 0; i++) await sleep(250)
@@ -1351,8 +1346,7 @@ try {
   await sleep(200)
 
   // export de toutes les pages : ZIP, plages de pages, format, taille
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle') // page 1 : rectangle au centre
   await sleep(300)
@@ -1518,6 +1512,28 @@ try {
   await key('Escape')
   await sleep(300)
 
+  // la barre de la présentation ne se masque pas tant qu'on l'utilise (souris dessus, menu déroulant ouvert) mais se masque sinon
+  await gotoPage(0)
+  await click('header.toolbar button', 'Présenter')
+  await waitShown(0)
+  const barBox = await run(`(() => { const r = document.querySelector('.presentation-bar').getBoundingClientRect(); return { x: r.left + 20, y: r.top + r.height / 2 } })()`)
+  for (const dx of [-8, 0, 6]) await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: barBox.x + dx, y: barBox.y, button: 'none', buttons: 0 })
+  await sleep(4300)
+  check('souris sur la barre : elle reste affichée au-delà du délai de masquage', (await nBrand('.presentation.idle')) === 0, JSON.stringify([barBox, await run(`(() => { const b = document.querySelector('.presentation-bar'); const r = b.getBoundingClientRect(); return [b.matches(':hover'), r.left, r.top, r.width, r.height, document.querySelector('.presentation').className] })()`)]))
+  await run(`document.querySelector('[data-pres="transition"]').focus()`)
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: barBox.x, y: 20 })
+  await sleep(4300)
+  check('menu de transition sélectionné : la barre reste affichée', (await nBrand('.presentation.idle')) === 0)
+  await run(`document.querySelector('[data-pres="transition"]').blur()`)
+  await sleep(4300)
+  check('sans usage, la barre se masque', (await nBrand('.presentation.idle')) === 1)
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: barBox.x + 3, y: 30 })
+  await sleep(300)
+  check('une nouvelle présentation ne reprend pas la lecture automatique de la précédente', (await run(`document.querySelector('[data-pres="auto"]').value`)) === '0')
+  check('un mouvement de souris la fait réapparaître', (await nBrand('.presentation.idle')) === 0)
+  await key('Escape')
+  await sleep(300)
+
   // notes de l'orateur : saisie par page, affichage en présentation (N), export et import PowerPoint
   const notesField = () => run(`document.querySelector('[data-notes="text"]')?.value ?? null`)
   const typeNotes = (text) => run(`(() => { const t = document.querySelector('[data-notes="text"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(t, ${JSON.stringify(text)}); t.dispatchEvent(new Event('input', { bubbles: true })) })()`)
@@ -1561,8 +1577,7 @@ try {
   check('l\'export PowerPoint contient les notes de la page 1', notesXml.includes('Accueillir la salle') && notesXml.includes('Puis présenter le plan'), notesXml.slice(0, 200))
   check('seules les pages annotées ont des notes dans le fichier', !notedZip.file('ppt/notesSlides/notesSlide2.xml') || !(await notedZip.file('ppt/notesSlides/notesSlide2.xml').async('string')).includes('Accueillir'))
   await writeFile(join(exportsDir, 'pick-import.pptx'), notedBuf)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await importVia('pptx')
   for (let i = 0; i < 120 && (await nBrand('.page-item')) !== 3; i++) await sleep(250)
@@ -1573,8 +1588,7 @@ try {
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
   // rechercher et remplacer : ⌘F, résultats, navigation, remplacement courant / global, casse, annulation
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   const escKey = async () => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await sleep(250) }
   await click('header.toolbar button', 'Texte')
@@ -1662,8 +1676,7 @@ try {
   check('un clic ailleurs ferme le menu d\'import', (await nBrand('[role="menu"]')) === 0)
 
   // kit de marque : couleurs, polices, logos, couleurs récentes ; persistance entre deux chargements
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('.sidebar .tabs button', 'Marque')
   await sleep(300)
@@ -1713,8 +1726,7 @@ try {
   await sleep(600)
   check('un clic sur le logo l\'insère dans la page', (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === imgsBefore + 1)
   // persistance : rechargement de la page → le kit est relu depuis le fichier
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('.sidebar .tabs button', 'Marque')
   await sleep(600)
@@ -1726,8 +1738,7 @@ try {
   check('retirer une couleur et un logo du kit', (await nBrand('[data-swatch="brand"]')) === startColors && (await nBrand('[data-brand-logo]')) === 0)
 
   // listes : bouton → miniature (marqueurs) → export image différent → PDF toujours en vrai texte
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Texte')
   await sleep(400)
@@ -1748,8 +1759,7 @@ try {
   check('un second clic retire la liste (export identique à l\'original)', (await exportPng()).equals(plainPng))
 
   // Magic Resize : 1080 × 1080 → Story 1080 × 1920 avec adaptation du contenu, puis sans, puis annulation
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   await click('header.toolbar button', 'Rectangle') // 300 × 200 au centre : (390, 440) → centre (540, 540)
   await sleep(400)
@@ -1796,8 +1806,7 @@ try {
   check('sans « Adapter le contenu » : le rectangle reste à y 440–640', pngHeight(png) === 1920 && coloured(pngPixel(png, 540, 540)) && !coloured(pngPixel(png, 540, 960)))
 
   // export PDF vectoriel : on ajoute du texte dans l'interface (document vierge : les scénarios précédents ont laissé des éléments)
-  await run('location.reload()')
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp()
   await sleep(500)
   // puis on exporte et on inspecte le PDF produit
   check("bouton « Texte » de la barre d'outils", (await click('header.toolbar button', 'Texte')) === true)
@@ -1842,8 +1851,7 @@ try {
     pages: [{ id: 'p', background: '#fff', elements: [txt('a', 20, 'Police système', 'Helvetica Neue, Arial, sans-serif'), txt('b', 80, 'Coche ✓ absente', '"Inter", sans-serif')] }]
   })
   await run(`window.trame.saveProject(${JSON.stringify(finderDoc)}, ${JSON.stringify(finderFile)}, 'Ouvert')`)
-  await run('location.reload()') // état propre : pas de confirmation native
-  for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  await reloadApp() // état propre : pas de confirmation native
   if (process.platform === 'darwin' && !(await otherElectronPids()).length) {
     await openWithApp('-a', bundle, finderFile)
     for (let i = 0; i < 30 && !(await run('document.title')).startsWith('ouvert-par-finder'); i++) await sleep(200)
@@ -1891,8 +1899,7 @@ try {
       // le document du renderer est modifié depuis les étapes précédentes : on recharge la page pour repartir d'un
       // état propre (sinon la confirmation native bloquerait), puis on signale seulement au processus principal
       // des modifications non enregistrées : le renderer, lui, confirme tout de suite la fermeture
-      await run('location.reload()')
-      for (let i = 0; i < 40 && (await run(`document.querySelector('header.toolbar') ? 1 : 0`)) !== 1; i++) await sleep(250)
+      await reloadApp()
       await run('window.trame.setState({ dirty: true })')
       spawn('osascript', ['-e', `tell application ${JSON.stringify(bundle)} to quit`], { stdio: 'ignore' })
       for (let i = 0; i < 40 && !exited; i++) await sleep(250)
@@ -1906,7 +1913,8 @@ try {
 } catch (err) {
   check('exécution du test', false, String(err))
 } finally {
-  if (!exited) app.kill()
+  // SIGKILL : en SIGTERM, la garde de fermeture de l'application (document modifié) peut empêcher l'arrêt et laisser une instance orpheline
+  if (!exited) app.kill('SIGKILL')
   photoServer.close()
   await rm(tmp, { recursive: true, force: true })
 }

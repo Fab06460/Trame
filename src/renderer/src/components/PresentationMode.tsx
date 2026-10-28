@@ -28,6 +28,11 @@ export function PresentationMode(): React.JSX.Element | null {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<number, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bar = useRef<HTMLDivElement>(null)
+  /** la barre est utilisée (souris dessus ou focus dedans, menu déroulant ouvert compris) : elle ne se masque pas */
+  /** dernière cible d'un mouvement de souris : dans la barre ou non (plus fiable que `:hover`, qui dépend du dernier rendu) */
+  const overBar = useRef(false)
+  const inUse = (): boolean => !!bar.current && (overBar.current || bar.current.contains(document.activeElement))
 
   const kind = doc?.transition ?? DEFAULT_TRANSITION
   const exit = useCallback(() => usePresentation.getState().stop(), [])
@@ -51,6 +56,7 @@ export function PresentationMode(): React.JSX.Element | null {
     setLeaving(null)
     setBlack(false)
     setShowNotes(false)
+    setAuto(0)
     setPaused(false)
     setControls(true)
   }, [active])
@@ -116,6 +122,15 @@ export function PresentationMode(): React.JSX.Element | null {
     return () => clearTimeout(t)
   }, [active, doc, auto, paused, index])
 
+  const wake = useCallback(() => {
+    setControls(true)
+    if (idle.current) clearTimeout(idle.current)
+    const hideLater = (): void => {
+      idle.current = setTimeout(() => (inUse() ? hideLater() : setControls(false)), 3500)
+    }
+    hideLater()
+  }, [])
+
   // clavier : tout est capturé, les raccourcis de l'éditeur ne doivent pas agir pendant la présentation
   useEffect(() => {
     if (!active) return
@@ -137,18 +152,13 @@ export function PresentationMode(): React.JSX.Element | null {
         e.preventDefault()
         e.stopPropagation()
       }
-      setControls(true)
+      wake()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [active, exit])
+  }, [active, exit, wake])
 
   // les commandes et le curseur se masquent quand la souris ne bouge plus
-  const wake = useCallback(() => {
-    setControls(true)
-    if (idle.current) clearTimeout(idle.current)
-    idle.current = setTimeout(() => setControls(false), 2200)
-  }, [])
   useEffect(() => {
     if (active) wake()
     return () => {
@@ -159,7 +169,10 @@ export function PresentationMode(): React.JSX.Element | null {
   if (!active || !doc) return null
   const last = doc.pages.length - 1
   return (
-    <div className={`presentation${controls ? '' : ' idle'}`} data-presentation data-pres-index={index} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={wake} onClick={() => usePresentation.getState().go(index + 1)}>
+    <div className={`presentation${controls ? '' : ' idle'}`} data-presentation data-pres-index={index} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={(e) => {
+        overBar.current = !!bar.current?.contains(e.target as Node)
+        wake()
+      }} onClick={() => usePresentation.getState().go(index + 1)}>
       {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
       {!black && image && <img key={image.index} className={`presentation-page entering t-${kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
       {!black && !image && <div className="presentation-loading" role="status">Préparation…</div>}
@@ -168,14 +181,23 @@ export function PresentationMode(): React.JSX.Element | null {
           {doc.pages[index].notes ?? 'Aucune note pour cette page.'}
         </div>
       )}
-      <div className="presentation-bar" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={bar}
+        className="presentation-bar"
+        onClick={(e) => e.stopPropagation()}
+        onMouseLeave={() => {
+          overBar.current = false
+          wake()
+        }}
+        onBlur={wake}
+      >
         <button data-pres="prev" disabled={index === 0} onClick={() => usePresentation.getState().go(index - 1)} aria-label="Page précédente">‹</button>
         <span data-pres="counter">{index + 1} / {doc.pages.length}</span>
         <button data-pres="next" disabled={index === last} onClick={() => usePresentation.getState().go(index + 1)} aria-label="Page suivante">›</button>
         {doc.pages.length > 1 && (
           <label className="pres-auto" title="Lecture automatique en boucle (P : pause)">
             Auto
-            <select data-pres="auto" value={auto} onChange={(e) => { setAuto(Number(e.target.value)); setPaused(false) }}>
+            <select data-pres="auto" value={auto} onChange={(e) => { setAuto(Number(e.target.value)); setPaused(false); e.currentTarget.blur() }}>
               {AUTO_CHOICES.map((s) => (
                 <option key={s} value={s}>{s === 0 ? 'Non' : `${s} s`}</option>
               ))}
@@ -184,7 +206,7 @@ export function PresentationMode(): React.JSX.Element | null {
         )}
         <label className="pres-auto" title="Transition entre les pages (enregistrée avec le document)">
           Transition
-          <select data-pres="transition" value={kind} onChange={(e) => usePresentation.getState().setTransition(e.target.value as typeof kind)}>
+          <select data-pres="transition" value={kind} onChange={(e) => { usePresentation.getState().setTransition(e.target.value as typeof kind); e.currentTarget.blur() }}>
             {TRANSITIONS.map((t) => (
               <option key={t.id} value={t.id}>{t.label}</option>
             ))}
