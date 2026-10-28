@@ -124,7 +124,7 @@ const photoServer = createServer((req, res) => {
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
 const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
-const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
+const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_THROTTLE ? [] : ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling']), ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
   stdio: process.env.SMOKE_VERBOSE ? ['ignore', 'inherit', 'inherit'] : 'ignore'
 })

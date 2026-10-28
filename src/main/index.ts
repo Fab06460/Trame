@@ -89,7 +89,9 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      // en test, la fenêtre peut être recouverte ou passée à l'arrière-plan : Chromium suspendrait alors rendu et minuteurs
+      backgroundThrottling: !TEST_EXPORT_DIR || Boolean(process.env.SMOKE_THROTTLE)
     }
   })
 
