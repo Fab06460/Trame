@@ -1636,6 +1636,38 @@ try {
   await sleep(300)
   check('⌘⌥1 et ⌘⌥2 réaffichent les panneaux', (await rectOf('[data-dock="left"]')) !== null && (await rectOf('[data-dock="right"]')) !== null)
 
+  // panneau masqué : il réapparaît au survol du bord de la fenêtre et se referme quand la souris s'éloigne
+  const moveTo = (x, y) => cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
+  await clickSel('[data-panel-toggle="left"]')
+  await sleep(300)
+  check('panneau de gauche masqué : une zone sensible borde la fenêtre', (await rectOf('[data-edge="left"]')) !== null && (await rectOf('[data-dock="left"]')) === null)
+  await moveTo(400, 300)
+  await moveTo(2, 300)
+  await sleep(500)
+  check('survoler le bord gauche fait apparaître le panneau (en recouvrement, sans fond grisé)', (await rectOf('[data-dock="left"]')) !== null && (await nBrand('[data-dock="backdrop"]')) === 0 && (await canvasW()) >= wide + 270, JSON.stringify([wide, await canvasW()]))
+  await moveTo(100, 300)
+  await moveTo(700, 300)
+  await sleep(900)
+  check('…et il se referme quand la souris s\'éloigne', (await rectOf('[data-dock="left"]')) === null)
+  await moveTo(2, 300)
+  await sleep(500)
+  await run(`document.querySelector('[data-dock="left"] .tabs button').focus()`)
+  await moveTo(700, 300)
+  await sleep(900)
+  check('un champ du panneau a le focus : il reste ouvert', (await rectOf('[data-dock="left"]')) !== null)
+  await run(`document.activeElement.blur()`)
+  await moveTo(710, 310)
+  await sleep(900)
+  check('focus rendu, souris ailleurs : il se referme', (await rectOf('[data-dock="left"]')) === null)
+  await moveTo(2, 300)
+  await sleep(500)
+  await clickSel('[data-panel-toggle="left"]')
+  await sleep(300)
+  await moveTo(700, 300)
+  await sleep(900)
+  check('cliquer « ◧ » pendant l\'aperçu ancre le panneau (il reste, avec sa poignée)', (await rectOf('[data-dock="left"]'))?.w === 280 && (await rectOf('[data-splitter="left"]')) !== null)
+  await moveTo(700, 300)
+
   // fenêtre étroite : les panneaux passent en recouvrement, à la demande
   await cdp('Emulation.setDeviceMetricsOverride', { width: 860, height: 700, deviceScaleFactor: 1, mobile: false })
   await sleep(500)
@@ -1655,13 +1687,40 @@ try {
   check('un clic en dehors du panneau le referme', (await rectOf('[data-dock="right"]')) === null)
   const bar = await rectOf('header.toolbar')
   check('barre d\'outils : aucun bouton coupé (tous dans la fenêtre)', await run(`[...document.querySelectorAll('header.toolbar button, header.toolbar input')].every(b => { const r = b.getBoundingClientRect(); return r.right <= window.innerWidth + 1 && r.left >= -1 })`), JSON.stringify(bar))
+  await moveTo(858, 300)
+  await sleep(500)
+  check('fenêtre étroite : le survol du bord droit ouvre le panneau de droite', (await rectOf('[data-dock="right"]')) !== null)
+  await key('Escape')
+  await sleep(250)
+  check('Échap referme aussi un aperçu', (await rectOf('[data-dock="right"]')) === null)
+  await moveTo(400, 300)
+  // barre d'outils : toujours une seule ligne, « ◨ » reste à droite, repli par paliers dans des menus
+  let lastTier = -1
+  for (const w of [1400, 1150, 1000, 860, 760]) {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 700, deviceScaleFactor: 1, mobile: false })
+    await sleep(600)
+    const info = await run(`(() => { const bar = document.querySelector('header.toolbar'); const t = document.querySelector('[data-panel-toggle="right"]').getBoundingClientRect(); return { h: Math.round(bar.getBoundingClientRect().height), right: Math.round(t.right), tier: Number(bar.dataset.tier), over: bar.scrollWidth > bar.clientWidth } })()`)
+    check(`barre d'outils à ${w} px : une seule ligne, « ◨ » à droite, rien ne déborde (palier ${info.tier})`, info.h <= 60 && !info.over && info.right <= w && info.right >= w - 40, JSON.stringify(info))
+    check(`…le repli ne recule pas quand la fenêtre rétrécit (palier ≥ ${lastTier})`, info.tier >= lastTier)
+    lastTier = info.tier
+  }
+  check('au minimum de la fenêtre : formes et fichier sont dans des menus', (await rectOf('[data-menu="add"]')) !== null && (await rectOf('[data-menu="file"]')) !== null)
+  await clickSel('[data-menu="add"] > button')
+  await sleep(200)
+  const countBefore = await allElements()
+  await clickSel('[data-menu-item="rect"]')
+  await sleep(300)
+  check('« Ajouter ▾ » → Rectangle ajoute bien un élément', (await allElements()) === countBefore + 1, `${countBefore} → ${await allElements()}`)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(200)
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 420, deviceScaleFactor: 1, mobile: false })
   await sleep(500)
   const strip = await rectOf('footer.page-strip')
   check('fenêtre basse (420 px) : la liste des pages reste visible, dans la fenêtre', strip !== null && strip.b <= 420 && strip.h >= 84, JSON.stringify(strip))
   check('…et le canevas garde de la place', (await rectOf('.canvas-wrap')).h >= 60, JSON.stringify(await rectOf('.canvas-wrap')))
   await cdp('Emulation.clearDeviceMetricsOverride')
-  await sleep(500)
+  await sleep(700)
+  check('fenêtre agrandie : la barre d\'outils retrouve tous ses boutons (palier 0)', (await run(`document.querySelector('header.toolbar').dataset.tier`)) === '0')
   check('fenêtre agrandie : retour automatique des panneaux ancrés', (await rectOf('[data-dock="left"]')) !== null && (await rectOf('[data-dock="right"]')) !== null && (await run(`document.querySelector('.workspace').dataset.compact`)) === undefined)
 
   // liste des pages : redimensionnement et masquage
@@ -2011,7 +2070,9 @@ try {
   check('exécution du test', false, String(err))
 } finally {
   // SIGKILL : en SIGTERM, la garde de fermeture de l'application (document modifié) peut empêcher l'arrêt et laisser une instance orpheline
-  if (!exited) app.kill('SIGKILL')
+  // SMOKE_KEEP_ON_FAIL=1 : en cas d'échec l'application reste ouverte (port affiché) pour pouvoir l'inspecter
+  if (!exited && !(process.env.SMOKE_KEEP_ON_FAIL && failures.length)) app.kill('SIGKILL')
+  else if (!exited) console.log(`application laissée ouverte : port ${port}, pid ${app.pid}`)
   photoServer.close()
   await rm(tmp, { recursive: true, force: true })
 }

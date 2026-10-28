@@ -16,7 +16,7 @@ import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
 import { useLayout } from '@/store/layout'
 import { Splitter } from '@/components/Splitter'
-import { overlayWidth } from '@/layout'
+import { Dock, EdgeZone } from '@/components/Docks'
 import { watchDocument } from '@/store/pdfIssues'
 import { copySelection, cutSelection, paste } from '@/clipboardActions'
 import { confirmUnsaved, newProject, openFile, openProject, saveProject } from '@/fileActions'
@@ -152,20 +152,20 @@ export default function App(): React.JSX.Element {
   const rightOpen = useLayout((s) => s.rightOpen)
   const leftWidth = useLayout((s) => s.leftWidth)
   const rightWidth = useLayout((s) => s.rightWidth)
-  const windowWidth = useLayout((s) => s.windowWidth)
-  // ancré : selon la préférence ; compact : seulement le panneau ouvert en recouvrement
-  const showLeft = compact ? overlay === 'left' : leftOpen
-  const showRight = compact ? overlay === 'right' : rightOpen
+  const peek = useLayout((s) => s.peek)
+  // ancré : selon la préférence (jamais en fenêtre étroite) ; sinon le panneau n'apparaît qu'en recouvrement, à la demande
+  const leftDocked = !compact && leftOpen
+  const rightDocked = !compact && rightOpen
 
   // Échap ferme le panneau en recouvrement
   useEffect(() => {
-    if (!compact || !overlay) return
+    if (!overlay) return
     const onEsc = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') useLayout.getState().closeOverlay()
     }
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
-  }, [compact, overlay])
+  }, [overlay])
 
   return (
     <div className="app">
@@ -176,28 +176,40 @@ export default function App(): React.JSX.Element {
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>
-        {showLeft && (
+        {leftDocked && (
           <>
-            <div className={`dock dock-left${compact ? ' overlay' : ''}`} data-dock="left" style={{ width: compact ? overlayWidth(leftWidth, windowWidth) : leftWidth }}>
+            <Dock side="left" docked width={leftWidth}>
               <Sidebar />
-            </div>
-            {!compact && <Splitter kind="left" />}
+            </Dock>
+            <Splitter kind="left" />
           </>
         )}
         <div className="center">
-          {compact && overlay && <div className="dock-backdrop" data-dock="backdrop" onPointerDown={() => useLayout.getState().closeOverlay()} />}
+          {overlay && !peek && <div className="dock-backdrop" data-dock="backdrop" onPointerDown={() => useLayout.getState().closeOverlay()} />}
           <Canvas />
           <NotesPanel />
           <PageStrip />
         </div>
-        {showRight && (
+        {rightDocked && (
           <>
-            {!compact && <Splitter kind="right" />}
-            <div className={`dock dock-right${compact ? ' overlay' : ''}`} data-dock="right" style={{ width: compact ? overlayWidth(rightWidth, windowWidth) : rightWidth }}>
+            <Splitter kind="right" />
+            <Dock side="right" docked width={rightWidth}>
               <Properties />
-            </div>
+            </Dock>
           </>
         )}
+        {overlay === 'left' && !leftDocked && (
+          <Dock side="left" docked={false} width={leftWidth}>
+            <Sidebar />
+          </Dock>
+        )}
+        {overlay === 'right' && !rightDocked && (
+          <Dock side="right" docked={false} width={rightWidth}>
+            <Properties />
+          </Dock>
+        )}
+        {!leftDocked && overlay !== 'left' && <EdgeZone side="left" />}
+        {!rightDocked && overlay !== 'right' && <EdgeZone side="right" />}
       </main>
     </div>
   )

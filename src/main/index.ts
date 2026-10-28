@@ -80,7 +80,7 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 640,
+    minWidth: 760,
     minHeight: 420,
     title: 'Trame',
     backgroundColor: '#1e1f24',

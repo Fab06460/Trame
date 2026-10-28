@@ -24,8 +24,10 @@ const save = (p: Prefs): void => {
 interface LayoutState extends Prefs {
   /** fenêtre trop étroite pour ancrer les panneaux ouverts : ils s'ouvrent en recouvrement, à la demande */
   compact: boolean
-  /** panneau actuellement ouvert en recouvrement (mode compact seulement) */
+  /** panneau actuellement ouvert en recouvrement (fenêtre étroite, ou panneau masqué) */
   overlay: Side | null
+  /** recouvrement ouvert par le survol du bord : il se referme quand la souris s'éloigne (sinon il reste jusqu'à Échap / clic ailleurs) */
+  peek: boolean
   windowWidth: number
   windowHeight: number
   setWindow: (width: number, height: number) => void
@@ -33,6 +35,8 @@ interface LayoutState extends Prefs {
   /** Ancré : masque / affiche le panneau (préférence enregistrée). Compact : ouvre / ferme son recouvrement. */
   toggle: (side: Side) => void
   toggleStrip: () => void
+  /** Survol du bord de la fenêtre : montre un panneau non ancré, le temps du survol. */
+  peekOpen: (side: Side) => void
   closeOverlay: () => void
   reset: () => void
 }
@@ -50,14 +54,16 @@ export const useLayout = create<LayoutState>((set, get) => ({
   ...load(),
   compact: false,
   overlay: null,
+  peek: false,
   windowWidth: typeof window === 'undefined' ? 1400 : window.innerWidth,
   windowHeight: typeof window === 'undefined' ? 900 : window.innerHeight,
 
   setWindow: (windowWidth, windowHeight) => {
     const s = get()
     const compact = isCompact(windowWidth, s)
-    // fenêtre agrandie : retour au mode ancré, donc plus de recouvrement
-    set({ windowWidth, windowHeight, compact, overlay: compact ? s.overlay : null })
+    // un recouvrement n'a de sens que pour un panneau qui n'est pas ancré
+    const stillFloating = s.overlay !== null && (compact || !(s.overlay === 'left' ? s.leftOpen : s.rightOpen))
+    set({ windowWidth, windowHeight, compact, overlay: stillFloating ? s.overlay : null, peek: stillFloating ? s.peek : false })
   },
 
   setSize: (kind, value) => {
@@ -72,12 +78,13 @@ export const useLayout = create<LayoutState>((set, get) => ({
   toggle: (side) => {
     const s = get()
     if (s.compact) {
-      set({ overlay: s.overlay === side ? null : side })
+      // un clic sur le bouton « épingle » un recouvrement ouvert par le survol
+      set({ overlay: s.overlay === side && !s.peek ? null : side, peek: false })
       return
     }
     const patch = side === 'left' ? { leftOpen: !s.leftOpen } : { rightOpen: !s.rightOpen }
     const merged = { ...prefsOf(s), ...patch }
-    set({ ...patch, compact: isCompact(s.windowWidth, merged), overlay: null })
+    set({ ...patch, compact: isCompact(s.windowWidth, merged), overlay: null, peek: false })
     save(merged)
   },
 
@@ -88,11 +95,19 @@ export const useLayout = create<LayoutState>((set, get) => ({
     save(merged)
   },
 
-  closeOverlay: () => set({ overlay: null }),
+  peekOpen: (side) => {
+    const s = get()
+    const docked = !s.compact && (side === 'left' ? s.leftOpen : s.rightOpen)
+    // un panneau ancré n'a pas à être montré ; un recouvrement ouvert au bouton n'est pas remplacé par un survol
+    if (docked || (s.overlay !== null && !s.peek)) return
+    set({ overlay: side, peek: true })
+  },
+
+  closeOverlay: () => set({ overlay: null, peek: false }),
 
   reset: () => {
     const d = sanitizeLayout(null)
-    set({ ...d, compact: isCompact(get().windowWidth, d), overlay: null })
+    set({ ...d, compact: isCompact(get().windowWidth, d), overlay: null, peek: false })
     save(d)
   }
 }))

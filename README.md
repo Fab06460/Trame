@@ -14,7 +14,7 @@
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
 - Mode présentation plein écran (F5) : navigation clavier et souris, écran noir, lecture automatique en boucle, transitions (fondu, glissement, recouvrement, zoom), notes de l'orateur (touche N)
-- Interface adaptable : panneaux latéraux et liste des pages redimensionnables (poignées, double-clic = taille par défaut) et masquables (◧ ◨, ⌘⌥1 / ⌘⌥2 / ⌘⌥3), passage automatique en panneaux « à la demande » quand la fenêtre est étroite
+- Interface adaptable : panneaux latéraux et liste des pages redimensionnables (poignées, double-clic = taille par défaut) et masquables (◧ ◨, ⌘⌥1 / ⌘⌥2 / ⌘⌥3), les panneaux masqués réapparaissent au survol du bord de la fenêtre ; en fenêtre étroite ils passent automatiquement en recouvrement, et la barre d'outils reste sur une seule ligne (repli dans des menus)
 - Notes de l'orateur par page (panneau sous le canevas), exportées et importées avec PowerPoint
 - Menus « Importer » (PDF, PowerPoint) et « Exporter » (PDF, PowerPoint, PNG, JPG, pages) dans la barre d'outils
 - Menu « Exporter » unique : PDF, PowerPoint, PNG, JPG, images de plusieurs pages
