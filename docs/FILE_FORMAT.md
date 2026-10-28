@@ -14,6 +14,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
     {
       "id": "aB3xK9_q",
       "background": "#ffffff",
+      "notes": "…",         // optionnel : notes de l'orateur de la page (texte, 20 000 caractères au plus)
       "guides": [            // optionnel : repères d'alignement de la page
         { "orientation": "v", "position": 540 },   // v = ligne verticale à x = 540
         { "orientation": "h", "position": 100 }    // h = ligne horizontale à y = 100
@@ -78,6 +79,8 @@ Le **contour** (`stroke`, `strokeWidth`, `strokeDashed`) existe pour tous les ty
 Les champs de style de texte sont bornés à la lecture (`letterSpacing` −10 à 100, `lineHeight` 0,5 à 4) et les valeurs inattendues retirées ; `underline`, `strike` et `uppercase` ne sont écrits que lorsqu'ils valent `true`. Les indicateurs de calque `locked` et `hidden` ne sont écrits que lorsqu'ils valent `true` ; à la lecture toute autre valeur est ignorée (un `locked: "oui"` ne verrouille rien) et `name` est borné à 80 caractères. Aucune nouvelle version du format.
 
 Les **repères** (`guides`, en pixels de design) sont enregistrés avec la page mais **jamais dessinés** dans les exports. À la lecture, une entrée invalide est ignorée sans refuser le fichier ; un champ absent ou vide signifie « aucun repère ». Ils ne demandent pas de nouvelle version du format.
+
+Les **notes de l'orateur** (`notes` sur une page) sont du texte libre, jamais dessiné dans les exports image / PDF. À la lecture, une valeur qui n'est pas un texte non vide est ignorée ; les caractères de contrôle sont retirés. Pas de nouvelle version du format.
 
 ### Champs par type
 

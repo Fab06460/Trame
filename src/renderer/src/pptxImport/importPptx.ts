@@ -4,6 +4,7 @@ import { createTextNode } from '@/exportPages'
 import { SIZE_LIMITS } from '@/magicResize'
 import { parseTheme, resolveColor, DEFAULT_COLOR_MAP, type ColorMap, type Theme } from '@/pptxImport/colors'
 import { finalizeText, parseSlideTree, readFill, type PlaceholderInfo, type SlideContext } from '@/pptxImport/slide'
+import { readNotes } from '@/pptxImport/notes'
 import { attr, kid, kids, parseXml } from '@/pptxImport/xml'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -15,6 +16,8 @@ export interface PptxReport {
   doc: TrameDocument
   slides: number
   elements: number
+  /** diapositives dont les notes ont été reprises */
+  notes: number
   /** éléments non repris (tableaux, graphiques…), avec le nombre de diapositives concernées */
   unsupported: Array<{ what: string; slides: number }>
   substitutedFonts: string[]
@@ -118,6 +121,7 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
   const unsupported = new Map<string, number>()
   const substituted = new Set<string>()
   let elementCount = 0
+  let notedSlides = 0
 
   for (const slidePath of slidePaths.slice(0, MAX_PPTX_SLIDES)) {
     const slideDoc = await zip.xml(slidePath)
@@ -171,7 +175,10 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     if (layoutDoc && layoutPath) elements.push(...run(layoutDoc, await zip.images(layoutPath), true, true))
     elements.push(...run(slideDoc, await zip.images(slidePath), false, false))
     elementCount += elements.length
-    pages.push({ id: nanoid(8), background: bgFill?.kind === 'solid' ? bgFill.color.hex : '#ffffff', elements })
+    const notesPath = slideRels.find((r) => r.type === 'notesSlide')?.path
+    const notes = notesPath ? readNotes(await zip.xml(notesPath)) : undefined
+    if (notes) notedSlides++
+    pages.push({ id: nanoid(8), background: bgFill?.kind === 'solid' ? bgFill.color.hex : '#ffffff', ...(notes ? { notes } : {}), elements })
   }
   if (pages.length === 0) throw new Error('aucune diapositive trouvée dans ce fichier')
   const doc: TrameDocument = { version: 2, name, width, height, pages }
@@ -179,6 +186,7 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     doc,
     slides: pages.length,
     elements: elementCount,
+    notes: notedSlides,
     unsupported: [...unsupported].map(([what, slides]) => ({ what, slides })),
     substitutedFonts: [...substituted].sort(),
     truncated

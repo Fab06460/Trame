@@ -1,3 +1,4 @@
+import { limitNotes, sanitizeNotes } from '@/notes'
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
@@ -77,6 +78,7 @@ export function parseDocument(json: string): TrameDocument {
       if (ok.length) page.guides = ok
       else delete page.guides
     }
+    sanitizeNotes(page)
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
       if (!isElement(e)) throw invalid('élément mal positionné')
@@ -170,6 +172,8 @@ interface EditorState {
   setBackground: (color: string) => void
   /** Modifie les repères de la page courante. `commit=false` pour un geste continu (après un `beginChange`). */
   updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
+  /** Notes de l'orateur de la page courante ; `commit` ouvre un cran d'historique (une seule fois par séance de frappe). */
+  setNotes: (text: string, commit?: boolean) => void
   setSize: (width: number, height: number) => void
   setName: (name: string) => void
   /** change le format ; `adapt` reporte le contenu dans le nouveau format (Magic Resize) au lieu de ne toucher qu'à la taille de la page */
@@ -625,6 +629,19 @@ export const useEditor = create<EditorState>((set, get) => {
     updateGuides: (f, commit = true) => {
       if (commit) set(snapshot())
       set({ doc: mapPage((p) => ({ ...p, guides: f(p.guides ?? []) })), dirty: true })
+    },
+
+    setNotes: (text, commit = true) => {
+      if (commit) set(snapshot())
+      const notes = limitNotes(text)
+      set({
+        doc: mapPage((p) => {
+          const { notes: _old, ...rest } = p
+          void _old
+          return notes === undefined ? rest : { ...rest, notes }
+        }),
+        dirty: true
+      })
     },
 
     setBackground: (background) =>

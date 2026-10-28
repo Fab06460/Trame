@@ -124,6 +124,8 @@ export interface TramePage {
   background: string
   /** repères de la page (absents = aucun) ; jamais dessinés dans les exports */
   guides?: Guide[]
+  /** notes de l'orateur (absentes = aucune) ; jamais dessinées dans les exports image / PDF */
+  notes?: string
   elements: TrameElement[] // ordre = z-index croissant
 }
 

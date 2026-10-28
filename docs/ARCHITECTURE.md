@@ -374,3 +374,7 @@ Les polices sont chargées à la demande (`pdfFonts.ts`, `import.meta.glob` en `
 Fichier d'abord, puis sortie : **Nouveau · Ouvrir · Importer ▾ | Enregistrer · Enregistrer sous… | annuler / rétablir / rechercher | éléments | Présenter · Exporter ▾**.
 
 Le test de bout en bout (`scripts/smoke-test.mjs`) abandonne désormais un échange CDP resté sans réponse au bout de 60 s en nommant la commande (au lieu de bloquer en silence), et attend que la mise en page du canevas soit stable avant le test d'aimantation.
+
+### Notes de l'orateur
+
+`TramePage.notes` (texte, optionnel). `notes.ts` : `limitNotes` (saisie : fins de ligne, caractères de contrôle, 20 000 caractères ; vide = champ supprimé), `cleanNotes`/`sanitizeNotes` (lecture d'un fichier). Action `setNotes(text, commit)` : `NotesPanel` ne demande un cran d'historique qu'au premier caractère d'une séance de frappe (du focus au blur). Panneau replié par défaut (état mémorisé dans `localStorage`, facultatif). Présentation : touche **N** ou bouton « Notes » (l'état est propre à chaque présentation). Export PPTX : `slide.addNotes`. Import PPTX : `pptxImport/notes.ts` lit le corps de texte (`ph type="body"`) du `notesSlide` lié à la diapositive ; les autres zones (numéro, miniature) sont ignorées. Les notes suivent la page dans « Dupliquer » ; elles ne sont pas encore concernées par la recherche / remplacement.

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Canvas } from '@/components/Canvas'
 import { Toolbar } from '@/components/Toolbar'
+import { NotesPanel } from '@/components/NotesPanel'
 import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
@@ -138,6 +139,7 @@ export default function App(): React.JSX.Element {
         <Sidebar />
         <div className="center">
           <Canvas />
+          <NotesPanel />
           <PageStrip />
         </div>
         <Properties />

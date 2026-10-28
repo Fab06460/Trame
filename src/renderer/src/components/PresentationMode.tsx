@@ -19,6 +19,7 @@ export function PresentationMode(): React.JSX.Element | null {
   const [auto, setAuto] = useState(0)
   const [paused, setPaused] = useState(false)
   const [black, setBlack] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<number, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,6 +42,7 @@ export function PresentationMode(): React.JSX.Element | null {
     cache.current.clear()
     setImage(null)
     setBlack(false)
+    setShowNotes(false)
     setPaused(false)
     setControls(true)
   }, [active])
@@ -105,6 +107,7 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (k === 'End') s.go(last)
       else if (k.toLowerCase() === 'b') setBlack((b) => !b)
       else if (k.toLowerCase() === 'p') setPaused((p) => !p)
+      else if (k.toLowerCase() === 'n') setShowNotes((n) => !n)
       else handled = false
       if (handled || !(e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -135,6 +138,11 @@ export function PresentationMode(): React.JSX.Element | null {
     <div className={`presentation${controls ? '' : ' idle'}`} data-presentation data-pres-index={index} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={wake} onClick={() => usePresentation.getState().go(index + 1)}>
       {!black && image && <img key={image.index} className="presentation-page" src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
       {!black && !image && <div className="presentation-loading" role="status">Préparation…</div>}
+      {showNotes && (
+        <div className={`presentation-notes${doc.pages[index].notes ? '' : ' empty'}`} data-pres="notes" onClick={(e) => e.stopPropagation()}>
+          {doc.pages[index].notes ?? 'Aucune note pour cette page.'}
+        </div>
+      )}
       <div className="presentation-bar" onClick={(e) => e.stopPropagation()}>
         <button data-pres="prev" disabled={index === 0} onClick={() => usePresentation.getState().go(index - 1)} aria-label="Page précédente">‹</button>
         <span data-pres="counter">{index + 1} / {doc.pages.length}</span>
@@ -149,6 +157,7 @@ export function PresentationMode(): React.JSX.Element | null {
             </select>
           </label>
         )}
+        <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title="Afficher les notes (N)">Notes</button>
         <button data-pres="exit" onClick={exit} title="Quitter (Échap)">✕ Quitter</button>
       </div>
     </div>

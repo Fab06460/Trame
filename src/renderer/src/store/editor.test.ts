@@ -684,3 +684,40 @@ describe('parseDocument', () => {
     expect(parseDocument(JSON.stringify(d)).name).toBe('Sans titre')
   })
 })
+
+describe('notes de l\'orateur', () => {
+  it('se saisissent par page, sans toucher aux autres', () => {
+    const first = S().pageId
+    S().setNotes('Accueil')
+    S().addPage()
+    expect(selectPage(S()).notes).toBeUndefined()
+    S().setNotes('Deuxième', true)
+    S().setPage(first)
+    expect(selectPage(S()).notes).toBe('Accueil')
+  })
+  it('un texte vidé supprime le champ', () => {
+    S().setNotes('x')
+    S().setNotes('')
+    expect('notes' in selectPage(S())).toBe(false)
+  })
+  it('une séance de frappe = un seul cran d\'annulation (commit une fois)', () => {
+    const before = S().past.length
+    S().setNotes('a', true)
+    S().setNotes('ab', false)
+    S().setNotes('abc', false)
+    expect(S().past.length).toBe(before + 1)
+    S().undo()
+    expect(selectPage(S()).notes).toBeUndefined()
+  })
+  it('la page dupliquée garde ses notes ; l\'enregistrement les conserve', () => {
+    S().setNotes('À dire')
+    S().duplicatePage(S().pageId)
+    expect(selectPage(S()).notes).toBe('À dire')
+    expect(parseDocument(JSON.stringify(S().doc)).pages[1].notes).toBe('À dire')
+  })
+  it('un fichier avec des notes invalides les ignore sans refuser le document', () => {
+    const raw = JSON.parse(JSON.stringify(S().doc))
+    raw.pages[0].notes = 42
+    expect('notes' in parseDocument(JSON.stringify(raw)).pages[0]).toBe(false)
+  })
+})

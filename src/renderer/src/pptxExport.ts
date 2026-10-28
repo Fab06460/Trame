@@ -62,6 +62,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
   for (const [index, page] of doc.pages.entries()) {
     const slide = pptx.addSlide()
     slide.background = { color: hex(page.background) }
+    if (page.notes) slide.addNotes(page.notes)
     const asImage = async (el: TrameElement, reason: string): Promise<void> => {
       const r = await renderElementImage(el, 'full')
       if (!r) return
