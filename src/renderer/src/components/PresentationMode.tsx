@@ -60,7 +60,11 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (cmd.type === 'black') setBlack((b) => !b)
       else if (cmd.type === 'exit') usePresentation.getState().stop()
     })
-    const offClosed = window.trame.onSpeakerClosed(() => setSpeaker(false))
+    const offClosed = window.trame.onSpeakerClosed(() => {
+      setSpeaker(false)
+      // un seul écran : la présentation avait laissé le plein écran à l'écran de l'orateur, elle le reprend
+      if (usePresentation.getState().active) void window.trame.setFullScreen(true)
+    })
     return () => {
       offCommand()
       offClosed()

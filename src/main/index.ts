@@ -9,6 +9,7 @@ import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_F
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { safeExportName } from './exportFolder'
+import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
 import {
@@ -100,8 +101,9 @@ function createWindow(): void {
   mainWindow = win
   // le mode présentation passe en plein écran ; si l'utilisateur en sort autrement (bouton système), l'interface le sait
   win.on('leave-full-screen', () => {
-    if (!repositioning) win.webContents.send('window:left-fullscreen')
+    if (fullscreenGuard.onLeave()) win.webContents.send('window:left-fullscreen')
   })
+  win.on('enter-full-screen', () => fullscreenGuard.onEnter())
   win.webContents.on('did-start-loading', () => fileInbox.onRendererGone())
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
@@ -689,8 +691,8 @@ let speakerState: SpeakerState | null = null
 let presentationDisplayId: number | null = null
 /** position de la fenêtre principale avant son déplacement vers l'autre écran */
 let boundsBeforePresentation: Electron.Rectangle | null = null
-/** vrai pendant qu'on quitte puis reprend le plein écran exprès : l'interface ne doit pas y voir la fin de la présentation */
-let repositioning = false
+/** sorties du plein écran voulues par l'application (déplacement, écran de l'orateur) : l'interface n'y voit pas la fin de la présentation */
+const fullscreenGuard = createFullscreenGuard()
 
 const multiDisplay = (): boolean => screen.getAllDisplays().length > 1
 
@@ -702,8 +704,11 @@ function presentationDisplay(): Electron.Display | undefined {
 function placePresentation(win: BrowserWindow): void {
   const target = speakerWindow && multiDisplay() ? presentationDisplay() : undefined
   if (speakerWindow && !multiDisplay()) {
-    // un seul écran : pas de plein écran, l'écran de l'orateur resterait caché derrière
-    if (win.isFullScreen()) win.setFullScreen(false)
+    // un seul écran : pas de plein écran, l'écran de l'orateur resterait caché derrière (sortie voulue : la présentation continue)
+    if (win.isFullScreen()) {
+      fullscreenGuard.expectLeave()
+      win.setFullScreen(false)
+    }
     return
   }
   if (!target) {
@@ -714,11 +719,10 @@ function placePresentation(win: BrowserWindow): void {
     boundsBeforePresentation ??= win.getBounds()
     win.setBounds(target.bounds)
     win.setFullScreen(true)
-    repositioning = false
   }
   if (win.isFullScreen()) {
     // déjà en plein écran (sur un autre écran) : on en sort pour le déplacer
-    repositioning = true
+    fullscreenGuard.expectLeave()
     win.once('leave-full-screen', move)
     win.setFullScreen(false)
   } else move()
@@ -748,6 +752,9 @@ ipcMain.handle('speaker:open', async (e, raw: unknown) => {
   const primary = screen.getPrimaryDisplay()
   const multi = displays.length > 1
   presentationDisplayId = multi ? (displays.find((d) => d.id !== primary.id) ?? primary).id : null
+  // un seul écran : la présentation sort du plein écran AVANT la création de l'autre fenêtre (sinon, sur macOS, elle apparaîtrait dans
+  // l'espace plein écran qui disparaît)
+  if (!multi && !TEST_EXPORT_DIR) await leaveFullscreenQuietly(main, fullscreenGuard)
   const area = multi ? primary.workArea : screen.getDisplayMatching(main.getBounds()).workArea
   const win = new BrowserWindow({
     x: area.x + (multi ? 0 : Math.round(area.width * 0.1)),
@@ -767,8 +774,6 @@ ipcMain.handle('speaker:open', async (e, raw: unknown) => {
     presentationDisplayId = null
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('speaker:closed')
-      // la présentation en cours reprend sa place normale (un seul écran : elle n'avait pas quitté sa fenêtre)
-      if (mainWindow.isFullScreen() && !multi) mainWindow.setFullScreen(false)
     }
   })
   const url = process.env['ELECTRON_RENDERER_URL']
