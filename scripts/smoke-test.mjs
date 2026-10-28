@@ -216,19 +216,31 @@ try {
     const d = JSON.parse(m.data)
     if (d.id && pending.has(d.id)) pending.get(d.id)(d)
   }
-  const run = (expression) =>
-    new Promise((resolve) => {
-      const i = ++id
-      pending.set(i, resolve)
-      ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }))
-    }).then((d) => (d.result.exceptionDetails ? { __error: d.result.exceptionDetails.exception?.description } : d.result.result.value))
-
-  const cdp = (method, params) =>
-    new Promise((resolve) => {
-      const i = ++id
-      pending.set(i, resolve)
-      ws.send(JSON.stringify({ id: i, method, params }))
+  // Un échange sans réponse ferait attendre le test indéfiniment sans rien dire : on l'abandonne en nommant la commande.
+  const answer = (i, label) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pending.delete(i)
+        reject(new Error(`CDP sans réponse après 60 s : ${label.slice(0, 300)}`))
+      }, 60000)
+      pending.set(i, (d) => {
+        clearTimeout(timer)
+        resolve(d)
+      })
     })
+  const run = (expression) => {
+    const i = ++id
+    const reply = answer(i, expression)
+    ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }))
+    return reply.then((d) => (d.result.exceptionDetails ? { __error: d.result.exceptionDetails.exception?.description } : d.result.result.value))
+  }
+
+  const cdp = (method, params) => {
+    const i = ++id
+    const reply = answer(i, method)
+    ws.send(JSON.stringify({ id: i, method, params }))
+    return reply
+  }
   // La page se comporte comme si sa fenêtre avait le focus du système, même quand une autre application est au premier plan :
   // sans cela, focus() / blur() ne déclenchent aucun événement et les champs ne se valident plus (test dépendant du bureau).
   await cdp('Emulation.setFocusEmulationEnabled', { enabled: true })
@@ -420,7 +432,16 @@ try {
   await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440)
   await sleep(500)
   const mouse = (type, x, y, modifiers = 0) => cdp('Input.dispatchMouseEvent', { type, x, y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, modifiers })
-  const wrap = await run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+  const measure = () => run(`(() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+  // la mise en page (volet, règles, polices) peut encore bouger : on attend deux mesures identiques d'affilée
+  let wrap = await measure()
+  for (let i = 0; i < 20; i++) {
+    await sleep(150)
+    const again = await measure()
+    const same = JSON.stringify(again) === JSON.stringify(wrap)
+    wrap = again
+    if (same) break
+  }
   const fit = Math.max(0.01, Math.min((wrap.w - 96) / 1080, (wrap.h - 96) / 1080))
   const sx = (d) => wrap.l + (wrap.w - 1080 * fit) / 2 + d * fit
   const sy = (d) => wrap.t + (wrap.h - 1080 * fit) / 2 + d * fit

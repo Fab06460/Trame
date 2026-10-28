@@ -23,8 +23,9 @@ export function Toolbar(): React.JSX.Element {
       <div className="brand">Trame</div>
       <button onClick={newProject} title="Nouveau (⌘N)">Nouveau</button>
       <button onClick={openProject} title="Ouvrir (⌘O)">Ouvrir</button>
-      <button onClick={() => saveProject()} title="Enregistrer (⌘S)">Enregistrer{dirty ? ' •' : ''}</button>
       <ImportMenu />
+      <span className="sep" />
+      <button onClick={() => saveProject()} title="Enregistrer (⌘S)">Enregistrer{dirty ? ' •' : ''}</button>
       <button onClick={() => saveProject(true)} title="Enregistrer sous (⇧⌘S)">Enregistrer sous…</button>
       <span className="sep" />
       <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>
