@@ -128,6 +128,8 @@ export interface TramePage {
   guides?: Guide[]
   /** notes de l'orateur (absentes = aucune) ; jamais dessinées dans les exports image / PDF */
   notes?: string
+  /** transition jouée à l'arrivée sur cette page en présentation (absente = celle du document) */
+  transition?: PageTransition
   elements: TrameElement[] // ordre = z-index croissant
 }
 

@@ -1,5 +1,5 @@
 import { limitNotes, sanitizeNotes } from '@/notes'
-import { cleanTransition, type PageTransition } from '@/transition'
+import { cleanPageTransition, cleanTransition, type PageTransition } from '@/transition'
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
@@ -80,6 +80,11 @@ export function parseDocument(json: string): TrameDocument {
       else delete page.guides
     }
     sanitizeNotes(page)
+    {
+      const t = cleanPageTransition(page.transition)
+      if (t) page.transition = t
+      else delete page.transition
+    }
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
       if (!isElement(e)) throw invalid('élément mal positionné')
@@ -180,6 +185,10 @@ interface EditorState {
   setNotes: (text: string, commit?: boolean) => void
   /** Transition de présentation du document (réglage : pas d'historique, mais le document est marqué modifié). */
   setTransition: (transition: PageTransition) => void
+  /** Transition d'une page (`null` : revient à celle du document). */
+  setPageTransition: (pageId: string, transition: PageTransition | null) => void
+  /** Une même transition pour tout le document : réglage par défaut, et les transitions propres à chaque page sont retirées. */
+  applyTransitionToAll: (transition: PageTransition) => void
   setSize: (width: number, height: number) => void
   setName: (name: string) => void
   /** change le format ; `adapt` reporte le contenu dans le nouveau format (Magic Resize) au lieu de ne toucher qu'à la taille de la page */
@@ -643,6 +652,33 @@ export const useEditor = create<EditorState>((set, get) => {
         void _old
         const next = cleanTransition(transition)
         return { doc: next ? { ...rest, transition: next } : rest, dirty: true }
+      }),
+
+    setPageTransition: (pageId, transition) =>
+      set((s) => ({
+        ...snapshot(),
+        doc: {
+          ...s.doc,
+          pages: s.doc.pages.map((p) => {
+            if (p.id !== pageId) return p
+            const { transition: _old, ...rest } = p
+            void _old
+            return transition ? { ...rest, transition } : rest
+          })
+        },
+        dirty: true
+      })),
+
+    applyTransitionToAll: (transition) =>
+      set((s) => {
+        const { transition: _old, ...rest } = s.doc
+        void _old
+        const next = cleanTransition(transition)
+        return {
+          ...snapshot(),
+          doc: { ...(next ? { ...rest, transition: next } : rest), pages: s.doc.pages.map(({ transition: _t, ...p }) => (void _t, p)) },
+          dirty: true
+        }
       }),
 
     setNotes: (text, commit = true) => {

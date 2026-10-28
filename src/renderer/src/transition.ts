@@ -1,4 +1,7 @@
-/** Transition entre deux pages en mode présentation : réglage du document, appliquée à l'arrivée sur chaque page. */
+/**
+ * Transition entre deux pages en mode présentation. Réglage du document (par défaut) que chaque page peut remplacer par la sienne :
+ * celle d'une page est jouée quand on ARRIVE sur elle (comme PowerPoint) ; en reculant, c'est celle de la page quittée qui est rejouée à l'envers.
+ */
 export type PageTransition = 'none' | 'fade' | 'slide' | 'cover' | 'zoom'
 
 export const TRANSITIONS: { id: PageTransition; label: string }[] = [
@@ -28,3 +31,21 @@ export function transitionDirection(from: number, to: number, pages: number, loo
   if (loop && from === pages - 1 && to === 0) return 1
   return to >= from ? 1 : -1
 }
+
+/** Ce qu'il faut du document pour choisir une transition. */
+interface Transitions {
+  transition?: PageTransition
+  pages: Array<{ transition?: PageTransition }>
+}
+
+/** Transition effective d'une page : la sienne, sinon celle du document, sinon le fondu. */
+export const pageTransition = (doc: Transitions, index: number): PageTransition => doc.pages[index]?.transition ?? doc.transition ?? DEFAULT_TRANSITION
+
+/**
+ * Transition à jouer pour passer de la page `from` (null : première apparition) à la page `to`. En avançant : celle de la page d'arrivée ;
+ * en reculant : celle de la page quittée, jouée dans l'autre sens.
+ */
+export const transitionBetween = (doc: Transitions, from: number | null, to: number): PageTransition => (from !== null && to < from ? pageTransition(doc, from) : pageTransition(doc, to))
+
+/** Transition d'une page lue dans un fichier : tout ce qui n'est pas une transition connue est ignoré (la page hérite du document). Le fondu reste écrit : il peut différer du réglage du document. */
+export const cleanPageTransition = (v: unknown): PageTransition | undefined => (isTransition(v) ? v : undefined)

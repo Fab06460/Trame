@@ -705,6 +705,42 @@ describe('transition de présentation', () => {
   })
 })
 
+describe('transition par page', () => {
+  it('se règle page par page ; null revient au document ; une seule étape d\'annulation', () => {
+    const first = S().pageId
+    S().addPage()
+    const second = S().pageId
+    const before = S().past.length
+    S().setPageTransition(second, 'zoom')
+    expect(S().doc.pages.find((p) => p.id === second)?.transition).toBe('zoom')
+    expect(S().doc.pages.find((p) => p.id === first)?.transition).toBeUndefined()
+    expect(S().past.length).toBe(before + 1)
+    S().setPageTransition(second, null)
+    expect('transition' in S().doc.pages[1]).toBe(false)
+    S().undo()
+    expect(S().doc.pages[1].transition).toBe('zoom')
+  })
+  it('« Appliquer à toutes » règle le document et efface les réglages des pages', () => {
+    S().addPage()
+    S().setPageTransition(S().pageId, 'cover')
+    S().applyTransitionToAll('slide')
+    expect(S().doc.transition).toBe('slide')
+    expect(S().doc.pages.every((p) => !('transition' in p))).toBe(true)
+    S().applyTransitionToAll('fade') // le fondu est le défaut : rien n\'est écrit
+    expect('transition' in S().doc).toBe(false)
+  })
+  it('survit à l\'enregistrement ; la page dupliquée la garde ; une valeur inconnue est ignorée', () => {
+    S().setPageTransition(S().pageId, 'fade') // « fondu » explicite : ≠ hériter
+    S().duplicatePage(S().pageId)
+    expect(selectPage(S()).transition).toBe('fade')
+    const json = JSON.stringify(S().doc)
+    expect(parseDocument(json).pages[1].transition).toBe('fade')
+    const raw = JSON.parse(json)
+    raw.pages[0].transition = 'spin'
+    expect('transition' in parseDocument(JSON.stringify(raw)).pages[0]).toBe(false)
+  })
+})
+
 describe('notes de l\'orateur', () => {
   it('se saisissent par page, sans toucher aux autres', () => {
     const first = S().pageId

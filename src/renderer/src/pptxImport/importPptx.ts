@@ -5,6 +5,8 @@ import { SIZE_LIMITS } from '@/magicResize'
 import { parseTheme, resolveColor, DEFAULT_COLOR_MAP, type ColorMap, type Theme } from '@/pptxImport/colors'
 import { finalizeText, parseSlideTree, readFill, type PlaceholderInfo, type SlideContext } from '@/pptxImport/slide'
 import { readNotes } from '@/pptxImport/notes'
+import { readTransition } from '@/pptxImport/transition'
+import { cleanTransition, type PageTransition } from '@/transition'
 import { attr, kid, kids, parseXml } from '@/pptxImport/xml'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -122,6 +124,7 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
   const substituted = new Set<string>()
   let elementCount = 0
   let notedSlides = 0
+  const transitions: PageTransition[] = []
 
   for (const slidePath of slidePaths.slice(0, MAX_PPTX_SLIDES)) {
     const slideDoc = await zip.xml(slidePath)
@@ -178,10 +181,17 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     const notesPath = slideRels.find((r) => r.type === 'notesSlide')?.path
     const notes = notesPath ? readNotes(await zip.xml(notesPath)) : undefined
     if (notes) notedSlides++
+    transitions.push(readTransition(slideDoc))
     pages.push({ id: nanoid(8), background: bgFill?.kind === 'solid' ? bgFill.color.hex : '#ffffff', ...(notes ? { notes } : {}), elements })
   }
   if (pages.length === 0) throw new Error('aucune diapositive trouvée dans ce fichier')
-  const doc: TrameDocument = { version: 2, name, width, height, pages }
+  // transitions : la plus fréquente devient celle du document, les autres pages gardent la leur (PowerPoint n'a que des réglages par diapositive)
+  const counts = new Map<PageTransition, number>()
+  for (const t of transitions) counts.set(t, (counts.get(t) ?? 0) + 1)
+  const common = [...counts].sort((a, b) => b[1] - a[1] || (a[0] === 'none' ? -1 : 1))[0]?.[0] ?? 'none'
+  for (const [i, p] of pages.entries()) if (transitions[i] !== common) p.transition = transitions[i]
+  const defaultTransition = cleanTransition(common)
+  const doc: TrameDocument = { version: 2, name, width, height, pages, ...(defaultTransition ? { transition: defaultTransition } : {}) }
   return {
     doc,
     slides: pages.length,

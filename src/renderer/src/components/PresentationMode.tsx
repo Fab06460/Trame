@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
-import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, transitionDirection } from '@/transition'
+import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, type PageTransition } from '@/transition'
 
 const AUTO_CHOICES = [0, 3, 5, 10, 15]
 /** Plus grand côté d'une image de présentation : au-delà, rien de visible sur un écran, mais beaucoup de mémoire. */
@@ -15,10 +15,10 @@ export function PresentationMode(): React.JSX.Element | null {
   const active = usePresentation((s) => s.active)
   const doc = usePresentation((s) => s.doc)
   const index = usePresentation((s) => s.index)
-  const [image, setImage] = useState<{ index: number; url: string } | null>(null)
+  const [image, setImage] = useState<{ index: number; url: string; kind: PageTransition } | null>(null)
   /** page qui s'efface pendant la transition (retirée au bout de la durée de l'animation) */
-  const [leaving, setLeaving] = useState<{ index: number; url: string; dir: 1 | -1; n: number } | null>(null)
-  const shown = useRef<{ index: number; url: string } | null>(null)
+  const [leaving, setLeaving] = useState<{ index: number; url: string; dir: 1 | -1; n: number; kind: PageTransition } | null>(null)
+  const shown = useRef<{ index: number; url: string; kind: PageTransition } | null>(null)
   const moves = useRef(0)
   const [controls, setControls] = useState(true)
   const [auto, setAuto] = useState(0)
@@ -140,9 +140,13 @@ export function PresentationMode(): React.JSX.Element | null {
         if (!live) return
         const prev = shown.current
         // une page d'arrivée différente de celle qui est affichée : la précédente reste en dessous le temps de la transition
-        if (prev && prev.index !== index && kind !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto > 0), n: ++moves.current })
-        shown.current = { index, url }
-        setImage({ index, url })
+        // transition de la page d'arrivée (en reculant : celle de la page quittée), voir transitionBetween
+        const move = prev && prev.index !== index ? transitionBetween(doc, prev.index, index) : null
+        if (prev && move && move !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto > 0), n: ++moves.current, kind: move })
+        // la classe de l'image arrivante ne change plus ensuite (un changement relancerait l'animation)
+        const entry = { index, url, kind: move ?? (prev?.index === index ? prev.kind : pageTransition(doc, index)) }
+        shown.current = entry
+        setImage(entry)
       },
       () => {}
     )
@@ -150,7 +154,7 @@ export function PresentationMode(): React.JSX.Element | null {
     return () => {
       live = false
     }
-  }, [active, doc, index, ensure, kind, auto])
+  }, [active, doc, index, ensure, auto])
 
   useEffect(() => {
     if (!leaving) return
@@ -217,8 +221,8 @@ export function PresentationMode(): React.JSX.Element | null {
         overBar.current = !!bar.current?.contains(e.target as Node)
         wake()
       }} onClick={() => usePresentation.getState().go(index + 1)}>
-      {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
-      {!black && image && <img key={image.index} className={`presentation-page entering t-${kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
+      {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${leaving.kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
+      {!black && image && <img key={image.index} className={`presentation-page entering t-${image.kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
       {!black && !image && <div className="presentation-loading" role="status">Préparation…</div>}
       {showNotes && (
         <div className={`presentation-notes${doc.pages[index].notes ? '' : ' empty'}`} data-pres="notes" onClick={(e) => e.stopPropagation()}>

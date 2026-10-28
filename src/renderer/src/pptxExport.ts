@@ -7,6 +7,9 @@ import { hasStroke } from '@/strokeStyle'
 import { listIndent } from '@/listStyle'
 import { decodeDataUrl } from '@/pdfMath'
 import { displayText } from '@/textStyle'
+import JSZip from 'jszip'
+import { insertTransition } from '@/pptxTransition'
+import { transitionBetween } from '@/transition'
 import type { TrameDocument, TrameElement } from '@/types'
 
 const IN = 1 / 96 // pouces par pixel de design
@@ -118,6 +121,16 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
       }
     }
   }
-  const base64 = (await pptx.write({ outputType: 'base64' })) as string
+  let base64 = (await pptx.write({ outputType: 'base64' })) as string
+  // pptxgenjs ne sait pas écrire les transitions : on les ajoute au XML de chaque diapositive (celle de la page d'arrivée)
+  if (doc.pages.some((_, i) => transitionBetween(doc, null, i) !== 'none')) {
+    const zip = await JSZip.loadAsync(base64, { base64: true })
+    for (const [i] of doc.pages.entries()) {
+      const path = `ppt/slides/slide${i + 1}.xml`
+      const file = zip.file(path)
+      if (file) zip.file(path, insertTransition(await file.async('string'), transitionBetween(doc, null, i)))
+    }
+    base64 = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' })
+  }
   return { dataUrl: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${base64}`, rasterized }
 }

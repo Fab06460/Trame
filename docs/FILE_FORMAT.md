@@ -80,6 +80,8 @@ Les champs de style de texte sont bornés à la lecture (`letterSpacing` −10 �
 
 Les **repères** (`guides`, en pixels de design) sont enregistrés avec la page mais **jamais dessinés** dans les exports. À la lecture, une entrée invalide est ignorée sans refuser le fichier ; un champ absent ou vide signifie « aucun repère ». Ils ne demandent pas de nouvelle version du format.
 
+Une **page** peut avoir sa propre `transition` (mêmes valeurs, `fade` compris : une page en fondu dans un document en glissement doit le dire) ; absente, elle hérite du document. La transition d'une page est jouée à l'arrivée sur elle ; en reculant, c'est celle de la page quittée.
+
 Le champ `transition` du document (`none`, `slide`, `cover`, `zoom` ; absent = fondu) règle l'animation entre pages en présentation ; une valeur inconnue est ignorée. Pas de nouvelle version du format.
 
 Les **notes de l'orateur** (`notes` sur une page) sont du texte libre, jamais dessiné dans les exports image / PDF. À la lecture, une valeur qui n'est pas un texte non vide est ignorée ; les caractères de contrôle sont retirés. Pas de nouvelle version du format.

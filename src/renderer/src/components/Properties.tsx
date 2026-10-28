@@ -1,3 +1,4 @@
+import { TransitionPanel } from './TransitionPanel'
 import { useEditor, selectPage } from '@/store/editor'
 import { allFonts, SYSTEM_FONT } from '@/fonts'
 import { useFonts } from '@/store/fonts'
@@ -41,6 +42,7 @@ export function Properties(): React.JSX.Element {
           Arrière-plan
           <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
         </label>
+        <TransitionPanel />
       </aside>
     )
   }
