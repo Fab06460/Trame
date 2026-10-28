@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 
 export interface RecentProject {
   path: string
@@ -109,6 +110,29 @@ const api = {
     ipcRenderer.on('window:left-fullscreen', listener)
     return () => ipcRenderer.removeListener('window:left-fullscreen', listener)
   },
+  // ── Écran de l'orateur (voir main/speakerProtocol.ts) ──
+  /** Fenêtre principale : ouvre l'écran de l'orateur ; null si refusé. */
+  speakerOpen: (state: SpeakerState): Promise<{ separateDisplay: boolean } | null> => ipcRenderer.invoke('speaker:open', state),
+  speakerSync: (state: SpeakerState): void => ipcRenderer.send('speaker:sync', state),
+  speakerClose: (): void => ipcRenderer.send('speaker:close'),
+  onSpeakerCommand: (cb: (cmd: SpeakerCommand) => void): (() => void) => {
+    const listener = (_e: unknown, cmd: SpeakerCommand): void => cb(cmd)
+    ipcRenderer.on('speaker:command', listener)
+    return () => ipcRenderer.removeListener('speaker:command', listener)
+  },
+  onSpeakerClosed: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('speaker:closed', listener)
+    return () => ipcRenderer.removeListener('speaker:closed', listener)
+  },
+  /** Écran de l'orateur : état courant au démarrage, mises à jour, commandes vers la présentation. */
+  speakerHello: (): Promise<SpeakerState | null> => ipcRenderer.invoke('speaker:hello'),
+  onSpeakerState: (cb: (state: SpeakerState) => void): (() => void) => {
+    const listener = (_e: unknown, state: SpeakerState): void => cb(state)
+    ipcRenderer.on('speaker:state', listener)
+    return () => ipcRenderer.removeListener('speaker:state', listener)
+  },
+  sendSpeakerCommand: (cmd: SpeakerCommand): void => ipcRenderer.send('speaker:command', cmd),
   confirmClose: (): void => ipcRenderer.send('app:close-confirmed')
 }
 

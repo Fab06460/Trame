@@ -8,6 +8,8 @@ export const usePresentation = create<{
   active: boolean
   doc: TrameDocument | null
   index: number
+  /** début de la présentation (ms depuis 1970), partagé avec l'écran de l'orateur */
+  startedAt: number
   start: (fromPage?: number) => void
   go: (index: number) => void
   /** Change la transition du document (et de la présentation en cours). */
@@ -17,10 +19,11 @@ export const usePresentation = create<{
   active: false,
   doc: null,
   index: 0,
+  startedAt: 0,
   start: (fromPage) => {
     const { doc, pageId } = useEditor.getState()
     const current = doc.pages.findIndex((p) => p.id === pageId)
-    set({ active: true, doc, index: Math.max(0, Math.min(doc.pages.length - 1, fromPage ?? current)) })
+    set({ active: true, startedAt: Date.now(), doc, index: Math.max(0, Math.min(doc.pages.length - 1, fromPage ?? current)) })
   },
   go: (index) => {
     const doc = get().doc

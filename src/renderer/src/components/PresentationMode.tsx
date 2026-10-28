@@ -25,6 +25,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const [paused, setPaused] = useState(false)
   const [black, setBlack] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
+  const [speaker, setSpeaker] = useState(false)
+  const startedAt = usePresentation((s) => s.startedAt)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<number, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -35,6 +37,42 @@ export function PresentationMode(): React.JSX.Element | null {
   const inUse = (): boolean => !!bar.current && (overBar.current || bar.current.contains(document.activeElement))
 
   const kind = doc?.transition ?? DEFAULT_TRANSITION
+
+  // Écran de l'orateur : seconde fenêtre (voir main/speakerProtocol.ts), synchronisée dans les deux sens
+  const toggleSpeaker = (): void => {
+    if (speaker) {
+      window.trame.speakerClose()
+      return
+    }
+    const s = usePresentation.getState()
+    if (!s.doc) return
+    void window.trame.speakerOpen({ doc: JSON.stringify(s.doc), index: s.index, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
+  }
+  const toggleSpeakerRef = useRef(toggleSpeaker)
+  toggleSpeakerRef.current = toggleSpeaker
+  useEffect(() => {
+    if (active && speaker) window.trame.speakerSync({ doc: null, index, black, startedAt })
+  }, [active, speaker, index, black, startedAt])
+  useEffect(() => {
+    if (!active) return
+    const offCommand = window.trame.onSpeakerCommand((cmd) => {
+      if (cmd.type === 'go') usePresentation.getState().go(cmd.index)
+      else if (cmd.type === 'black') setBlack((b) => !b)
+      else if (cmd.type === 'exit') usePresentation.getState().stop()
+    })
+    const offClosed = window.trame.onSpeakerClosed(() => setSpeaker(false))
+    return () => {
+      offCommand()
+      offClosed()
+    }
+  }, [active])
+  // la présentation se termine : l'écran de l'orateur se ferme avec elle
+  useEffect(() => {
+    if (!active && speaker) {
+      window.trame.speakerClose()
+      setSpeaker(false)
+    }
+  }, [active, speaker])
   const exit = useCallback(() => usePresentation.getState().stop(), [])
 
   // plein écran à l'ouverture, retour à la fenêtre à la fermeture ; sortie du plein écran par le système = fin de la présentation
@@ -56,6 +94,7 @@ export function PresentationMode(): React.JSX.Element | null {
     setLeaving(null)
     setBlack(false)
     setShowNotes(false)
+    setSpeaker(false)
     setAuto(0)
     setPaused(false)
     setControls(true)
@@ -147,6 +186,7 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (k.toLowerCase() === 'b') setBlack((b) => !b)
       else if (k.toLowerCase() === 'p') setPaused((p) => !p)
       else if (k.toLowerCase() === 'n') setShowNotes((n) => !n)
+      else if (k.toLowerCase() === 's') toggleSpeakerRef.current()
       else handled = false
       if (handled || !(e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -212,6 +252,7 @@ export function PresentationMode(): React.JSX.Element | null {
             ))}
           </select>
         </label>
+        <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title="Écran de l'orateur : page suivante, notes et chronomètre dans une seconde fenêtre (S)">Orateur</button>
         <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title="Afficher les notes (N)">Notes</button>
         <button data-pres="exit" onClick={exit} title="Quitter (Échap)">✕ Quitter</button>
       </div>

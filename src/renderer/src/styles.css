@@ -304,3 +304,24 @@ button.danger { color: #ff7b7b; }
 .edge-zone:hover { background: linear-gradient(to right, rgba(124, 92, 255, 0.7), transparent); }
 .edge-right:hover { background: linear-gradient(to left, rgba(124, 92, 255, 0.7), transparent); }
 .dock.overlay.peek { box-shadow: 0 0 28px rgba(0, 0, 0, 0.45); }
+
+/* écran de l'orateur (seconde fenêtre) */
+.speaker { height: 100vh; display: flex; flex-direction: column; background: #14151a; color: var(--text); }
+.speaker-wait { align-items: center; justify-content: center; color: var(--muted); font-size: 18px; }
+.speaker-bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 15px; flex-wrap: nowrap; white-space: nowrap; }
+.speaker-counter { font-weight: 700; font-size: 20px; }
+.speaker-timer { font-variant-numeric: tabular-nums; font-size: 20px; color: #7ee787; }
+.speaker-clock { color: var(--muted); font-variant-numeric: tabular-nums; }
+.speaker-main { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 14px; }
+.speaker-current { flex: 3; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 8px; overflow: hidden; }
+.speaker-current img, .speaker-next img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.speaker-black { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); border: 1px solid #555; font-size: 13px; }
+.speaker-side { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.speaker-next { flex: none; height: 32%; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.speaker-next img { flex: 1; min-height: 0; background: #000; border-radius: 6px; }
+.speaker h2 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+.speaker-end, .speaker-loading { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 6px; }
+.speaker-notes { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.speaker-notes-text { flex: 1; min-height: 0; overflow-y: auto; white-space: pre-wrap; line-height: 1.45; padding: 12px 14px; background: #1b1c21; border: 1px solid var(--border); border-radius: 8px; }
+.speaker-notes-text.empty { color: var(--muted); font-style: italic; }
+.speaker-size button { padding: 1px 8px; margin-left: 4px; font-size: 12px; }

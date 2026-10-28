@@ -1653,6 +1653,80 @@ try {
   check('ré-import : la page 2 reste sans notes', (await notesField()) === '')
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
+  // écran de l'orateur : seconde fenêtre synchronisée avec la présentation (page courante, suivante, notes, chronomètre, commandes)
+  const speakerTargets = async () => (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((t) => t.type === 'page' && t.url.includes('#speaker'))
+  const waitSpeaker = async (present) => { for (let i = 0; i < 60; i++) { const n = (await speakerTargets()).length; if ((n > 0) === present) return true; await sleep(250) } return false }
+  const attachSpeaker = async () => {
+    const t = (await speakerTargets())[0]
+    const sws = new WebSocket(t.webSocketDebuggerUrl)
+    await new Promise((r) => (sws.onopen = r))
+    let sid = 0
+    const waiting = new Map()
+    sws.onmessage = (m) => { const d = JSON.parse(m.data); waiting.get(d.id)?.(d) }
+    const srun = (expression) => new Promise((res) => { const i = ++sid; waiting.set(i, res); sws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } })) }).then((d) => d.result?.exceptionDetails ? { __error: d.result.exceptionDetails.exception?.description } : d.result?.result?.value)
+    return { srun, close: () => sws.close() }
+  }
+  const spText = (sp, what) => sp.srun(`document.querySelector('[data-speaker="${what}"]')?.textContent ?? null`)
+  const spWait = async (sp, what, expected) => { for (let i = 0; i < 60 && (await spText(sp, what)) !== expected; i++) await sleep(250); return (await spText(sp, what)) === expected }
+  await gotoPage(0)
+  await click('header.toolbar button', 'Présenter')
+  await waitShown(0)
+  check('avant : pas d\'écran de l\'orateur', (await speakerTargets()).length === 0)
+  await clickSel('[data-pres="speaker"]')
+  check('« Orateur » ouvre une seconde fenêtre', await waitSpeaker(true))
+  const sp = await attachSpeaker()
+  check('l\'écran de l\'orateur affiche « 1 / 3 »', await spWait(sp, 'counter', '1 / 3'))
+  for (let i = 0; i < 60 && (await sp.srun(`document.querySelector('[data-speaker="current"]') && document.querySelector('[data-speaker="next-image"]') ? 1 : 0`)) !== 1; i++) await sleep(250)
+  check('la page courante et la page suivante sont rendues en image (0 puis 1)', (await sp.srun(`document.querySelector('[data-speaker="current"]')?.dataset.speakerIndex + ',' + document.querySelector('[data-speaker="next-image"]')?.dataset.speakerIndex`)) === '0,1')
+  check('les notes de la page courante sont affichées', (await spText(sp, 'notes')) === 'Accueillir la salle\nPuis présenter le plan')
+  check('le chronomètre et l\'heure sont affichés', /^⏱ \d+:\d\d$/.test((await spText(sp, 'timer')) ?? '') && /^\d\d:\d\d$/.test((await spText(sp, 'clock')) ?? ''))
+  check('le bouton « Orateur » de la présentation est enfoncé', (await run(`document.querySelector('[data-pres="speaker"]').getAttribute('aria-pressed')`)) === 'true')
+  await sp.srun(`document.querySelector('[data-speaker="next"]').click()`)
+  for (let i = 0; i < 40 && (await pres()) !== 1; i++) await sleep(250)
+  check('« Suivante » dans l\'écran de l\'orateur fait avancer la présentation (page 2)', (await pres()) === 1)
+  check('…et l\'écran de l\'orateur suit : « 2 / 3 », page sans note', (await spWait(sp, 'counter', '2 / 3')) && (await spText(sp, 'notes')) === 'Aucune note pour cette page.')
+  await key('ArrowRight')
+  check('une touche dans la présentation met à jour l\'écran de l\'orateur (« 3 / 3 », « Fin de la présentation »)', (await spWait(sp, 'counter', '3 / 3')) && (await spWait(sp, 'end', 'Fin de la présentation')))
+  check('à la dernière page, « Suivante » est désactivé', (await sp.srun(`document.querySelector('[data-speaker="next"]').disabled`)) === true)
+  await sp.srun(`document.querySelector('[data-speaker="black"]').click()`)
+  for (let i = 0; i < 20 && (await nBrand('[data-pres-shown]')) !== 0; i++) await sleep(250)
+  check('« Écran noir » de l\'écran de l\'orateur noircit la présentation', (await nBrand('[data-pres-shown]')) === 0)
+  check('…et l\'écran de l\'orateur l\'indique', (await spWait(sp, 'black-flag', 'Écran noir')))
+  await sp.srun(`document.querySelector('[data-speaker="black"]').click()`)
+  await waitShown(2)
+  check('un second clic rend l\'image', (await nBrand('[data-pres-shown]')) === 1)
+  const sizeOf = () => sp.srun(`parseInt(document.querySelector('[data-speaker="notes"]').style.fontSize)`)
+  const size0 = await sizeOf()
+  await sp.srun(`document.querySelector('[data-speaker="notes-larger"]').click()`)
+  await sleep(200)
+  check('« A+ » agrandit le texte des notes (+4 px)', (await sizeOf()) === size0 + 4, `${size0} → ${await sizeOf()}`)
+  await sp.srun(`document.querySelector('[data-speaker="notes-smaller"]').click()`)
+  // sécurité : seuls les messages bien formés de la bonne fenêtre agissent
+  await sp.srun(`window.trame.sendSpeakerCommand({ type: 'go', index: -5 }); window.trame.sendSpeakerCommand({ type: 'rm -rf' }); window.trame.sendSpeakerCommand('exit')`)
+  await run(`window.trame.sendSpeakerCommand({ type: 'exit' })`) // la fenêtre principale n'est pas l'émettrice légitime des commandes
+  await sleep(500)
+  check('commandes mal formées ou venant de la mauvaise fenêtre : ignorées (présentation intacte, page 3)', (await pres()) === 2)
+  check('la fenêtre de l\'orateur ne peut pas ouvrir d\'écran de l\'orateur', (await sp.srun(`window.trame.speakerOpen({ doc: '{}', index: 0, black: false, startedAt: 1 })`)) === null)
+  await sp.srun(`document.querySelector('[data-speaker="exit"]').click()`)
+  for (let i = 0; i < 40 && (await pres()) !== -1; i++) await sleep(250)
+  check('« Terminer » met fin à la présentation', (await pres()) === -1)
+  check('…et ferme l\'écran de l\'orateur', await waitSpeaker(false))
+  sp.close()
+  // clavier dans la présentation : S ouvre, Échap ferme tout
+  await gotoPage(0)
+  await click('header.toolbar button', 'Présenter')
+  await waitShown(0)
+  await key('s')
+  check('S ouvre l\'écran de l\'orateur', await waitSpeaker(true))
+  await key('s')
+  check('S de nouveau le ferme', await waitSpeaker(false))
+  await sleep(300)
+  check('…et le bouton n\'est plus enfoncé', (await run(`document.querySelector('[data-pres="speaker"]').getAttribute('aria-pressed')`)) === 'false')
+  await key('s')
+  await waitSpeaker(true)
+  await key('Escape')
+  check('Échap dans la présentation ferme aussi l\'écran de l\'orateur', (await waitSpeaker(false)) && (await pres()) === -1)
+
   // disposition : panneaux masquables et redimensionnables, mode compact en fenêtre étroite, liste des pages
   const rectOf = (sel) => run(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), b: Math.round(r.bottom), r: Math.round(r.right) } })()`)
   const dragBy = async (sel, dx, dy) => {

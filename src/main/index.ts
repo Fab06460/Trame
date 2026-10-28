@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen } from 'electron'
 import { join } from 'path'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
@@ -9,6 +9,7 @@ import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_F
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { safeExportName } from './exportFolder'
+import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
 import {
   addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
@@ -98,7 +99,9 @@ function createWindow(): void {
 
   mainWindow = win
   // le mode présentation passe en plein écran ; si l'utilisateur en sort autrement (bouton système), l'interface le sait
-  win.on('leave-full-screen', () => win.webContents.send('window:left-fullscreen'))
+  win.on('leave-full-screen', () => {
+    if (!repositioning) win.webContents.send('window:left-fullscreen')
+  })
   win.webContents.on('did-start-loading', () => fileInbox.onRendererGone())
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
@@ -670,8 +673,142 @@ ipcMain.handle('fonts:remove', async (_e, id: unknown) => {
 ipcMain.handle('window:fullscreen', (e, on: unknown) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win || TEST_EXPORT_DIR) return false
-  win.setFullScreen(on === true)
+  if (on === true) placePresentation(win)
+  else leavePresentation(win)
   return win.isFullScreen()
+})
+
+// ───────────── Écran de l'orateur : une seconde fenêtre, synchronisée avec le mode présentation ─────────────
+//
+// Deux écrans : la présentation va sur l'écran qui n'est pas l'écran principal (en général le projecteur), l'écran de l'orateur sur
+// l'écran principal ; le bouton « Échanger les écrans » les permute. Un seul écran : la présentation reste dans sa fenêtre (pas de
+// plein écran, qui cacherait l'écran de l'orateur) et les deux fenêtres se côtoient.
+let speakerWindow: BrowserWindow | null = null
+let speakerState: SpeakerState | null = null
+/** écran de la présentation quand l'écran de l'orateur est ouvert (permutable) */
+let presentationDisplayId: number | null = null
+/** position de la fenêtre principale avant son déplacement vers l'autre écran */
+let boundsBeforePresentation: Electron.Rectangle | null = null
+/** vrai pendant qu'on quitte puis reprend le plein écran exprès : l'interface ne doit pas y voir la fin de la présentation */
+let repositioning = false
+
+const multiDisplay = (): boolean => screen.getAllDisplays().length > 1
+
+function presentationDisplay(): Electron.Display | undefined {
+  return screen.getAllDisplays().find((d) => d.id === presentationDisplayId)
+}
+
+/** Plein écran de la présentation, sur l'écran voulu quand l'écran de l'orateur est ouvert. */
+function placePresentation(win: BrowserWindow): void {
+  const target = speakerWindow && multiDisplay() ? presentationDisplay() : undefined
+  if (speakerWindow && !multiDisplay()) {
+    // un seul écran : pas de plein écran, l'écran de l'orateur resterait caché derrière
+    if (win.isFullScreen()) win.setFullScreen(false)
+    return
+  }
+  if (!target) {
+    win.setFullScreen(true)
+    return
+  }
+  const move = (): void => {
+    boundsBeforePresentation ??= win.getBounds()
+    win.setBounds(target.bounds)
+    win.setFullScreen(true)
+    repositioning = false
+  }
+  if (win.isFullScreen()) {
+    // déjà en plein écran (sur un autre écran) : on en sort pour le déplacer
+    repositioning = true
+    win.once('leave-full-screen', move)
+    win.setFullScreen(false)
+  } else move()
+}
+
+function leavePresentation(win: BrowserWindow): void {
+  win.setFullScreen(false)
+  const back = boundsBeforePresentation
+  boundsBeforePresentation = null
+  if (back) win.once('leave-full-screen', () => win.setBounds(back))
+}
+
+function closeSpeaker(): void {
+  speakerWindow?.close()
+}
+
+ipcMain.handle('speaker:open', async (e, raw: unknown) => {
+  const main = mainWindow
+  const state = parseSpeakerState(raw)
+  if (!main || e.sender !== main.webContents || !state || !state.doc) return null
+  speakerState = state
+  if (speakerWindow) {
+    speakerWindow.focus()
+    return { separateDisplay: multiDisplay() }
+  }
+  const displays = screen.getAllDisplays()
+  const primary = screen.getPrimaryDisplay()
+  const multi = displays.length > 1
+  presentationDisplayId = multi ? (displays.find((d) => d.id !== primary.id) ?? primary).id : null
+  const area = multi ? primary.workArea : screen.getDisplayMatching(main.getBounds()).workArea
+  const win = new BrowserWindow({
+    x: area.x + (multi ? 0 : Math.round(area.width * 0.1)),
+    y: area.y + (multi ? 0 : Math.round(area.height * 0.1)),
+    width: multi ? area.width : Math.round(area.width * 0.8),
+    height: multi ? area.height : Math.round(area.height * 0.8),
+    minWidth: 640,
+    minHeight: 420,
+    title: 'Trame — Écran de l’orateur',
+    backgroundColor: '#14151a',
+    webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  speakerWindow = win
+  win.on('closed', () => {
+    speakerWindow = null
+    speakerState = null
+    presentationDisplayId = null
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('speaker:closed')
+      // la présentation en cours reprend sa place normale (un seul écran : elle n'avait pas quitté sa fenêtre)
+      if (mainWindow.isFullScreen() && !multi) mainWindow.setFullScreen(false)
+    }
+  })
+  const url = process.env['ELECTRON_RENDERER_URL']
+  if (url) await win.loadURL(`${url}#speaker`)
+  else await win.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'speaker' })
+  // déjà en plein écran : la présentation change d'écran (deux écrans) ou quitte le plein écran (un seul)
+  if (!TEST_EXPORT_DIR && main.isFullScreen()) placePresentation(main)
+  return { separateDisplay: multi }
+})
+
+ipcMain.on('speaker:sync', (e, raw: unknown) => {
+  const state = parseSpeakerState(raw)
+  if (!state || !mainWindow || e.sender !== mainWindow.webContents) return
+  speakerState = mergeSpeakerState(speakerState, state)
+  speakerWindow?.webContents.send('speaker:state', { ...state, doc: null })
+})
+
+/** L'écran de l'orateur demande l'état courant au démarrage (document compris). */
+ipcMain.handle('speaker:hello', (e) => (speakerWindow && e.sender === speakerWindow.webContents ? speakerState : null))
+
+ipcMain.on('speaker:command', (e, raw: unknown) => {
+  const cmd = parseSpeakerCommand(raw)
+  if (!cmd || !speakerWindow || e.sender !== speakerWindow.webContents) return
+  if (cmd.type === 'swap') {
+    const displays = screen.getAllDisplays()
+    const main = mainWindow
+    if (displays.length < 2 || !main) return
+    // la présentation passe à l'autre écran, l'écran de l'orateur prend celui qu'elle quitte
+    const current = presentationDisplay() ?? displays[0]
+    const next = displays.find((d) => d.id !== current.id) ?? current
+    presentationDisplayId = next.id
+    speakerWindow.setBounds(current.workArea)
+    placePresentation(main)
+    return
+  }
+  mainWindow?.webContents.send('speaker:command', cmd)
+})
+
+ipcMain.on('speaker:close', (e) => {
+  if (mainWindow && e.sender === mainWindow.webContents) closeSpeaker()
 })
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))
