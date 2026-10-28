@@ -14,6 +14,7 @@ body { background: var(--bg); color: var(--text); font: 13px -apple-system, 'Hel
 .toolbar {
   display: flex; align-items: center; gap: 6px; padding: 8px 12px;
   padding-left: 84px; /* place pour les boutons macOS */
+  flex-wrap: wrap; row-gap: 6px; flex: none; /* fenêtre étroite : la barre passe sur plusieurs lignes au lieu de couper des boutons */
   background: var(--panel); border-bottom: 1px solid var(--border); -webkit-app-region: drag;
 }
 .toolbar > * { -webkit-app-region: no-drag; }
@@ -29,9 +30,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.active { background: var(--accent); border-color: var(--accent); }
 button.danger { color: #ff7b7b; }
-.workspace { flex: 1; display: flex; min-height: 0; }
-.canvas-wrap { flex: 1; position: relative; background: #15161a; min-width: 0; }
-.panel { width: 240px; background: var(--panel); border-left: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.workspace { flex: 1; display: flex; min-height: 0; position: relative; }
+.canvas-wrap { flex: 1; position: relative; background: #15161a; min-width: 0; min-height: 0; }
+.panel { width: 100%; flex: none; background: var(--panel); border-left: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .panel h3 { margin: 4px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .panel label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
 .panel input[type='color'] { width: 100%; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; }
@@ -41,10 +42,10 @@ button.danger { color: #ff7b7b; }
   position: absolute; margin: 0; padding: 0; border: 1px dashed var(--accent); background: transparent;
   resize: none; outline: none; overflow: hidden; line-height: 1; transform-origin: top left;
 }
-.center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.center { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
 .page-strip {
   display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; overflow-x: auto;
-  background: var(--panel); border-top: 1px solid var(--border); min-height: 150px;
+  background: var(--panel); border-top: 1px solid var(--border); flex: none; overflow-y: auto;
 }
 .page-item { flex: none; padding: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
 .page-item.current { border-color: var(--accent); }
@@ -54,7 +55,7 @@ button.danger { color: #ff7b7b; }
 .page-actions { display: flex; gap: 2px; }
 .page-actions button { padding: 0 6px; font-size: 11px; background: none; border: none; }
 .add-page { width: 56px; height: 56px; font-size: 22px; align-self: center; flex: none; }
-.sidebar { width: 280px; flex: none; background: var(--panel); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.sidebar { width: 100%; flex: none; background: var(--panel); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .sidebar h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .tabs button { min-width: 0; padding: 5px 2px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -160,7 +161,7 @@ button.danger { color: #ff7b7b; }
 
 .panel h4 { margin: 10px 0 2px; font-size: 11px; font-weight: 600; color: var(--muted, #9aa0aa); text-transform: uppercase; letter-spacing: 0.04em; }
 .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.toolbar .doc-name { width: 180px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 4px 8px; font: inherit; text-align: right; }
+.toolbar .doc-name { flex: 0 1 180px; min-width: 90px; width: 180px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 4px 8px; font: inherit; text-align: right; }
 .toolbar .doc-name:hover { border-color: var(--border); }
 .toolbar .doc-name:focus { border-color: var(--accent); background: #1b1c21; outline: none; text-align: left; }
 .panel label.check { flex-direction: row; align-items: center; gap: 6px; }
@@ -276,3 +277,21 @@ button.danger { color: #ff7b7b; }
 .notes-panel textarea { height: 110px; resize: vertical; margin: 0 12px 10px; padding: 8px; background: #14151a; color: inherit; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 13px; line-height: 1.45; }
 .presentation-notes { position: absolute; z-index: 9; left: 0; right: 0; bottom: 0; max-height: 38%; overflow: auto; padding: 18px 8vw 64px; background: rgba(10, 10, 12, 0.88); color: #f2f2f4; font-size: clamp(16px, 2.2vw, 30px); line-height: 1.45; white-space: pre-wrap; cursor: default; }
 .presentation-notes.empty { color: #9a9aa3; font-style: italic; }
+
+/* disposition : panneaux latéraux redimensionnables, masquables, en recouvrement quand la fenêtre est étroite */
+.dock { flex: none; display: flex; min-width: 0; min-height: 0; }
+.dock > .sidebar, .dock > .panel { height: 100%; }
+.dock.overlay { position: absolute; top: 0; bottom: 0; z-index: 30; box-shadow: 0 0 40px rgba(0, 0, 0, 0.55); }
+.dock-left.overlay { left: 0; }
+.dock-right.overlay { right: 0; }
+.dock-backdrop { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.25); }
+.splitter { flex: none; background: transparent; position: relative; z-index: 5; touch-action: none; }
+.splitter-v { width: 5px; margin: 0 -2px; cursor: col-resize; }
+.splitter-h { height: 5px; width: 100%; margin: -2px 0; cursor: row-resize; }
+.splitter:hover, .splitter:focus-visible, .splitter:active { background: var(--accent); opacity: 0.7; outline: none; }
+.panel-toggle { padding: 4px 8px; font-size: 15px; line-height: 1; }
+.panel-toggle[aria-pressed='false'] { color: var(--muted); }
+.strip-bar { flex: none; position: relative; height: 22px; display: flex; align-items: center; justify-content: center; background: var(--panel); border-top: 1px solid var(--border); }
+.strip-bar .splitter-h { position: absolute; top: -3px; left: 0; right: 0; width: auto; margin: 0; }
+.strip-toggle { position: relative; z-index: 6; background: none; border: none; color: var(--muted); font-size: 11px; padding: 2px 10px; }
+.notes-panel textarea { height: min(110px, 16vh); }

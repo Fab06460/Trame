@@ -80,8 +80,8 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 640,
+    minHeight: 420,
     title: 'Trame',
     backgroundColor: '#1e1f24',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',

@@ -1587,6 +1587,103 @@ try {
   check('ré-import : la page 2 reste sans notes', (await notesField()) === '')
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
+  // disposition : panneaux masquables et redimensionnables, mode compact en fenêtre étroite, liste des pages
+  const rectOf = (sel) => run(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), b: Math.round(r.bottom), r: Math.round(r.right) } })()`)
+  const dragBy = async (sel, dx, dy) => {
+    const r = await rectOf(sel)
+    const x = r.l + r.w / 2, y = r.t + r.h / 2
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 })
+    for (let i = 1; i <= 6; i++) await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x + (dx * i) / 6, y: y + (dy * i) / 6, button: 'left', buttons: 1 })
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x + dx, y: y + dy, button: 'left', buttons: 0, clickCount: 1 })
+    await sleep(250)
+  }
+  await reloadApp()
+  await sleep(400)
+  check('disposition par défaut : panneau de gauche 280 px, de droite 240 px', (await rectOf('[data-dock="left"]'))?.w === 280 && (await rectOf('[data-dock="right"]'))?.w === 240, JSON.stringify([await rectOf('[data-dock="left"]'), await rectOf('[data-dock="right"]')]))
+  await dragBy('[data-splitter="left"]', 60, 0)
+  check('glisser la poignée de gauche élargit le panneau (340 px)', (await rectOf('[data-dock="left"]'))?.w === 340, JSON.stringify(await rectOf('[data-dock="left"]')))
+  await dragBy('[data-splitter="right"]', -50, 0)
+  check('glisser la poignée de droite vers la gauche élargit le panneau de droite (290 px)', (await rectOf('[data-dock="right"]'))?.w === 290, JSON.stringify(await rectOf('[data-dock="right"]')))
+  await dragBy('[data-splitter="left"]', -900, 0)
+  check('la largeur est bornée (minimum 220 px)', (await rectOf('[data-dock="left"]'))?.w === 220)
+  await run(`document.querySelector('[data-splitter="left"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
+  await run(`document.querySelector('[data-splitter="right"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
+  await sleep(200)
+  check('double-clic sur une poignée : taille par défaut', (await rectOf('[data-dock="left"]'))?.w === 280 && (await rectOf('[data-dock="right"]'))?.w === 240)
+  await run(`document.querySelector('[data-splitter="left"]').focus()`)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight' })
+  await sleep(150)
+  check('flèche droite sur la poignée : +16 px au clavier', (await rectOf('[data-dock="left"]'))?.w === 296)
+  await run(`document.querySelector('[data-splitter="left"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
+
+  const canvasW = async () => (await rectOf('.canvas-wrap')).w
+  const wide = await canvasW()
+  await clickSel('[data-panel-toggle="left"]')
+  await sleep(300)
+  check('« ◧ » masque le panneau de gauche et libère la place pour le canevas', (await rectOf('[data-dock="left"]')) === null && (await canvasW()) >= wide + 270, `${wide} → ${await canvasW()}`)
+  await clickSel('[data-panel-toggle="right"]')
+  await sleep(300)
+  check('« ◨ » masque le panneau de droite', (await rectOf('[data-dock="right"]')) === null)
+  await reloadApp()
+  await sleep(400)
+  check('le choix est mémorisé après rechargement (les deux panneaux restent masqués)', (await rectOf('[data-dock="left"]')) === null && (await rectOf('[data-dock="right"]')) === null)
+  for (const code of ['Digit1', 'Digit2']) {
+    await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: code, code, modifiers: 1 | 4, windowsVirtualKeyCode: code === 'Digit1' ? 49 : 50 })
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: code, code, modifiers: 1 | 4 })
+  }
+  await sleep(300)
+  check('⌘⌥1 et ⌘⌥2 réaffichent les panneaux', (await rectOf('[data-dock="left"]')) !== null && (await rectOf('[data-dock="right"]')) !== null)
+
+  // fenêtre étroite : les panneaux passent en recouvrement, à la demande
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 860, height: 700, deviceScaleFactor: 1, mobile: false })
+  await sleep(500)
+  check('fenêtre étroite (860 px) : panneaux masqués automatiquement, canevas pleine largeur', (await rectOf('[data-dock="left"]')) === null && (await rectOf('[data-dock="right"]')) === null && (await run(`document.querySelector('.workspace').dataset.compact`)) === 'true')
+  await clickSel('[data-panel-toggle="left"]')
+  await sleep(300)
+  const ov = await rectOf('[data-dock="left"]')
+  check('« ◧ » ouvre le panneau de gauche en recouvrement (par-dessus le canevas, sans le réduire)', ov !== null && ov.w === 280 && (await canvasW()) > 800, JSON.stringify([ov, await canvasW()]))
+  await key('Escape')
+  await sleep(250)
+  check('Échap referme le recouvrement', (await rectOf('[data-dock="left"]')) === null)
+  await clickSel('[data-panel-toggle="right"]')
+  await sleep(250)
+  check('« ◨ » ouvre le panneau de droite', (await rectOf('[data-dock="right"]')) !== null)
+  await run(`document.querySelector('[data-dock="backdrop"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))`)
+  await sleep(250)
+  check('un clic en dehors du panneau le referme', (await rectOf('[data-dock="right"]')) === null)
+  const bar = await rectOf('header.toolbar')
+  check('barre d\'outils : aucun bouton coupé (tous dans la fenêtre)', await run(`[...document.querySelectorAll('header.toolbar button, header.toolbar input')].every(b => { const r = b.getBoundingClientRect(); return r.right <= window.innerWidth + 1 && r.left >= -1 })`), JSON.stringify(bar))
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 420, deviceScaleFactor: 1, mobile: false })
+  await sleep(500)
+  const strip = await rectOf('footer.page-strip')
+  check('fenêtre basse (420 px) : la liste des pages reste visible, dans la fenêtre', strip !== null && strip.b <= 420 && strip.h >= 84, JSON.stringify(strip))
+  check('…et le canevas garde de la place', (await rectOf('.canvas-wrap')).h >= 60, JSON.stringify(await rectOf('.canvas-wrap')))
+  await cdp('Emulation.clearDeviceMetricsOverride')
+  await sleep(500)
+  check('fenêtre agrandie : retour automatique des panneaux ancrés', (await rectOf('[data-dock="left"]')) !== null && (await rectOf('[data-dock="right"]')) !== null && (await run(`document.querySelector('.workspace').dataset.compact`)) === undefined)
+
+  // liste des pages : redimensionnement et masquage
+  const h0 = (await rectOf('footer.page-strip')).h
+  await dragBy('[data-splitter="strip"]', 0, -60)
+  const h1 = (await rectOf('footer.page-strip')).h
+  check('glisser la poignée au-dessus des pages agrandit la liste (+60 px)', h1 === h0 + 60, `${h0} → ${h1}`)
+  const t1 = (await rectOf('.page-item .thumb')).h
+  await dragBy('[data-splitter="strip"]', 0, 80)
+  const t2 = (await rectOf('.page-item .thumb')).h
+  check('les miniatures suivent la hauteur de la liste', t2 < t1, `${t1} → ${t2}`)
+  await clickSel('[data-strip-toggle]')
+  await sleep(250)
+  check('« Pages » masque la liste', (await rectOf('footer.page-strip')) === null && (await rectOf('[data-strip-toggle]')) !== null)
+  await clickSel('[data-strip-toggle]')
+  await sleep(250)
+  check('…et la réaffiche', (await rectOf('footer.page-strip')) !== null)
+  await run(`document.querySelector('[data-splitter="strip"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
+  await sleep(200)
+  check('double-clic : hauteur par défaut (150 px)', (await rectOf('footer.page-strip')).h === 150)
+  await run(`try { localStorage.removeItem('trame.layout') } catch {}`)
+
   // rechercher et remplacer : ⌘F, résultats, navigation, remplacement courant / global, casse, annulation
   await reloadApp()
   await sleep(500)

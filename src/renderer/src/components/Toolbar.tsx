@@ -1,3 +1,4 @@
+import { useLayout } from '@/store/layout'
 import { useEditor } from '@/store/editor'
 import { insertImage } from '@/clipboardActions'
 import { newProject, openProject, saveProject } from '@/fileActions'
@@ -21,6 +22,7 @@ export function Toolbar(): React.JSX.Element {
   return (
     <header className="toolbar">
       <div className="brand">Trame</div>
+      <PanelToggle side="left" />
       <button onClick={newProject} title="Nouveau (⌘N)">Nouveau</button>
       <button onClick={openProject} title="Ouvrir (⌘O)">Ouvrir</button>
       <ImportMenu />
@@ -40,6 +42,26 @@ export function Toolbar(): React.JSX.Element {
       <DocName />
       <button onClick={() => usePresentation.getState().start()} title="Présenter en plein écran depuis la page courante (F5)">▶ Présenter</button>
       <ExportMenu />
+      <PanelToggle side="right" />
     </header>
+  )
+}
+
+/** Bouton qui masque / affiche un panneau latéral (en fenêtre étroite : l'ouvre en recouvrement). */
+function PanelToggle({ side }: { side: 'left' | 'right' }): React.JSX.Element {
+  const compact = useLayout((s) => s.compact)
+  const visible = useLayout((s) => (compact ? s.overlay === side : side === 'left' ? s.leftOpen : s.rightOpen))
+  const name = side === 'left' ? 'de gauche (modèles, photos, marque…)' : 'de droite (propriétés)'
+  return (
+    <button
+      className="panel-toggle"
+      data-panel-toggle={side}
+      aria-pressed={visible}
+      aria-label={`${visible ? 'Masquer' : 'Afficher'} le panneau ${name}`}
+      title={`${visible ? 'Masquer' : 'Afficher'} le panneau ${name} (⌘⌥${side === 'left' ? 1 : 2})`}
+      onClick={() => useLayout.getState().toggle(side)}
+    >
+      {side === 'left' ? '◧' : '◨'}
+    </button>
   )
 }

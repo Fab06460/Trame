@@ -14,6 +14,9 @@ import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
+import { useLayout } from '@/store/layout'
+import { Splitter } from '@/components/Splitter'
+import { overlayWidth } from '@/layout'
 import { watchDocument } from '@/store/pdfIssues'
 import { copySelection, cutSelection, paste } from '@/clipboardActions'
 import { confirmUnsaved, newProject, openFile, openProject, saveProject } from '@/fileActions'
@@ -22,6 +25,14 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const t = e.target as HTMLElement
+      // ⌘⌥1 / ⌘⌥2 / ⌘⌥3 : panneau de gauche, panneau de droite, liste des pages
+      if ((e.metaKey || e.ctrlKey) && e.altKey && !e.shiftKey && ['Digit1', 'Digit2', 'Digit3'].includes(e.code) && !usePresentation.getState().active) {
+        e.preventDefault()
+        const l = useLayout.getState()
+        if (e.code === 'Digit3') l.toggleStrip()
+        else l.toggle(e.code === 'Digit1' ? 'left' : 'right')
+        return
+      }
       const k = e.key.toLowerCase()
       // ⌘F : rechercher et remplacer dans les textes
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && k === 'f' && !usePresentation.getState().active) {
@@ -97,6 +108,14 @@ export default function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Taille de la fenêtre : bascule entre panneaux ancrés et panneaux en recouvrement (voir layout.ts)
+  useEffect(() => {
+    const apply = (): void => useLayout.getState().setWindow(window.innerWidth, window.innerHeight)
+    apply()
+    window.addEventListener('resize', apply)
+    return () => window.removeEventListener('resize', apply)
+  }, [])
+
   // Tient le processus principal informé (garde de fermeture, indicateur macOS) et met à jour le titre
   const dirty = useEditor((s) => s.dirty)
   const filePath = useEditor((s) => s.filePath)
@@ -127,6 +146,27 @@ export default function App(): React.JSX.Element {
     []
   )
 
+  const compact = useLayout((s) => s.compact)
+  const overlay = useLayout((s) => s.overlay)
+  const leftOpen = useLayout((s) => s.leftOpen)
+  const rightOpen = useLayout((s) => s.rightOpen)
+  const leftWidth = useLayout((s) => s.leftWidth)
+  const rightWidth = useLayout((s) => s.rightWidth)
+  const windowWidth = useLayout((s) => s.windowWidth)
+  // ancré : selon la préférence ; compact : seulement le panneau ouvert en recouvrement
+  const showLeft = compact ? overlay === 'left' : leftOpen
+  const showRight = compact ? overlay === 'right' : rightOpen
+
+  // Échap ferme le panneau en recouvrement
+  useEffect(() => {
+    if (!compact || !overlay) return
+    const onEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') useLayout.getState().closeOverlay()
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [compact, overlay])
+
   return (
     <div className="app">
       <Toolbar />
@@ -135,14 +175,29 @@ export default function App(): React.JSX.Element {
       <ExportPagesDialog />
       <FindPanel />
       <PresentationMode />
-      <main className="workspace">
-        <Sidebar />
+      <main className="workspace" data-compact={compact || undefined}>
+        {showLeft && (
+          <>
+            <div className={`dock dock-left${compact ? ' overlay' : ''}`} data-dock="left" style={{ width: compact ? overlayWidth(leftWidth, windowWidth) : leftWidth }}>
+              <Sidebar />
+            </div>
+            {!compact && <Splitter kind="left" />}
+          </>
+        )}
         <div className="center">
+          {compact && overlay && <div className="dock-backdrop" data-dock="backdrop" onPointerDown={() => useLayout.getState().closeOverlay()} />}
           <Canvas />
           <NotesPanel />
           <PageStrip />
         </div>
-        <Properties />
+        {showRight && (
+          <>
+            {!compact && <Splitter kind="right" />}
+            <div className={`dock dock-right${compact ? ' overlay' : ''}`} data-dock="right" style={{ width: compact ? overlayWidth(rightWidth, windowWidth) : rightWidth }}>
+              <Properties />
+            </div>
+          </>
+        )}
       </main>
     </div>
   )
