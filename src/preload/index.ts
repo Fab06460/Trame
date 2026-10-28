@@ -46,6 +46,9 @@ const api = {
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
+  /** Export vers un dossier : choix du dossier (null si annulé ; `existing` : fichiers qui seraient remplacés), puis écriture fichier par fichier. */
+  pickExportFolder: (names: string[], suggestion: string): Promise<{ dir: string; existing: string[] } | null> => ipcRenderer.invoke('export:folder-pick', names, suggestion),
+  writeExportFile: (dir: string, name: string, dataUrl: string): Promise<boolean> => ipcRenderer.invoke('export:folder-write', dir, name, dataUrl),
   /** Kit de marque (JSON brut, à valider côté interface) ; null s'il n'existe pas encore. */
   loadBrandKit: (): Promise<string | null> => ipcRenderer.invoke('brand:load'),
   saveBrandKit: (json: string): Promise<boolean> => ipcRenderer.invoke('brand:save', json),

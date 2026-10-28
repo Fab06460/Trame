@@ -26,7 +26,7 @@ export function parsePageRange(text: string, pageCount: number): RangeResult {
 }
 
 /** Nom du fichier d'une page : `<nom>-page-<n>.<ext>`, le numéro complété de zéros pour garder l'ordre alphabétique (01 … 12). */
-export function pageFileName(base: string, pageNumber: number, pageCount: number, ext: 'png' | 'jpg'): string {
+export function pageFileName(base: string, pageNumber: number, pageCount: number, ext: 'png' | 'jpg' | 'svg'): string {
   return `${base}-page-${String(pageNumber).padStart(String(pageCount).length, '0')}.${ext}`
 }
 

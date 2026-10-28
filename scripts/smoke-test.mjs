@@ -11,7 +11,7 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
@@ -1409,6 +1409,72 @@ try {
   await clickSel('[data-action="export-cancel"]')
   await sleep(300)
 
+  // export SVG (menu et fenêtre « Plusieurs pages ») et export vers un dossier
+  const svgOf = (name) => readFile(join(zipDir, name), 'utf-8')
+  const validSvg = (text) => run(`(() => { const d = new DOMParser().parseFromString(${JSON.stringify(text)}, 'image/svg+xml'); return !d.querySelector('parsererror') && d.documentElement.localName === 'svg' })()`)
+  await rm(join(zipDir, 'Sans titre-page-3.svg'), { force: true })
+  await exportVia('svg')
+  for (let i = 0; i < 60 && !readdirSync(zipDir).includes('Sans titre-page-3.svg'); i++) await sleep(250)
+  const svg3 = readdirSync(zipDir).includes('Sans titre-page-3.svg') ? await svgOf('Sans titre-page-3.svg') : ''
+  check('menu Exporter → SVG : fichier de la page courante (« Sans titre-page-3.svg »)', svg3.startsWith('<?xml') && svg3.includes('<svg') && svg3.includes('viewBox="0 0 1080 1080"'), svg3.slice(0, 120))
+  check('le SVG est du XML valide, vectoriel (une ellipse, pas d\'image ni de foreignObject)', (await validSvg(svg3)) === true && svg3.includes('<ellipse') && !svg3.includes('<foreignObject') && !svg3.includes('<image'))
+  // un texte avec la police par défaut : vrai <text>, police incorporée
+  await click('header.toolbar button', 'Texte')
+  await sleep(300)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  await rm(join(zipDir, 'Sans titre-page-3.svg'), { force: true })
+  await exportVia('svg')
+  for (let i = 0; i < 60 && !readdirSync(zipDir).includes('Sans titre-page-3.svg'); i++) await sleep(250)
+  const svgText = await svgOf('Sans titre-page-3.svg')
+  check('un texte devient un vrai <text> (« Votre texte »)', (await validSvg(svgText)) === true && />Votre texte<\/text>/.test(svgText), svgText.slice(0, 200))
+  check('la police du texte est incorporée (@font-face, WOFF en base64)', svgText.includes('@font-face') && svgText.includes("font-family:'Inter'") && svgText.includes('data:font/woff;base64,'))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(250)
+
+  await exportVia('pages')
+  for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+  await clickSel('[data-export-which="all"]')
+  await clickSel('[data-export-format="svg"]')
+  await sleep(200)
+  check('format SVG : plus de réglage de taille (vectoriel) et une explication', (await nBrand('[data-field="exportScale"]')) === 0 && (await run(`document.querySelector('.modal .hint').innerText`)).includes('vectoriel'))
+  check('plusieurs pages : le choix de destination (archive ZIP / dossier) apparaît', (await nBrand('[data-export-dest]')) === 2 && (await run(`document.querySelector('[data-export-dest="archive"]').checked`)) === true)
+  pagesZip = await exportZip('Sans titre.zip')
+  check('SVG en archive : une page = un fichier .svg', !!pagesZip && Object.keys(pagesZip.files).sort().join() === 'Sans titre-page-1.svg,Sans titre-page-2.svg,Sans titre-page-3.svg', pagesZip ? Object.keys(pagesZip.files).join() : 'aucun ZIP')
+  const folder = join(zipDir, 'dossier-Sans titre')
+  await rm(folder, { recursive: true, force: true })
+  await rm(join(zipDir, 'dialog-confirm.txt'), { force: true })
+  const runFolder = async (format) => {
+    await exportVia('pages')
+    for (let i = 0; i < 20 && (await nBrand('[data-action="export-run"]')) === 0; i++) await sleep(250)
+    await clickSel('[data-export-which="all"]')
+    await clickSel(`[data-export-format="${format}"]`)
+    await clickSel('[data-export-dest="folder"]')
+    await sleep(150)
+    const hint = await run(`document.querySelector('[data-export-summary]').innerText`)
+    await clickSel('[data-action="export-run"]')
+    for (let i = 0; i < 80 && (await nBrand('[data-action="export-run"]')) !== 0; i++) await sleep(250)
+    return hint
+  }
+  const hint = await runFolder('svg')
+  check('destination « dossier » : le résumé l\'annonce', hint.includes('dans le dossier choisi'), hint)
+  check('un fichier .svg par page dans le dossier, la fenêtre se referme', existsSync(folder) && readdirSync(folder).sort().join() === 'Sans titre-page-1.svg,Sans titre-page-2.svg,Sans titre-page-3.svg' && (await nBrand('[data-action="export-run"]')) === 0, existsSync(folder) ? readdirSync(folder).join() : 'dossier absent')
+  check('les fichiers du dossier sont des SVG valides', (await validSvg(await readFile(join(folder, 'Sans titre-page-1.svg'), 'utf-8'))) === true)
+  check('premier export dans un dossier vide : aucune question de remplacement', !existsSync(join(zipDir, 'dialog-confirm.txt')))
+  await runFolder('png')
+  check('PNG vers le même dossier : trois images PNG en plus (6 fichiers)', readdirSync(folder).filter((f) => f.endsWith('.png')).length === 3 && readdirSync(folder).length === 6)
+  const png1 = await readFile(join(folder, 'Sans titre-page-1.png'))
+  check('…de vraies images PNG, carrées (la taille choisie dans la fenêtre s\'applique)', png1.subarray(1, 4).toString('latin1') === 'PNG' && png1.readUInt32BE(16) === png1.readUInt32BE(20) && png1.readUInt32BE(16) >= 1080, `${png1.readUInt32BE(16)} × ${png1.readUInt32BE(20)}`)
+  await runFolder('svg')
+  const confirmText = existsSync(join(zipDir, 'dialog-confirm.txt')) ? await readFile(join(zipDir, 'dialog-confirm.txt'), 'utf-8') : ''
+  check('exporter de nouveau dans le même dossier demande de confirmer le remplacement', confirmText.includes('Remplacer 3 fichiers existants') && confirmText.includes('[Remplacer]'), confirmText)
+  // sécurité : le renderer ne peut écrire que des images à nom simple, dans un dossier qui lui a été accordé
+  const tryWrite = (dir, name) => run(`window.trame.writeExportFile(${JSON.stringify(dir)}, ${JSON.stringify(name)}, 'data:image/png;base64,AAAA')`)
+  check('écriture refusée dans un dossier non accordé', (await tryWrite(tmp, 'x.png')) === false && !existsSync(join(tmp, 'x.png')))
+  check('écriture refusée avec un chemin ou une extension non image', (await tryWrite(folder, '../evil.png')) === false && (await tryWrite(folder, 'x.sh')) === false && (await tryWrite(folder, 'sub/x.png')) === false && !existsSync(join(zipDir, 'evil.png')) && !existsSync(join(folder, 'x.sh')))
+  check('…mais un nom simple est accepté dans le dossier accordé', (await tryWrite(folder, 'ok.png')) === true && existsSync(join(folder, 'ok.png')))
+
   // mode présentation : plein écran, navigation clavier / souris, écran noir, lecture automatique, retour à l'éditeur
   const pres = () => run(`(() => { const p = document.querySelector('[data-presentation]'); return p ? Number(p.dataset.presIndex) : -1 })()`)
   const shownPixel = () => run(`(async () => { const img = document.querySelector('[data-pres-shown]'); if (!img || !img.complete) return null; const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data; return [d[0], d[1], d[2]] })()`)
@@ -1804,7 +1870,7 @@ try {
   check('le menu est fermé au départ', (await nBrand('[role="menu"]')) === 0)
   await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
   await sleep(250)
-  check('le menu propose PDF, PowerPoint, PNG, JPG et images de plusieurs pages', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,png,jpg,pages')
+  check('le menu propose PDF, PowerPoint, PNG, JPG, SVG et plusieurs pages', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,png,jpg,svg,pages')
   check('le bouton annonce le menu ouvert (accessibilité)', (await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter')).getAttribute('aria-expanded')`)) === 'true')
   await escKey()
   check('Échap ferme le menu', (await nBrand('[role="menu"]')) === 0)

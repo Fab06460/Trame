@@ -169,6 +169,7 @@ export interface Case {
    * large laisserait passer une erreur localisée (un trait déformé ne change que ~1 % de la page).
    */
   maxBigPct?: number[]
+  maxSvgBigPct?: number[]
   /** nombre de textes qui doivent retomber en image (et être signalés) : 0 pour tout document réel */
   expectFallbacks: number
 }

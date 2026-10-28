@@ -8,6 +8,7 @@ import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
+import { safeExportName } from './exportFolder'
 import { createFileInbox } from './fileInbox'
 import {
   addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
@@ -709,6 +710,39 @@ ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   if (res.canceled || !res.filePath) return null
   await writeFile(res.filePath, Buffer.from(dataUrl.split(',')[1], 'base64'))
   return res.filePath
+})
+
+// Export vers un dossier : le renderer ne choisit jamais le dossier. Il en demande un (boîte système) et n'écrit ensuite que dans
+// celui qui lui a été accordé, des fichiers images à nom simple (voir exportFolder.ts).
+const grantedFolders = new Set<string>()
+
+ipcMain.handle('export:folder-pick', async (e, names: unknown, suggestion: unknown) => {
+  const files = (Array.isArray(names) ? names : []).map(safeExportName)
+  if (files.length === 0 || files.some((f) => f === null)) return null
+  let dir: string
+  if (TEST_EXPORT_DIR) {
+    // mode test (voir export:save) : un sous-dossier du dossier de test, sans boîte de dialogue
+    dir = join(TEST_EXPORT_DIR, `dossier-${basename(String(suggestion || 'export'))}`)
+    await mkdir(dir, { recursive: true })
+  } else {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const res = await dialog.showOpenDialog(win!, { title: 'Choisir le dossier d’export', properties: ['openDirectory', 'createDirectory'], buttonLabel: 'Exporter ici' })
+    if (res.canceled || !res.filePaths[0]) return null
+    dir = res.filePaths[0]
+  }
+  grantedFolders.add(dir)
+  const existing: string[] = []
+  for (const f of files as string[]) if (await stat(join(dir, f)).then(() => true, () => false)) existing.push(f)
+  return { dir, existing }
+})
+
+ipcMain.handle('export:folder-write', async (_e, dir: unknown, name: unknown, dataUrl: unknown) => {
+  const safe = safeExportName(name)
+  if (typeof dir !== 'string' || !grantedFolders.has(dir) || !safe || typeof dataUrl !== 'string') return false
+  const comma = dataUrl.indexOf(',')
+  if (!dataUrl.startsWith('data:') || comma < 0) return false
+  await writeFile(join(dir, safe), Buffer.from(dataUrl.slice(comma + 1), 'base64'))
+  return true
 })
 
 app.on('before-quit', () => closeGuard.onBeforeQuit())

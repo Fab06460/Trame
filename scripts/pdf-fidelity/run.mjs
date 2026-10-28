@@ -15,6 +15,8 @@ import { join, resolve } from 'node:path'
 
 /** Seuil par défaut : part maximale (en %) de pixels très différents (> 64/255) par page. Les modèles mesurent 0,2–0,5 % (du lissage) ; les documents d'essai ont des seuils propres, plus serrés. */
 const MAX_BIG_PCT = 1
+/** Le SVG doit être bien plus proche de l'éditeur que le PDF (même moteur de rendu, polices incorporées) : mesuré 0 à 0,25 %. */
+const MAX_SVG_BIG_PCT = 0.5
 
 if (process.platform !== 'darwin') {
   console.log('npm run fidelity : macOS uniquement (PDFKit). Ignoré.')
@@ -76,6 +78,16 @@ for (const [name, info] of Object.entries(report)) {
             `${p.page === 1 ? (textOk ? '✓' : '✗ manque : ' + missing.join(' | ')) : '·'}`.padEnd(20)) +
         `   ${p.page === 1 ? info.exportMs + ' ms' : ''}`
     )
+  }
+}
+
+console.log(`\n${'document'.padEnd(12)} page   SVG : écart moyen   pixels très différents   taille   <text>`)
+for (const [name, info] of Object.entries(report)) {
+  for (const p of info.svg) {
+    const limit = info.maxSvgBigPct?.[p.page - 1] ?? MAX_SVG_BIG_PCT
+    const bad = p.bigPct > limit
+    if (bad) failures++
+    console.log(`${name.padEnd(12)} ${String(p.page).padEnd(4)} ${p.meanDiff.toFixed(2).padStart(14)}/255   ${(p.bigPct.toFixed(2) + ' %').padStart(10)} ${bad ? '✗ (> ' + limit + ' %)' : '✓'}   ${String(Math.round(p.bytes / 1024)).padStart(5)} Ko   ${p.textElements}`)
   }
 }
 

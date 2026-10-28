@@ -5,6 +5,7 @@ import { pageFileName } from '@/pageExport'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPptx } from '@/pptxExport'
+import { pageToSvg } from '@/svgExport'
 import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
 import { usePdfIssues } from '@/store/pdfIssues'
@@ -18,6 +19,16 @@ async function exportImage(type: 'image/png' | 'image/jpeg'): Promise<void> {
   const ext = type === 'image/png' ? 'png' : 'jpg'
   // même nom que dans l'archive des pages (« Nom-page-2.png ») : un document de plusieurs pages se range dans l'ordre
   await window.trame.saveExport(url, doc.pages.length > 1 ? pageFileName(fileSafeName(doc.name), pageNo, doc.pages.length, ext) : `${fileSafeName(doc.name)}.${ext}`)
+}
+
+async function exportSvg(): Promise<void> {
+  const { doc, pageId } = useEditor.getState()
+  const pageNo = doc.pages.findIndex((p) => p.id === pageId) + 1
+  const svg = await pageToSvg(doc, doc.pages.find((p) => p.id === pageId) ?? doc.pages[0])
+  const bytes = new TextEncoder().encode(svg)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  await window.trame.saveExport(`data:image/svg+xml;base64,${btoa(bin)}`, doc.pages.length > 1 ? pageFileName(fileSafeName(doc.name), pageNo, doc.pages.length, 'svg') : `${fileSafeName(doc.name)}.svg`)
 }
 
 async function exportPdfFile(): Promise<void> {
@@ -71,7 +82,7 @@ export function ExportMenu(): React.JSX.Element {
         className={`primary${pdfIssueCount ? ' has-warning' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={warning || 'Exporter : PDF, PowerPoint, images'}
+        title={warning || 'Exporter : PDF, PowerPoint, images, SVG'}
         onClick={() => setOpen((o) => !o)}
       >
         Exporter{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''} ▾
@@ -95,9 +106,13 @@ export function ExportMenu(): React.JSX.Element {
             <strong>JPG</strong>
             <span>{pageCount > 1 ? `Page courante (${pageNo})` : 'La page'}, taille du design</span>
           </button>
+          <button role="menuitem" data-export="svg" onClick={() => choose(exportSvg)}>
+            <strong>SVG</strong>
+            <span>{pageCount > 1 ? `Page courante (${pageNo})` : 'La page'}, vectoriel, textes et polices incorporés</span>
+          </button>
           <button role="menuitem" data-export="pages" onClick={() => choose(() => useExportPages.getState().setOpen(true))}>
-            <strong>Images de plusieurs pages…</strong>
-            <span>PNG ou JPG, jusqu'à ×3, toutes les pages ou une sélection (archive ZIP)</span>
+            <strong>Plusieurs pages…</strong>
+            <span>PNG, JPG ou SVG, toutes les pages ou une sélection, en archive ZIP ou dans un dossier</span>
           </button>
         </div>
       )}

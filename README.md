@@ -18,7 +18,8 @@
 - Notes de l'orateur par page (panneau sous le canevas), exportées et importées avec PowerPoint
 - Menus « Importer » (PDF, PowerPoint) et « Exporter » (PDF, PowerPoint, PNG, JPG, pages) dans la barre d'outils
 - Menu « Exporter » unique : PDF, PowerPoint, PNG, JPG, images de plusieurs pages
-- Export de toutes les pages (ou d'une sélection) en PNG / JPG, jusqu'à ×3, en archive ZIP
+- Export de toutes les pages (ou d'une sélection) en PNG / JPG (jusqu'à ×3) ou en SVG vectoriel, en archive ZIP ou dans un dossier
+- Export SVG de la page courante (textes en vrai texte, polices incorporées) depuis le menu Exporter
 - Export PowerPoint (.pptx) : textes, formes et images modifiables dans PowerPoint, Keynote ou Google Slides
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export)
 - Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette

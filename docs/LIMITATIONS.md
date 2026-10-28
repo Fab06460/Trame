@@ -83,7 +83,9 @@
 - **Ligne de base** : reprise de Konva 10 (métriques de police du navigateur) ; une montée de version de Konva qui changerait cette formule déplacerait le texte du PDF — `npm run fidelity` le détecte.
 - **PDF et images** : PNG et JPEG sont intégrés à leur **résolution d'origine** (un PDF peut donc être lourd avec de grandes photos) ; GIF, WebP et SVG sont ré-encodés en PNG. Pas de compression ni de rééchantillonnage.
 - `npm run fidelity` est réservé à macOS (PDFKit) et n'est pas exécuté automatiquement.
-- PNG/JPG exporte **uniquement la page affichée** ; pas d'export de toutes les pages en images, ni de SVG.
+- Menu Exporter : PNG, JPG et SVG exportent la **page courante** ; « Plusieurs pages… » exporte toutes les pages ou une sélection, en archive ZIP ou dans un dossier.
+- **SVG** : dessin vectoriel (formes, dégradés, ombres, contours, textes en vrai `<text>` avec les polices utilisées incorporées en base64, images retouchées en `<image>`). Pas de conversion du texte en tracés (une police non incorporée serait remplacée par celle du système ; les polices système comme Helvetica Neue ne sont pas incorporées), les images gardent leur résolution d'origine (un SVG avec de grandes photos est lourd), une ombre est un filtre `feDropShadow` (rendu proche mais non identique selon le logiciel : Illustrator, Figma, Inkscape), le crénage est désactivé quand un interlettrage est réglé (comme à l'écran). Une police incorporée n'est pas réduite aux caractères utilisés.
+- **Export vers un dossier** : un fichier par page, sans sous-dossier ni modèle de nom personnalisé ; le renderer n'écrit que des fichiers `png`, `jpg` ou `svg` à nom simple dans le dossier choisi par l'utilisateur. Les fichiers déjà présents sont remplacés après confirmation.
 - Le nom de fichier d'export vient de `doc.name`, non modifiable (voir plus haut).
 
 ## Dette technique à connaître
