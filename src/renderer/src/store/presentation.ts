@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { TrameDocument } from '@/types'
 import { useEditor } from '@/store/editor'
+import type { PageTransition } from '@/transition'
 
 /** Mode présentation : le document est figé au lancement (on ne modifie rien pendant qu'on présente) et la page affichée est suivie ici. */
 export const usePresentation = create<{
@@ -9,6 +10,8 @@ export const usePresentation = create<{
   index: number
   start: (fromPage?: number) => void
   go: (index: number) => void
+  /** Change la transition du document (et de la présentation en cours). */
+  setTransition: (transition: PageTransition) => void
   stop: () => void
 }>((set, get) => ({
   active: false,
@@ -22,6 +25,11 @@ export const usePresentation = create<{
   go: (index) => {
     const doc = get().doc
     if (doc) set({ index: Math.max(0, Math.min(doc.pages.length - 1, index)) })
+  },
+  setTransition: (transition) => {
+    useEditor.getState().setTransition(transition)
+    const doc = get().doc
+    if (doc) set({ doc: { ...doc, transition: useEditor.getState().doc.transition } })
   },
   stop: () => {
     const { doc, index, active } = get()

@@ -685,6 +685,26 @@ describe('parseDocument', () => {
   })
 })
 
+describe('transition de présentation', () => {
+  it('absente par défaut ; le fondu n\'est pas écrit, les autres si', () => {
+    expect(S().doc.transition).toBeUndefined()
+    S().setTransition('slide')
+    expect(S().doc.transition).toBe('slide')
+    expect(S().dirty).toBe(true)
+    S().setTransition('fade')
+    expect('transition' in S().doc).toBe(false)
+    S().setTransition('none')
+    expect(S().doc.transition).toBe('none')
+  })
+  it('survit à l\'enregistrement ; une valeur inconnue est ignorée à la lecture', () => {
+    S().setTransition('zoom')
+    expect(parseDocument(JSON.stringify(S().doc)).transition).toBe('zoom')
+    const raw = JSON.parse(JSON.stringify(S().doc))
+    raw.transition = 'spin'
+    expect('transition' in parseDocument(JSON.stringify(raw))).toBe(false)
+  })
+})
+
 describe('notes de l\'orateur', () => {
   it('se saisissent par page, sans toucher aux autres', () => {
     const first = S().pageId

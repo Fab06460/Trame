@@ -1,3 +1,5 @@
+import type { PageTransition } from './transition'
+
 export type ElementType = 'rect' | 'ellipse' | 'text' | 'image' | 'path'
 
 /** Ombre portée ou lueur (une lueur est une ombre sans décalage). Flou et décalages en pixels de design ; le décalage reste dans les axes de la page, même si l'élément pivote. */
@@ -150,6 +152,8 @@ export interface TrameDocument {
   layoutFrame?: { x: number; y: number; width: number; height: number }
   /** polices ajoutées en ligne utilisées par le document, embarquées pour qu'il s'affiche et s'exporte partout (base64 WOFF2 par variante) */
   fonts?: Record<string, EmbeddedFont>
+  /** transition entre pages en présentation (absente = fondu) */
+  transition?: PageTransition
   /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */
   sources?: Record<string, string>
 }

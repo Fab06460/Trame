@@ -226,7 +226,21 @@ button.danger { color: #ff7b7b; }
 
 .presentation { position: fixed; inset: 0; z-index: 100; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
 .presentation.idle { cursor: none; }
-.presentation-page { max-width: 100vw; max-height: 100vh; object-fit: contain; animation: pres-fade 0.25s ease; }
+/* deux images se superposent pendant une transition : l'arrivante au-dessus de la partante */
+.presentation-page { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.presentation-page.entering { z-index: 2; }
+.presentation-page.leaving { z-index: 1; }
+.presentation-page.entering.t-fade { animation: pres-fade 0.45s ease; }
+.presentation-page.entering.t-slide { animation: pres-slide-in 0.45s ease; }
+.presentation-page.leaving.t-slide { animation: pres-slide-out 0.45s ease forwards; }
+.presentation-page.entering.t-cover { animation: pres-slide-in 0.45s ease; box-shadow: 0 0 60px rgba(0, 0, 0, 0.6); }
+.presentation-page.entering.t-zoom { animation: pres-zoom-in 0.45s ease; }
+.presentation-page.leaving.t-zoom { animation: pres-zoom-out 0.45s ease forwards; }
+@keyframes pres-slide-in { from { transform: translateX(calc(var(--dir) * 100%)); } to { transform: none; } }
+@keyframes pres-slide-out { from { transform: none; } to { transform: translateX(calc(var(--dir) * -100%)); } }
+@keyframes pres-zoom-in { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pres-zoom-out { from { transform: none; opacity: 1; } to { transform: scale(1.12); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .presentation-page { animation: none !important; } }
 @keyframes pres-fade { from { opacity: 0; } to { opacity: 1; } }
 .presentation-loading { color: #888; font-size: 14px; }
 .presentation-bar { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; background: rgba(30, 31, 36, 0.85); color: #fff; font-size: 13px; transition: opacity 0.3s; cursor: default; }

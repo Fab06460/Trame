@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
+import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, transitionDirection } from '@/transition'
 
 const AUTO_CHOICES = [0, 3, 5, 10, 15]
 /** Plus grand côté d'une image de présentation : au-delà, rien de visible sur un écran, mais beaucoup de mémoire. */
@@ -15,6 +16,10 @@ export function PresentationMode(): React.JSX.Element | null {
   const doc = usePresentation((s) => s.doc)
   const index = usePresentation((s) => s.index)
   const [image, setImage] = useState<{ index: number; url: string } | null>(null)
+  /** page qui s'efface pendant la transition (retirée au bout de la durée de l'animation) */
+  const [leaving, setLeaving] = useState<{ index: number; url: string; dir: 1 | -1; n: number } | null>(null)
+  const shown = useRef<{ index: number; url: string } | null>(null)
+  const moves = useRef(0)
   const [controls, setControls] = useState(true)
   const [auto, setAuto] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -24,6 +29,7 @@ export function PresentationMode(): React.JSX.Element | null {
   const cache = useRef(new Map<number, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const kind = doc?.transition ?? DEFAULT_TRANSITION
   const exit = useCallback(() => usePresentation.getState().stop(), [])
 
   // plein écran à l'ouverture, retour à la fenêtre à la fermeture ; sortie du plein écran par le système = fin de la présentation
@@ -40,7 +46,9 @@ export function PresentationMode(): React.JSX.Element | null {
   useEffect(() => {
     if (!active) return
     cache.current.clear()
+    shown.current = null
     setImage(null)
+    setLeaving(null)
     setBlack(false)
     setShowNotes(false)
     setPaused(false)
@@ -78,12 +86,28 @@ export function PresentationMode(): React.JSX.Element | null {
   useEffect(() => {
     if (!active || !doc) return
     let live = true
-    void ensure(index).then((url) => live && setImage({ index, url }), () => {})
+    void ensure(index).then(
+      (url) => {
+        if (!live) return
+        const prev = shown.current
+        // une page d'arrivée différente de celle qui est affichée : la précédente reste en dessous le temps de la transition
+        if (prev && prev.index !== index && kind !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto > 0), n: ++moves.current })
+        shown.current = { index, url }
+        setImage({ index, url })
+      },
+      () => {}
+    )
     for (const n of [index + 1, index - 1]) if (n >= 0 && n < doc.pages.length) void ensure(n).catch(() => {})
     return () => {
       live = false
     }
-  }, [active, doc, index, ensure])
+  }, [active, doc, index, ensure, kind, auto])
+
+  useEffect(() => {
+    if (!leaving) return
+    const t = setTimeout(() => setLeaving(null), TRANSITION_MS + 60)
+    return () => clearTimeout(t)
+  }, [leaving])
 
   // lecture automatique (boucle)
   useEffect(() => {
@@ -136,7 +160,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const last = doc.pages.length - 1
   return (
     <div className={`presentation${controls ? '' : ' idle'}`} data-presentation data-pres-index={index} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={wake} onClick={() => usePresentation.getState().go(index + 1)}>
-      {!black && image && <img key={image.index} className="presentation-page" src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
+      {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
+      {!black && image && <img key={image.index} className={`presentation-page entering t-${kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
       {!black && !image && <div className="presentation-loading" role="status">Préparation…</div>}
       {showNotes && (
         <div className={`presentation-notes${doc.pages[index].notes ? '' : ' empty'}`} data-pres="notes" onClick={(e) => e.stopPropagation()}>
@@ -157,6 +182,14 @@ export function PresentationMode(): React.JSX.Element | null {
             </select>
           </label>
         )}
+        <label className="pres-auto" title="Transition entre les pages (enregistrée avec le document)">
+          Transition
+          <select data-pres="transition" value={kind} onChange={(e) => usePresentation.getState().setTransition(e.target.value as typeof kind)}>
+            {TRANSITIONS.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        </label>
         <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title="Afficher les notes (N)">Notes</button>
         <button data-pres="exit" onClick={exit} title="Quitter (Échap)">✕ Quitter</button>
       </div>

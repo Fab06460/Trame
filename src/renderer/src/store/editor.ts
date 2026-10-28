@@ -1,4 +1,5 @@
 import { limitNotes, sanitizeNotes } from '@/notes'
+import { cleanTransition, type PageTransition } from '@/transition'
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
@@ -99,6 +100,9 @@ export function parseDocument(json: string): TrameDocument {
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
   sanitizeFonts(doc)
   sanitizeFrame(doc)
+  const transition = cleanTransition(doc.transition)
+  if (transition) doc.transition = transition
+  else delete doc.transition
   return { ...doc, name: cleanDocName(doc.name) }
 }
 
@@ -174,6 +178,8 @@ interface EditorState {
   updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
   /** Notes de l'orateur de la page courante ; `commit` ouvre un cran d'historique (une seule fois par séance de frappe). */
   setNotes: (text: string, commit?: boolean) => void
+  /** Transition de présentation du document (réglage : pas d'historique, mais le document est marqué modifié). */
+  setTransition: (transition: PageTransition) => void
   setSize: (width: number, height: number) => void
   setName: (name: string) => void
   /** change le format ; `adapt` reporte le contenu dans le nouveau format (Magic Resize) au lieu de ne toucher qu'à la taille de la page */
@@ -630,6 +636,14 @@ export const useEditor = create<EditorState>((set, get) => {
       if (commit) set(snapshot())
       set({ doc: mapPage((p) => ({ ...p, guides: f(p.guides ?? []) })), dirty: true })
     },
+
+    setTransition: (transition) =>
+      set((s) => {
+        const { transition: _old, ...rest } = s.doc
+        void _old
+        const next = cleanTransition(transition)
+        return { doc: next ? { ...rest, transition: next } : rest, dirty: true }
+      }),
 
     setNotes: (text, commit = true) => {
       if (commit) set(snapshot())
