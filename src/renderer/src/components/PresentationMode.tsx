@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LaserPointer } from '@/components/LaserPointer'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
 import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, type PageTransition } from '@/transition'
@@ -26,6 +27,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const [black, setBlack] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [speaker, setSpeaker] = useState(false)
+  const [laser, setLaser] = useState(false)
+  const [onBar, setOnBar] = useState(false)
   const startedAt = usePresentation((s) => s.startedAt)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<number, Promise<string>>())
@@ -99,6 +102,8 @@ export function PresentationMode(): React.JSX.Element | null {
     setBlack(false)
     setShowNotes(false)
     setSpeaker(false)
+    setLaser(false)
+    setOnBar(false)
     setAuto(0)
     setPaused(false)
     setControls(true)
@@ -194,6 +199,7 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (k.toLowerCase() === 'b') setBlack((b) => !b)
       else if (k.toLowerCase() === 'p') setPaused((p) => !p)
       else if (k.toLowerCase() === 'n') setShowNotes((n) => !n)
+      else if (k.toLowerCase() === 'l') setLaser((l) => !l)
       else if (k.toLowerCase() === 's') toggleSpeakerRef.current()
       else handled = false
       if (handled || !(e.metaKey || e.ctrlKey)) {
@@ -217,8 +223,9 @@ export function PresentationMode(): React.JSX.Element | null {
   if (!active || !doc) return null
   const last = doc.pages.length - 1
   return (
-    <div className={`presentation${controls ? '' : ' idle'}`} data-presentation data-pres-index={index} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={(e) => {
+    <div className={`presentation${controls ? '' : ' idle'}${laser ? ' laser' : ''}`} data-presentation data-pres-index={index} data-pres-laser={laser || undefined} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={(e) => {
         overBar.current = !!bar.current?.contains(e.target as Node)
+        if (laser) setOnBar(overBar.current)
         wake()
       }} onClick={() => usePresentation.getState().go(index + 1)}>
       {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${leaving.kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
@@ -229,6 +236,7 @@ export function PresentationMode(): React.JSX.Element | null {
           {doc.pages[index].notes ?? 'Aucune note pour cette page.'}
         </div>
       )}
+      {laser && <LaserPointer hidden={onBar} />}
       <div
         ref={bar}
         className="presentation-bar"
@@ -260,6 +268,7 @@ export function PresentationMode(): React.JSX.Element | null {
             ))}
           </select>
         </label>
+        <button data-pres="laser" aria-pressed={laser} onClick={() => setLaser((l) => !l)} title="Pointeur laser : un point rouge qui suit la souris (L)">Laser</button>
         <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title="Écran de l'orateur : page suivante, notes et chronomètre dans une seconde fenêtre (S)">Orateur</button>
         <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title="Afficher les notes (N)">Notes</button>
         <button data-pres="exit" onClick={exit} title="Quitter (Échap)">✕ Quitter</button>

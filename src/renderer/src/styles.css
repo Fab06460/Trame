@@ -227,6 +227,10 @@ button.danger { color: #ff7b7b; }
 
 .presentation { position: fixed; inset: 0; z-index: 100; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
 .presentation.idle { cursor: none; }
+/* pointeur laser : le point remplace le curseur (sauf sur la barre), il ne reçoit aucun événement */
+.presentation.laser { cursor: none; }
+.presentation.laser .presentation-bar { cursor: default; }
+.laser-pointer { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
 /* deux images se superposent pendant une transition : l'arrivante au-dessus de la partante */
 .presentation-page { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .presentation-page.entering { z-index: 2; }
