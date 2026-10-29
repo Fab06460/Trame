@@ -5,6 +5,7 @@ import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
+import { AI_PROVIDERS } from '@shared/ai'
 
 const SLIDERS = [
   ['brightness', 'img.brightness'],
@@ -64,6 +65,17 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
           ⇅
         </button>
       </div>
+
+      {el.ai && (
+        <>
+          <h4>{t('ai.image.heading')}</h4>
+          <p className="hint" data-field="aiInfo">{t('ai.image.info', { service: AI_PROVIDERS.find((p) => p.id === el.ai!.provider)?.name ?? el.ai.provider, model: el.ai.model })}</p>
+          <p className="hint" data-field="aiPrompt">{el.ai.prompt}</p>
+          <button data-action="copy-ai-prompt" onClick={() => void navigator.clipboard.writeText(el.ai!.prompt).catch(() => {})}>
+            {t('ai.image.copyPrompt')}
+          </button>
+        </>
+      )}
 
       {el.credit && (
         <>

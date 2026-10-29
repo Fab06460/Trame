@@ -73,6 +73,7 @@ await mkdir(join(tmp, 'exports'))
 
 // faux serveur Openverse (le vrai n'est jamais contacté par les tests) : photos, miniatures, erreurs
 const photoRequests = []
+const aiRequests = []
 const photoServer = createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   photoRequests.push({ path: url.pathname, query: url.searchParams, ua: req.headers['user-agent'] ?? '' })
@@ -117,12 +118,36 @@ const photoServer = createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'font/woff2' })
     return res.end(readFileSync(join(root, `node_modules/@fontsource/lora/files/lora-latin-${fontFile[2]}-normal.woff2`)))
   }
+  // faux services d'images IA (Cloudflare Workers AI, OpenAI) : les vrais ne sont jamais contactés par les tests
+  if (req.method === 'POST' && (url.pathname.startsWith('/client/v4/accounts/') || url.pathname === '/v1/images/generations')) {
+    let raw = ''
+    req.on('data', (c) => (raw += c))
+    req.on('end', () => {
+      const body = JSON.parse(raw || '{}')
+      aiRequests.push({ path: url.pathname, auth: req.headers.authorization ?? '', body })
+      const reply = (status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
+      const b64 = (w, h) => testPng(w, h).toString('base64')
+      const prompt = String(body.prompt ?? '')
+      if (url.pathname.startsWith('/client')) {
+        if (req.headers.authorization !== 'Bearer cf-token-test') return reply(403, { success: false, errors: [{ code: 10000, message: 'Authentication error' }] })
+        if (prompt === 'quota') return reply(429, { success: false, errors: [{ code: 4006, message: "you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan" }] })
+        if (prompt === 'panne') return reply(500, { success: false, errors: [{ code: 5000, message: 'Internal error' }] })
+        if (prompt === 'lent') return // ne répond jamais : annulation ou délai
+        return reply(200, { result: { image: b64(512, 512) }, success: true, errors: [], messages: [] })
+      }
+      if (req.headers.authorization !== 'Bearer sk-test-openai') return reply(401, { error: { message: 'Incorrect API key provided', code: 'invalid_api_key' } })
+      if (prompt === 'moderation') return reply(400, { error: { code: 'moderation_blocked', message: 'Your request was rejected by the safety system.' } })
+      const [w, h] = String(body.size).split('x').map(Number)
+      return reply(200, { data: [{ b64_json: b64(Math.round(w / 5), Math.round(h / 5)) }] })
+    })
+    return
+  }
   if (url.pathname === '/img/a.png') return png(800, 400)
   if (url.pathname === '/thumb/a.png') return png(80, 40)
   res.writeHead(404); res.end()
 })
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
-const env = { ...process.env, TRAME_LANG: 'fr', TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
+const env = { ...process.env, TRAME_LANG: 'fr', TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_AI_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_AI_TIMEOUT_MS: '3000', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_THROTTLE ? [] : ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling']), ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
@@ -1118,6 +1143,96 @@ try {
   await search('vide')
   for (let i = 0; i < 40 && !(await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'); i++) await sleep(250)
   check('recherche sans résultat : message dédié', (await run(`document.body.innerText`)).includes('Aucun résultat pour « vide »'))
+  await reloadApp()
+
+  // images par IA : connexion d'un service (faux serveur), génération, insertion, erreurs, annulation, secrets jamais renvoyés à l'interface
+  await reloadApp()
+  await sleep(500)
+  await click('.sidebar .tabs button', 'IA')
+  await sleep(300)
+  const typeText = (sel, value) => run(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); if (!i) return false; Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
+  const pickProvider = async (id) => { await run(`(() => { const s = document.querySelector('[data-field="aiProvider"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(id)}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`); await sleep(300) }
+  const aiError = () => run(`document.querySelector('[data-ai-error]')?.dataset.aiError ?? ''`)
+  const generateAi = async (prompt) => { await typeText('[data-field="aiPrompt"]', prompt); await sleep(100); await clickSel('[data-action="ai-generate"]') }
+  const waitAi = (fn) => waitFor(fn, 9000)
+  check('IA : sans identifiant, seul le formulaire de connexion est proposé', (await nBrand('[data-ai-field]')) === 2 && (await nBrand('[data-field="aiPrompt"]')) === 0 && (await nBrand('[data-ai-connected]')) === 0)
+  check('IA : le coût du service est annoncé', (await run(`document.querySelector('[data-ai-cost]')?.innerText ?? ''`)).includes('quota quotidien'))
+  await typeInto('[data-ai-field="account"]', 'trop-court')
+  await typeInto('[data-ai-field="token"]', 'cf-token-test')
+  await clickSel('[data-action="ai-save"]')
+  await sleep(300)
+  check('IA : un identifiant de compte invalide est refusé avec une explication', (await run(`document.querySelector('[data-ai-form-error]')?.innerText ?? ''`)).includes('32 caractères') && (await nBrand('[data-ai-connected]')) === 0)
+  await typeInto('[data-ai-field="account"]', '0123456789abcdef0123456789abcdef')
+  await clickSel('[data-action="ai-save"]')
+  check('IA : identifiants valides : le service est connecté', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
+  const aiStatusJson = JSON.stringify(await run('window.trame.aiStatus()'))
+  check("IA : l'interface ne reçoit jamais le jeton (seulement l'identifiant de compte, non secret)", !aiStatusJson.includes('cf-token-test') && aiStatusJson.includes('0123456789abcdef0123456789abcdef') && aiStatusJson.includes('"persistent":true'), aiStatusJson)
+  check("IA : le chiffrement est annoncé", (await run(`document.body.innerText`)).includes('chiffrés par le système'))
+  check("IA : aucune requête réseau avant la première génération", aiRequests.length === 0)
+
+  await generateAi('Un renard roux')
+  check('IA : Cloudflare : une image est générée et proposée', await waitAi(async () => (await nBrand('[data-ai-result]')) === 1))
+  const cfReq = aiRequests.at(-1)
+  check('IA : requête Cloudflare : bon modèle, jeton en en-tête, demande et 4 étapes', cfReq.path === '/client/v4/accounts/0123456789abcdef0123456789abcdef/ai/run/@cf/black-forest-labs/flux-1-schnell' && cfReq.auth === 'Bearer cf-token-test' && cfReq.body.prompt === 'Un renard roux' && cfReq.body.steps === 4, JSON.stringify(cfReq))
+  check('IA : Cloudflare ne propose que le format carré (pas de choix)', (await nBrand('[data-ai-size]')) === 0)
+  const aiImgsBefore = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
+  await clickSel('[data-ai-result]')
+  check("IA : cliquer l'image l'insère dans la page", await waitAi(async () => (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === aiImgsBefore + 1))
+  const aiInfo = await run(`document.querySelector('.panel [data-field="aiInfo"]')?.innerText ?? ''`)
+  check("IA : les propriétés indiquent le service, le modèle et la demande", aiInfo.includes('Cloudflare Workers AI') && aiInfo.includes('FLUX.1 schnell') && (await run(`document.querySelector('.panel [data-field="aiPrompt"]')?.innerText ?? ''`)).includes('Un renard roux'), aiInfo)
+  await clickSel('.sidebar .tabs button[data-tab="ai"]')
+  await sleep(200)
+
+  // erreurs : quota (4006), panne, secours en cas de délai, annulation
+  await generateAi('quota')
+  check('IA : quota quotidien épuisé : message dédié (remise à zéro à 00:00 UTC)', await waitAi(async () => (await aiError()) === 'quota') && (await run(`document.querySelector('[data-ai-error]').innerText`)).includes('00:00 UTC'))
+  await generateAi('panne')
+  check('IA : panne du service : le code HTTP est affiché', await waitAi(async () => (await aiError()) === 'unavailable') && (await run(`document.querySelector('[data-ai-detail]')?.innerText ?? ''`)).includes('HTTP 500'))
+  await generateAi('lent')
+  check('IA : génération en cours : bouton « Annuler » proposé', await waitAi(async () => (await nBrand('[data-ai-busy]')) === 1))
+  await clickSel('[data-action="ai-cancel"]')
+  await sleep(500)
+  check("IA : annuler n'affiche aucune erreur et rend la main", (await aiError()) === '' && (await nBrand('[data-ai-busy]')) === 0 && (await nBrand('[data-action="ai-generate"]')) === 1)
+  await generateAi('lent')
+  check('IA : service qui ne répond pas : délai dépassé = message « hors ligne »', await waitAi(async () => (await aiError()) === 'offline'))
+
+  // OpenAI : mauvaise clé puis bonne clé, formats, refus de contenu
+  await pickProvider('openai')
+  check('IA : OpenAI : un seul champ (la clé), le coût payant est annoncé', (await nBrand('[data-ai-field]')) === 1 && (await run(`document.querySelector('[data-ai-cost]')?.innerText ?? ''`)).includes('Payant'))
+  await typeInto('[data-ai-field="key"]', 'sk-wrong')
+  await clickSel('[data-action="ai-save"]')
+  check('IA : OpenAI connecté', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
+  check('IA : OpenAI propose les trois formats, le carré par défaut', (await nBrand('[data-ai-size]')) === 3 && (await run(`document.querySelector('[data-ai-size="square"]').getAttribute('aria-pressed')`)) === 'true')
+  await generateAi('Un phare')
+  check('IA : mauvaise clé : erreur « identifiants refusés »', await waitAi(async () => (await aiError()) === 'auth'))
+  await clickSel('[data-action="ai-edit"]')
+  await sleep(200)
+  await typeInto('[data-ai-field="key"]', 'sk-test-openai')
+  await clickSel('[data-action="ai-save"]')
+  check('IA : modifier les identifiants les remplace', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
+  await clickSel('[data-ai-size="landscape"]')
+  await generateAi('Un phare')
+  check('IA : OpenAI : image générée', await waitAi(async () => (await nBrand('[data-ai-result]')) === 2))
+  const oaReq = aiRequests.at(-1)
+  check('IA : requête OpenAI : modèle, taille paysage, une image, clé en en-tête', oaReq.path === '/v1/images/generations' && oaReq.auth === 'Bearer sk-test-openai' && oaReq.body.model === 'gpt-image-1' && oaReq.body.size === '1536x1024' && oaReq.body.n === 1, JSON.stringify(oaReq))
+  const ratio = await run(`(() => { const i = document.querySelector('[data-ai-result] img'); return i.naturalWidth / i.naturalHeight })()`)
+  check('IA : l\'image paysage reçue est bien plus large que haute', ratio > 1.4 && ratio < 1.6, String(ratio))
+  await generateAi('moderation')
+  check('IA : demande refusée par les règles de contenu : message dédié', await waitAi(async () => (await aiError()) === 'refused'))
+  // le panneau, la liste des images et la demande survivent à un changement d'onglet
+  await click('.sidebar .tabs button', 'Photos')
+  await click('.sidebar .tabs button', 'IA')
+  await sleep(300)
+  check("IA : les images générées restent dans la liste quand on change d'onglet", (await nBrand('[data-ai-result]')) === 2)
+
+  // sécurité de l'interface IPC
+  check('IA : un service inconnu est refusé par le processus principal', (await run(`window.trame.aiGenerate('evil', 'x', 'square', 'r1')`)).ok === false)
+  check("IA : un identifiant de compte qui sortirait de l'adresse est refusé", (await run(`window.trame.aiSave('cloudflare', { account: '../../../x'.padEnd(32, 'a'), token: 'x' })`)).ok === false)
+  check('IA : une demande trop longue est refusée avant tout appel réseau', (await run(`window.trame.aiGenerate('openai', 'x'.repeat(1001), 'square', 'r2')`)).ok === false && aiRequests.every((r) => r.body.prompt !== 'x'.repeat(1001)))
+  const aiCallsBefore = aiRequests.length
+  await clickSel('[data-action="ai-forget"]')
+  check('IA : « Oublier mes identifiants » ramène au formulaire', await waitAi(async () => (await nBrand('[data-ai-field]')) === 1 && (await nBrand('[data-ai-connected]')) === 0))
+  check('IA : sans identifiant, le processus principal refuse de générer (aucun appel réseau)', (await run(`window.trame.aiGenerate('openai', 'Un phare', 'square', 'r3')`)).error === 'no-credentials' && aiRequests.length === aiCallsBefore)
   await reloadApp()
 
   // polices en ligne : catalogue, aperçu, installation, utilisation, export PDF, persistance, embarquement dans le document

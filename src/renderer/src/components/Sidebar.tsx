@@ -15,8 +15,9 @@ import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
 import { LanguageSelect } from './LanguageSelect'
+import { AiPanel } from './AiPanel'
 
-type Tab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand' | 'photos'
+type Tab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand' | 'photos' | 'ai'
 
 const TEXT_PRESETS = [
   { label: 'sidebar.preset.title', fontSize: 110, fontStyle: 'bold', text: 'sidebar.preset.title' },
@@ -66,6 +67,7 @@ export function Sidebar(): React.JSX.Element {
         <button className={tab === 'layers' ? 'active' : ''} onClick={() => setTab('layers')}>{t('sidebar.layers')}</button>
         <button className={tab === 'brand' ? 'active' : ''} onClick={() => setTab('brand')}>{t('sidebar.brand')}</button>
         <button className={tab === 'photos' ? 'active' : ''} onClick={() => setTab('photos')}>{t('sidebar.photos')}</button>
+        <button className={tab === 'ai' ? 'active' : ''} data-tab="ai" onClick={() => setTab('ai')}>{t('ai.tab')}</button>
       </div>
 
       {tab === 'layers' && <LayersPanel />}
@@ -73,6 +75,8 @@ export function Sidebar(): React.JSX.Element {
       {tab === 'brand' && <BrandPanel />}
 
       {tab === 'photos' && <PhotosPanel />}
+
+      {tab === 'ai' && <AiPanel />}
 
       {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}
 

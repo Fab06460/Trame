@@ -18,6 +18,7 @@ import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
 import type { Guide, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
+import { sanitizeAiInfo } from '@/aiImage'
 
 const HISTORY_LIMIT = 100
 
@@ -96,6 +97,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeShadow(e)
       sanitizeList(e)
       if (e.type === 'image') sanitizeImageStyle(e)
+      sanitizeAiInfo(e)
       if (e.locked !== true) delete e.locked
       sanitizeProtection(e)
       if (e.hidden !== true) delete e.hidden

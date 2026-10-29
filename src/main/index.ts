@@ -18,6 +18,7 @@ import {
   type TemplateMeta
 } from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+import { registerAiHandlers } from './aiIpc'
 
 const recentsFile = (): string => join(app.getPath('userData'), 'recent-projects.json')
 
@@ -923,6 +924,8 @@ async function openFromSystem(path: string): Promise<void> {
 ipcMain.handle('i18n:set', (_e, code: unknown) => setMainLocale(code))
 // Le renderer écoute désormais : on lui remet le fichier reçu pendant le démarrage, s'il y en a un
 ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
+
+registerAiHandlers()
 
 app.whenReady().then(() => {
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)

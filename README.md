@@ -13,6 +13,7 @@
 - Recherche de photos libres de droits (Openverse, avec Wikimedia Commons en secours ; en ligne, sur demande ; la photo est copiée dans le document, crédit conservé)
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
+- **Images générées par IA** (facultatif, service en ligne avec votre propre compte) : Cloudflare Workers AI (quota gratuit quotidien) ou OpenAI ; les identifiants sont chiffrés par le système et l'image est copiée dans le document
 - Interface en **français, anglais, allemand et espagnol**, au choix en bas de la barre latérale, changement immédiat ; autres langues faciles à ajouter ([docs/I18N.md](docs/I18N.md))
 - Mode présentation plein écran (F5) : navigation clavier et souris, écran noir, lecture automatique en boucle, transitions par document ou par page (fondu, glissement, recouvrement, zoom), exportées vers PowerPoint, notes de l'orateur (touche N), pointeur laser (touche L), écran de l'orateur dans une seconde fenêtre (touche S : page suivante, notes, chronomètre)
 - Interface adaptable : panneaux latéraux et liste des pages redimensionnables (poignées, double-clic = taille par défaut) et masquables (◧ ◨, ⌘⌥1 / ⌘⌥2 / ⌘⌥3), les panneaux masqués réapparaissent au survol du bord de la fenêtre ; en fenêtre étroite ils passent automatiquement en recouvrement, et la barre d'outils reste sur une seule ligne (repli dans des menus)

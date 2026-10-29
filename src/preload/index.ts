@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
+import type { AiGenerateResult, AiProviderId, AiSize, AiStatus } from '../shared/ai'
 
 export interface RecentProject {
   path: string
@@ -87,6 +88,12 @@ const api = {
     return () => ipcRenderer.removeListener('app:open-file', listener)
   },
   /** À appeler une fois l'interface prête : retourne le fichier ouvert par le système pendant le démarrage. */
+  // ── Images générées par un service en ligne (voir main/aiIpc.ts) : les identifiants ne reviennent jamais ici ──
+  aiStatus: (): Promise<AiStatus> => ipcRenderer.invoke('ai:status'),
+  aiSave: (provider: AiProviderId, values: Record<string, string>): Promise<{ ok: true } | { ok: false; field: string }> => ipcRenderer.invoke('ai:save', provider, values),
+  aiForget: (provider: AiProviderId): Promise<void> => ipcRenderer.invoke('ai:forget', provider),
+  aiGenerate: (provider: AiProviderId, prompt: string, size: AiSize, requestId: string): Promise<AiGenerateResult> => ipcRenderer.invoke('ai:generate', provider, prompt, size, requestId),
+  aiCancel: (requestId: string): Promise<void> => ipcRenderer.invoke('ai:cancel', requestId),
   rendererReady: (): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('app:renderer-ready'),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),
   /** Contenu le plus récent du presse-papiers : éléments Trame, image, ou texte. */
