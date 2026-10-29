@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { editOutput } from '../shared/ai'
-import { buildEditRequest, buildRequest, classifyError, editImage, extractImage, generateImage, parseEditImage, sniffImageMime, type EditSource, type HttpPost } from './aiClient'
+import { buildEditRequest, buildRequest, buildTextRequest, classifyError, editImage, extractImage, extractText, generateImage, parseEditImage, sniffImageMime, writeText, type EditSource, type HttpPost } from './aiClient'
 import { buildMultipart } from './multipart'
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(200, 7)]).toString('base64')
@@ -161,5 +161,46 @@ describe('retouche guidée', () => {
     expect(parseEditImage(png, 10, 99999)).toBeNull()
     expect(parseEditImage(null, 10, 10)).toBeNull()
     expect(parseEditImage('data:image/png;base64,' + 'A'.repeat(9_000_000), 10, 10)).toBeNull()
+  })
+})
+
+describe('aide à la rédaction', () => {
+  const MSGS = [{ role: 'system' as const, content: 's' }, { role: 'user' as const, content: 'u' }]
+  it('Cloudflare : point d’accès compatible OpenAI, modèle Llama, jeton en en-tête', () => {
+    const r = buildTextRequest('cloudflare', MSGS, CF, 'https://api.cloudflare.com')
+    expect(r.url).toBe(`https://api.cloudflare.com/client/v4/accounts/${'a'.repeat(32)}/ai/v1/chat/completions`)
+    expect(r.headers.Authorization).toBe('Bearer jeton-secret')
+    expect(JSON.parse(String(r.body))).toEqual({ model: '@cf/meta/llama-3.1-8b-instruct-fp8-fast', messages: MSGS, max_tokens: 1024 })
+  })
+
+  it('OpenAI : /v1/chat/completions', () => {
+    const r = buildTextRequest('openai', MSGS, OA, 'https://api.openai.com/')
+    expect(r.url).toBe('https://api.openai.com/v1/chat/completions')
+    expect(JSON.parse(String(r.body))).toEqual({ model: 'gpt-4.1-mini', messages: MSGS, max_completion_tokens: 1024 })
+  })
+
+  it('lit le texte au format commun et au format natif de Cloudflare', () => {
+    expect(extractText({ choices: [{ message: { role: 'assistant', content: 'Bonjour' } }] })).toBe('Bonjour')
+    expect(extractText({ result: { response: 'Salut' }, success: true })).toBe('Salut')
+    expect(extractText({ choices: [{ message: { content: '   ' } }] })).toBeNull()
+    expect(extractText({ choices: [] })).toBeNull()
+    expect(extractText(null)).toBeNull()
+  })
+
+  it('writeText : texte nettoyé avec le modèle, erreurs classées, requête invalide sans appel réseau', async () => {
+    const ok = await writeText('cloudflare', 'rewrite', 'Bonjour', '', CF, { post: reply(200, { choices: [{ message: { content: '"Salut"' } }] }) })
+    expect(ok).toEqual({ ok: true, text: 'Salut', provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct-fp8-fast' })
+    expect(await writeText('openai', 'rewrite', 'x', '', OA, { post: reply(401, { error: { message: 'bad' } }) })).toMatchObject({ ok: false, error: 'auth' })
+    expect(await writeText('openai', 'rewrite', 'x', '', OA, { post: reply(200, { choices: [{ message: { content: '' } }] }) })).toMatchObject({ ok: false, error: 'unavailable' })
+    let called = false
+    const spy: HttpPost = async () => ((called = true), { status: 200, ok: true, text: async () => '{}' })
+    expect(await writeText('openai', 'translate', 'x', 'xx', OA, { post: spy })).toMatchObject({ ok: false, error: 'unavailable', detail: 'request' })
+    expect(called).toBe(false)
+  })
+
+  it('le détail d’une erreur de rédaction ne contient jamais le texte de l’utilisateur ni le jeton', async () => {
+    const r = await writeText('cloudflare', 'rewrite', 'texte confidentiel', '', CF, { post: reply(500, { errors: [{ code: 1, message: 'boom' }] }) })
+    expect(JSON.stringify(r)).not.toContain('confidentiel')
+    expect(JSON.stringify(r)).not.toContain('jeton-secret')
   })
 })

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import { providerInfo, type AiProviderId, type AiSize, type AiStatus, type EditKind } from '@shared/ai'
+import { TRANSLATE_LANGUAGES, providerInfo, type AiProviderId, type AiSize, type AiStatus, type EditKind, type WriteAction } from '@shared/ai'
 import { makeAiInfo, type AiInfo } from '@/aiImage'
 import { prepareEditSource } from '@/aiEdit'
 import { selectPage, useEditor } from '@/store/editor'
-import { t } from '@/i18n'
+import { t, useLocale } from '@/i18n'
 
 export interface AiResult {
   id: string
@@ -16,6 +16,20 @@ export interface AiResult {
   sourceId?: string
 }
 
+/** Proposition de texte de l'aide à la rédaction. */
+export interface AiDraft {
+  id: string
+  text: string
+  /** ce qui a été demandé (« Reformulé », « Traduit (Deutsch) »…), déjà traduit */
+  label: string
+  /** élément de texte d'origine, pour « Remplacer le texte » */
+  sourceId?: string
+  provider: AiProviderId
+  model: string
+}
+
+export const MAX_DRAFTS = 8
+
 /** Nombre d'images gardées dans la liste (elles pèsent plusieurs Mo chacune et disparaissent à la fermeture). */
 export const MAX_RESULTS = 12
 
@@ -26,14 +40,19 @@ export const useAi = create<{
   size: AiSize
   prompt: string
   editPrompt: string
+  writePrompt: string
+  writeLanguage: string
+  drafts: AiDraft[]
   busy: string | null
-  error: { kind: string; detail?: string; where: 'generate' | 'edit' } | null
+  error: { kind: string; detail?: string; where: 'generate' | 'edit' | 'write' } | null
   results: AiResult[]
   refresh: () => Promise<void>
-  set: (patch: Partial<{ provider: AiProviderId; size: AiSize; prompt: string; editPrompt: string }>) => void
+  set: (patch: Partial<{ provider: AiProviderId; size: AiSize; prompt: string; editPrompt: string; writePrompt: string; writeLanguage: string }>) => void
   generate: () => Promise<void>
   /** Retouche guidée (consigne) ou variante de l'image sélectionnée. */
   edit: (kind: EditKind) => Promise<void>
+  /** Aide à la rédaction sur le texte sélectionné (ou rédaction d'un texte neuf pour une demande libre sans sélection). */
+  write: (action: WriteAction) => Promise<void>
   cancel: () => void
   clearError: () => void
 }>((set, get) => ({
@@ -42,6 +61,9 @@ export const useAi = create<{
   size: 'square',
   prompt: '',
   editPrompt: '',
+  writePrompt: '',
+  writeLanguage: TRANSLATE_LANGUAGES.some((l) => l.code === useLocale.getState().locale) ? useLocale.getState().locale : 'en',
+  drafts: [],
   busy: null,
   error: null,
   results: [],
@@ -98,6 +120,27 @@ export const useAi = create<{
     const label = kind === 'variation' ? t('aie.variation.prompt') : editPrompt.trim()
     const result: AiResult = { id, dataUrl: res.dataUrl, prompt: label, info: makeAiInfo(res.provider, res.model, label, kind), kind, sourceId: el.id }
     set({ busy: null, results: [result, ...get().results].slice(0, MAX_RESULTS) })
+  },
+
+  write: async (action) => {
+    const { provider, writePrompt, writeLanguage, busy } = get()
+    const ed = useEditor.getState()
+    const el = selectPage(ed).elements.find((e) => e.id === ed.selectedIds[0])
+    const source = ed.selectedIds.length === 1 && el?.type === 'text' ? el : null
+    const text = source?.text ?? ''
+    if (busy || (action !== 'free' && !text.trim()) || (action === 'free' && !writePrompt.trim())) return
+    const id = crypto.randomUUID()
+    set({ busy: id, error: null })
+    const option = action === 'translate' ? writeLanguage : action === 'free' ? writePrompt : ''
+    const res = await window.trame.aiWrite(provider, action, text, option, id)
+    if (get().busy !== id) return // annulée entre-temps
+    if (!res.ok) {
+      set({ busy: null, error: res.error === 'cancelled' ? null : { kind: res.error, detail: res.detail, where: 'write' } })
+      return
+    }
+    const language = TRANSLATE_LANGUAGES.find((l) => l.code === writeLanguage)?.name ?? writeLanguage
+    const draft: AiDraft = { id, text: res.text, label: t(`aiw.label.${action}`, { language }), sourceId: source?.id, provider: res.provider, model: res.model }
+    set({ busy: null, drafts: [draft, ...get().drafts].slice(0, MAX_DRAFTS) })
   },
 
   cancel: () => {

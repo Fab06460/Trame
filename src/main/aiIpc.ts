@@ -1,7 +1,7 @@
 import { app, ipcMain, net, safeStorage } from 'electron'
 import { join } from 'path'
-import { MAX_AI_PROMPT, VARIATION_INSTRUCTION, isAiProvider, isAiSize, isEditKind, providerInfo, type AiGenerateResult, type AiStatus } from '../shared/ai'
-import { DEFAULT_BASES, editImage, generateImage, parseEditImage, type HttpPost } from './aiClient'
+import { MAX_AI_PROMPT, MAX_WRITE_TEXT, VARIATION_INSTRUCTION, isAiProvider, isAiSize, isEditKind, isWriteAction, providerInfo, type AiGenerateResult, type AiStatus, type AiTextResult } from '../shared/ai'
+import { DEFAULT_BASES, editImage, generateImage, parseEditImage, writeText, type HttpPost } from './aiClient'
 import { createCredentialStore, type SecretBox } from './aiCredentials'
 import { isAllowedUrl } from './photos'
 
@@ -29,7 +29,7 @@ const running = new Map<string, AbortController>()
 const post: HttpPost = (url, init) => net.fetch(url, { method: 'POST', headers: init.headers, body: init.body as string, signal: init.signal })
 
 /** Exécute une demande annulable (`ai:cancel`) avec un délai maximal, et journalise les échecs sans jamais écrire d'identifiant. */
-async function run(requestId: unknown, call: (signal: AbortSignal) => Promise<AiGenerateResult>, provider: string): Promise<AiGenerateResult> {
+async function run<T extends AiGenerateResult | AiTextResult>(requestId: unknown, call: (signal: AbortSignal) => Promise<T>, provider: string): Promise<T> {
   const cancel = new AbortController()
   const id = typeof requestId === 'string' && requestId.length <= 64 ? requestId : null
   if (id) running.set(id, cancel)
@@ -83,5 +83,16 @@ export function registerAiHandlers(): void {
     if (!isAllowedUrl(base, !!BASE_OVERRIDE)) return { ok: false, error: 'unavailable', detail: 'address refused' }
     return run(requestId, (signal) => editImage(provider, text, source, values, { base, signal, post }), provider)
   })
-}
 
+  ipcMain.handle('ai:write', async (_e, provider: unknown, action: unknown, text: unknown, option: unknown, requestId: unknown): Promise<AiTextResult> => {
+    if (!isAiProvider(provider) || !isWriteAction(action)) return { ok: false, error: 'unavailable', detail: 'service' }
+    const body = typeof text === 'string' ? text : ''
+    const opt = typeof option === 'string' ? option : ''
+    if (body.length > MAX_WRITE_TEXT || opt.length > MAX_AI_PROMPT) return { ok: false, error: 'unavailable', detail: 'request' }
+    const values = await credentials().get(provider)
+    if (!values) return { ok: false, error: 'no-credentials' }
+    const base = BASE_OVERRIDE ?? DEFAULT_BASES[provider]
+    if (!isAllowedUrl(base, !!BASE_OVERRIDE)) return { ok: false, error: 'unavailable', detail: 'address refused' }
+    return run(requestId, (signal) => writeText(provider, action, body, opt, values, { base, signal, post }), provider)
+  })
+}

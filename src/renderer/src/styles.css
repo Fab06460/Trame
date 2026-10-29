@@ -192,6 +192,10 @@ button.danger { color: #ff7b7b; }
 .choice-row em { font-style: normal; font-size: 12px; color: var(--muted); }
 .row.end { justify-content: flex-end; }
 
+.ai-excerpt { margin: 0; padding: 6px 8px; border-left: 3px solid var(--accent, #7c5cff); background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 110px; overflow: auto; }
+.ai-draft { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+.ai-draft-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 170px; overflow: auto; }
+.row.wrap { flex-wrap: wrap; }
 .ai-source { width: 100%; max-height: 90px; object-fit: contain; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
 .ai-result-card { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ai-result-card .link { font-size: 11px; padding: 0; text-align: left; }

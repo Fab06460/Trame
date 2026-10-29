@@ -35,6 +35,11 @@ export interface AiProviderInfo {
     maxInputSide: number
     costNote: MessageKey
   }
+  /** aide à la rédaction (modèle de texte) */
+  text: {
+    model: string
+    costNote: MessageKey
+  }
 }
 
 export const AI_PROVIDERS: readonly AiProviderInfo[] = [
@@ -51,7 +56,9 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     costNote: 'ai.cost.cloudflare',
     signupUrl: 'dash.cloudflare.com',
     // FLUX.2 klein 4B : « toutes les images en entrée doivent faire moins de 512×512 » (documentation Cloudflare)
-    edit: { model: 'FLUX.2 klein 4B', maxInputSide: 512, costNote: 'aie.cost.cloudflare' }
+    edit: { model: 'FLUX.2 klein 4B', maxInputSide: 512, costNote: 'aie.cost.cloudflare' },
+    // point d'accès compatible OpenAI (`/ai/v1/chat/completions`) : même format de réponse que pour OpenAI
+    text: { model: '@cf/meta/llama-3.1-8b-instruct-fp8-fast', costNote: 'aiw.cost.cloudflare' }
   },
   {
     id: 'openai',
@@ -62,7 +69,8 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     free: false,
     costNote: 'ai.cost.openai',
     signupUrl: 'platform.openai.com',
-    edit: { model: 'gpt-image-1', maxInputSide: 1024, costNote: 'aie.cost.openai' }
+    edit: { model: 'gpt-image-1', maxInputSide: 1024, costNote: 'aie.cost.openai' },
+    text: { model: 'gpt-4.1-mini', costNote: 'aiw.cost.openai' }
   }
 ]
 
@@ -144,3 +152,26 @@ export function editOutput(provider: AiProviderId, w: number, h: number): { widt
   }
   return { size: ratio >= 1.2 ? 'landscape' : ratio <= 1 / 1.2 ? 'portrait' : 'square' }
 }
+
+// ── Aide à la rédaction ──────────────────────────────────────────────────────────────────────────────────────────────
+
+export type WriteAction = 'rewrite' | 'shorten' | 'expand' | 'fix' | 'formal' | 'casual' | 'translate' | 'free'
+export const WRITE_ACTIONS: readonly WriteAction[] = ['rewrite', 'shorten', 'expand', 'fix', 'formal', 'casual', 'translate', 'free']
+export const isWriteAction = (v: unknown): v is WriteAction => WRITE_ACTIONS.includes(v as WriteAction)
+
+/** Langues proposées pour la traduction : code, nom dans la langue elle-même (affiché) et en anglais (envoyé au modèle). */
+export const TRANSLATE_LANGUAGES: ReadonlyArray<{ code: string; name: string; english: string }> = [
+  { code: 'fr', name: 'Français', english: 'French' },
+  { code: 'en', name: 'English', english: 'English' },
+  { code: 'de', name: 'Deutsch', english: 'German' },
+  { code: 'es', name: 'Español', english: 'Spanish' },
+  { code: 'it', name: 'Italiano', english: 'Italian' },
+  { code: 'pt', name: 'Português', english: 'Portuguese' }
+]
+
+/** Longueur maximale du texte envoyé (le résultat d'une demande sur un long texte coûterait cher et dépasserait la réponse permise). */
+export const MAX_WRITE_TEXT = 4000
+
+export type AiTextResult =
+  | { ok: true; text: string; provider: AiProviderId; model: string }
+  | { ok: false; error: AiErrorKind; detail?: string }

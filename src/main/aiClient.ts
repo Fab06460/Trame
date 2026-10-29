@@ -1,4 +1,5 @@
-import { MAX_EDIT_IMAGE_CHARS, editOutput, providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize } from '../shared/ai'
+import { MAX_EDIT_IMAGE_CHARS, editOutput, providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize, type AiTextResult, type WriteAction } from '../shared/ai'
+import { buildMessages, cleanOutput, type ChatMessage } from './aiWriting'
 import { buildMultipart } from './multipart'
 
 /** Réponse HTTP minimale (celle de `net.fetch`, ou d'un faux en test). */
@@ -156,8 +157,10 @@ export async function generateImage(provider: AiProviderId, prompt: string, size
   return send(provider, req, info.model, o)
 }
 
-/** Envoie une requête et lit l'image de la réponse (génération comme retouche). */
-async function send(provider: AiProviderId, req: BuiltRequest, model: string, o: GenerateOptions): Promise<AiGenerateResult> {
+type Raw = { ok: true; body: unknown } | { ok: false; error: AiErrorKind; detail?: string }
+
+/** Envoie une requête et retourne le corps JSON de la réponse, ou l'erreur classée. */
+async function sendRaw(provider: AiProviderId, req: BuiltRequest, o: GenerateOptions): Promise<Raw> {
   let res: HttpResponse
   let text: string
   try {
@@ -173,8 +176,59 @@ async function send(provider: AiProviderId, req: BuiltRequest, model: string, o:
     const error = classifyError(provider, res.status, body)
     return { ok: false, error, detail: `HTTP ${res.status}${errorText(provider, body) ? ` — ${errorText(provider, body)}`.slice(0, 300) : ''}` }
   }
-  const b64 = extractImage(provider, body)
+  return { ok: true, body }
+}
+
+/** Envoie une requête et lit l'image de la réponse (génération comme retouche). */
+async function send(provider: AiProviderId, req: BuiltRequest, model: string, o: GenerateOptions): Promise<AiGenerateResult> {
+  const raw = await sendRaw(provider, req, o)
+  if (!raw.ok) return raw
+  const b64 = extractImage(provider, raw.body)
   const mime = b64 ? sniffImageMime(b64) : null
   if (!b64 || !mime) return { ok: false, error: 'unavailable', detail: 'no image in the response' }
   return { ok: true, dataUrl: `data:${mime};base64,${b64}`, provider, model }
+}
+
+// ── Aide à la rédaction : conversation avec un modèle de texte (format « chat completions », le même chez les deux services) ──
+
+export function buildTextRequest(provider: AiProviderId, messages: ChatMessage[], values: Record<string, string>, base: string): BuiltRequest {
+  const root = base.replace(/\/+$/, '')
+  const model = providerInfo(provider).text.model
+  if (provider === 'cloudflare') {
+    return {
+      url: `${root}/client/v4/accounts/${values.account}/ai/v1/chat/completions`,
+      headers: { Authorization: `Bearer ${values.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, max_tokens: 1024 })
+    }
+  }
+  return {
+    url: `${root}/v1/chat/completions`,
+    headers: { Authorization: `Bearer ${values.key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages, max_completion_tokens: 1024 })
+  }
+}
+
+/** Texte de la réponse : `choices[0].message.content` (format commun), ou `result.response` (réponse native de Cloudflare). */
+export function extractText(body: unknown): string | null {
+  const o = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+  const first = Array.isArray(o.choices) ? o.choices[0] : null
+  const message = first && typeof first === 'object' ? (first as Record<string, unknown>).message : null
+  let content = message && typeof message === 'object' ? (message as Record<string, unknown>).content : null
+  if (content === null || content === undefined) {
+    const r = o.result && typeof o.result === 'object' ? (o.result as Record<string, unknown>) : null
+    content = r?.response ?? null
+  }
+  return typeof content === 'string' && content.trim() ? content : null
+}
+
+/** Demande un texte. Ne lève jamais. `original` : texte d'origine (pour ne pas retirer ses propres guillemets). */
+export async function writeText(provider: AiProviderId, action: WriteAction, text: string, option: string, values: Record<string, string>, o: GenerateOptions): Promise<AiTextResult> {
+  const messages = buildMessages(action, text, option)
+  if (!messages) return { ok: false, error: 'unavailable', detail: 'request' }
+  const raw = await sendRaw(provider, buildTextRequest(provider, messages, values, o.base ?? DEFAULT_BASES[provider]), o)
+  if (!raw.ok) return raw
+  const out = extractText(raw.body)
+  const cleaned = out ? cleanOutput(out, text) : ''
+  if (!cleaned) return { ok: false, error: 'unavailable', detail: 'no text in the response' }
+  return { ok: true, text: cleaned, provider, model: providerInfo(provider).text.model }
 }

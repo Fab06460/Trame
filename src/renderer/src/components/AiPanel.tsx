@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { AI_PROVIDERS, MAX_AI_PROMPT, providerInfo, type AiSize } from '@shared/ai'
+import { AI_PROVIDERS, MAX_AI_PROMPT, TRANSLATE_LANGUAGES, providerInfo, type AiSize, type WriteAction } from '@shared/ai'
+import { contentLocked, isEnforced } from '@/protection'
 import { placeResult } from '@/aiEdit'
 import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
@@ -26,6 +27,15 @@ export function AiPanel(): React.JSX.Element {
   const [form, setForm] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [inserting, setInserting] = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
+  const { writePrompt, writeLanguage, drafts } = useAi()
+  const selectedText = useEditor((s) => {
+    const el = selectPage(s).elements.find((e) => e.id === s.selectedIds[0])
+    return s.selectedIds.length === 1 && el?.type === 'text' ? el : null
+  })
+  const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
+  const hasText = !!selectedText?.text?.trim()
+  const elementsOnPage = useEditor((s) => selectPage(s).elements)
 
   useEffect(() => {
     void useAi.getState().refresh()
@@ -237,6 +247,109 @@ export function AiPanel(): React.JSX.Element {
               {error.detail && <small className="detail">{t('ai.detail', { detail: error.detail })}</small>}
             </div>
           )}
+        </section>
+      )}
+
+      {configured && !editing && (
+        <section data-ai-write>
+          <h3>{t('aiw.title')}</h3>
+          {hasText ? (
+            <blockquote className="ai-excerpt" data-ai-excerpt>{selectedText!.text!.length > 160 ? `${selectedText!.text!.slice(0, 160)}…` : selectedText!.text}</blockquote>
+          ) : (
+            <p className="hint" data-aiw-none>{t('aiw.none')}</p>
+          )}
+          {hasText && (
+            <>
+              <div className="chips">
+                {(['rewrite', 'shorten', 'expand', 'fix', 'formal', 'casual'] as const).map((a) => (
+                  <button key={a} data-ai-write={a} disabled={busy !== null} onClick={() => void useAi.getState().write(a)}>
+                    {t(`aiw.${a}`)}
+                  </button>
+                ))}
+              </div>
+              <div className="row">
+                <span className="seg-label">{t('aiw.translate')}</span>
+                <select data-field="aiWriteLanguage" value={writeLanguage} disabled={busy !== null} onChange={(e) => useAi.getState().set({ writeLanguage: e.target.value })}>
+                  {TRANSLATE_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.name}</option>
+                  ))}
+                </select>
+                <button data-ai-write="translate" disabled={busy !== null} onClick={() => void useAi.getState().write('translate')}>{t('aiw.translate.button')}</button>
+              </div>
+            </>
+          )}
+          <label>
+            {t('aiw.free')}
+            <textarea
+              className="text-field"
+              data-field="aiWritePrompt"
+              rows={3}
+              maxLength={MAX_AI_PROMPT}
+              placeholder={hasText ? t('aiw.free.selected') : t('aiw.free.new')}
+              value={writePrompt}
+              disabled={busy !== null}
+              onChange={(e) => useAi.getState().set({ writePrompt: e.target.value })}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void useAi.getState().write('free')
+              }}
+            />
+          </label>
+          <div className="row">
+            {busy ? (
+              <>
+                <button disabled data-aiw-busy>{t('aiw.working')}</button>
+                <button data-action="aiw-cancel" onClick={() => useAi.getState().cancel()}>{t('common.cancel')}</button>
+              </>
+            ) : (
+              <button className="primary" data-ai-write="free" disabled={!writePrompt.trim()} onClick={() => void useAi.getState().write('free')}>
+                {hasText ? t('aiw.free.apply') : t('aiw.free.write')}
+              </button>
+            )}
+          </div>
+          <p className="hint">{hasText ? t('aiw.sent', { service: info.name }) : t('aiw.sent.new', { service: info.name })}</p>
+          <p className="hint" data-aiw-cost>{t(info.text.costNote)}</p>
+          {error?.where === 'write' && (
+            <div className="warn" role="status" data-aiw-error={error.kind}>
+              {aiErrorMessage(error.kind, provider)}
+              {error.detail && <small className="detail">{t('ai.detail', { detail: error.detail })}</small>}
+            </div>
+          )}
+        </section>
+      )}
+
+      {drafts.length > 0 && (
+        <section data-ai-drafts>
+          <h3>{t('aiw.results')}</h3>
+          <p className="hint">{t('aiw.results.hint')}</p>
+          {drafts.map((d) => {
+            const source = d.sourceId ? elementsOnPage.find((e) => e.id === d.sourceId) : undefined
+            const locked = !!source && contentLocked(source, enforced)
+            return (
+              <div key={d.id} className="ai-draft" data-ai-draft={d.id}>
+                <strong>{d.label}</strong>
+                <div className="ai-draft-text" data-ai-draft-text>{d.text}</div>
+                <div className="row wrap">
+                  {source && (
+                    <button className="primary" data-action="ai-draft-replace" disabled={locked} title={locked ? t('aiw.replace.locked') : undefined} onClick={() => useEditor.getState().updateElement(source.id, { text: d.text })}>
+                      {t('aiw.replace')}
+                    </button>
+                  )}
+                  <button data-action="ai-draft-new" onClick={() => useEditor.getState().addElement({ type: 'text', text: d.text }, { edit: false })}>{t('aiw.insertNew')}</button>
+                  <button
+                    data-action="ai-draft-copy"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(d.text).catch(() => {})
+                      setCopied(d.id)
+                      setTimeout(() => setCopied(null), 1500)
+                    }}
+                  >
+                    {copied === d.id ? t('aiw.copied') : t('aiw.copy')}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </section>
       )}
 
