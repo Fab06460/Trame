@@ -45,7 +45,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
 | Magic Write | 🚫 Écarté | Un service en ligne par nature. Hors-ligne, seuls des modèles de langage locaux (plusieurs Go) sont possibles, avec une qualité et un poids discutables : option très tardive. **Écarté.** Reste la correction orthographique (correcteur du système macOS), qui n'est pas de l'IA générative. | H3 |
-| Magic Media / générateurs IA | 🟡 Partiel (en ligne, facultatif) | **Génération d'images** faite, avec le compte de l'utilisateur et sans aucune dépendance au reste de l'application : Cloudflare Workers AI (FLUX.1 schnell, quota gratuit quotidien) et OpenAI (`gpt-image-1`, payant, non testé contre le vrai service). Vidéos et objets 3D : non. Génération locale hors de portée (modèles de plusieurs Go, GPU). | — |
+| Magic Media / générateurs IA | 🟡 Partiel (en ligne, facultatif) | **Génération d'images** faite, avec le compte de l'utilisateur et sans aucune dépendance au reste de l'application : Cloudflare Workers AI (FLUX.1 schnell, quota gratuit quotidien) et OpenAI (`gpt-image-1`, payant, non testé contre le vrai service ; Cloudflare, lui, vérifié en vrai). Vidéos et objets 3D : non. Génération locale hors de portée (modèles de plusieurs Go, GPU). | — |
 | Magic Edit / Magic Eraser | 🚫 Écarté | **Écarté** (IA). Effacer un objet = « inpainting » ; la partie générative de Magic Edit est de toute façon en ligne. | — |
 | Magic Expand | ⛔ Hors-ligne impossible | Étendre une photo suppose de **générer** du contenu : modèle génératif distant. | — |
 | Magic Grab | 🚫 Écarté | **Écarté** (IA : segmentation d'image). | — |
