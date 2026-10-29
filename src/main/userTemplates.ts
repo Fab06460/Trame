@@ -1,3 +1,4 @@
+import { tm } from './i18n'
 /** Modèles de l'utilisateur : logique pure (les lectures/écritures de fichiers sont dans index.ts). */
 
 export const MAX_NAME = 60
@@ -22,7 +23,7 @@ export const isValidId = (id: unknown): id is string => typeof id === 'string' &
 
 export function normalizeName(raw: unknown): string {
   const name = typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim().slice(0, MAX_NAME) : ''
-  return name || 'Sans titre'
+  return name || tm('doc.untitled')
 }
 
 /** Identifiant d'un modèle intégré (ceux de templates.ts : minuscules, chiffres, tirets). */

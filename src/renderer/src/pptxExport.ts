@@ -19,7 +19,7 @@ export interface PptxExportResult {
   /** `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,…` */
   dataUrl: string
   /** éléments exportés en image (PowerPoint ne sait pas les reproduire en objet modifiable) : nombre et causes */
-  rasterized: Array<{ page: number; reason: string }>
+  rasterized: Array<{ page: number; reason: 'gradient' | 'vector' | 'imageBorder' | 'edited' | 'format' }>
 }
 
 const hex = (c: string): string => {
@@ -66,7 +66,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
     const slide = pptx.addSlide()
     slide.background = { color: hex(page.background) }
     if (page.notes) slide.addNotes(page.notes)
-    const asImage = async (el: TrameElement, reason: string): Promise<void> => {
+    const asImage = async (el: TrameElement, reason: PptxExportResult['rasterized'][number]['reason']): Promise<void> => {
       const r = await renderElementImage(el, 'full')
       if (!r) return
       slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN })
@@ -77,7 +77,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
       if (el.hidden) continue // un calque masqué n'est jamais exporté
       const transparency = Math.round((1 - el.opacity) * 100)
       if (el.type === 'rect' || el.type === 'ellipse') {
-        if (el.gradient) { await asImage(el, 'dégradé'); continue }
+        if (el.gradient) { await asImage(el, 'gradient'); continue }
         const { x, y } = centredBox(el, el.width, el.height)
         const round = el.type === 'rect' && (el.cornerRadius ?? 0) > 0
         slide.addShape(el.type === 'ellipse' ? pptx.ShapeType.ellipse : round ? pptx.ShapeType.roundRect : pptx.ShapeType.rect, {
@@ -88,12 +88,12 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
           ...(round ? { rectRadius: Math.min(el.cornerRadius!, el.width / 2, el.height / 2) * IN } : {})
         })
       } else if (el.type === 'path') {
-        await asImage(el, 'forme vectorielle')
+        await asImage(el, 'vector')
       } else if (el.type === 'image' && el.src) {
-        if (hasStroke(el) || hasShadow(el)) { await asImage(el, 'image avec contour ou ombre'); continue }
+        if (hasStroke(el) || hasShadow(el)) { await asImage(el, 'imageBorder'); continue }
         const mime = decodeDataUrl(el.src)?.mime
         // une image retouchée est cuite (recadrage, miroir, filtres) ; un format que PowerPoint ne lit pas est converti
-        if (hasImageEdits(el) || (mime !== 'image/png' && mime !== 'image/jpeg')) { await asImage({ ...el, stroke: undefined }, hasImageEdits(el) ? 'image retouchée' : 'format d\'image converti'); continue }
+        if (hasImageEdits(el) || (mime !== 'image/png' && mime !== 'image/jpeg')) { await asImage({ ...el, stroke: undefined }, hasImageEdits(el) ? 'edited' : 'format'); continue }
         const { x, y } = centredBox(el, el.width, el.height)
         slide.addImage({ data: el.src, x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation, transparency })
       } else if (el.type === 'text') {

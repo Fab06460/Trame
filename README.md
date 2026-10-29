@@ -13,6 +13,7 @@
 - Recherche de photos libres de droits (Openverse, avec Wikimedia Commons en secours ; en ligne, sur demande ; la photo est copiée dans le document, crédit conservé)
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
+- Interface en **français, anglais, allemand et espagnol**, au choix en bas de la barre latérale, changement immédiat ; autres langues faciles à ajouter ([docs/I18N.md](docs/I18N.md))
 - Mode présentation plein écran (F5) : navigation clavier et souris, écran noir, lecture automatique en boucle, transitions par document ou par page (fondu, glissement, recouvrement, zoom), exportées vers PowerPoint, notes de l'orateur (touche N), pointeur laser (touche L), écran de l'orateur dans une seconde fenêtre (touche S : page suivante, notes, chronomètre)
 - Interface adaptable : panneaux latéraux et liste des pages redimensionnables (poignées, double-clic = taille par défaut) et masquables (◧ ◨, ⌘⌥1 / ⌘⌥2 / ⌘⌥3), les panneaux masqués réapparaissent au survol du bord de la fenêtre ; en fenêtre étroite ils passent automatiquement en recouvrement, et la barre d'outils reste sur une seule ligne (repli dans des menus)
 - Notes de l'orateur par page (panneau sous le canevas), exportées et importées avec PowerPoint
@@ -118,7 +119,9 @@ src/
       fonts.ts           Polices embarquées et préchargement
       exportPages.ts     Rendu hors écran d'une page (export PNG/JPG, miniatures)
       pdfExport.ts       Export PDF vectoriel (pdfMath.ts, pdfFonts.ts, fontkit.ts)
+      i18n.ts            Langue courante, useT() et t() (voir docs/I18N.md)
       components/        Canvas, Toolbar, Sidebar, Properties, PageStrip, PageThumb
+  shared/i18n/         Cœur de la traduction et catalogues (fr, en, de, es), partagés avec le processus principal
 build/                   Icône de l'application (icon.icns, icon.png)
 scripts/make-icon.py     Génère l'icône
 scripts/smoke-test.mjs   Test de fumée de bout en bout
@@ -133,6 +136,7 @@ FEATURES.md              Notes de référence sur les fonctionnalités de Canva 
 - [Feuille de route](docs/ROADMAP.md) : fonctionnalités de Canva (`FEATURES.md`) à implémenter, triées selon le prérequis hors-ligne
 - [Architecture](docs/ARCHITECTURE.md) : processus, flux de données, store, historique, rendu
 - [Format de fichier `.trame`](docs/FILE_FORMAT.md) : schéma, versions, migration
+- [Langues de l'interface](docs/I18N.md) : traductions, ajouter une langue
 - [Packaging et distribution macOS](docs/PACKAGING.md) : build du `.dmg`, signature, notarisation, pièges
 - [Étendre l'appli](docs/EXTENDING.md) : ajouter un type d'élément, un modèle, une police, une action
 - [Limitations connues et dette technique](docs/LIMITATIONS.md) : à lire avant de modifier le code

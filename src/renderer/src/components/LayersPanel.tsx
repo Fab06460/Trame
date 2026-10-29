@@ -4,6 +4,7 @@ import { isEnforced } from '@/protection'
 import { selectPage, useEditor } from '@/store/editor'
 import { usePdfIssues } from '@/store/pdfIssues'
 import type { TrameElement } from '@/types'
+import { useT } from '@/i18n'
 
 const GLYPH: Record<TrameElement['type'], string> = { rect: '▭', ellipse: '◯', text: 'T', image: '▣', path: '★' }
 
@@ -12,6 +13,7 @@ const GLYPH: Record<TrameElement['type'], string> = { rect: '▭', ellipse: '◯
  * renommer (double-clic) et réordonner (glisser-déposer).
  */
 export function LayersPanel(): React.JSX.Element {
+  const t = useT()
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const pdfIssues = usePdfIssues((s) => s.issues)
@@ -22,7 +24,7 @@ export function LayersPanel(): React.JSX.Element {
   const [renaming, setRenaming] = useState<string | null>(null)
 
   const rows = [...page.elements].reverse()
-  if (!rows.length) return <p className="empty">Les éléments de la page apparaîtront ici, du premier plan à l'arrière-plan.</p>
+  if (!rows.length) return <p className="empty">{t('layer.empty')}</p>
 
   return (
     <ul className="layers" data-testid="layers">
@@ -56,7 +58,7 @@ export function LayersPanel(): React.JSX.Element {
           <button
             disabled={enforced && !!el.protect}
             className={`layer-flag eye${el.hidden ? ' off' : ''}`}
-            title={el.hidden ? 'Afficher' : 'Masquer (ni affiché ni exporté)'}
+            title={el.hidden ? t('layer.show') : t('layer.hide')}
             aria-pressed={!el.hidden}
             onClick={(e) => {
               e.stopPropagation()
@@ -84,17 +86,17 @@ export function LayersPanel(): React.JSX.Element {
               }}
             />
           ) : (
-            <span className="layer-name" title="Double-clic pour renommer" onDoubleClick={() => setRenaming(el.id)}>
+            <span className="layer-name" title={t('layer.rename')} onDoubleClick={() => setRenaming(el.id)}>
               {layerLabel(el)}
-              {el.groupId ? <em className="layer-tag" title="Fait partie d'un groupe"> groupe</em> : null}
-              {el.protect ? <em className="layer-protect" data-layer-protect={el.protect} title={el.protect === 'fixed' ? 'Figé par le modèle' : 'À remplir (contenu modifiable, position fixée)'}>{el.protect === 'fixed' ? '🔐' : '🏷'}</em> : null}
-              {pdfIssues[el.id] ? <em className="layer-tag warn-tag" title="Sera exporté en image dans le PDF"> ⚠</em> : null}
+              {el.groupId ? <em className="layer-tag" title={t('layer.group.title')}>{t('layer.group')}</em> : null}
+              {el.protect ? <em className="layer-protect" data-layer-protect={el.protect} title={el.protect === 'fixed' ? t('layer.protect.fixed') : t('layer.protect.fill')}>{el.protect === 'fixed' ? '🔐' : '🏷'}</em> : null}
+              {pdfIssues[el.id] ? <em className="layer-tag warn-tag" title={t('layer.pdfIssue')}> ⚠</em> : null}
             </span>
           )}
           <button
             disabled={enforced && !!el.protect}
             className={`layer-flag lock${el.locked ? ' on' : ''}`}
-            title={el.locked ? 'Déverrouiller' : 'Verrouiller la position'}
+            title={el.locked ? t('layer.unlock') : t('layer.lockPosition')}
             aria-pressed={!!el.locked}
             onClick={(e) => {
               e.stopPropagation()

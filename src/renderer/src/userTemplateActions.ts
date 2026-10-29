@@ -3,8 +3,9 @@ import { confirmUnsaved } from '@/fileActions'
 import { renderPage } from '@/exportPages'
 import { parseDocument, useEditor } from '@/store/editor'
 import { useTemplates } from '@/store/templates'
-import { TEMPLATES, cloneWithNewIds, instantiate } from '@/templates'
+import { TEMPLATES, cloneWithNewIds, instantiate, templateName } from '@/templates'
 import type { TrameDocument } from '@/types'
+import { t } from '@/i18n'
 
 const THUMBNAIL_SIZE = 320
 
@@ -31,11 +32,11 @@ export async function saveAsTemplate(name: string, opts: { replaceId?: string; b
 
 /** Crée un nouveau document à partir d'un modèle intégré. */
 export async function applyBuiltinTemplate(id: string): Promise<boolean> {
-  const t = TEMPLATES.find((x) => x.id === id)
-  if (!t || !(await confirmUnsaved('remplacer ce design par un modèle'))) return false
+  const tpl = TEMPLATES.find((x) => x.id === id)
+  if (!tpl || !(await confirmUnsaved('template'))) return false
   const { loadDocument, setTemplateOrigin } = useEditor.getState()
-  loadDocument(instantiate(t))
-  setTemplateOrigin({ kind: 'builtin', id: t.id, name: t.name })
+  loadDocument(instantiate(tpl))
+  setTemplateOrigin({ kind: 'builtin', id: tpl.id, name: templateName(tpl) })
   return true
 }
 
@@ -44,13 +45,13 @@ export async function applyUserTemplate(meta: UserTemplateMeta): Promise<boolean
   const json = await window.trame.loadUserTemplate(meta.id)
   let doc
   try {
-    if (!json) throw new Error(`Le modèle « ${meta.name} » est introuvable sur le disque.`)
+    if (!json) throw new Error(t('tpl.missingOnDisk', { name: meta.name }))
     doc = parseDocument(json)
   } catch (err) {
-    await window.trame.showError('Modèle inutilisable', err instanceof Error ? err.message : String(err))
+    await window.trame.showError(t('tpl.unusable'), err instanceof Error ? err.message : String(err))
     return false
   }
-  if (!(await confirmUnsaved('remplacer ce design par un modèle'))) return false
+  if (!(await confirmUnsaved('template'))) return false
   const { loadDocument, setTemplateOrigin } = useEditor.getState()
   loadDocument({ ...cloneWithNewIds(doc), name: meta.name })
   setTemplateOrigin({ kind: 'user', id: meta.id, name: meta.name })
@@ -67,21 +68,17 @@ export async function renameUserTemplate(meta: UserTemplateMeta, name: string): 
  * sa place. Le modèle d'origine reste rétablissable en supprimant cette version.
  */
 export async function renameBuiltinTemplate(id: string, name: string): Promise<void> {
-  const t = TEMPLATES.find((x) => x.id === id)
-  if (!t || !name.trim()) return
-  const doc = { ...instantiate(t), name: name.trim() }
-  await window.trame.saveUserTemplate(await metaOf(doc, name.trim(), t.id), JSON.stringify(doc))
+  const tpl = TEMPLATES.find((x) => x.id === id)
+  if (!tpl || !name.trim()) return
+  const doc = { ...instantiate(tpl), name: name.trim() }
+  await window.trame.saveUserTemplate(await metaOf(doc, name.trim(), tpl.id), JSON.stringify(doc))
   await useTemplates.getState().refresh()
 }
 
 /** « Supprimer » un modèle intégré : il est masqué (restaurable), jamais perdu. */
 export async function hideBuiltinTemplate(id: string): Promise<boolean> {
-  const t = TEMPLATES.find((x) => x.id === id)
-  const ok = await window.trame.confirm(
-    `Masquer le modèle « ${t?.name ?? id} » ?`,
-    'Il disparaît de la liste mais n\'est pas perdu : « Restaurer les modèles masqués » le fait réapparaître. Les designs déjà créés ne sont pas affectés.',
-    'Masquer'
-  )
+  const tpl = TEMPLATES.find((x) => x.id === id)
+  const ok = await window.trame.confirm(t('tpl.hide.confirm', { name: tpl ? templateName(tpl) : id }), t('tpl.hide.detail'), t('tpl.hide.button'))
   if (ok) {
     await window.trame.hideBuiltinTemplate(id)
     await useTemplates.getState().refresh()
@@ -98,11 +95,9 @@ export async function restoreHiddenTemplates(): Promise<void> {
 export async function deleteUserTemplate(meta: UserTemplateMeta): Promise<boolean> {
   const builtin = meta.basedOn ? TEMPLATES.find((t) => t.id === meta.basedOn) : undefined
   const ok = await window.trame.confirm(
-    builtin ? `Rétablir le modèle d'origine « ${builtin.name} » ?` : `Supprimer le modèle « ${meta.name} » ?`,
-    builtin
-      ? 'Votre version personnalisée sera supprimée et le modèle d\'origine reviendra dans la liste. Cette action est définitive.'
-      : 'Cette action est définitive. Les designs déjà créés à partir de ce modèle ne sont pas affectés.',
-    builtin ? 'Rétablir' : 'Supprimer'
+    builtin ? t('tpl.restore.confirm', { name: templateName(builtin) }) : t('tpl.delete.confirm', { name: meta.name }),
+    builtin ? t('tpl.restore.detail') : t('tpl.delete.detail'),
+    builtin ? t('tpl.restore.button') : t('tpl.delete.button')
   )
   if (ok) {
     await window.trame.deleteUserTemplate(meta.id)

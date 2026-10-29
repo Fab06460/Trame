@@ -17,6 +17,7 @@ import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
 import type { Guide, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
+import { t } from '@/i18n'
 
 const HISTORY_LIMIT = 100
 
@@ -24,7 +25,7 @@ const blankPage = (): TramePage => ({ id: nanoid(8), background: '#ffffff', elem
 
 const blankDoc = (): TrameDocument => ({
   version: 2,
-  name: 'Sans titre',
+  name: t('doc.untitled'),
   width: 1080,
   height: 1080,
   pages: [blankPage()]
@@ -54,25 +55,25 @@ export function isElement(e: any): e is TrameElement {
  * Vérifie la structure (pas la cohérence visuelle) : suffisant pour ne jamais planter l'éditeur.
  */
 export function parseDocument(json: string): TrameDocument {
-  const invalid = (detail: string): Error => new Error(`Ce fichier n'est pas un projet Trame valide (${detail}).`)
+  const invalid = (detail: string): Error => new Error(t('file.invalid', { detail }))
   let raw: any
   try {
     raw = JSON.parse(json)
   } catch {
-    throw invalid('JSON illisible')
+    throw invalid(t('file.invalid.json'))
   }
-  if (!raw || typeof raw !== 'object') throw invalid('contenu inattendu')
+  if (!raw || typeof raw !== 'object') throw invalid(t('file.invalid.content'))
   if (raw.version !== 1 && raw.version !== 2) {
     throw isNum(raw.version) && raw.version > 2
-      ? new Error('Ce projet a été créé avec une version plus récente de Trame. Mettez Trame à jour pour l’ouvrir.')
-      : invalid('version inconnue')
+      ? new Error(t('file.newer'))
+      : invalid(t('file.invalid.version'))
   }
   const doc = migrateDocument(raw)
-  if (!isNum(doc.width) || !isNum(doc.height) || doc.width <= 0 || doc.height <= 0) throw invalid('dimensions')
-  if (!Array.isArray(doc.pages) || doc.pages.length === 0) throw invalid('aucune page')
+  if (!isNum(doc.width) || !isNum(doc.height) || doc.width <= 0 || doc.height <= 0) throw invalid(t('file.invalid.size'))
+  if (!Array.isArray(doc.pages) || doc.pages.length === 0) throw invalid(t('file.invalid.noPage'))
   for (const page of doc.pages) {
     if (typeof page?.id !== 'string' || typeof page.background !== 'string' || !Array.isArray(page.elements))
-      throw invalid('page malformée')
+      throw invalid(t('file.invalid.page'))
     // repères : optionnels ; une entrée invalide est ignorée plutôt que de refuser tout le fichier
     if (page.guides !== undefined) {
       const ok = (Array.isArray(page.guides) ? page.guides : []).filter(isGuide)
@@ -86,8 +87,8 @@ export function parseDocument(json: string): TrameDocument {
       else delete page.transition
     }
     for (const e of page.elements) {
-      if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid('élément inconnu')
-      if (!isElement(e)) throw invalid('élément mal positionné')
+      if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid(t('file.invalid.element'))
+      if (!isElement(e)) throw invalid(t('file.invalid.position'))
       // indicateurs de calque : seules les valeurs attendues sont retenues (un « locked: "oui" » ne doit rien verrouiller)
       sanitizeTextStyle(e)
       sanitizeStroke(e)
@@ -209,7 +210,7 @@ const defaults: Record<TrameElement['type'], Partial<TrameElement>> = {
     width: 500,
     height: 80,
     fill: '#1e1f24',
-    text: 'Votre texte',
+    text: '', // remplacé à la création par le texte par défaut de la langue courante (voir addElement)
     fontSize: 64,
     fontFamily: '"Inter", sans-serif',
     fontStyle: 'bold',
@@ -414,6 +415,7 @@ export const useEditor = create<EditorState>((set, get) => {
         width,
         height
       }
+      if (el.type === 'text' && partial.text === undefined) el.text = t('el.defaultText')
       set({
         ...snapshot(),
         doc: mapPage((p) => ({ ...p, elements: [...p.elements, el] })),

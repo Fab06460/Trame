@@ -96,5 +96,6 @@
 - `Canvas.tsx` concentre beaucoup de responsabilités (rendu, drag, transformation, lasso, édition de texte) : candidat au découpage.
 - Les modèles de départ sont codés en dur dans `templates.ts` ; les modèles personnels n'ont ni import ni export.
 - Les versions de dépendances sont très récentes (TypeScript 7, Vite 8, Electron 45, React 19) : lire les notes de version avant toute montée de version majeure. Exemple déjà rencontré : TypeScript 7 refuse l'option `baseUrl` (les alias passent par `paths` avec des chemins relatifs).
-- Accessibilité et internationalisation : textes de l'interface en français, directement dans les composants (pas de couche i18n) ; pas de navigation clavier complète ni de support lecteur d'écran sur le canvas.
+- Internationalisation : interface en français, anglais, allemand et espagnol (voir [I18N.md](I18N.md)) ; les traductions anglaise, allemande et espagnole n'ont pas été relues par des locuteurs natifs ; langues écrites de droite à gauche non gérées (pas de mise en page miroir) ; menus du système (menu de l'application, menu contextuel) dans la langue du système ; documentation en français.
+- Accessibilité : pas de navigation clavier complète ni de support lecteur d'écran sur le canvas.
 - `FEATURES.md` est un document de recherche sur Canva, pas une spécification validée.

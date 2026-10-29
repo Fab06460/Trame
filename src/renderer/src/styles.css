@@ -56,6 +56,8 @@ button.danger { color: #ff7b7b; }
 .page-actions button { padding: 0 6px; font-size: 11px; background: none; border: none; }
 .add-page { width: 56px; height: 56px; font-size: 22px; align-self: center; flex: none; }
 .sidebar { width: 100%; flex: none; background: var(--panel); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.sidebar-footer { margin-top: auto; position: sticky; bottom: -12px; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 8px 0 4px; background: var(--panel); color: var(--muted); font-size: 12px; }
+.sidebar-footer select { flex: 1; min-width: 0; }
 .sidebar h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .tabs button { min-width: 0; padding: 5px 2px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

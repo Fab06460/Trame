@@ -39,13 +39,13 @@ describe('checkText', () => {
 
   it('police système ou inconnue', async () => {
     expect(await checkText(el({ fontFamily: 'Helvetica Neue, Arial, sans-serif' }), withFont)).toEqual({
-      reason: 'unknown-font', family: 'Helvetica Neue', variantLabel: undefined
+      reason: 'unknown-font', family: 'Helvetica Neue', variantStyle: undefined
     })
   })
 
   it('variante absente', async () => {
     expect(await checkText(el({ fontFamily: '"Bebas Neue", sans-serif', fontStyle: 'bold' }), withFont)).toMatchObject({
-      reason: 'missing-variant', family: 'Bebas Neue', variantLabel: 'gras'
+      reason: 'missing-variant', family: 'Bebas Neue', variantStyle: 'bold'
     })
   })
 
@@ -72,13 +72,13 @@ describe('suggestFix', () => {
   })
 
   it('gras absent → on retire le gras', () => {
-    const fix = suggestFix(el({ fontFamily: '"Bebas Neue", sans-serif', fontStyle: 'bold' }), { reason: 'missing-variant', family: 'Bebas Neue', variantLabel: 'gras' })!
+    const fix = suggestFix(el({ fontFamily: '"Bebas Neue", sans-serif', fontStyle: 'bold' }), { reason: 'missing-variant', family: 'Bebas Neue', variantStyle: 'bold' })!
     expect(fix.patch).toEqual({ fontStyle: 'normal' })
     expect(fix.label).toBe('Retirer gras et italique')
   })
 
   it('italique absent mais gras disponible → on garde le gras', () => {
-    const fix = suggestFix(el({ fontFamily: '"Oswald", sans-serif', fontStyle: 'italic bold' }), { reason: 'missing-variant', family: 'Oswald', variantLabel: 'gras italique' })!
+    const fix = suggestFix(el({ fontFamily: '"Oswald", sans-serif', fontStyle: 'italic bold' }), { reason: 'missing-variant', family: 'Oswald', variantStyle: 'bold italic' })!
     expect(fix.patch).toEqual({ fontStyle: 'bold' })
     expect(fix.label).toBe('Utiliser le style gras')
   })

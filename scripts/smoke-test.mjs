@@ -122,7 +122,7 @@ const photoServer = createServer((req, res) => {
   res.writeHead(404); res.end()
 })
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
-const env = { ...process.env, TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
+const env = { ...process.env, TRAME_LANG: 'fr', TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_THROTTLE ? [] : ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling']), ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
@@ -857,7 +857,7 @@ try {
   check('« Rétablir l\'image entière » rend la moitié rouge', isRed(pngPixel(png, ...L)) && isBlue(pngPixel(png, ...R)) && (await field('cropLeft')) === 0)
 
   // filtres : noir et blanc → rouge et bleu deviennent des gris (R = V = B)
-  await clickSel('.panel [data-preset="Noir & blanc"]')
+  await clickSel('.panel [data-preset="bw"]')
   await sleep(500)
   png = await exportPng()
   const gl = pngPixel(png, ...L), gr = pngPixel(png, ...R)
@@ -2296,6 +2296,30 @@ try {
   } else {
     console.log('- ouverture depuis le Finder (appli ouverte) : ignorée (macOS, aucune autre instance d\'Electron)')
   }
+
+  // langue de l'interface : changement immédiat depuis le sélecteur 🌐 de la barre latérale, mémorisé, sans toucher au document
+  await reloadApp()
+  const uiText = () => run(`[...document.querySelectorAll('header.toolbar button')].map((b) => b.textContent).join('|') + '#' + [...document.querySelectorAll('.sidebar .tabs button')].map((b) => b.textContent).join('|')`)
+  const setLanguage = async (code) => {
+    const ok = await run(`(() => { const s = document.querySelector('[data-field="language"]'); if (!s) return false; Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(code)}); s.dispatchEvent(new Event('change', { bubbles: true })); return true })()`)
+    await sleep(400)
+    return ok
+  }
+  check('langue : français au lancement (TRAME_LANG=fr)', (await uiText()).includes('Enregistrer') && (await run('document.documentElement.lang')) === 'fr')
+  check('langue : le sélecteur propose les quatre langues, chacune dans son nom', JSON.stringify(await run(`[...document.querySelectorAll('[data-field="language"] option')].map((o) => o.textContent)`)) === JSON.stringify(['Français', 'English', 'Deutsch', 'Español']))
+  for (const [code, save, present, tab] of [['en', 'Save', 'Present', 'Templates'], ['de', 'Speichern', 'Präsentieren', 'Vorlagen'], ['es', 'Guardar', 'Presentar', 'Plantillas'], ['fr', 'Enregistrer', 'Présenter', 'Modèles']]) {
+    check(`langue ${code} : choisie depuis le sélecteur`, await setLanguage(code))
+    const ui = await uiText()
+    check(`langue ${code} : barre d'outils et onglets traduits sans recharger`, ui.includes(save) && ui.includes(present) && ui.includes(tab) && (code === 'fr' || !ui.includes('Enregistrer')), ui)
+    check(`langue ${code} : attribut lang du document et choix mémorisé`, (await run('document.documentElement.lang')) === code && (await run(`localStorage.getItem('trame.lang')`)) === code)
+  }
+  await setLanguage('en')
+  await clickSel('header.toolbar button.primary')
+  await sleep(200)
+  check("langue en : les menus et les messages construits sont traduits", (await run(`document.querySelector('.export-popup')?.innerText ?? ''`)).includes('Several pages'))
+  await key('Escape')
+  await setLanguage('fr')
+  check('langue : retour au français (document inchangé : aucune modification déclenchée)', (await uiText()).includes('Enregistrer') && !(await run(`document.title`)).includes('•'))
 
   // sortie avec modifications non enregistrées (régression : l'appli restait ouverte sans fenêtre)
   if (process.platform === 'darwin') {

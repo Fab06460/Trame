@@ -1,11 +1,13 @@
 import type { TrameElement } from '@/types'
+import { t } from '@/i18n'
+import type { MessageKey } from '@shared/i18n'
 
-const TYPE_LABEL: Record<TrameElement['type'], string> = {
-  rect: 'Rectangle',
-  ellipse: 'Ellipse',
-  text: 'Texte',
-  image: 'Image',
-  path: 'Forme'
+const TYPE_LABEL: Record<TrameElement['type'], MessageKey> = {
+  rect: 'layer.type.rect',
+  ellipse: 'layer.type.ellipse',
+  text: 'layer.type.text',
+  image: 'layer.type.image',
+  path: 'layer.type.path'
 }
 
 const MAX_LABEL = 28
@@ -18,7 +20,7 @@ export function layerLabel(el: Pick<TrameElement, 'type' | 'name' | 'text'>): st
     const flat = (el.text ?? '').replace(/\s+/g, ' ').trim()
     if (flat) return flat.length > MAX_LABEL ? `${flat.slice(0, MAX_LABEL - 1)}…` : flat
   }
-  return TYPE_LABEL[el.type]
+  return t(TYPE_LABEL[el.type])
 }
 
 /**

@@ -16,8 +16,8 @@ export type FontDiagnosis =
       reason: 'unknown-font' | 'missing-variant'
       /** nom de la famille demandée */
       family: string
-      /** pour `missing-variant` : « gras », « italique » ou « gras italique » */
-      variantLabel?: string
+      /** pour `missing-variant` : le style demandé que la famille ne possède pas */
+      variantStyle?: 'bold' | 'italic' | 'bold italic'
     }
 
 /**
@@ -27,13 +27,13 @@ export type FontDiagnosis =
 export function diagnoseFont(fontFamily: string | undefined, fontStyle: string | undefined): FontDiagnosis {
   const name = /^\s*["']?([^"',]+?)["']?\s*(?:,|$)/.exec(fontFamily ?? '')?.[1]
   const def = allFonts().find((f) => f.name === name)
-  if (!def) return { ok: false, reason: 'unknown-font', family: name ?? 'inconnue' }
+  if (!def) return { ok: false, reason: 'unknown-font', family: name ?? '' }
   const style = fontStyle ?? ''
   const bold = style.includes('bold')
   const italic = style.includes('italic')
   const variant = `${bold ? '700' : '400'}${italic ? '-italic' : ''}`
   if (!def.variants.includes(variant)) {
-    return { ok: false, reason: 'missing-variant', family: def.name, variantLabel: [bold && 'gras', italic && 'italique'].filter(Boolean).join(' ') }
+    return { ok: false, reason: 'missing-variant', family: def.name, variantStyle: bold && italic ? 'bold italic' : bold ? 'bold' : 'italic' }
   }
   return { ok: true, choice: { def, variant, file: `${def.slug}-latin-${variant.replace('-italic', '')}-${italic ? 'italic' : 'normal'}.woff` } }
 }

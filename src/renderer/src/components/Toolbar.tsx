@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useT } from '@/i18n'
 import { useLayout } from '@/store/layout'
 import { fitStep, type FitState } from '@/toolbarFit'
 import { DropMenu } from './DropMenu'
@@ -14,6 +15,7 @@ import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
 
 export function Toolbar(): React.JSX.Element {
+  const t = useT()
   const { addElement, undo, redo } = useEditor.getState()
   const dirty = useEditor((s) => s.dirty)
   const canUndo = useEditor((s) => s.past.length > 0)
@@ -48,7 +50,7 @@ export function Toolbar(): React.JSX.Element {
     return () => ro.disconnect()
   }, [])
 
-  const save = <button onClick={() => saveProject()} title="Enregistrer (⌘S)">Enregistrer{dirty ? ' •' : ''}</button>
+  const save = <button onClick={() => saveProject()} title={t('toolbar.save.title')}>{t('toolbar.save')}{dirty ? ' •' : ''}</button>
 
   return (
     <header className="toolbar" ref={bar} data-tier={tier} data-doc={name}>
@@ -56,58 +58,58 @@ export function Toolbar(): React.JSX.Element {
       <PanelToggle side="left" />
       {tier < 2 ? (
         <>
-          <button onClick={newProject} title="Nouveau (⌘N)">Nouveau</button>
-          <button onClick={openProject} title="Ouvrir (⌘O)">Ouvrir</button>
+          <button onClick={newProject} title={t('toolbar.new.title')}>{t('toolbar.new')}</button>
+          <button onClick={openProject} title={t('toolbar.open.title')}>{t('toolbar.open')}</button>
           <ImportMenu />
           <span className="sep" />
           {save}
-          <button onClick={() => saveProject(true)} title="Enregistrer sous (⇧⌘S)">Enregistrer sous…</button>
+          <button onClick={() => saveProject(true)} title={t('toolbar.saveAs.title')}>{t('toolbar.saveAs')}</button>
         </>
       ) : (
         <>
           <DropMenu
             name="file"
-            label="Fichier"
-            title="Nouveau, Ouvrir, Importer, Enregistrer sous"
+            label={t('toolbar.file')}
+            title={t('toolbar.file.title')}
             items={[
-              { key: 'new', label: 'Nouveau', hint: '⌘N', onSelect: newProject },
-              { key: 'open', label: 'Ouvrir…', hint: '⌘O', onSelect: openProject },
-              { key: 'import-pdf', label: 'Importer un PDF…', onSelect: startPdfImport },
-              { key: 'import-pptx', label: 'Importer un PowerPoint…', onSelect: importPptxFile },
-              { key: 'save-as', label: 'Enregistrer sous…', hint: '⇧⌘S', onSelect: () => saveProject(true) }
+              { key: 'new', label: t('toolbar.new'), hint: '⌘N', onSelect: newProject },
+              { key: 'open', label: t('toolbar.open.dots'), hint: '⌘O', onSelect: openProject },
+              { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
+              { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
+              { key: 'save-as', label: t('toolbar.saveAs'), hint: '⇧⌘S', onSelect: () => saveProject(true) }
             ]}
           />
           {save}
         </>
       )}
       <span className="sep" />
-      <button disabled={!canUndo} onClick={undo} title="Annuler (⌘Z)">↩︎</button>
-      <button disabled={!canRedo} onClick={redo} title="Rétablir (⇧⌘Z)">↪︎</button>
-      <button onClick={() => useFind.getState().show()} title="Rechercher et remplacer dans les textes (⌘F)" aria-label="Rechercher et remplacer">🔍︎</button>
+      <button disabled={!canUndo} onClick={undo} title={t('toolbar.undo.title')}>↩︎</button>
+      <button disabled={!canRedo} onClick={redo} title={t('toolbar.redo.title')}>↪︎</button>
+      <button onClick={() => useFind.getState().show()} title={t('toolbar.find.title')} aria-label={t('toolbar.find.label')}>🔍︎</button>
       <span className="sep" />
       {tier < 1 ? (
         <>
-          <button onClick={() => addElement({ type: 'text' }, { edit: true })}>Texte</button>
-          <button onClick={() => addElement({ type: 'rect' })}>Rectangle</button>
-          <button onClick={() => addElement({ type: 'ellipse' })}>Ellipse</button>
-          <button onClick={addImage}>Image</button>
+          <button onClick={() => addElement({ type: 'text' }, { edit: true })}>{t('toolbar.text')}</button>
+          <button onClick={() => addElement({ type: 'rect' })}>{t('toolbar.rect')}</button>
+          <button onClick={() => addElement({ type: 'ellipse' })}>{t('toolbar.ellipse')}</button>
+          <button onClick={addImage}>{t('toolbar.image')}</button>
         </>
       ) : (
         <DropMenu
           name="add"
-          label="Ajouter"
-          title="Ajouter un texte, une forme ou une image"
+          label={t('toolbar.add')}
+          title={t('toolbar.add.title')}
           items={[
-            { key: 'text', label: 'Texte', onSelect: () => addElement({ type: 'text' }, { edit: true }) },
-            { key: 'rect', label: 'Rectangle', onSelect: () => addElement({ type: 'rect' }) },
-            { key: 'ellipse', label: 'Ellipse', onSelect: () => addElement({ type: 'ellipse' }) },
-            { key: 'image', label: 'Image…', onSelect: addImage }
+            { key: 'text', label: t('toolbar.text'), onSelect: () => addElement({ type: 'text' }, { edit: true }) },
+            { key: 'rect', label: t('toolbar.rect'), onSelect: () => addElement({ type: 'rect' }) },
+            { key: 'ellipse', label: t('toolbar.ellipse'), onSelect: () => addElement({ type: 'ellipse' }) },
+            { key: 'image', label: t('toolbar.image.dots'), onSelect: addImage }
           ]}
         />
       )}
       <span className="spacer" />
       {tier < 3 && <DocName />}
-      <button onClick={() => usePresentation.getState().start()} title="Présenter en plein écran depuis la page courante (F5)" aria-label="Présenter">{tier < 4 ? '▶ Présenter' : '▶'}</button>
+      <button onClick={() => usePresentation.getState().start()} title={t('toolbar.present.title')} aria-label={t('toolbar.present')}>{tier < 4 ? `▶ ${t('toolbar.present')}` : '▶'}</button>
       <ExportMenu />
       <PanelToggle side="right" />
     </header>
@@ -116,16 +118,17 @@ export function Toolbar(): React.JSX.Element {
 
 /** Bouton qui masque / affiche un panneau latéral (en fenêtre étroite : l'ouvre en recouvrement). */
 function PanelToggle({ side }: { side: 'left' | 'right' }): React.JSX.Element {
+  const t = useT()
   const compact = useLayout((s) => s.compact)
   const visible = useLayout((s) => (compact ? s.overlay === side : side === 'left' ? s.leftOpen : s.rightOpen))
-  const name = side === 'left' ? 'de gauche (modèles, photos, marque…)' : 'de droite (propriétés)'
+  const label = t(`toolbar.${side}Panel.${visible ? 'hide' : 'show'}`)
   return (
     <button
       className="panel-toggle"
       data-panel-toggle={side}
       aria-pressed={visible}
-      aria-label={`${visible ? 'Masquer' : 'Afficher'} le panneau ${name}`}
-      title={`${visible ? 'Masquer' : 'Afficher'} le panneau ${name} (⌘⌥${side === 'left' ? 1 : 2})`}
+      aria-label={label}
+      title={`${label} (⌘⌥${side === 'left' ? 1 : 2})`}
       onClick={() => useLayout.getState().toggle(side)}
     >
       {side === 'left' ? '◧' : '◨'}

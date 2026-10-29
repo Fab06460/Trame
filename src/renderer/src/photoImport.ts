@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 /** Plus grand côté d'une photo insérée : au-delà, elle est réduite (un document n'a pas besoin d'une image de 6 000 px). */
 export const MAX_PHOTO_SIDE = 2400
 
@@ -5,7 +6,7 @@ const load = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Image illisible'))
+    img.onerror = () => reject(new Error(t('imp.imageUnreadable')))
     img.src = src
   })
 

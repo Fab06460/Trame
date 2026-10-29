@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { applyUserTemplate, deleteUserTemplate, renameUserTemplate, saveAsTemplate } from '@/userTemplateActions'
 import { useEditor } from '@/store/editor'
 import { useTemplates } from '@/store/templates'
-import { TEMPLATES } from '@/templates'
+import { TEMPLATES, templateName } from '@/templates'
 import { TemplateCard } from './TemplateCard'
+import { isUntitledName, useT } from '@/i18n'
 
 /** Section « Mes modèles » : enregistrer le design actuel (ou remplacer le modèle dont il vient), réutiliser, renommer, supprimer. */
 export function UserTemplates(): React.JSX.Element {
+  const t = useT()
   const items = useTemplates((s) => s.user)
   const refresh = useTemplates((s) => s.refresh)
   const [naming, setNaming] = useState(false)
@@ -23,7 +25,7 @@ export function UserTemplates(): React.JSX.Element {
 
   // Le document vient-il d'un modèle qu'on peut encore remplacer ?
   const replaceable =
-    origin && (origin.kind === 'user' ? items.some((t) => t.id === origin.id) : !items.some((t) => t.basedOn === origin.id) && TEMPLATES.some((t) => t.id === origin.id))
+    origin && (origin.kind === 'user' ? items.some((u) => u.id === origin.id) : !items.some((u) => u.basedOn === origin.id) && TEMPLATES.some((tpl) => tpl.id === origin.id))
       ? origin
       : null
 
@@ -39,7 +41,7 @@ export function UserTemplates(): React.JSX.Element {
 
   return (
     <section>
-      <h3>Mes modèles</h3>
+      <h3>{t('tpl.mine')}</h3>
 
       {naming ? (
         <form
@@ -52,14 +54,14 @@ export function UserTemplates(): React.JSX.Element {
           {replaceable && (
             <fieldset className="choice">
               <label>
-                <input type="radio" name="tpl-mode" checked={!replace} onChange={() => { setReplace(false); setName(docName === 'Sans titre' ? '' : docName) }} />
-                Nouveau modèle
+                <input type="radio" name="tpl-mode" checked={!replace} onChange={() => { setReplace(false); setName(isUntitledName(docName) ? '' : docName) }} />
+                {t('tpl.new')}
               </label>
               <label>
                 <input type="radio" name="tpl-mode" checked={replace} onChange={() => { setReplace(true); setName(replaceable.name) }} />
                 <span>
-                  Remplacer « {replaceable.name} »
-                  {replaceable.kind === 'builtin' ? <small> — l'original pourra être rétabli</small> : null}
+                  {t('tpl.replace', { name: replaceable.name })}
+                  {replaceable.kind === 'builtin' ? <small>{t('tpl.replace.note')}</small> : null}
                 </span>
               </label>
             </fieldset>
@@ -69,7 +71,7 @@ export function UserTemplates(): React.JSX.Element {
             autoFocus
             value={name}
             maxLength={60}
-            placeholder="Nom du modèle"
+            placeholder={t('tpl.name.placeholder')}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
               e.stopPropagation() // ne pas déclencher les raccourcis de l'éditeur pendant la saisie
@@ -77,45 +79,45 @@ export function UserTemplates(): React.JSX.Element {
             }}
           />
           <div className="row">
-            <button type="submit" className="primary" disabled={busy || !name.trim()}>{replace && replaceable ? 'Remplacer' : 'Enregistrer'}</button>
-            <button type="button" onClick={() => setNaming(false)}>Annuler</button>
+            <button type="submit" className="primary" disabled={busy || !name.trim()}>{replace && replaceable ? t('tpl.replace.button') : t('tpl.save.button')}</button>
+            <button type="button" onClick={() => setNaming(false)}>{t('common.cancel')}</button>
           </div>
         </form>
       ) : (
         <button
           className="wide"
           disabled={isEmpty}
-          title={isEmpty ? 'Ajoutez d’abord des éléments à votre design' : 'Conserver ce design (toutes les pages) comme modèle'}
+          title={isEmpty ? t('tpl.saveAs.empty') : t('tpl.saveAs.title')}
           onClick={() => {
             setReplace(false) // par défaut on ne remplace rien : choix explicite
-            setName(docName === 'Sans titre' ? '' : docName)
+            setName(isUntitledName(docName) ? '' : docName)
             setNaming(true)
           }}
         >
-          ＋ Enregistrer ce design comme modèle
+          {t('tpl.saveAs')}
         </button>
       )}
 
       {items.length === 0 ? (
-        <p className="empty">Vos modèles apparaîtront ici.</p>
+        <p className="empty">{t('tpl.mine.empty')}</p>
       ) : (
         <div className="grid">
-          {items.map((t) => {
-            const builtin = t.basedOn ? TEMPLATES.find((b) => b.id === t.basedOn) : undefined
+          {items.map((u) => {
+            const builtin = u.basedOn ? TEMPLATES.find((b) => b.id === u.basedOn) : undefined
             return (
               <TemplateCard
-                key={t.id}
-                id={t.id}
+                key={u.id}
+                id={u.id}
                 kind="user"
-                name={t.name}
-                suffix={t.pageCount > 1 ? ` · ${t.pageCount} p.` : undefined}
-                thumb={<img src={t.thumbnail} alt="" draggable={false} />}
-                badge={builtin ? 'personnalisé' : undefined}
-                onOpen={() => void applyUserTemplate(t)}
-                onRename={(n) => void renameUserTemplate(t, n)}
-                onRemove={() => void deleteUserTemplate(t)}
-                renameTitle="Renommer ce modèle"
-                removeTitle={builtin ? `Rétablir le modèle d'origine « ${builtin.name} »` : 'Supprimer ce modèle'}
+                name={u.name}
+                suffix={u.pageCount > 1 ? t('tpl.pagesSuffix', { count: u.pageCount }) : undefined}
+                thumb={<img src={u.thumbnail} alt="" draggable={false} />}
+                badge={builtin ? t('tpl.badge.custom') : undefined}
+                onOpen={() => void applyUserTemplate(u)}
+                onRename={(n) => void renameUserTemplate(u, n)}
+                onRemove={() => void deleteUserTemplate(u)}
+                renameTitle={t('tpl.rename.user')}
+                removeTitle={builtin ? t('tpl.restoreOriginal.title', { name: templateName(builtin) }) : t('tpl.delete.title')}
                 removeIcon={builtin ? '↺' : '✕'}
               />
             )

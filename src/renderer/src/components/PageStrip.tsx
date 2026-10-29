@@ -4,8 +4,10 @@ import { PageThumb } from './PageThumb'
 import { Splitter } from './Splitter'
 import { useLayout } from '@/store/layout'
 import { stripHeight, thumbBox } from '@/layout'
+import { useT } from '@/i18n'
 
 export function PageStrip(): React.JSX.Element {
+  const t = useT()
   const doc = useEditor((s) => s.doc)
   const pageId = useEditor((s) => s.pageId)
   const { setPage, addPage, duplicatePage, removePage, movePage } = useEditor.getState()
@@ -24,9 +26,9 @@ export function PageStrip(): React.JSX.Element {
           data-strip-toggle
           aria-expanded={open}
           onClick={() => useLayout.getState().toggleStrip()}
-          title={`${open ? 'Masquer' : 'Afficher'} la liste des pages (⌘⌥3)`}
+          title={open ? t('strip.toggle.hide') : t('strip.toggle.show')}
         >
-          {open ? '▾' : '▴'} Pages ({doc.pages.length})
+          {open ? '▾' : '▴'} {t('strip.pages', { count: doc.pages.length })}
         </button>
       </div>
       {open && (
@@ -56,9 +58,9 @@ export function PageStrip(): React.JSX.Element {
           <div className="page-meta">
             <span>{i + 1}</span>
             <span className="page-actions">
-              <button title="Dupliquer la page" onClick={(e) => { e.stopPropagation(); duplicatePage(p.id) }}>⧉</button>
+              <button title={t('strip.duplicate')} onClick={(e) => { e.stopPropagation(); duplicatePage(p.id) }}>⧉</button>
               <button
-                title="Supprimer la page"
+                title={t('strip.delete')}
                 disabled={doc.pages.length <= 1}
                 onClick={(e) => { e.stopPropagation(); removePage(p.id) }}
               >
@@ -68,7 +70,7 @@ export function PageStrip(): React.JSX.Element {
           </div>
         </div>
       ))}
-      <button className="add-page" onClick={addPage} title="Ajouter une page">＋</button>
+      <button className="add-page" onClick={addPage} title={t('strip.add')}>＋</button>
     </footer>
       )}
     </>

@@ -15,13 +15,13 @@ export type FilterKey = keyof typeof FILTER_LIMITS
 export const MIN_CROP = 0.05
 
 /** Réglages prédéfinis (boutons « Filtres ») ; chacun remplace l'ensemble des réglages. */
-export const FILTER_PRESETS: { name: string; filters: ImageFilters }[] = [
-  { name: 'Aucun', filters: {} },
-  { name: 'Noir & blanc', filters: { grayscale: 100, contrast: 10 } },
-  { name: 'Sépia', filters: { sepia: 80, contrast: 5 } },
-  { name: 'Vif', filters: { saturation: 40, contrast: 15 } },
-  { name: 'Fané', filters: { saturation: -35, contrast: -15, brightness: 10 } },
-  { name: 'Contrasté', filters: { contrast: 40, brightness: -5 } }
+export const FILTER_PRESETS: { id: 'none' | 'bw' | 'sepia' | 'vivid' | 'faded' | 'contrast'; filters: ImageFilters }[] = [
+  { id: 'none', filters: {} },
+  { id: 'bw', filters: { grayscale: 100, contrast: 10 } },
+  { id: 'sepia', filters: { sepia: 80, contrast: 5 } },
+  { id: 'vivid', filters: { saturation: 40, contrast: 15 } },
+  { id: 'faded', filters: { saturation: -35, contrast: -15, brightness: 10 } },
+  { id: 'contrast', filters: { contrast: 40, brightness: -5 } }
 ]
 
 const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v))

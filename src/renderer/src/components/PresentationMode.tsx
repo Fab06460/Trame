@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LaserPointer } from '@/components/LaserPointer'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
-import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, type PageTransition } from '@/transition'
+import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, transitionLabel, type PageTransition } from '@/transition'
+import { useT } from '@/i18n'
 
 const AUTO_CHOICES = [0, 3, 5, 10, 15]
 /** Plus grand côté d'une image de présentation : au-delà, rien de visible sur un écran, mais beaucoup de mémoire. */
@@ -13,6 +14,7 @@ const MAX_SIDE = 4096
  * à la résolution de l'écran ; la suivante et la précédente sont préparées d'avance pour que le changement soit immédiat.
  */
 export function PresentationMode(): React.JSX.Element | null {
+  const t = useT()
   const active = usePresentation((s) => s.active)
   const doc = usePresentation((s) => s.doc)
   const index = usePresentation((s) => s.index)
@@ -223,17 +225,17 @@ export function PresentationMode(): React.JSX.Element | null {
   if (!active || !doc) return null
   const last = doc.pages.length - 1
   return (
-    <div className={`presentation${controls ? '' : ' idle'}${laser ? ' laser' : ''}`} data-presentation data-pres-index={index} data-pres-laser={laser || undefined} role="dialog" aria-modal="true" aria-label="Présentation" onMouseMove={(e) => {
+    <div className={`presentation${controls ? '' : ' idle'}${laser ? ' laser' : ''}`} data-presentation data-pres-index={index} data-pres-laser={laser || undefined} role="dialog" aria-modal="true" aria-label={t('pres.dialog')} onMouseMove={(e) => {
         overBar.current = !!bar.current?.contains(e.target as Node)
         if (laser) setOnBar(overBar.current)
         wake()
       }} onClick={() => usePresentation.getState().go(index + 1)}>
       {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${leaving.kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
-      {!black && image && <img key={image.index} className={`presentation-page entering t-${image.kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={`Page ${image.index + 1}`} draggable={false} data-pres-shown={image.index} />}
-      {!black && !image && <div className="presentation-loading" role="status">Préparation…</div>}
+      {!black && image && <img key={image.index} className={`presentation-page entering t-${image.kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={t('pres.page', { page: image.index + 1 })} draggable={false} data-pres-shown={image.index} />}
+      {!black && !image && <div className="presentation-loading" role="status">{t('pres.preparing')}</div>}
       {showNotes && (
         <div className={`presentation-notes${doc.pages[index].notes ? '' : ' empty'}`} data-pres="notes" onClick={(e) => e.stopPropagation()}>
-          {doc.pages[index].notes ?? 'Aucune note pour cette page.'}
+          {doc.pages[index].notes ?? t('pres.notes.none')}
         </div>
       )}
       {laser && <LaserPointer hidden={onBar} />}
@@ -247,31 +249,31 @@ export function PresentationMode(): React.JSX.Element | null {
         }}
         onBlur={wake}
       >
-        <button data-pres="prev" disabled={index === 0} onClick={() => usePresentation.getState().go(index - 1)} aria-label="Page précédente">‹</button>
+        <button data-pres="prev" disabled={index === 0} onClick={() => usePresentation.getState().go(index - 1)} aria-label={t('pres.prev')}>‹</button>
         <span data-pres="counter">{index + 1} / {doc.pages.length}</span>
-        <button data-pres="next" disabled={index === last} onClick={() => usePresentation.getState().go(index + 1)} aria-label="Page suivante">›</button>
+        <button data-pres="next" disabled={index === last} onClick={() => usePresentation.getState().go(index + 1)} aria-label={t('pres.next')}>›</button>
         {doc.pages.length > 1 && (
-          <label className="pres-auto" title="Lecture automatique en boucle (P : pause)">
-            Auto
+          <label className="pres-auto" title={t('pres.auto.title')}>
+            {t('pres.auto')}
             <select data-pres="auto" value={auto} onChange={(e) => { setAuto(Number(e.target.value)); setPaused(false); e.currentTarget.blur() }}>
               {AUTO_CHOICES.map((s) => (
-                <option key={s} value={s}>{s === 0 ? 'Non' : `${s} s`}</option>
+                <option key={s} value={s}>{s === 0 ? t('pres.auto.none') : t('pres.auto.seconds', { s })}</option>
               ))}
             </select>
           </label>
         )}
-        <label className="pres-auto" title="Transition entre les pages (enregistrée avec le document)">
-          Transition
+        <label className="pres-auto" title={t('pres.transition.title')}>
+          {t('pres.transition')}
           <select data-pres="transition" value={kind} onChange={(e) => { usePresentation.getState().setTransition(e.target.value as typeof kind); e.currentTarget.blur() }}>
-            {TRANSITIONS.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
+            {TRANSITIONS.map((x) => (
+              <option key={x.id} value={x.id}>{transitionLabel(x.id)}</option>
             ))}
           </select>
         </label>
-        <button data-pres="laser" aria-pressed={laser} onClick={() => setLaser((l) => !l)} title="Pointeur laser : un point rouge qui suit la souris (L)">Laser</button>
-        <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title="Écran de l'orateur : page suivante, notes et chronomètre dans une seconde fenêtre (S)">Orateur</button>
-        <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title="Afficher les notes (N)">Notes</button>
-        <button data-pres="exit" onClick={exit} title="Quitter (Échap)">✕ Quitter</button>
+        <button data-pres="laser" aria-pressed={laser} onClick={() => setLaser((l) => !l)} title={t('pres.laser.title')}>{t('pres.laser')}</button>
+        <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title={t('pres.speaker.title')}>{t('pres.speaker')}</button>
+        <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title={t('pres.notes.title')}>{t('pres.notes')}</button>
+        <button data-pres="exit" onClick={exit} title={t('pres.exit.title')}>{t('pres.exit')}</button>
       </div>
     </div>
   )

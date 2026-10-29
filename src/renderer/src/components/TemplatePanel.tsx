@@ -1,43 +1,47 @@
 import { selectPage, useEditor } from '@/store/editor'
 import { hasProtected, isEnforced } from '@/protection'
 import type { Protection } from '@/types'
+import { useT } from '@/i18n'
+import type { MessageKey } from '@shared/i18n'
 
 /**
  * Bandeau « modèle de marque » : tant que le document contient des éléments protégés, il dit dans quel état on est
  * (modèle verrouillé : on remplit ; modèle en modification : on décide ce qui est figé ou à remplir).
  */
 export function TemplateBanner(): React.JSX.Element | null {
+  const t = useT()
   const protectedAny = useEditor((s) => hasProtected(s.doc))
   const unlocked = useEditor((s) => s.templateUnlocked)
   const { setTemplateUnlocked } = useEditor.getState()
   if (!protectedAny) return null
   return unlocked ? (
     <div className="template-banner editing" role="status" data-template-state="editing">
-      <strong>✏️ Modification du modèle</strong>
-      <span>Les éléments figés sont déverrouillés. Choisissez pour chaque élément : libre, à remplir ou figé.</span>
+      <strong>{t('protect.editing.title')}</strong>
+      <span>{t('protect.editing.text')}</span>
       <button className="primary" data-action="template-lock" onClick={() => setTemplateUnlocked(false)}>
-        Terminer et verrouiller
+        {t('protect.editing.lock')}
       </button>
     </div>
   ) : (
     <div className="template-banner" role="status" data-template-state="locked">
-      <strong>🔒 Modèle verrouillé</strong>
-      <span>Les éléments figés ne peuvent pas être modifiés ; les éléments « à remplir » le sont dans leur contenu seulement.</span>
+      <strong>{t('protect.locked.title')}</strong>
+      <span>{t('protect.locked.text')}</span>
       <button data-action="template-unlock" onClick={() => setTemplateUnlocked(true)}>
-        Modifier le modèle
+        {t('protect.locked.unlock')}
       </button>
     </div>
   )
 }
 
-const OPTIONS: Array<[Protection | undefined, string, string]> = [
-  [undefined, 'Libre', 'Aucune protection : l\'élément reste entièrement modifiable'],
-  ['fill', 'À remplir', 'Le contenu (texte, image, couleur…) reste modifiable ; la position, la taille et la présence sont figées'],
-  ['fixed', 'Figé', 'Rien ne peut être modifié : logo, mentions, bandeaux de la marque']
+const OPTIONS: Array<[Protection | undefined, MessageKey, MessageKey]> = [
+  [undefined, 'protect.free', 'protect.free.title'],
+  ['fill', 'protect.fill', 'protect.fill.title'],
+  ['fixed', 'protect.fixed', 'protect.fixed.title']
 ]
 
 /** Choix de la protection des éléments sélectionnés (disponible quand le modèle n'est pas verrouillé). */
 export function ProtectionControls(): React.JSX.Element | null {
+  const t = useT()
   const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   const values = useEditor((s) => selectPage(s).elements.filter((e) => s.selectedIds.includes(e.id)).map((e) => e.protect ?? '').join('|'))
   const { setProtection } = useEditor.getState()
@@ -46,15 +50,15 @@ export function ProtectionControls(): React.JSX.Element | null {
   const common = list.every((v) => v === list[0]) ? list[0] || undefined : null // null : sélection mixte
   return (
     <>
-      <h3>Modèle de marque</h3>
-      <div className="seg three" role="group" aria-label="Protection de l'élément">
-        {OPTIONS.map(([value, label, title]) => (
-          <button key={label} data-protect={value ?? 'free'} title={title} aria-pressed={common === value} className={common === value ? 'active' : ''} onClick={() => setProtection(value)}>
-            {label}
+      <h3>{t('protect.heading')}</h3>
+      <div className="seg three" role="group" aria-label={t('protect.element')}>
+        {OPTIONS.map(([value, key, titleKey]) => (
+          <button key={key} data-protect={value ?? 'free'} title={t(titleKey)} aria-pressed={common === value} className={common === value ? 'active' : ''} onClick={() => setProtection(value)}>
+            {t(key)}
           </button>
         ))}
       </div>
-      <p className="hint">Pour fabriquer un modèle : marquez le logo et les mentions « figés », le titre et les photos « à remplir », puis « Terminer et verrouiller » et enregistrez-le comme modèle.</p>
+      <p className="hint">{t('protect.hint')}</p>
     </>
   )
 }

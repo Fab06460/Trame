@@ -176,10 +176,13 @@ export interface Case {
 
 export const cases = (): Case[] => [
   { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %
-  ...TEMPLATES.map((t): Case => ({
-    name: t.id,
-    doc: instantiate(t),
-    expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
-    expectText: t.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && e.text && e.text.length < 14).map((e) => e.text!))
-  }))
+  ...TEMPLATES.map((t): Case => {
+    const doc = instantiate(t)
+    return {
+      name: t.id,
+      doc,
+      expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
+      expectText: doc.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && e.text && e.text.length < 14).map((e) => e.text!))
+    }
+  })
 ]

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useEditor, selectPage } from '@/store/editor'
 import { MAX_NOTES } from '@/notes'
+import { useT } from '@/i18n'
 
 const KEY = 'trame.notesOpen'
 const read = (): boolean => {
@@ -13,6 +14,7 @@ const read = (): boolean => {
 
 /** Notes de l'orateur de la page courante : repliées par défaut, visibles en mode présentation (touche N). */
 export function NotesPanel(): React.JSX.Element {
+  const t = useT()
   const notes = useEditor((s) => selectPage(s).notes ?? '')
   const pageId = useEditor((s) => selectPage(s).id)
   const pageNumber = useEditor((s) => s.doc.pages.findIndex((p) => p.id === pageId) + 1)
@@ -32,9 +34,9 @@ export function NotesPanel(): React.JSX.Element {
   }
 
   return (
-    <section className="notes-panel" data-notes-panel aria-label="Notes de l'orateur">
+    <section className="notes-panel" data-notes-panel aria-label={t('notes.label')}>
       <button className="notes-toggle" data-notes="toggle" aria-expanded={open} onClick={toggle}>
-        {open ? '▾' : '▸'} Notes de l'orateur — page {pageNumber}
+        {open ? '▾' : '▸'} {t('notes.toggle', { page: pageNumber })}
         {notes && !open ? ' •' : ''}
       </button>
       {open && (
@@ -43,7 +45,7 @@ export function NotesPanel(): React.JSX.Element {
           data-notes="text"
           value={notes}
           maxLength={MAX_NOTES}
-          placeholder="Ce que vous direz sur cette page. Visible en présentation (touche N), exporté dans PowerPoint."
+          placeholder={t('notes.placeholder')}
           onFocus={() => (started.current = false)}
           onChange={(e) => {
             useEditor.getState().setNotes(e.target.value, !started.current)

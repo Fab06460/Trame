@@ -9,6 +9,7 @@ import { readTransition } from '@/pptxImport/transition'
 import { cleanTransition, type PageTransition } from '@/transition'
 import { attr, kid, kids, parseXml } from '@/pptxImport/xml'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
+import { t } from '@/i18n'
 
 export const MAX_PPTX_SLIDES = 100
 const EMU_PER_PX = 9525
@@ -107,7 +108,7 @@ function readBackground(doc: Document | null, theme: Theme, map: ColorMap): Retu
 export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxReport> {
   const zip = new Archive(await JSZip.loadAsync(bytes))
   const pres = await zip.xml('ppt/presentation.xml')
-  if (!pres) throw new Error("ce fichier n'est pas une présentation PowerPoint (ppt/presentation.xml absent)")
+  if (!pres) throw new Error(t('imp.pptx.notPresentation'))
   const sz = kid(pres.documentElement, 'sldSz')
   const width = Math.min(SIZE_LIMITS.max, Math.max(SIZE_LIMITS.min, Math.round((Number(attr(sz, 'cx')) || 9144000) / EMU_PER_PX)))
   const height = Math.min(SIZE_LIMITS.max, Math.max(SIZE_LIMITS.min, Math.round((Number(attr(sz, 'cy')) || 6858000) / EMU_PER_PX)))
@@ -184,7 +185,7 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     transitions.push(readTransition(slideDoc))
     pages.push({ id: nanoid(8), background: bgFill?.kind === 'solid' ? bgFill.color.hex : '#ffffff', ...(notes ? { notes } : {}), elements })
   }
-  if (pages.length === 0) throw new Error('aucune diapositive trouvée dans ce fichier')
+  if (pages.length === 0) throw new Error(t('imp.pptx.noSlide'))
   // transitions : la plus fréquente devient celle du document, les autres pages gardent la leur (PowerPoint n'a que des réglages par diapositive)
   const counts = new Map<PageTransition, number>()
   for (const t of transitions) counts.set(t, (counts.get(t) ?? 0) + 1)

@@ -9,6 +9,7 @@ import { attr, kid, kids, nameOfEl, num } from '@/pptxImport/xml'
 import { matchFont } from '@/pdfImport/layout'
 import { SHAPES } from '@/shapes'
 import type { Gradient, Shadow, TrameElement } from '@/types'
+import { t as tr } from '@/i18n'
 
 export const EMU_PER_PX = 9525
 const px = (emu: number): number => emu / EMU_PER_PX
@@ -324,11 +325,11 @@ function shapeElement(sp: Element, b: { cx: number; cy: number; w: number; h: nu
       el = baseElement('path', b)
       el.path = d
     } else {
-      st.unsupported.add('forme dessinée avec des arcs')
+      st.unsupported.add(tr('imp.pptx.arcs'))
       el = baseElement('rect', b)
     }
   } else {
-    st.unsupported.add(`forme « ${prst} » (remplacée par un rectangle)`)
+    st.unsupported.add(tr('imp.pptx.shape', { name: prst }))
     el = baseElement('rect', b)
   }
   if (fill.kind === 'solid') {
@@ -389,7 +390,7 @@ function walk(tree: Element, t: Tf, st: State): void {
           el.fill = c.hex
           el.opacity = c.alpha
           drafts = [{ el }]
-        } else st.unsupported.add('trait diagonal ou sans couleur')
+        } else st.unsupported.add(tr('imp.pptx.line'))
       } else {
         const fill = readFill(spPr, st.ctx)
         if (fill?.kind === 'image') {
@@ -412,7 +413,7 @@ function walk(tree: Element, t: Tf, st: State): void {
       const relId = attr(blip, 'embed')
       const src = relId ? st.ctx.image(relId) : null
       if (!x || !src) {
-        st.unsupported.add(relId ? 'image dans un format non pris en charge (SVG, EMF…)' : 'image sans fichier')
+        st.unsupported.add(relId ? tr('imp.pptx.imageFormat') : tr('imp.pptx.imageMissing'))
         continue
       }
       const alpha = (num(kid(blip, 'alphaModFix'), 'amt') ?? 100000) / 100000
@@ -433,7 +434,7 @@ function walk(tree: Element, t: Tf, st: State): void {
       walk(node, nt, { ...st, groupId: st.groupId ?? nanoid(8) })
     } else if (kind === 'graphicFrame') {
       const uri = attr(kid(node, 'graphic', 'graphicData'), 'uri') ?? ''
-      st.unsupported.add(/table/.test(uri) ? 'tableau' : /chart/.test(uri) ? 'graphique' : /diagram/.test(uri) ? 'schéma SmartArt' : 'objet intégré')
+      st.unsupported.add(/table/.test(uri) ? tr('imp.pptx.table') : /chart/.test(uri) ? tr('imp.pptx.chart') : /diagram/.test(uri) ? tr('imp.pptx.smartart') : tr('imp.pptx.embedded'))
     }
   }
 }

@@ -2,7 +2,11 @@ import { fileSafeName } from '@/docName'
 import { embedFonts } from '@/fontEmbed'
 import { extraFonts } from '@/fonts'
 import { pruneSources } from '@/pdfSources'
+import { t } from '@/i18n'
 import { parseDocument, useEditor } from '@/store/editor'
+
+/** Ce que l'utilisateur s'apprête à faire (le processus principal traduit la question, voir `unsaved.action.*`). */
+export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'
 
 /** Enregistre le document. `saveAs` force le choix d'un nouvel emplacement. Retourne false si annulé ou en échec. */
 export async function saveProject(saveAs = false): Promise<boolean> {
@@ -18,7 +22,7 @@ export async function saveProject(saveAs = false): Promise<boolean> {
  * Sans modifications : true. Sinon demande Enregistrer / Ne pas enregistrer / Annuler
  * et retourne true seulement si l'action peut se poursuivre.
  */
-export async function confirmUnsaved(action: string): Promise<boolean> {
+export async function confirmUnsaved(action: UnsavedAction): Promise<boolean> {
   const { dirty, doc } = useEditor.getState()
   if (!dirty) return true
   const choice = await window.trame.askUnsaved(doc.name, action)
@@ -28,7 +32,7 @@ export async function confirmUnsaved(action: string): Promise<boolean> {
 }
 
 export async function newProject(): Promise<void> {
-  if (await confirmUnsaved('créer un nouveau projet')) useEditor.getState().newDocument()
+  if (await confirmUnsaved('new')) useEditor.getState().newDocument()
 }
 
 /** Valide un fichier lu, demande de sauvegarder le document courant si besoin, puis le charge. */
@@ -37,10 +41,10 @@ export async function openFile(res: { path: string; json: string }): Promise<voi
   try {
     doc = parseDocument(res.json)
   } catch (err) {
-    await window.trame.showError('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    await window.trame.showError(t('file.openFailed'), err instanceof Error ? err.message : String(err))
     return
   }
-  if (await confirmUnsaved('ouvrir un autre projet')) useEditor.getState().loadDocument(doc, res.path)
+  if (await confirmUnsaved('open')) useEditor.getState().loadDocument(doc, res.path)
 }
 
 export async function openProject(): Promise<void> {
@@ -53,7 +57,7 @@ export async function openProject(): Promise<void> {
 export async function openRecent(path: string): Promise<void> {
   const res = await window.trame.openPath(path)
   if (!res) {
-    await window.trame.showError('Projet introuvable', `Le fichier « ${path} » n'existe plus ou n'est plus accessible. Il a été retiré des projets récents.`)
+    await window.trame.showError(t('file.notFound.title'), t('file.notFound', { path }))
     await window.trame.removeRecent(path)
     return
   }

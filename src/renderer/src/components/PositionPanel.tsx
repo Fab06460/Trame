@@ -3,6 +3,7 @@ import { boundsOf, unionBox } from '@/geometry'
 import { isEnforced, positionLocked } from '@/protection'
 import { selectPage, useEditor } from '@/store/editor'
 import { NumberField } from './NumberField'
+import { useT } from '@/i18n'
 
 /**
  * Position, taille et rotation numériques de la sélection, comme dans Canva.
@@ -10,6 +11,7 @@ import { NumberField } from './NumberField'
  * largeur / hauteur / rotation sont celles de l'élément lui-même. Une sélection multiple se déplace d'un bloc (X, Y seulement).
  */
 export function PositionPanel(): React.JSX.Element | null {
+  const t = useT()
   // Zustand 5 exige des sélecteurs à résultat stable : on lit les valeurs brutes, le filtrage se fait au rendu
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
@@ -40,24 +42,24 @@ export function PositionPanel(): React.JSX.Element | null {
 
   return (
     <>
-      <h3>Position et taille</h3>
+      <h3>{t('pos.title')}</h3>
       <div className="num-grid">
         <NumberField label="X" field="x" value={box.x} suffix="px" disabled={locked} onCommit={(v) => nudgeSelected(v - box.x, 0)} />
         <NumberField label="Y" field="y" value={box.y} suffix="px" disabled={locked} onCommit={(v) => nudgeSelected(0, v - box.y)} />
-        <NumberField label="L" field="width" value={single ? single.width : box.width} min={1} suffix="px" disabled={!single || locked} onCommit={setWidth} />
-        <NumberField label="H" field="height" value={single ? single.height : box.height} min={1} suffix="px" disabled={!single || isText || locked} onCommit={setHeight} />
-        <NumberField label="Rotation" field="rotation" value={single ? single.rotation : 0} step={1} suffix="°" disabled={!single || locked} onCommit={(v) => single && updateElement(single.id, { rotation: v })} />
+        <NumberField label={t('pos.w')} field="width" value={single ? single.width : box.width} min={1} suffix="px" disabled={!single || locked} onCommit={setWidth} />
+        <NumberField label={t('pos.h')} field="height" value={single ? single.height : box.height} min={1} suffix="px" disabled={!single || isText || locked} onCommit={setHeight} />
+        <NumberField label={t('pos.rotation')} field="rotation" value={single ? single.rotation : 0} step={1} suffix="°" disabled={!single || locked} onCommit={(v) => single && updateElement(single.id, { rotation: v })} />
         <button
           className={`lock${lock ? ' active' : ''}`}
-          title={lock ? 'Proportions verrouillées' : 'Verrouiller les proportions'}
+          title={lock ? t('pos.ratio.locked') : t('pos.ratio.lock')}
           disabled={!single || isText}
           onClick={() => setLock(!lock)}
         >
           {lock ? '🔒' : '🔓'}
         </button>
       </div>
-      {locked && <p className="hint">{byTemplate ? '🏷 Position fixée par le modèle (« Modifier le modèle » pour la changer).' : '🔒 Position verrouillée : déverrouillez pour la modifier.'}</p>}
-      {isText && <p className="hint">La hauteur d'un texte dépend de son contenu : elle s'ajuste seule.</p>}
+      {locked && <p className="hint">{byTemplate ? t('pos.hint.template') : t('pos.hint.locked')}</p>}
+      {isText && <p className="hint">{t('pos.hint.textHeight')}</p>}
     </>
   )
 }

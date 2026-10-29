@@ -6,7 +6,7 @@ export default defineConfig({
   main: {},
   preload: {},
   renderer: {
-    resolve: { alias: { '@': resolve('src/renderer/src') } },
+    resolve: { alias: { '@': resolve('src/renderer/src'), '@shared': resolve('src/shared') } },
     plugins: [react()]
   }
 })

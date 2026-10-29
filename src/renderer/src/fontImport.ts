@@ -1,5 +1,6 @@
 import { allFonts, extraFonts, registerExtraFont, unregisterExtraFont } from '@/fonts'
 import { MAX_FONT_FILE_BYTES, customId, groupFamilies, parseFontFile, uniqueName, type FontFileInfo } from '@/fontFiles'
+import { t } from '@/i18n'
 
 export interface FontImportReport {
   /** familles importées, avec leurs variantes */
@@ -29,12 +30,12 @@ export async function importFontFiles(category: string): Promise<FontImportRepor
   const ok: Array<{ bytes: Uint8Array; info: FontFileInfo }> = []
   for (const f of picked) {
     if (f.size > MAX_FONT_FILE_BYTES) {
-      report.ignored.push(`${f.name} : trop volumineux (${(f.size / 1e6).toFixed(1)} Mo ; 1,5 Mo au plus — un sous-ensemble ou un fichier WOFF2 est plus léger)`)
+      report.ignored.push(t('font.file.line', { name: f.name, reason: t('font.file.tooBig', { mb: (f.size / 1e6).toFixed(1) }) }))
       continue
     }
-    const r = f.bytes.length === 0 ? ({ ok: false, reason: 'fichier vide ou illisible' } as const) : parseFontFile(f.name, f.bytes)
+    const r = f.bytes.length === 0 ? ({ ok: false, reason: t('font.file.empty') } as const) : parseFontFile(f.name, f.bytes)
     if (r.ok) ok.push({ bytes: f.bytes, info: r.info })
-    else report.ignored.push(`${f.name} : ${r.reason}`)
+    else report.ignored.push(t('font.file.line', { name: f.name, reason: r.reason }))
   }
 
   for (const group of groupFamilies(ok)) {
@@ -44,12 +45,12 @@ export async function importFontFiles(category: string): Promise<FontImportRepor
     const taken = new Set(allFonts().map((f) => f.name))
     const name = existing && existing.name === group.family ? group.family : uniqueName(group.family, taken)
     const id = name === group.family ? sameId : customId(name)
-    if (name !== group.family) report.notes.push(`« ${group.family} » existe déjà : importée sous le nom « ${name} »`)
+    if (name !== group.family) report.notes.push(t('font.import.exists', { family: group.family, name }))
     const variants: Record<string, string> = {}
     for (const [v, file] of Object.entries(group.variants)) variants[v] = await toBase64(file!.bytes)
     const res = await window.trame.saveCustomFont(id, name, group.mono ? 'monospace' : category, variants)
     if (!res.ok) {
-      report.ignored.push(`${name} : ${res.detail || res.error}`)
+      report.ignored.push(t('font.file.line', { name, reason: res.detail || res.error }))
       continue
     }
     unregisterExtraFont(id)

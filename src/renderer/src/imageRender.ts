@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cssFilter, editKey, hasImageEdits } from '@/imageStyle'
 import type { TrameElement } from '@/types'
+import { t } from '@/i18n'
 
 /** Plus grand côté du rendu d'une image retouchée (au-delà, on réduit : la mémoire d'un canvas n'est pas illimitée). */
 const MAX_SIDE = 4096
@@ -12,7 +13,7 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Image illisible'))
+    img.onerror = () => reject(new Error(t('imp.imageUnreadable')))
     img.src = src
   })
 

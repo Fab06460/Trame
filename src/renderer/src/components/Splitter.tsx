@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { dragSize, LIMITS, type Side } from '@/layout'
 import { useLayout } from '@/store/layout'
+import { useT } from '@/i18n'
 
 /**
  * Poignée de redimensionnement entre deux zones : se glisse à la souris (ou au clavier avec les flèches), un double-clic
@@ -10,7 +11,8 @@ export function Splitter({ kind }: { kind: Side | 'strip' }): React.JSX.Element 
   const start = useRef<{ pos: number; size: number } | null>(null)
   const vertical = kind === 'strip' // poignée horizontale qui change une hauteur
   const size = useLayout((s) => (kind === 'left' ? s.leftWidth : kind === 'right' ? s.rightWidth : s.stripHeight))
-  const label = kind === 'left' ? 'Largeur du panneau de gauche' : kind === 'right' ? 'Largeur du panneau de droite' : 'Hauteur de la liste des pages'
+  const t = useT()
+  const label = t(`splitter.${kind}`)
 
   const set = (v: number): void => useLayout.getState().setSize(kind, v)
   return (
@@ -24,7 +26,7 @@ export function Splitter({ kind }: { kind: Side | 'strip' }): React.JSX.Element 
       aria-valuemax={LIMITS[kind].max}
       tabIndex={0}
       data-splitter={kind}
-      title={`${label} — glisser, double-clic pour rétablir`}
+      title={t('splitter.title', { label })}
       onPointerDown={(e) => {
         e.preventDefault()
         e.currentTarget.setPointerCapture(e.pointerId)

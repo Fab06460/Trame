@@ -9,6 +9,7 @@ import { pageToSvg } from '@/svgExport'
 import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
 import { usePdfIssues } from '@/store/pdfIssues'
+import { t, useT } from '@/i18n'
 import { useDismiss } from './useDismiss'
 
 async function exportImage(type: 'image/png' | 'image/jpeg'): Promise<void> {
@@ -46,11 +47,8 @@ async function exportPptxFile(): Promise<void> {
   const saved = await window.trame.saveExport(dataUrl, `${fileSafeName(doc.name)}.pptx`)
   // comme pour le PDF : on prévient APRÈS l'enregistrement de ce qui n'est pas resté modifiable dans PowerPoint
   if (saved && rasterized.length) {
-    const causes = [...new Set(rasterized.map((r) => r.reason))].join(', ')
-    await window.trame.showInfo(
-      `${rasterized.length} élément${rasterized.length > 1 ? 's exportés' : ' exporté'} sous forme d'image`,
-      `PowerPoint ne sait pas reproduire en objet modifiable : ${causes}. Ils sont placés en image à la même position.\nLes polices de Trame (Inter, Montserrat…) doivent être installées sur l'ordinateur qui ouvre le fichier, sinon PowerPoint les remplace.`
-    )
+    const causes = [...new Set(rasterized.map((r) => t(`pptx.reason.${r.reason}`)))].join(', ')
+    await window.trame.showInfo(t('export.pptx.raster.title', { count: rasterized.length }), t('export.pptx.raster.detail', { causes }))
   }
 }
 
@@ -59,6 +57,7 @@ async function exportPptxFile(): Promise<void> {
  * sur le bouton (même quand le menu est fermé) et sur l'entrée PDF.
  */
 export function ExportMenu(): React.JSX.Element {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const pdfIssueCount = usePdfIssues((s) => Object.keys(s.issues).length)
@@ -72,9 +71,7 @@ export function ExportMenu(): React.JSX.Element {
     setOpen(false)
     void action()
   }
-  const warning = pdfIssueCount
-    ? `${pdfIssueCount} texte${pdfIssueCount > 1 ? 's seront exportés' : ' sera exporté'} en image dans le PDF (non sélectionnable${pdfIssueCount > 1 ? 's' : ''}). Sélectionnez-les : l'éditeur indique pourquoi.`
-    : ''
+  const warning = pdfIssueCount ? t('export.warning', { count: pdfIssueCount }) : ''
 
   return (
     <div className="export-menu" ref={root}>
@@ -82,37 +79,37 @@ export function ExportMenu(): React.JSX.Element {
         className={`primary${pdfIssueCount ? ' has-warning' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={warning || 'Exporter : PDF, PowerPoint, images, SVG'}
+        title={warning || t('export.button.title')}
         onClick={() => setOpen((o) => !o)}
       >
-        Exporter{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''} ▾
+        {t('export.button')}{pdfIssueCount ? ` ⚠ ${pdfIssueCount}` : ''} ▾
       </button>
       {open && (
-        <div className="export-popup" role="menu" aria-label="Exporter">
+        <div className="export-popup" role="menu" aria-label={t('export.button')}>
           <button role="menuitem" data-export="pdf" title={warning || undefined} onClick={() => choose(exportPdfFile)}>
             <strong>PDF</strong>
-            <span>{pageCount > 1 ? `Toutes les pages (${pageCount})` : 'La page'}, texte sélectionnable{pdfIssueCount ? ` — ⚠ ${pdfIssueCount} en image` : ''}</span>
+            <span>{pageCount > 1 ? t('export.pdf.pages', { count: pageCount }) : t('export.pdf.page')}{pdfIssueCount ? t('export.pdf.issues', { count: pdfIssueCount }) : ''}</span>
           </button>
           <button role="menuitem" data-export="pptx" onClick={() => choose(exportPptxFile)}>
             <strong>PowerPoint (.pptx)</strong>
-            <span>Éléments modifiables dans PowerPoint, Keynote, Google Slides</span>
+            <span>{t('export.pptx.desc')}</span>
           </button>
           <div className="export-sep" role="separator" />
           <button role="menuitem" data-export="png" onClick={() => choose(() => exportImage('image/png'))}>
             <strong>PNG</strong>
-            <span>{pageCount > 1 ? `Page courante (${pageNo})` : 'La page'}, taille du design</span>
+            <span>{pageCount > 1 ? t('export.image.pages', { page: pageNo }) : t('export.image.page')}</span>
           </button>
           <button role="menuitem" data-export="jpg" onClick={() => choose(() => exportImage('image/jpeg'))}>
             <strong>JPG</strong>
-            <span>{pageCount > 1 ? `Page courante (${pageNo})` : 'La page'}, taille du design</span>
+            <span>{pageCount > 1 ? t('export.image.pages', { page: pageNo }) : t('export.image.page')}</span>
           </button>
           <button role="menuitem" data-export="svg" onClick={() => choose(exportSvg)}>
             <strong>SVG</strong>
-            <span>{pageCount > 1 ? `Page courante (${pageNo})` : 'La page'}, vectoriel, textes et polices incorporés</span>
+            <span>{pageCount > 1 ? t('export.svg.pages', { page: pageNo }) : t('export.svg.page')}</span>
           </button>
           <button role="menuitem" data-export="pages" onClick={() => choose(() => useExportPages.getState().setOpen(true))}>
-            <strong>Plusieurs pages…</strong>
-            <span>PNG, JPG ou SVG, toutes les pages ou une sélection, en archive ZIP ou dans un dossier</span>
+            <strong>{t('export.multi')}</strong>
+            <span>{t('export.multi.desc')}</span>
           </button>
         </div>
       )}

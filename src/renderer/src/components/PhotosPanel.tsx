@@ -3,15 +3,18 @@ import type { PhotoError, PhotoSourceChoice, PhotoView } from '../../../preload'
 import { insertImage } from '@/clipboardActions'
 import { documentCredits, downscaleImage } from '@/photoImport'
 import { useEditor } from '@/store/editor'
+import { useT } from '@/i18n'
+import type { MessageKey } from '@shared/i18n'
 
-const MESSAGES: Record<PhotoError, string> = {
-  offline: 'Impossible de joindre le service de photos. Vérifiez votre connexion : Trame continue de fonctionner hors ligne.',
-  'rate-limit': 'Trop de recherches pour le moment : réessayez dans quelques minutes.',
-  unavailable: 'Le service de photos ne répond pas correctement. Réessayez plus tard.'
+const MESSAGES: Record<PhotoError, MessageKey> = {
+  offline: 'photo.err.offline',
+  'rate-limit': 'photo.err.rateLimit',
+  unavailable: 'photo.err.unavailable'
 }
 
 /** Recherche de photos libres de droits (Openverse). Seule fonction en ligne de Trame : elle ne s'active que sur demande. */
 export function PhotosPanel(): React.JSX.Element {
+  const t = useT()
   const [query, setQuery] = useState('')
   const [asked, setAsked] = useState('')
   const [photos, setPhotos] = useState<PhotoView[]>([])
@@ -58,7 +61,7 @@ export function PhotosPanel(): React.JSX.Element {
       return setError(res.error)
     }
     try {
-      await insertImage(await downscaleImage(res.dataUrl), { credit: res.credit, name: (res.title || photo.title || 'Photo').slice(0, 80) })
+      await insertImage(await downscaleImage(res.dataUrl), { credit: res.credit, name: (res.title || photo.title || t('photo.default')).slice(0, 80) })
     } finally {
       setImporting(null)
     }
@@ -77,7 +80,7 @@ export function PhotosPanel(): React.JSX.Element {
   return (
     <>
       <section>
-        <h3>Photos libres de droits</h3>
+        <h3>{t('photo.title')}</h3>
         <form
           className="row"
           onSubmit={(e) => {
@@ -85,37 +88,37 @@ export function PhotosPanel(): React.JSX.Element {
             void search(query, 1)
           }}
         >
-          <input data-field="photoQuery" type="search" placeholder="Rechercher (ex. : montagne)" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100} />
+          <input data-field="photoQuery" type="search" placeholder={t('photo.search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100} />
           <button type="submit" data-action="photo-search" disabled={busy || !query.trim()}>
-            {busy && page === 1 ? '…' : 'Chercher'}
+            {busy && page === 1 ? '…' : t('photo.search')}
           </button>
         </form>
         <label className="row">
-          <span>Source</span>
+          <span>{t('photo.source')}</span>
           <select data-field="photoSource" value={choice} onChange={(e) => setChoice(e.target.value as PhotoSourceChoice)}>
-            <option value="auto">Automatique</option>
+            <option value="auto">{t('photo.source.auto')}</option>
             <option value="openverse">Openverse</option>
             <option value="commons">Wikimedia Commons</option>
           </select>
         </label>
         <p className="hint">
-          Recherche en ligne : votre requête est envoyée à Openverse (openverse.org) et, si celui-ci ne répond pas, à Wikimedia Commons (commons.wikimedia.org), et à eux seuls. Photos réutilisables, y compris à titre commercial. La photo choisie est copiée dans le document, qui reste utilisable hors ligne.
+          {t('photo.hint')}
         </p>
         {error && (
           <div className="warn" role="status" data-photo-error={error}>
-            {MESSAGES[error]}
-            {detail && <small className="detail" data-photo-detail>Détail technique : {detail}</small>}
+            {t(MESSAGES[error])}
+            {detail && <small className="detail" data-photo-detail>{t('photo.detail', { detail })}</small>}
           </div>
         )}
       </section>
 
       {photos.length > 0 && (
         <section>
-          <h3>Résultats pour « {asked} »</h3>
+          <h3>{t('photo.results', { query: asked })}</h3>
           {used && (
             <p className="hint" data-photo-source={used.source}>
-              Source : {used.source === 'openverse' ? 'Openverse' : 'Wikimedia Commons'}
-              {used.fallback ? ' (Openverse ne répond pas pour le moment)' : ''}
+              {t('photo.from', { source: used.source === 'openverse' ? 'Openverse' : 'Wikimedia Commons' })}
+              {used.fallback ? t('photo.fallback') : ''}
             </p>
           )}
           <div className="grid photos">
@@ -125,7 +128,7 @@ export function PhotosPanel(): React.JSX.Element {
                 className="photo"
                 data-photo={p.id}
                 disabled={importing !== null}
-                title={`${p.title || 'Sans titre'}${p.creator ? ' — ' + p.creator : ''} · ${p.license}\nCliquer pour insérer`}
+                title={t('photo.tooltip', { title: p.title || t('doc.untitled'), creator: p.creator ? ' — ' + p.creator : '', license: p.license })}
                 onClick={() => void insert(p)}
               >
                 <img src={p.thumb} alt={p.title} draggable={false} />
@@ -136,20 +139,20 @@ export function PhotosPanel(): React.JSX.Element {
           </div>
           {page < pageCount && (
             <button data-action="photo-more" disabled={busy} onClick={() => void search(asked, page + 1)}>
-              {busy ? 'Chargement…' : 'Plus de résultats'}
+              {busy ? t('photo.loading') : t('photo.more')}
             </button>
           )}
         </section>
       )}
 
-      {photos.length === 0 && asked && !busy && !error && <p className="hint">Aucun résultat pour « {asked} ».</p>}
+      {photos.length === 0 && asked && !busy && !error && <p className="hint">{t('photo.noResults', { query: asked })}</p>}
 
       {credits.length > 0 && (
         <section>
-          <h3>Crédits</h3>
-          <p className="hint">{credits.length} photo{credits.length > 1 ? 's' : ''} de ce document demande{credits.length > 1 ? 'nt' : ''} d'être créditée{credits.length > 1 ? 's' : ''} ou le recommande{credits.length > 1 ? 'nt' : ''}.</p>
+          <h3>{t('photo.credits')}</h3>
+          <p className="hint">{t('photo.credits.hint', { count: credits.length })}</p>
           <button data-action="photo-credits" onClick={() => void copyCredits()}>
-            {copied ? 'Copié !' : 'Copier les crédits'}
+            {copied ? t('photo.credits.copied') : t('photo.credits.copy')}
           </button>
         </section>
       )}

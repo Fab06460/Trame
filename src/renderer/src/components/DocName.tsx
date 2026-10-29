@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useT } from '@/i18n'
 import { useEditor } from '@/store/editor'
 import { MAX_NAME } from '@/docName'
 
 /** Nom du document : celui des exports et le nom proposé par « Enregistrer sous ». Entrée valide, Échap annule. */
 export function DocName(): React.JSX.Element {
+  const t = useT()
   const name = useEditor((s) => s.doc.name)
   const [draft, setDraft] = useState(name)
   useEffect(() => setDraft(name), [name])
@@ -14,8 +16,8 @@ export function DocName(): React.JSX.Element {
   return (
     <input
       className="doc-name"
-      aria-label="Nom du document"
-      title="Nom du document (nom des exports et du fichier)"
+      aria-label={t('doc.name.label')}
+      title={t('doc.name.title')}
       value={draft}
       maxLength={MAX_NAME}
       onChange={(e) => setDraft(e.target.value)}

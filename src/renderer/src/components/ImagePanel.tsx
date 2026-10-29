@@ -3,18 +3,21 @@ import { downscaleImage } from '@/photoImport'
 import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
+import { useT } from '@/i18n'
+import type { MessageKey } from '@shared/i18n'
 
-const SLIDERS: Array<[FilterKey, string]> = [
-  ['brightness', 'Luminosité'],
-  ['contrast', 'Contraste'],
-  ['saturation', 'Saturation'],
-  ['grayscale', 'Noir et blanc'],
-  ['sepia', 'Sépia'],
-  ['blur', 'Flou']
-]
+const SLIDERS = [
+  ['brightness', 'img.brightness'],
+  ['contrast', 'img.contrast'],
+  ['saturation', 'img.saturation'],
+  ['grayscale', 'img.grayscale'],
+  ['sepia', 'img.sepia'],
+  ['blur', 'img.blur']
+] as const satisfies ReadonlyArray<readonly [FilterKey, MessageKey]>
 
 /** Recadrage, miroir et réglages de lumière et de couleur d'une image. */
 export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
+  const t = useT()
   const { updateElement, beginChange } = useEditor.getState()
   const filters = activeFilters(el)
   const inset = cropInsets(el)
@@ -50,52 +53,52 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
 
   return (
     <>
-      <button data-action="replace-image" title="Garde la place et la taille de cette image ; la nouvelle est recadrée pour la couvrir" onClick={() => void replaceImage()}>
-        Remplacer l'image…
+      <button data-action="replace-image" title={t('img.replace.title')} onClick={() => void replaceImage()}>
+        {t('img.replace')}
       </button>
       <div className="row">
-        <button data-flip="x" aria-pressed={!!el.flipX} className={el.flipX ? 'active' : ''} title="Retourner horizontalement" onClick={() => updateElement(el.id, { flipX: el.flipX ? undefined : true })}>
+        <button data-flip="x" aria-pressed={!!el.flipX} className={el.flipX ? 'active' : ''} title={t('img.flipX')} onClick={() => updateElement(el.id, { flipX: el.flipX ? undefined : true })}>
           ⇋
         </button>
-        <button data-flip="y" aria-pressed={!!el.flipY} className={el.flipY ? 'active' : ''} title="Retourner verticalement" onClick={() => updateElement(el.id, { flipY: el.flipY ? undefined : true })}>
+        <button data-flip="y" aria-pressed={!!el.flipY} className={el.flipY ? 'active' : ''} title={t('img.flipY')} onClick={() => updateElement(el.id, { flipY: el.flipY ? undefined : true })}>
           ⇅
         </button>
       </div>
 
       {el.credit && (
         <>
-          <h4>Crédit</h4>
+          <h4>{t('img.credit')}</h4>
           <p className="hint" data-field="credit">{el.credit}</p>
           <button data-action="copy-credit" onClick={() => void navigator.clipboard.writeText(el.credit!).catch(() => {})}>
-            Copier le crédit
+            {t('img.credit.copy')}
           </button>
         </>
       )}
 
-      <h4>Recadrage</h4>
+      <h4>{t('img.crop')}</h4>
       <div className="num-grid">
-        <NumberField label="Gauche" field="cropLeft" value={inset.left} min={0} max={95} suffix="%" onCommit={(v) => setInset('left', v)} />
-        <NumberField label="Haut" field="cropTop" value={inset.top} min={0} max={95} suffix="%" onCommit={(v) => setInset('top', v)} />
-        <NumberField label="Droite" field="cropRight" value={inset.right} min={0} max={95} suffix="%" onCommit={(v) => setInset('right', v)} />
-        <NumberField label="Bas" field="cropBottom" value={inset.bottom} min={0} max={95} suffix="%" onCommit={(v) => setInset('bottom', v)} />
+        <NumberField label={t('img.crop.left')} field="cropLeft" value={inset.left} min={0} max={95} suffix="%" onCommit={(v) => setInset('left', v)} />
+        <NumberField label={t('img.crop.top')} field="cropTop" value={inset.top} min={0} max={95} suffix="%" onCommit={(v) => setInset('top', v)} />
+        <NumberField label={t('img.crop.right')} field="cropRight" value={inset.right} min={0} max={95} suffix="%" onCommit={(v) => setInset('right', v)} />
+        <NumberField label={t('img.crop.bottom')} field="cropBottom" value={inset.bottom} min={0} max={95} suffix="%" onCommit={(v) => setInset('bottom', v)} />
       </div>
       {hasCrop(el) && (
         <button data-action="crop-reset" onClick={() => updateElement(el.id, recrop(el, { x: 0, y: 0, width: 1, height: 1 }))}>
-          Rétablir l'image entière ({Math.round(crop.width * 100)} × {Math.round(crop.height * 100)} %)
+          {t('img.crop.reset', { w: Math.round(crop.width * 100), h: Math.round(crop.height * 100) })}
         </button>
       )}
 
-      <h4>Filtres</h4>
+      <h4>{t('img.filters')}</h4>
       <div className="presets">
         {FILTER_PRESETS.map((p) => (
-          <button key={p.name} data-preset={p.name} onClick={() => updateElement(el.id, { filters: Object.keys(p.filters).length ? { ...p.filters } : undefined })}>
-            {p.name}
+          <button key={p.id} data-preset={p.id} onClick={() => updateElement(el.id, { filters: Object.keys(p.filters).length ? { ...p.filters } : undefined })}>
+            {t(`img.preset.${p.id}`)}
           </button>
         ))}
       </div>
       {SLIDERS.map(([key, label]) => (
         <label key={key}>
-          {label}
+          {t(label)}
           <input
             type="range"
             data-filter={key}
@@ -110,7 +113,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       ))}
       {hasFilters(el) && (
         <button data-action="filters-reset" onClick={() => updateElement(el.id, { filters: undefined })}>
-          Réinitialiser les réglages
+          {t('img.filters.reset')}
         </button>
       )}
     </>

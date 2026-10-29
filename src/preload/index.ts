@@ -24,6 +24,10 @@ export interface UserTemplateMeta {
 }
 
 const api = {
+  /** Langue imposée au lancement (variable `TRAME_LANG`, utilisée par les tests) ; sinon undefined. */
+  forcedLocale: process.argv.find((a) => a.startsWith('--trame-lang='))?.slice('--trame-lang='.length),
+  /** Informe le processus principal de la langue choisie (boîtes de dialogue, erreurs). */
+  setLocale: (code: string): Promise<void> => ipcRenderer.invoke('i18n:set', code),
   /** Sans `path`, ouvre « Enregistrer sous » (proposant `name`). Retourne le chemin, ou null si annulé/échec. */
   saveProject: (json: string, path?: string, name?: string): Promise<string | null> =>
     ipcRenderer.invoke('project:save', json, path, name),
@@ -89,7 +93,7 @@ const api = {
   readClipboard: (): Promise<
     { kind: 'elements'; json: string } | { kind: 'image'; dataUrl: string } | { kind: 'text'; text: string } | null
   > => ipcRenderer.invoke('clipboard:read'),
-  askUnsaved: (name: string, action: string): Promise<'save' | 'discard' | 'cancel'> =>
+  askUnsaved: (name: string, action: 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'): Promise<'save' | 'discard' | 'cancel'> =>
     ipcRenderer.invoke('dialog:unsaved', name, action),
   /** Boîte d'information native (un bouton OK). */
   showInfo: (message: string, detail: string): Promise<void> => ipcRenderer.invoke('dialog:info', message, detail),

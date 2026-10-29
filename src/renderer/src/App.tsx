@@ -141,7 +141,7 @@ export default function App(): React.JSX.Element {
   useEffect(
     () =>
       window.trame.onBeforeClose(async () => {
-        if (await confirmUnsaved('fermer')) window.trame.confirmClose()
+        if (await confirmUnsaved('close')) window.trame.confirmClose()
       }),
     []
   )

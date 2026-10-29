@@ -46,16 +46,16 @@ export interface FontDef {
 export const SYSTEM_FONT = 'Helvetica Neue, Arial, sans-serif'
 
 export const FONTS: FontDef[] = [
-  { name: 'Inter', family: '"Inter", sans-serif', group: 'Sans', slug: 'inter', variants: ['400', '700', '400-italic', '700-italic'] },
-  { name: 'Montserrat', family: '"Montserrat", sans-serif', group: 'Sans', slug: 'montserrat', variants: ['400', '700', '400-italic', '700-italic'] },
-  { name: 'Poppins', family: '"Poppins", sans-serif', group: 'Sans', slug: 'poppins', variants: ['400', '700', '400-italic', '700-italic'] },
-  { name: 'Oswald', family: '"Oswald", sans-serif', group: 'Titre', slug: 'oswald', variants: ['400', '700'] },
-  { name: 'Bebas Neue', family: '"Bebas Neue", sans-serif', group: 'Titre', slug: 'bebas-neue', variants: ['400'] },
-  { name: 'Playfair Display', family: '"Playfair Display", serif', group: 'Serif', slug: 'playfair-display', variants: ['400', '700', '400-italic', '700-italic'] },
-  { name: 'Lora', family: '"Lora", serif', group: 'Serif', slug: 'lora', variants: ['400', '700', '400-italic', '700-italic'] },
-  { name: 'Caveat', family: '"Caveat", cursive', group: 'Manuscrit', slug: 'caveat', variants: ['400', '700'] },
-  { name: 'Pacifico', family: '"Pacifico", cursive', group: 'Manuscrit', slug: 'pacifico', variants: ['400'] },
-  { name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', group: 'Mono', slug: 'jetbrains-mono', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Inter', family: '"Inter", sans-serif', group: 'sans', slug: 'inter', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Montserrat', family: '"Montserrat", sans-serif', group: 'sans', slug: 'montserrat', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Poppins', family: '"Poppins", sans-serif', group: 'sans', slug: 'poppins', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Oswald', family: '"Oswald", sans-serif', group: 'display', slug: 'oswald', variants: ['400', '700'] },
+  { name: 'Bebas Neue', family: '"Bebas Neue", sans-serif', group: 'display', slug: 'bebas-neue', variants: ['400'] },
+  { name: 'Playfair Display', family: '"Playfair Display", serif', group: 'serif', slug: 'playfair-display', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Lora', family: '"Lora", serif', group: 'serif', slug: 'lora', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Caveat', family: '"Caveat", cursive', group: 'handwriting', slug: 'caveat', variants: ['400', '700'] },
+  { name: 'Pacifico', family: '"Pacifico", cursive', group: 'handwriting', slug: 'pacifico', variants: ['400'] },
+  { name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', group: 'mono', slug: 'jetbrains-mono', variants: ['400', '700', '400-italic', '700-italic'] },
 ]
 
 /** Charge toutes les graisses/styles avant le premier rendu : Konva mesure le texte au dessin, la police doit être prête. */
@@ -93,7 +93,7 @@ export function subscribeFonts(cb: () => void): () => void {
   return () => listeners.delete(cb)
 }
 
-const GROUPS: Record<string, string> = { 'sans-serif': 'Sans', serif: 'Serif', display: 'Titre', handwriting: 'Manuscrit', monospace: 'Mono' }
+const GROUPS: Record<string, string> = { 'sans-serif': 'sans', serif: 'serif', display: 'display', handwriting: 'handwriting', monospace: 'mono' }
 
 /** Toutes les polices utilisables : les 10 embarquées, puis celles ajoutées en ligne. */
 export const allFonts = (): FontDef[] => [...FONTS, ...[...extras.values()].map((e) => e.def)]
@@ -129,7 +129,7 @@ export async function registerExtraFont(font: ExtraFontData): Promise<void> {
   }
   if (faces.length === 0) return
   const variants = Object.keys(font.data)
-  extras.set(font.id, { def: { name: font.name, family: font.family, group: GROUPS[font.category] ?? 'Sans', slug: font.id, variants, installed: true }, font, faces })
+  extras.set(font.id, { def: { name: font.name, family: font.family, group: GROUPS[font.category] ?? 'sans', slug: font.id, variants, installed: true }, font, faces })
   notify()
 }
 

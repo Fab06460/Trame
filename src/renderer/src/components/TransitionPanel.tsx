@@ -1,13 +1,15 @@
 import { useEditor, selectPage } from '@/store/editor'
-import { DEFAULT_TRANSITION, TRANSITIONS, pageTransition, type PageTransition } from '@/transition'
+import { DEFAULT_TRANSITION, TRANSITIONS, pageTransition, transitionLabel, type PageTransition } from '@/transition'
+import { useT } from '@/i18n'
 
-const labelOf = (t: PageTransition): string => TRANSITIONS.find((x) => x.id === t)?.label ?? t
+const labelOf = transitionLabel
 
 /**
  * Transitions de la présentation : celle de la page courante (jouée à l'arrivée sur elle), celle du document (par défaut), et un
  * raccourci pour donner la même à toutes les pages.
  */
 export function TransitionPanel(): React.JSX.Element {
+  const t = useT()
   const page = useEditor(selectPage)
   const doc = useEditor((s) => s.doc)
   const index = doc.pages.findIndex((p) => p.id === page.id)
@@ -18,28 +20,28 @@ export function TransitionPanel(): React.JSX.Element {
 
   return (
     <>
-      <h3>Présentation</h3>
+      <h3>{t('transition.section')}</h3>
       <label>
-        Transition vers cette page
+        {t('transition.page')}
         <select data-field="pageTransition" value={page.transition ?? 'inherit'} onChange={(e) => setPageTransition(page.id, e.target.value === 'inherit' ? null : (e.target.value as PageTransition))}>
-          <option value="inherit">Comme le document ({labelOf(fallback)})</option>
-          {TRANSITIONS.map((t) => (
-            <option key={t.id} value={t.id}>{t.label}</option>
+          <option value="inherit">{t('transition.inherit', { name: labelOf(fallback) })}</option>
+          {TRANSITIONS.map((x) => (
+            <option key={x.id} value={x.id}>{labelOf(x.id)}</option>
           ))}
         </select>
       </label>
       <label>
-        Par défaut (document)
+        {t('transition.default')}
         <select data-field="docTransition" value={fallback} onChange={(e) => setTransition(e.target.value as PageTransition)}>
-          {TRANSITIONS.map((t) => (
-            <option key={t.id} value={t.id}>{t.label}</option>
+          {TRANSITIONS.map((x) => (
+            <option key={x.id} value={x.id}>{labelOf(x.id)}</option>
           ))}
         </select>
       </label>
-      <button data-action="transition-all" onClick={() => applyTransitionToAll(effective)} disabled={custom === 0 && effective === fallback} title={`Donne « ${labelOf(effective)} » à toutes les pages et retire les réglages propres à chaque page`}>
-        Appliquer « {labelOf(effective)} » à toutes les pages
+      <button data-action="transition-all" onClick={() => applyTransitionToAll(effective)} disabled={custom === 0 && effective === fallback} title={t('transition.all.title', { name: labelOf(effective) })}>
+        {t('transition.all', { name: labelOf(effective) })}
       </button>
-      {custom > 0 && <p className="hint" data-transition-count>{custom} page{custom > 1 ? 's ont' : ' a'} sa propre transition.</p>}
+      {custom > 0 && <p className="hint" data-transition-count>{t('transition.custom', { count: custom })}</p>}
     </>
   )
 }

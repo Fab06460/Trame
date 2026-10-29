@@ -3,6 +3,7 @@
  * d'intégration, regroupement des fichiers en familles (normal, gras, italique, gras italique). Pur : pas d'accès aux fichiers.
  */
 import { fontkit } from '@/fontkit'
+import { t } from '@/i18n'
 
 export type FontFormat = 'ttf' | 'otf' | 'woff' | 'woff2'
 /** Un fichier de police est embarqué tel quel dans les documents (≤ 2 M caractères en base64) : on refuse au-delà. */
@@ -46,25 +47,25 @@ interface FkFont {
 const NAME = /^[^"\\<>\u0000-\u001f]{1,60}$/
 
 export function parseFontFile(file: string, bytes: Uint8Array): FontFileResult {
-  if (bytes.length > MAX_FONT_FILE_BYTES) return { ok: false, reason: `trop volumineux (${(bytes.length / 1e6).toFixed(1)} Mo ; 1,5 Mo au plus — un sous-ensemble ou un fichier WOFF2 est plus léger)` }
+  if (bytes.length > MAX_FONT_FILE_BYTES) return { ok: false, reason: t('font.file.tooBig', { mb: (bytes.length / 1e6).toFixed(1) }) }
   const format = sniffFormat(bytes)
-  if (format === null) return { ok: false, reason: "ce n'est pas un fichier de police reconnu (TTF, OTF, WOFF ou WOFF2)" }
-  if (format === 'collection') return { ok: false, reason: 'collection de polices (.ttc) non prise en charge : exportez chaque police séparément' }
+  if (format === null) return { ok: false, reason: t('font.file.unrecognized') }
+  if (format === 'collection') return { ok: false, reason: t('font.file.collection') }
   let f: FkFont
   try {
     f = fontkit.create(bytes as never) as unknown as FkFont
   } catch {
-    return { ok: false, reason: 'fichier de police illisible ou endommagé' }
+    return { ok: false, reason: t('font.file.unreadable') }
   }
   const family = (f.familyName ?? '').replace(/\s+/g, ' ').trim()
-  if (!NAME.test(family)) return { ok: false, reason: 'nom de famille absent ou invalide' }
+  if (!NAME.test(family)) return { ok: false, reason: t('font.file.badName') }
   const os2 = f['OS/2']
   // le champ fsType est la volonté de l'auteur : « intégration interdite » doit être respectée (document et PDF embarquent la police)
-  if (os2?.fsType?.noEmbedding) return { ok: false, reason: "l'auteur de la police interdit son intégration dans des documents (licence)" }
+  if (os2?.fsType?.noEmbedding) return { ok: false, reason: t('font.file.noEmbedding') }
   const warnings: string[] = []
-  if (os2?.fsType?.viewOnly) warnings.push(`${file} : licence « aperçu et impression » seulement — vérifiez que vous avez le droit de l'utiliser dans vos documents`)
+  if (os2?.fsType?.viewOnly) warnings.push(t('font.file.viewOnly', { file }))
   const variable = !!f.variationAxes && Object.keys(f.variationAxes).length > 0
-  if (variable) warnings.push(`${file} : police variable, seule sa graisse par défaut est utilisée`)
+  if (variable) warnings.push(t('font.file.variable', { file }))
   const style = f.subfamilyName ?? ''
   const italic = !!os2?.fsSelection?.italic || !!os2?.fsSelection?.oblique || (f.italicAngle ?? 0) !== 0 || /italic|oblique/i.test(style)
   return { ok: true, info: { file, family, weight: os2?.usWeightClass ?? (/bold|black|heavy/i.test(style) ? 700 : 400), italic, variable, mono: (f.post?.isFixedPitch ?? 0) !== 0, format, warnings } }
@@ -102,13 +103,13 @@ export function groupFamilies(items: Array<{ bytes: Uint8Array; info: FontFileIn
       if (normal) g.variants[key(italic, false)] = { file: normal.info.file, bytes: normal.bytes }
       if (bold) g.variants[key(italic, true)] = { file: bold.info.file, bytes: bold.bytes }
       const kept = new Set([normal, bold])
-      for (const f of styled) if (!kept.has(f)) g.notes.push(`${f.info.file} : graisse ${f.info.weight} ignorée (Trame gère « normal » et « gras »)`)
+      for (const f of styled) if (!kept.has(f)) g.notes.push(t('font.file.weightIgnored', { file: f.info.file, weight: f.info.weight }))
     }
     // un style italique seul (sans droit) : on ne peut pas bâtir la famille sur lui
     if (!g.variants['400'] && g.variants['400-italic']) {
       g.variants['400'] = g.variants['400-italic']
       delete g.variants['400-italic']
-      g.notes.push('aucun fichier « normal » : le fichier italique sert de graisse normale')
+      g.notes.push(t('font.file.italicAsNormal'))
     }
     out.push(g)
   }
@@ -118,8 +119,8 @@ export function groupFamilies(items: Array<{ bytes: Uint8Array; info: FontFileIn
 /** Nom de police unique : celui du fichier, suivi de « (perso) » s'il existe déjà (une police embarquée ou ajoutée ne doit jamais être masquée). */
 export function uniqueName(family: string, taken: Set<string>): string {
   if (!taken.has(family)) return family
-  let n = `${family} (perso)`
-  for (let i = 2; taken.has(n); i++) n = `${family} (perso ${i})`
+  let n = t('font.custom', { family })
+  for (let i = 2; taken.has(n); i++) n = t('font.custom.n', { family, n: i })
   return n.slice(0, 60)
 }
 

@@ -3,6 +3,7 @@ import { rulerTicks } from '@/rulerMath'
 import { selectPage, useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
 import type { Guide } from '@/types'
+import { useT } from '@/i18n'
 
 /** Épaisseur des règles, en pixels écran. */
 export const RULER = 22
@@ -16,6 +17,7 @@ const COLORS = { bg: '#272830', page: '#3a3c4a', tick: '#8b8d9c', text: '#c9cad6
  * Tout se calcule à partir du store de vue : la position d'un repère en pixels écran est `décalage + position × échelle`.
  */
 export function Rulers(): React.JSX.Element {
+  const t = useT()
   const fit = useView((v) => v.fit)
   const zoom = useView((v) => v.zoom)
   const panX = useView((v) => v.panX)
@@ -159,7 +161,7 @@ export function Rulers(): React.JSX.Element {
             className={`guide ${g.orientation}`}
             data-guide={`${g.orientation}:${g.position}`}
             style={g.orientation === 'v' ? { left: offX + g.position * scale, top: settings.rulers ? RULER : 0 } : { top: offY + g.position * scale, left: settings.rulers ? RULER : 0 }}
-            title="Glisser pour déplacer · relâcher sur la règle ou double-clic pour supprimer"
+            title={t('view.guide.remove')}
             onPointerDown={(e) => startGuideDrag(g.orientation, i, e)}
             onDoubleClick={() => useEditor.getState().updateGuides((all) => all.filter((_, k) => k !== i))}
           />
@@ -185,11 +187,12 @@ export function Rulers(): React.JSX.Element {
 export function ViewOptions(): React.JSX.Element {
   const settings = useView((v) => v.settings)
   const toggle = useView((v) => v.toggleSetting)
-  const items: Array<{ key: 'rulers' | 'guides' | 'snap'; label: string; title: string }> = [
-    { key: 'rulers', label: 'Règles', title: 'Afficher / masquer les règles (⇧R)' },
-    { key: 'guides', label: 'Repères', title: 'Afficher / masquer les repères' },
-    { key: 'snap', label: 'Aimantation', title: 'Aimantation aux bords, centres et repères (maintenir ⌘ pour la suspendre)' }
-  ]
+  const t = useT()
+  const items = [
+    { key: 'rulers', label: t('view.rulers'), title: t('view.rulers.title') },
+    { key: 'guides', label: t('view.guides'), title: t('view.guides.title') },
+    { key: 'snap', label: t('view.snap'), title: t('view.snap.title') }
+  ] as const
   return (
     <div className="view-options" onMouseDown={(e) => e.stopPropagation()}>
       {items.map((it) => (

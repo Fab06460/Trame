@@ -7,6 +7,7 @@ import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
+import { t } from '@/i18n'
 
 /** Nœud Konva de texte tel que dessiné à l'écran : mêmes propriétés partout (éditeur, export image, export PDF). */
 export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): Konva.Text {
@@ -34,7 +35,7 @@ export const loadImage = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Image illisible'))
+    img.onerror = () => reject(new Error(t('imp.imageUnreadable')))
     img.src = src
   })
 

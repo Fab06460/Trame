@@ -4,6 +4,7 @@ import { registerEmbeddedFonts } from '@/fonts'
 import { clampNotesSize, formatElapsed, NOTES_SIZE, nextIndex } from '@/speakerFormat'
 import { parseDocument } from '@/store/editor'
 import type { TrameDocument } from '@/types'
+import { useLocale, useT } from '@/i18n'
 
 const NOTES_KEY = 'trame.speakerNotesSize'
 const readSize = (): number => {
@@ -55,6 +56,8 @@ function usePageImage(doc: TrameDocument | null, index: number | null, maxSide: 
  * par le processus principal (voir main/speakerProtocol.ts).
  */
 export function SpeakerView(): React.JSX.Element {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const [view, setView] = useState<View | null>(null)
   const [now, setNow] = useState(Date.now())
   const [resetAt, setResetAt] = useState<number | null>(null)
@@ -62,7 +65,10 @@ export function SpeakerView(): React.JSX.Element {
   const docJson = useRef<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Trame — Écran de l’orateur'
+    document.title = t('speaker.title')
+  }, [t])
+
+  useEffect(() => {
     const apply = (s: { doc: string | null; index: number; black: boolean; startedAt: number }): void => {
       if (s.doc !== null && s.doc !== docJson.current) {
         docJson.current = s.doc
@@ -118,7 +124,7 @@ export function SpeakerView(): React.JSX.Element {
   const upcoming = view ? nextIndex(view.index, count) : null
   const next = usePageImage(view?.doc ?? null, upcoming, 700)
 
-  if (!view) return <div className="speaker speaker-wait" role="status">En attente de la présentation…</div>
+  if (!view) return <div className="speaker speaker-wait" role="status">{t('speaker.waiting')}</div>
   const notes = view.doc.pages[view.index].notes
   const elapsed = now - (resetAt ?? view.startedAt)
   const resize = (delta: number): void => {
@@ -135,36 +141,36 @@ export function SpeakerView(): React.JSX.Element {
     <div className="speaker" data-speaker>
       <header className="speaker-bar">
         <span className="speaker-counter" data-speaker="counter">{view.index + 1} / {count}</span>
-        <span className="speaker-timer" data-speaker="timer" title="Temps écoulé depuis le début de la présentation">⏱ {formatElapsed(elapsed)}</span>
-        <button data-speaker="reset" onClick={() => setResetAt(Date.now())} title="Remettre le chronomètre à zéro">↺</button>
-        <span className="speaker-clock" data-speaker="clock">{new Date(now).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+        <span className="speaker-timer" data-speaker="timer" title={t('speaker.timer.title')}>⏱ {formatElapsed(elapsed)}</span>
+        <button data-speaker="reset" onClick={() => setResetAt(Date.now())} title={t('speaker.reset.title')}>↺</button>
+        <span className="speaker-clock" data-speaker="clock">{new Date(now).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
         <span className="spacer" />
-        <button data-speaker="prev" disabled={view.index === 0} onClick={() => go(view.index - 1)}>‹ Précédente</button>
-        <button data-speaker="next" className="primary" disabled={upcoming === null} onClick={() => go(view.index + 1)}>Suivante ›</button>
-        <button data-speaker="black" aria-pressed={view.black} className={view.black ? 'active' : ''} onClick={() => window.trame.sendSpeakerCommand({ type: 'black' })} title="Écran noir sur la présentation (B)">Écran noir</button>
-        <button data-speaker="swap" onClick={() => window.trame.sendSpeakerCommand({ type: 'swap' })} title="Échanger les écrans de la présentation et de l'orateur (avec deux écrans)">⇄ Écrans</button>
-        <button data-speaker="exit" className="danger" onClick={() => window.trame.sendSpeakerCommand({ type: 'exit' })} title="Terminer la présentation (Échap)">Terminer</button>
+        <button data-speaker="prev" disabled={view.index === 0} onClick={() => go(view.index - 1)}>{t('speaker.prev')}</button>
+        <button data-speaker="next" className="primary" disabled={upcoming === null} onClick={() => go(view.index + 1)}>{t('speaker.next')}</button>
+        <button data-speaker="black" aria-pressed={view.black} className={view.black ? 'active' : ''} onClick={() => window.trame.sendSpeakerCommand({ type: 'black' })} title={t('speaker.black.title')}>{t('speaker.black')}</button>
+        <button data-speaker="swap" onClick={() => window.trame.sendSpeakerCommand({ type: 'swap' })} title={t('speaker.swap.title')}>{t('speaker.swap')}</button>
+        <button data-speaker="exit" className="danger" onClick={() => window.trame.sendSpeakerCommand({ type: 'exit' })} title={t('speaker.exit.title')}>{t('speaker.exit')}</button>
       </header>
       <main className="speaker-main">
-        <section className="speaker-current" aria-label="Page affichée">
-          {current ? <img src={current} alt={`Page ${view.index + 1}`} data-speaker="current" data-speaker-index={view.index} draggable={false} /> : <div className="speaker-loading">Préparation…</div>}
-          {view.black && <div className="speaker-black" data-speaker="black-flag">Écran noir</div>}
+        <section className="speaker-current" aria-label={t('speaker.current')}>
+          {current ? <img src={current} alt={t('pres.page', { page: view.index + 1 })} data-speaker="current" data-speaker-index={view.index} draggable={false} /> : <div className="speaker-loading">{t('pres.preparing')}</div>}
+          {view.black && <div className="speaker-black" data-speaker="black-flag">{t('speaker.black')}</div>}
         </section>
         <aside className="speaker-side">
-          <section className="speaker-next" aria-label="Page suivante">
-            <h2>Suivante</h2>
-            {next ? <img src={next} alt={`Page ${(upcoming ?? 0) + 1}`} data-speaker="next-image" data-speaker-index={upcoming ?? -1} draggable={false} /> : <div className="speaker-end" data-speaker="end">{upcoming === null ? 'Fin de la présentation' : 'Préparation…'}</div>}
+          <section className="speaker-next" aria-label={t('speaker.nextLabel')}>
+            <h2>{t('speaker.upNext')}</h2>
+            {next ? <img src={next} alt={t('pres.page', { page: (upcoming ?? 0) + 1 })} data-speaker="next-image" data-speaker-index={upcoming ?? -1} draggable={false} /> : <div className="speaker-end" data-speaker="end">{upcoming === null ? t('speaker.end') : t('pres.preparing')}</div>}
           </section>
-          <section className="speaker-notes" aria-label="Notes">
+          <section className="speaker-notes" aria-label={t('speaker.notes')}>
             <h2>
-              Notes
+              {t('speaker.notes')}
               <span className="speaker-size">
-                <button data-speaker="notes-smaller" onClick={() => resize(-NOTES_SIZE.step)} disabled={size <= NOTES_SIZE.min} aria-label="Réduire le texte">A−</button>
-                <button data-speaker="notes-larger" onClick={() => resize(NOTES_SIZE.step)} disabled={size >= NOTES_SIZE.max} aria-label="Agrandir le texte">A+</button>
+                <button data-speaker="notes-smaller" onClick={() => resize(-NOTES_SIZE.step)} disabled={size <= NOTES_SIZE.min} aria-label={t('speaker.smaller')}>A−</button>
+                <button data-speaker="notes-larger" onClick={() => resize(NOTES_SIZE.step)} disabled={size >= NOTES_SIZE.max} aria-label={t('speaker.larger')}>A+</button>
               </span>
             </h2>
             <div className={`speaker-notes-text${notes ? '' : ' empty'}`} data-speaker="notes" style={{ fontSize: size }}>
-              {notes ?? 'Aucune note pour cette page.'}
+              {notes ?? t('pres.notes.none')}
             </div>
           </section>
         </aside>

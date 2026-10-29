@@ -9,9 +9,11 @@ import type { PdfFallback } from '@/pdfFallbacks'
 import { markerChars } from '@/listStyle'
 import { displayText } from '@/textStyle'
 import type { TrameElement } from '@/types'
+import { t } from '@/i18n'
+import { variantName } from '@/pdfFallbacks'
 
 /** Pourquoi un texte ne pourra pas être sélectionnable dans le PDF (voir `PdfFallback`). */
-export type TextIssue = Pick<PdfFallback, 'reason' | 'family' | 'variantLabel' | 'chars'>
+export type TextIssue = Pick<PdfFallback, 'reason' | 'family' | 'variantStyle' | 'chars'>
 
 /** Caractères de `text` absents d'une police (sans doublon, hors retours à la ligne). */
 export function missingChars(text: string, has: (codePoint: number) => boolean): string {
@@ -27,7 +29,7 @@ export async function checkText(el: TrameElement, getLayout: (choice: FontChoice
   if (!body.trim()) return null // rien à dessiner
   const text = body + markerChars(el) // les marqueurs de liste s'écrivent aussi : la police doit les avoir
   const d = diagnoseFont(el.fontFamily, el.fontStyle)
-  if (!d.ok) return { reason: d.reason, family: d.family, variantLabel: d.variantLabel }
+  if (!d.ok) return { reason: d.reason, family: d.family, variantStyle: d.variantStyle }
   const layout = await getLayout(d.choice)
   if (!layout) return { reason: 'font-unreadable', family: d.choice.def.name }
   const chars = missingChars(text, (cp) => layout.hasGlyphForCodePoint(cp))
@@ -44,7 +46,7 @@ const styleOf = (italic: boolean, bold: boolean): string => [italic ? 'italic' :
 export function suggestFix(el: TrameElement, issue: TextIssue): { patch: Partial<TrameElement>; label: string } | null {
   if (issue.reason === 'unknown-font') {
     const target = FONTS[0]
-    return { patch: { fontFamily: target.family }, label: `Utiliser ${target.name}` }
+    return { patch: { fontFamily: target.family }, label: t('pdf.fix.useFont', { name: target.name }) }
   }
   if (issue.reason === 'missing-variant') {
     const def = allFonts().find((f) => f.name === issue.family)
@@ -56,7 +58,7 @@ export function suggestFix(el: TrameElement, issue: TextIssue): { patch: Partial
     const found = wanted.find(([i, b]) => def.variants.includes(`${b ? '700' : '400'}${i ? '-italic' : ''}`))
     if (!found) return null
     const fontStyle = styleOf(found[0], found[1])
-    return { patch: { fontStyle }, label: fontStyle === 'normal' ? 'Retirer gras et italique' : `Utiliser le style ${fontStyle === 'italic' ? 'italique' : fontStyle === 'bold' ? 'gras' : 'gras italique'}` }
+    return { patch: { fontStyle }, label: fontStyle === 'normal' ? t('pdf.fix.removeStyles') : t('pdf.fix.useStyle', { style: variantName(fontStyle === 'italic' ? 'italic' : fontStyle === 'bold' ? 'bold' : 'bold italic') }) }
   }
   return null
 }

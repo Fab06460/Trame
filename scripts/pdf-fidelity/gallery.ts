@@ -19,7 +19,7 @@ async function main(): Promise<void> {
   for (const t of TEMPLATES) {
     const doc: TrameDocument = instantiate(t)
     const tiles: Array<{ label: string; img: HTMLImageElement }> = []
-    tiles.push({ label: `${t.name} ${doc.width}×${doc.height}`, img: await load(await renderPage(doc, doc.pages[0])) })
+    tiles.push({ label: `${t.id} ${doc.width}×${doc.height}`, img: await load(await renderPage(doc, doc.pages[0])) })
     for (const [name, w, h] of TARGETS) {
       if (w === doc.width && h === doc.height) continue
       const out = adaptDocument(doc, w, h)

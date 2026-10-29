@@ -50,7 +50,7 @@ describe('describeFallbacks', () => {
 
 describe('explain', () => {
   it('une cause par type', () => {
-    expect(explain(fb({ reason: 'missing-variant', family: 'Bebas Neue', variantLabel: 'gras' }))).toBe(
+    expect(explain(fb({ reason: 'missing-variant', family: 'Bebas Neue', variantStyle: 'bold' }))).toBe(
       "« Bebas Neue » n'existe pas en gras : retirez ce style ou choisissez une autre police"
     )
     expect(explain(fb({ reason: 'missing-glyph', chars: '✓≈' }))).toBe(
@@ -64,12 +64,12 @@ describe('diagnoseFont', () => {
   it('police connue → choix ; sinon la raison', () => {
     expect(diagnoseFont('"Inter", sans-serif', 'bold')).toMatchObject({ ok: true })
     expect(diagnoseFont('Helvetica Neue, Arial, sans-serif', 'normal')).toEqual({ ok: false, reason: 'unknown-font', family: 'Helvetica Neue' })
-    expect(diagnoseFont(undefined, undefined)).toEqual({ ok: false, reason: 'unknown-font', family: 'inconnue' })
+    expect(diagnoseFont(undefined, undefined)).toEqual({ ok: false, reason: 'unknown-font', family: '' })
   })
 
   it('variante absente : libellé du style demandé', () => {
-    expect(diagnoseFont('"Bebas Neue", sans-serif', 'bold')).toMatchObject({ reason: 'missing-variant', family: 'Bebas Neue', variantLabel: 'gras' })
-    expect(diagnoseFont('"Pacifico", cursive', 'italic')).toMatchObject({ reason: 'missing-variant', variantLabel: 'italique' })
-    expect(diagnoseFont('"Oswald", sans-serif', 'italic bold')).toMatchObject({ reason: 'missing-variant', variantLabel: 'gras italique' })
+    expect(diagnoseFont('"Bebas Neue", sans-serif', 'bold')).toMatchObject({ reason: 'missing-variant', family: 'Bebas Neue', variantStyle: 'bold' })
+    expect(diagnoseFont('"Pacifico", cursive', 'italic')).toMatchObject({ reason: 'missing-variant', variantStyle: 'italic' })
+    expect(diagnoseFont('"Oswald", sans-serif', 'italic bold')).toMatchObject({ reason: 'missing-variant', variantStyle: 'bold italic' })
   })
 })

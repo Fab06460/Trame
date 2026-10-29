@@ -4,6 +4,7 @@ import { renderPage } from '@/exportPages'
 import { effectiveScale, pageFileName } from '@/pageExport'
 import { pageToSvg } from '@/svgExport'
 import { useEditor } from '@/store/editor'
+import { t } from '@/i18n'
 
 export type PageFormat = 'png' | 'jpg' | 'svg'
 
@@ -60,11 +61,11 @@ export async function exportPagesImages(o: PagesExportOptions): Promise<PagesExp
     // le dossier est demandé AVANT le rendu : annuler ne coûte rien
     const picked = await window.trame.pickExportFolder(o.pages.map(nameOf), base)
     if (!picked) return { saved: null, files: 0, scale }
-    if (picked.existing.length && !(await window.trame.confirm(`Remplacer ${picked.existing.length} fichier${picked.existing.length > 1 ? 's' : ''} existant${picked.existing.length > 1 ? 's' : ''} ?`, `Le dossier contient déjà : ${picked.existing.slice(0, 5).join(', ')}${picked.existing.length > 5 ? '…' : ''}`, 'Remplacer'))) return { saved: null, files: 0, scale }
+    if (picked.existing.length && !(await window.trame.confirm(t('xp.replace.title', { count: picked.existing.length }), t('xp.replace.detail', { list: `${picked.existing.slice(0, 5).join(', ')}${picked.existing.length > 5 ? '…' : ''}` }), t('xp.replace.button')))) return { saved: null, files: 0, scale }
     for (const [i, n] of o.pages.entries()) {
       o.onProgress?.(i, total)
       const ok = await window.trame.writeExportFile(picked.dir, nameOf(n), `data:${type};base64,${await render(n)}`)
-      if (!ok) throw new Error(`Écriture impossible : ${nameOf(n)}`)
+      if (!ok) throw new Error(t('xp.writeFailed', { name: nameOf(n) }))
     }
     o.onProgress?.(total, total)
     return { saved: picked.dir, files: total, scale }

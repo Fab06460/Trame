@@ -1,16 +1,14 @@
+import { t } from '@/i18n'
 /**
  * Transition entre deux pages en mode présentation. Réglage du document (par défaut) que chaque page peut remplacer par la sienne :
  * celle d'une page est jouée quand on ARRIVE sur elle (comme PowerPoint) ; en reculant, c'est celle de la page quittée qui est rejouée à l'envers.
  */
 export type PageTransition = 'none' | 'fade' | 'slide' | 'cover' | 'zoom'
 
-export const TRANSITIONS: { id: PageTransition; label: string }[] = [
-  { id: 'none', label: 'Aucune' },
-  { id: 'fade', label: 'Fondu' },
-  { id: 'slide', label: 'Glissement' },
-  { id: 'cover', label: 'Recouvrement' },
-  { id: 'zoom', label: 'Zoom' }
-]
+export const TRANSITIONS: { id: PageTransition }[] = [{ id: 'none' }, { id: 'fade' }, { id: 'slide' }, { id: 'cover' }, { id: 'zoom' }]
+
+/** Nom d'une transition dans la langue courante. */
+export const transitionLabel = (id: PageTransition): string => t(`transition.${id}`)
 
 /** Valeur d'un document qui n'en précise pas (c'est le comportement d'origine du mode présentation). */
 export const DEFAULT_TRANSITION: PageTransition = 'fade'

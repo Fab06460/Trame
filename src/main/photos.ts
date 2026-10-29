@@ -1,3 +1,4 @@
+import { tm } from './i18n'
 /** Recherche de photos libres (Openverse) : logique pure — adresses, lecture tolérante des réponses, crédits. Le réseau est dans index.ts. */
 
 export const OPENVERSE_BASE = 'https://api.openverse.org'
@@ -50,13 +51,13 @@ export function licenseLabel(license: unknown, version: unknown): string {
   const l = typeof license === 'string' ? license.toLowerCase() : ''
   const v = typeof version === 'string' && version ? version : ''
   if (l === 'cc0') return `CC0${v ? ' ' + v : ' 1.0'}`
-  if (l === 'pdm') return 'Domaine public'
-  if (!l) return 'Licence inconnue'
+  if (l === 'pdm') return tm('photo.publicDomain')
+  if (!l) return tm('photo.unknownLicense')
   return `CC ${l.toUpperCase()}${v ? ' ' + v : ''}`
 }
 
 /** Une licence qui demande de citer l'auteur (tout sauf CC0 et domaine public). */
-export const needsCredit = (label: string): boolean => !/^(CC0|Domaine public)/.test(label)
+export const needsCredit = (label: string): boolean => !/^CC0/.test(label) && label !== tm('photo.publicDomain')
 
 const str = (v: unknown, max = 300): string => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const posInt = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v) : 0)
@@ -73,9 +74,9 @@ export function isAllowedUrl(url: string, allowLocal = false): boolean {
 }
 
 export function creditOf(p: Pick<Photo, 'title' | 'creator' | 'license' | 'landingUrl'>): string {
-  const who = p.creator ? ` par ${p.creator}` : ''
+  const who = p.creator ? tm('photo.by', { name: p.creator }) : ''
   const where = p.landingUrl ? ` — ${p.landingUrl}` : ''
-  return `« ${p.title || 'Sans titre'} »${who} (${p.license})${where}`
+  return tm('photo.credit', { title: p.title || tm('doc.untitled'), who, license: p.license, where })
 }
 
 /** Lecture tolérante d'une réponse de recherche : une entrée incomplète est ignorée, jamais d'erreur. */
@@ -134,7 +135,7 @@ export function commonsLicense(short: unknown): string | null {
   const s = typeof short === 'string' ? short.trim() : ''
   if (/^CC BY(-SA)? \d/i.test(s)) return s.replace(/\s+/g, ' ').toUpperCase().replace(/^CC BY-SA/, 'CC BY-SA')
   if (/^CC0/i.test(s)) return 'CC0 1.0'
-  if (/^(public domain|PD\b|PDM)/i.test(s)) return 'Domaine public'
+  if (/^(public domain|PD\b|PDM)/i.test(s)) return tm('photo.publicDomain')
   return null
 }
 

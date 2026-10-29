@@ -17,7 +17,7 @@ Recettes pour les évolutions les plus courantes. Lire d'abord [ARCHITECTURE.md]
 
 ## Ajouter une forme vectorielle
 
-Ajouter une entrée à `SHAPES` dans `shapes.ts` : `{ id, name, path }` avec un chemin SVG **rempli** (pas de contour) dans un viewBox 100×100. Elle apparaît automatiquement dans la barre latérale et peut servir aux modèles via `icon('id', …)`.
+Ajouter une entrée à `SHAPES` dans `shapes.ts` : `{ id, path }` (et le nom, clé `shape.<id>`, dans les quatre catalogues de `src/shared/i18n/locales/`) avec un chemin SVG **rempli** (pas de contour) dans un viewBox 100×100. Elle apparaît automatiquement dans la barre latérale et peut servir aux modèles via `icon('id', …)`.
 
 ## Ajouter un modèle
 
@@ -25,13 +25,13 @@ Dans `templates.ts`, ajouter un objet à `TEMPLATES` :
 
 ```ts
 {
-  id: 'mon-modele', name: 'Mon modèle', category: 'Post Instagram',
+  id: 'mon-modele', category: 'instagram',
   width: 1080, height: 1080,
   pages: [{ background: '#fff', elements: [ shape('rect', {...}, '#000'), text(...), icon(...) ] }]
 }
 ```
 
-Helpers : `shape`, `icon`, `text`. Les identifiants des éléments sont générés à l'application du modèle (`instantiate`). **L'`id` du modèle lui-même est persistant** : les utilisateurs peuvent l'avoir masqué ou remplacé par leur version (`hidden.json`, `basedOn`) ; ne jamais le renommer ni le réutiliser pour un autre modèle, et ne retirer un modèle qu'en sachant que sa version personnelle éventuelle subsiste. Un modèle peut avoir plusieurs pages. La catégorie regroupe les modèles dans la barre latérale. Les modèles sont du code TypeScript, pas des fichiers de données.
+Helpers : `shape`, `icon`, `text`. Le nom (`tpl.<id>.name`), la catégorie (`tpl.cat.<catégorie>`) et chaque texte (`L('tpl.<id>.…')`) sont des clés de traduction à ajouter aux quatre catalogues (voir [I18N.md](I18N.md)). Les identifiants des éléments sont générés à l'application du modèle (`instantiate`). **L'`id` du modèle lui-même est persistant** : les utilisateurs peuvent l'avoir masqué ou remplacé par leur version (`hidden.json`, `basedOn`) ; ne jamais le renommer ni le réutiliser pour un autre modèle, et ne retirer un modèle qu'en sachant que sa version personnelle éventuelle subsiste. Un modèle peut avoir plusieurs pages. La catégorie regroupe les modèles dans la barre latérale. Les modèles sont du code TypeScript, pas des fichiers de données.
 
 ## Ajouter une police
 
@@ -78,3 +78,7 @@ Toute modification de ce qui décide si un texte peut être écrit en vrai texte
 - **Maj enfoncé au moment du clic bascule la sélection** : pour contraindre un axe, presser sans Maj et l'ajouter pendant le mouvement (`modifiers` : Alt = 1, Ctrl = 2, ⌘ = 4, Maj = 8).
 - Un repère **vertical** se supprime sur la règle de **gauche**, un repère horizontal sur celle du haut.
 - Pour valider un test d'interaction, **désactiver volontairement la fonction** (par ex. remplacer `settings.snap` par `false`) et vérifier qu'il échoue.
+
+## Ajouter ou modifier un texte de l'interface
+
+Jamais de texte en dur dans un composant : ajouter la clé à `src/shared/i18n/locales/fr.ts`, puis aux trois autres catalogues (le compilateur signale celui auquel il manque), et l'utiliser avec `useT()` / `t()`. Voir [I18N.md](I18N.md), qui explique aussi comment ajouter une langue.

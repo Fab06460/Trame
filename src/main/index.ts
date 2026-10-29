@@ -12,6 +12,7 @@ import { safeExportName } from './exportFolder'
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
+import { initMainLocale, setMainLocale, tm } from './i18n'
 import {
   addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
   type TemplateMeta
@@ -71,7 +72,9 @@ const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(tem
 // sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
 const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
 
-const FILTER = { name: 'Projet Trame', extensions: ['trame'] }
+const FORCED_LANG = process.env.TRAME_LANG
+
+const projectFilter = (): { name: string; extensions: string[] } => ({ name: tm('main.filter.project'), extensions: ['trame'] })
 
 let mainWindow: BrowserWindow | null = null
 /** Fichiers ouverts par le système, en attente d'un renderer prêt à les recevoir. */
@@ -90,6 +93,7 @@ function createWindow(): void {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      additionalArguments: FORCED_LANG ? [`--trame-lang=${FORCED_LANG}`] : [],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -132,11 +136,11 @@ ipcMain.handle('project:save', async (e, json: string, currentPath?: string, nam
     let path = currentPath
     if (!path && TEST_EXPORT_DIR) {
       // tests de bout en bout : « Enregistrer » écrit dans le dossier de test (aucun dialogue natif)
-      path = join(TEST_EXPORT_DIR, `${basename(name || 'Sans titre')}.trame`)
+      path = join(TEST_EXPORT_DIR, `${basename(name || tm('doc.untitled'))}.trame`)
     }
     if (!path) {
       const win = BrowserWindow.fromWebContents(e.sender)!
-      const res = await dialog.showSaveDialog(win, { defaultPath: `${name || 'Sans titre'}.trame`, filters: [FILTER] })
+      const res = await dialog.showSaveDialog(win, { defaultPath: `${name || tm('doc.untitled')}.trame`, filters: [projectFilter()] })
       if (res.canceled || !res.filePath) return null
       path = res.filePath
     }
@@ -144,14 +148,14 @@ ipcMain.handle('project:save', async (e, json: string, currentPath?: string, nam
     await noteRecent(path)
     return path
   } catch (err) {
-    dialog.showErrorBox('Enregistrement impossible', err instanceof Error ? err.message : String(err))
+    dialog.showErrorBox(tm('main.saveFailed'), err instanceof Error ? err.message : String(err))
     return null
   }
 })
 
 ipcMain.handle('project:open', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)!
-  const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [FILTER] })
+  const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [projectFilter()] })
   if (res.canceled || !res.filePaths[0]) return null
   const path = res.filePaths[0]
   try {
@@ -159,7 +163,7 @@ ipcMain.handle('project:open', async (e) => {
     await noteRecent(path)
     return { path, json }
   } catch (err) {
-    dialog.showErrorBox('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    dialog.showErrorBox(tm('file.openFailed'), err instanceof Error ? err.message : String(err))
     return null
   }
 })
@@ -217,25 +221,25 @@ ipcMain.handle('templates:list', () => loadTemplateIndex())
 // `replaceId` : remplace le contenu d'un modèle existant (même identifiant) au lieu d'en créer un nouveau
 ipcMain.handle('templates:save', async (_e, meta: unknown, json: unknown, replaceId?: unknown) => {
   try {
-    if (typeof json !== 'string' || json.length > MAX_TEMPLATE_BYTES) throw new Error('Le design est trop volumineux pour devenir un modèle.')
+    if (typeof json !== 'string' || json.length > MAX_TEMPLATE_BYTES) throw new Error(tm('main.template.tooBig'))
     await mkdir(templatesDir(), { recursive: true })
     const index = await loadTemplateIndex()
     let entry: TemplateMeta | undefined
     let next: TemplateMeta[] | null
     if (replaceId !== undefined && replaceId !== null) {
-      if (!isValidId(replaceId) || !index.some((m) => m.id === replaceId)) throw new Error('Le modèle à remplacer est introuvable.')
+      if (!isValidId(replaceId) || !index.some((m) => m.id === replaceId)) throw new Error(tm('main.template.notFound'))
       next = replaceMeta(index, replaceId, meta)
       entry = next?.[0]
     } else {
       entry = sanitizeMeta(meta, randomUUID(), Date.now()) ?? undefined
       next = entry ? addMeta(index, entry) : null
     }
-    if (!entry || !next) throw new Error('Informations du modèle invalides.')
+    if (!entry || !next) throw new Error(tm('main.template.invalid'))
     await writeFile(join(templatesDir(), `${entry.id}.json`), json, 'utf-8')
     await saveTemplateIndex(next)
     return entry
   } catch (err) {
-    dialog.showErrorBox('Enregistrement du modèle impossible', err instanceof Error ? err.message : String(err))
+    dialog.showErrorBox(tm('main.template.saveFailed'), err instanceof Error ? err.message : String(err))
     return null
   }
 })
@@ -286,7 +290,7 @@ ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, conf
   const win = BrowserWindow.fromWebContents(e.sender)!
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
-    buttons: [confirmLabel, 'Annuler'],
+    buttons: [confirmLabel, tm('common.cancel')],
     defaultId: 1,
     cancelId: 1,
     message,
@@ -295,15 +299,17 @@ ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, conf
   return response === 0
 })
 
+const UNSAVED_ACTIONS = ['close', 'new', 'open', 'importPdf', 'importPptx', 'template'] as const
 ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
+  if (!(UNSAVED_ACTIONS as readonly string[]).includes(action)) return 'cancel'
   const win = BrowserWindow.fromWebContents(e.sender)!
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
-    buttons: ['Enregistrer', 'Ne pas enregistrer', 'Annuler'],
+    buttons: [tm('unsaved.save'), tm('unsaved.discard'), tm('common.cancel')],
     defaultId: 0,
     cancelId: 2,
-    message: `Enregistrer les modifications de « ${name} » ?`,
-    detail: `Vos modifications seront perdues si vous ne les enregistrez pas avant de ${action}.`
+    message: tm('unsaved.message', { name }),
+    detail: tm('unsaved.detail', { action: tm(`unsaved.action.${action as (typeof UNSAVED_ACTIONS)[number]}`) })
   })
   return (['save', 'discard', 'cancel'] as const)[response]
 })
@@ -377,7 +383,7 @@ async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ nam
     path = res.filePaths[0]
   }
   if ((await stat(path)).size > MAX_IMPORT_BYTES) {
-    dialog.showErrorBox('Fichier trop volumineux', `Ce fichier dépasse 150 Mo : il ne peut pas être importé.`)
+    dialog.showErrorBox(tm('main.import.tooBig.title'), tm('main.import.tooBig'))
     return null
   }
   return { name: basename(path).replace(new RegExp(`\\.${ext}$`, 'i'), ''), bytes: new Uint8Array(await readFile(path)) }
@@ -407,7 +413,7 @@ class NetworkError extends Error {
 }
 
 async function download(url: string, maxBytes: number, accept: string, timeoutMs = 20_000): Promise<{ bytes: Buffer; contentType: string | null }> {
-  if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `adresse refusée : ${url.slice(0, 120)}`)
+  if (!isAllowedUrl(url, ALLOW_LOCAL)) throw new NetworkError('unavailable', tm('net.addressRefused', { url: url.slice(0, 120) }))
   let res: Response
   try {
     // net.fetch (pile réseau de Chromium) plutôt que le fetch de Node : le service est derrière Cloudflare, qui bloque (HTTP 403) les
@@ -419,11 +425,11 @@ async function download(url: string, maxBytes: number, accept: string, timeoutMs
   }
   if (res.status === 429) throw new NetworkError('rate-limit', 'HTTP 429')
   if (!res.ok) throw new NetworkError('unavailable', `HTTP ${res.status} — ${(await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200)}`)
-  if (!isAllowedUrl(res.url || url, ALLOW_LOCAL)) throw new NetworkError('unavailable', `redirection refusée vers ${(res.url || '').slice(0, 120)}`)
+  if (!isAllowedUrl(res.url || url, ALLOW_LOCAL)) throw new NetworkError('unavailable', tm('net.redirectRefused', { url: (res.url || '').slice(0, 120) }))
   const declared = Number(res.headers.get('content-length') ?? 0)
-  if (declared > maxBytes) throw new NetworkError('unavailable', `réponse trop volumineuse (${declared} octets)`)
+  if (declared > maxBytes) throw new NetworkError('unavailable', tm('net.tooLarge', { bytes: declared }))
   const bytes = Buffer.from(await res.arrayBuffer())
-  if (bytes.length > maxBytes) throw new NetworkError('unavailable', `réponse trop volumineuse (${bytes.length} octets)`)
+  if (bytes.length > maxBytes) throw new NetworkError('unavailable', tm('net.tooLarge', { bytes: bytes.length }))
   return { bytes, contentType: res.headers.get('content-type') }
 }
 
@@ -451,7 +457,7 @@ function readJson(res: { bytes: Buffer; contentType: string | null }): unknown {
   try {
     return JSON.parse(res.bytes.toString('utf-8'))
   } catch {
-    throw new NetworkError('unavailable', `réponse illisible (type ${res.contentType ?? 'inconnu'}) : ${res.bytes.toString('utf-8').replace(/\s+/g, ' ').slice(0, 150)}`)
+    throw new NetworkError('unavailable', tm('net.unreadable', { type: res.contentType ?? tm('net.unknownType'), excerpt: res.bytes.toString('utf-8').replace(/\s+/g, ' ').slice(0, 150) }))
   }
 }
 
@@ -505,7 +511,7 @@ ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown, source
 ipcMain.handle('photos:import', async (_e, id: unknown): Promise<{ ok: true; dataUrl: string; credit: string; title: string } | { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail?: string }> => {
   const photo = typeof id === 'string' ? lastPhotos.get(id) : undefined
   if (!photo) return { ok: false, error: 'unavailable' }
-  let lastError: NetworkError = new NetworkError('unavailable', 'aucune photo téléchargeable (type de fichier non pris en charge ?)')
+  let lastError: NetworkError = new NetworkError('unavailable', tm('net.noPhoto'))
   for (const url of [photo.url, photo.thumbnailUrl]) {
     try {
       const dataUrl = asDataUrl(await download(url, MAX_IMAGE_BYTES, 'image/*'))
@@ -530,7 +536,7 @@ async function loadCatalog(): Promise<{ fonts: CatalogFont[]; stale: boolean }> 
   try {
     const res = await download(`${FONTS_API_URL.replace(/\/+$/, '')}/v1/fonts`, 8_000_000, 'application/json', 20_000)
     const fonts = parseCatalog(JSON.parse(res.bytes.toString('utf-8')))
-    if (fonts.length === 0) throw new NetworkError('unavailable', 'catalogue vide ou illisible')
+    if (fonts.length === 0) throw new NetworkError('unavailable', tm('net.catalogEmpty'))
     catalogMemo = fonts
     await writeFile(catalogFile(), JSON.stringify(fonts), 'utf-8').catch(() => {}) // copie pour le mode hors ligne
     return { fonts, stale: false }
@@ -562,7 +568,7 @@ async function readInstalledFont(id: string): Promise<InstalledFont | null> {
 
 async function downloadVariant(id: string, v: FontVariant): Promise<Buffer> {
   const res = await download(fontFileUrl(FONTS_CDN_URL, id, v), MAX_FONT_BYTES, 'font/woff2,*/*', 20_000)
-  if (!isWoff2(res.bytes)) throw new NetworkError('unavailable', `fichier de police invalide (${v})`)
+  if (!isWoff2(res.bytes)) throw new NetworkError('unavailable', tm('net.fontInvalidFile', { variant: v }))
   return res.bytes
 }
 
@@ -593,16 +599,16 @@ ipcMain.handle('fonts:installed', async (): Promise<InstalledFont[]> => {
 
 ipcMain.handle('fonts:install', async (_e, id: unknown) => {
   try {
-    if (!isSafeId(id)) throw new NetworkError('unavailable', 'identifiant de police invalide')
+    if (!isSafeId(id)) throw new NetworkError('unavailable', tm('net.fontInvalidId'))
     const font = (await loadCatalog()).fonts.find((f) => f.id === id)
-    if (!font) throw new NetworkError('unavailable', 'police absente du catalogue')
+    if (!font) throw new NetworkError('unavailable', tm('net.fontNotInCatalog'))
     const files = await Promise.all(font.variants.map(async (v) => [v, await downloadVariant(id, v).catch((e) => (v === '400' ? Promise.reject(e) : null))] as const))
     const dir = join(fontsDir(), id)
     await mkdir(dir, { recursive: true })
     await writeFile(join(dir, 'meta.json'), JSON.stringify({ id, name: font.name, category: font.category, license: font.license }), 'utf-8')
     for (const [v, bytes] of files) if (bytes) await writeFile(join(dir, `${v}.woff2`), bytes)
     const installed = await readInstalledFont(id)
-    if (!installed) throw new NetworkError('unavailable', "la police n'a pas pu être enregistrée")
+    if (!installed) throw new NetworkError('unavailable', tm('net.fontNotSaved'))
     return { ok: true as const, font: installed }
   } catch (err) {
     return fontsFailure(err)
@@ -612,9 +618,9 @@ ipcMain.handle('fonts:install', async (_e, id: unknown) => {
 /** Aperçu avant installation : la graisse normale seule, jamais enregistrée. */
 ipcMain.handle('fonts:preview', async (_e, id: unknown) => {
   try {
-    if (!isSafeId(id)) throw new NetworkError('unavailable', 'identifiant de police invalide')
+    if (!isSafeId(id)) throw new NetworkError('unavailable', tm('net.fontInvalidId'))
     const font = (await loadCatalog()).fonts.find((f) => f.id === id)
-    if (!font) throw new NetworkError('unavailable', 'police absente du catalogue')
+    if (!font) throw new NetworkError('unavailable', tm('net.fontNotInCatalog'))
     return { ok: true as const, name: font.name, data: (await downloadVariant(id, '400')).toString('base64') }
   } catch (err) {
     return fontsFailure(err)
@@ -628,7 +634,7 @@ ipcMain.handle('fonts:pick-files', async (): Promise<Array<{ name: string; size:
     // tests de bout en bout : les fichiers pick-font-* du dossier de test tiennent lieu de choix (aucun dialogue natif)
     paths = (await readdir(TEST_EXPORT_DIR)).filter((f) => f.startsWith('pick-font-')).sort().map((f) => join(TEST_EXPORT_DIR, f))
   } else {
-    const res = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: 'Polices', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] })
+    const res = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: tm('main.filter.fonts'), extensions: ['ttf', 'otf', 'woff', 'woff2'] }] })
     if (res.canceled) return []
     paths = res.filePaths
   }
@@ -643,22 +649,22 @@ ipcMain.handle('fonts:pick-files', async (): Promise<Array<{ name: string; size:
 /** Enregistre une famille importée (les fichiers sont gardés tels quels, une famille du même nom est remplacée). */
 ipcMain.handle('fonts:save-custom', async (_e, id: unknown, name: unknown, category: unknown, variants: unknown) => {
   try {
-    if (!isSafeId(id) || !id.startsWith(CUSTOM_PREFIX) || !isSafeFamilyName(name) || typeof category !== 'string' || !CATEGORY_LIST.includes(category)) throw new NetworkError('unavailable', 'police invalide')
+    if (!isSafeId(id) || !id.startsWith(CUSTOM_PREFIX) || !isSafeFamilyName(name) || typeof category !== 'string' || !CATEGORY_LIST.includes(category)) throw new NetworkError('unavailable', tm('net.fontInvalid'))
     const files: Array<[string, Buffer]> = []
     for (const [v, b64] of Object.entries((variants && typeof variants === 'object' ? variants : {}) as Record<string, unknown>)) {
       if (!ALL_VARIANTS.includes(v as FontVariant) || typeof b64 !== 'string') continue
       const bytes = Buffer.from(b64, 'base64')
-      if (bytes.length > MAX_FONT_BYTES || !isFontFile(bytes)) throw new NetworkError('unavailable', `fichier de police invalide (${v})`)
+      if (bytes.length > MAX_FONT_BYTES || !isFontFile(bytes)) throw new NetworkError('unavailable', tm('net.fontInvalidFile', { variant: v }))
       files.push([v, bytes])
     }
-    if (!files.some(([v]) => v === '400')) throw new NetworkError('unavailable', 'la graisse normale est obligatoire')
+    if (!files.some(([v]) => v === '400')) throw new NetworkError('unavailable', tm('net.normalRequired'))
     const dir = join(fontsDir(), id)
     await rm(dir, { recursive: true, force: true })
     await mkdir(dir, { recursive: true })
     await writeFile(join(dir, 'meta.json'), JSON.stringify({ id, name, category, license: 'Fichier personnel', custom: true }), 'utf-8')
     for (const [v, bytes] of files) await writeFile(join(dir, `${v}.font`), bytes)
     const font = await readInstalledFont(id)
-    if (!font) throw new NetworkError('unavailable', "la police n'a pas pu être enregistrée")
+    if (!font) throw new NetworkError('unavailable', tm('net.fontNotSaved'))
     return { ok: true as const, font }
   } catch (err) {
     return fontsFailure(err)
@@ -763,9 +769,9 @@ ipcMain.handle('speaker:open', async (e, raw: unknown) => {
     height: multi ? area.height : Math.round(area.height * 0.8),
     minWidth: 640,
     minHeight: 420,
-    title: 'Trame — Écran de l’orateur',
+    title: tm('main.speaker.title'),
     backgroundColor: '#14151a',
-    webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
+    webPreferences: { preload: join(__dirname, '../preload/index.js'), additionalArguments: FORCED_LANG ? [`--trame-lang=${FORCED_LANG}`] : [], contextIsolation: true, nodeIntegration: false, sandbox: true }
   })
   speakerWindow = win
   win.on('closed', () => {
@@ -827,7 +833,7 @@ ipcMain.handle('image:pick', async () => {
   }
   const res = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }]
+    filters: [{ name: tm('main.filter.images'), extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }]
   })
   if (res.canceled || !res.filePaths[0]) return null
   const path = res.filePaths[0]
@@ -868,7 +874,7 @@ ipcMain.handle('export:folder-pick', async (e, names: unknown, suggestion: unkno
     await mkdir(dir, { recursive: true })
   } else {
     const win = BrowserWindow.fromWebContents(e.sender)
-    const res = await dialog.showOpenDialog(win!, { title: 'Choisir le dossier d’export', properties: ['openDirectory', 'createDirectory'], buttonLabel: 'Exporter ici' })
+    const res = await dialog.showOpenDialog(win!, { title: tm('main.export.folderTitle'), properties: ['openDirectory', 'createDirectory'], buttonLabel: tm('main.export.folderButton') })
     if (res.canceled || !res.filePaths[0]) return null
     dir = res.filePaths[0]
   }
@@ -903,7 +909,7 @@ async function openFromSystem(path: string): Promise<void> {
   try {
     json = await readFile(path, 'utf-8')
   } catch (err) {
-    dialog.showErrorBox('Ouverture impossible', err instanceof Error ? err.message : String(err))
+    dialog.showErrorBox(tm('file.openFailed'), err instanceof Error ? err.message : String(err))
     return
   }
   await noteRecent(path)
@@ -914,10 +920,12 @@ async function openFromSystem(path: string): Promise<void> {
   mainWindow?.focus()
 }
 
+ipcMain.handle('i18n:set', (_e, code: unknown) => setMainLocale(code))
 // Le renderer écoute désormais : on lui remet le fichier reçu pendant le démarrage, s'il y en a un
 ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 
 app.whenReady().then(() => {
+  initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
