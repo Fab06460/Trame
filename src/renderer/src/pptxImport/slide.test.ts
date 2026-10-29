@@ -64,6 +64,15 @@ describe('images et groupes', () => {
     const r = tree(`<p:pic><p:nvPicPr><p:cNvPr id="3" name="i"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"><a:alphaModFix amt="50000"/></a:blip><a:srcRect l="25000" r="25000"/></p:blipFill><p:spPr><a:xfrm flipH="1"><a:off x="${10 * E}" y="${10 * E}"/><a:ext cx="${100 * E}" cy="${50 * E}"/></a:xfrm></p:spPr></p:pic>`)
     expect(r.drafts[0].el).toMatchObject({ type: 'image', src: 'data:image/png;base64,AAAA', opacity: 0.5, flipX: true, crop: { x: 0.25, y: 0, width: 0.5, height: 1 } })
   })
+  it('le texte alternatif (descr) de PowerPoint est repris, borné ; un descr vide ne crée rien', () => {
+    const pic = (descr: string) => `<p:pic><p:nvPicPr><p:cNvPr id="3" name="i"${descr}/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr>${xfrm(0, 0, 10, 10)}</p:spPr></p:pic>`
+    expect(tree(pic(' descr="  Un phare au lever du jour "')).drafts[0].el.alt).toBe('Un phare au lever du jour')
+    expect(tree(pic(` descr="${'x'.repeat(900)}"`)).drafts[0].el.alt).toHaveLength(500)
+    expect(tree(pic(' descr=""')).drafts[0].el.alt).toBeUndefined()
+    expect(tree(pic(' descr="preencoded.png"')).drafts[0].el.alt).toBeUndefined() // nom de fichier, pas une description
+    expect(tree(pic(' descr="Image1.JPG"')).drafts[0].el.alt).toBeUndefined()
+    expect(tree(pic('')).drafts[0].el.alt).toBeUndefined()
+  })
   it('image introuvable ou format non pris en charge : signalée', () => {
     const r = tree(`<p:pic><p:nvPicPr><p:cNvPr id="3" name="i"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId9"/></p:blipFill><p:spPr>${xfrm(0, 0, 10, 10)}</p:spPr></p:pic>`)
     expect(r.drafts).toHaveLength(0)

@@ -96,6 +96,7 @@ const api = {
   aiEdit: (provider: AiProviderId, kind: EditKind, instruction: string, imageDataUrl: string, width: number, height: number, requestId: string): Promise<AiGenerateResult> =>
     ipcRenderer.invoke('ai:edit', provider, kind, instruction, imageDataUrl, width, height, requestId),
   aiWrite: (provider: AiProviderId, action: WriteAction, text: string, option: string, requestId: string): Promise<AiTextResult> => ipcRenderer.invoke('ai:write', provider, action, text, option, requestId),
+  aiDescribe: (provider: AiProviderId, imageDataUrl: string, language: string, requestId: string): Promise<AiTextResult> => ipcRenderer.invoke('ai:describe', provider, imageDataUrl, language, requestId),
   aiCancel: (requestId: string): Promise<void> => ipcRenderer.invoke('ai:cancel', requestId),
   rendererReady: (): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('app:renderer-ready'),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),

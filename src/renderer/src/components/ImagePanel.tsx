@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react'
+import { prepareDescribeSource } from '@/aiEdit'
+import { useAi, aiErrorMessage } from '@/store/ai'
 import { useEditor } from '@/store/editor'
 import { downscaleImage } from '@/photoImport'
 import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
-import { AI_PROVIDERS } from '@shared/ai'
+import { AI_PROVIDERS, MAX_ALT, TRANSLATE_LANGUAGES, providerInfo } from '@shared/ai'
 
 const SLIDERS = [
   ['brightness', 'img.brightness'],
@@ -23,6 +26,45 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
   const filters = activeFilters(el)
   const inset = cropInsets(el)
   const crop = currentCrop(el)
+
+  // texte alternatif : saisi à la main ou proposé par un modèle qui voit l'image ; enregistré à la sortie du champ (un seul pas d'historique)
+  const [altDraft, setAltDraft] = useState(el.alt ?? '')
+  useEffect(() => setAltDraft(el.alt ?? ''), [el.id, el.alt])
+  const uiLocale = useLocale((s) => s.locale)
+  const [altLang, setAltLang] = useState(TRANSLATE_LANGUAGES.some((l) => l.code === uiLocale) ? uiLocale : 'en')
+  const aiStatus = useAi((s) => s.status)
+  const aiProvider = useAi((s) => s.provider)
+  const [describing, setDescribing] = useState<string | null>(null)
+  const [altError, setAltError] = useState<{ kind: string; detail?: string } | null>(null)
+  const [altNote, setAltNote] = useState<string | null>(null)
+  useEffect(() => {
+    if (!aiStatus) void useAi.getState().refresh()
+  }, [aiStatus])
+  const describeWith = aiStatus?.providers.find((p) => p.configured && p.id === aiProvider)?.id ?? aiStatus?.providers.find((p) => p.configured)?.id
+  const commitAlt = (): void => {
+    const v = altDraft.trim().slice(0, MAX_ALT)
+    if (v !== (el.alt ?? '')) updateElement(el.id, { alt: v || undefined })
+    setAltNote(null)
+  }
+  const describe = async (): Promise<void> => {
+    if (!describeWith || describing) return
+    const id = crypto.randomUUID()
+    setDescribing(id)
+    setAltError(null)
+    setAltNote(null)
+    try {
+      const source = await prepareDescribeSource(el)
+      const res = await window.trame.aiDescribe(describeWith, source.dataUrl, altLang, id)
+      if (res.ok) {
+        updateElement(el.id, { alt: res.text })
+        setAltNote(providerInfo(describeWith).name)
+      } else if (res.error !== 'cancelled') setAltError({ kind: res.error, detail: res.detail })
+    } catch {
+      setAltError({ kind: 'source' })
+    } finally {
+      setDescribing(null)
+    }
+  }
 
   const setInset = (side: 'left' | 'top' | 'right' | 'bottom', percent: number): void => {
     const i = { ...inset, [side]: percent }
@@ -65,6 +107,50 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
           ⇅
         </button>
       </div>
+
+      <h4>{t('alt.label')}</h4>
+      <textarea
+        className="text-field"
+        data-field="alt"
+        rows={3}
+        maxLength={MAX_ALT}
+        placeholder={t('alt.placeholder')}
+        value={altDraft}
+        disabled={describing !== null}
+        onChange={(e) => setAltDraft(e.target.value)}
+        onBlur={commitAlt}
+        onKeyDown={(e) => e.stopPropagation()}
+      />
+      <p className="hint">{t('alt.hint')}</p>
+      {describeWith ? (
+        <>
+          <div className="row">
+            <select data-field="altLanguage" aria-label={t('alt.language')} title={t('alt.language')} value={altLang} disabled={describing !== null} onChange={(e) => setAltLang(e.target.value)}>
+              {TRANSLATE_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </select>
+            {describing ? (
+              <>
+                <button disabled data-alt-busy>{t('alt.describing')}</button>
+                <button data-action="alt-cancel" onClick={() => void window.trame.aiCancel(describing)}>{t('common.cancel')}</button>
+              </>
+            ) : (
+              <button data-action="alt-describe" onClick={() => void describe()}>{t('alt.describe')}</button>
+            )}
+          </div>
+          <p className="hint">{t('alt.sent', { service: providerInfo(describeWith).name })} {t(providerInfo(describeWith).vision.costNote)}</p>
+        </>
+      ) : (
+        <p className="hint" data-alt-connect>{t('alt.connect')}</p>
+      )}
+      {altNote && <p className="hint" data-alt-note>{t('alt.aiNote', { service: altNote })}</p>}
+      {altError && (
+        <div className="warn" role="status" data-alt-error={altError.kind}>
+          {aiErrorMessage(altError.kind, describeWith ?? aiProvider)}
+          {altError.detail && <small className="detail">{t('ai.detail', { detail: altError.detail })}</small>}
+        </div>
+      )}
 
       {el.ai && (
         <>

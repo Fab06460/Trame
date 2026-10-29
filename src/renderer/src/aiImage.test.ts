@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aiLayerName, makeAiInfo, sanitizeAiInfo } from '@/aiImage'
+import { aiLayerName, makeAiInfo, sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
 import { parseDocument } from '@/store/editor'
 
 describe('origine d’une image générée par IA', () => {
@@ -30,5 +30,28 @@ describe('origine d’une image générée par IA', () => {
     const read = parseDocument(JSON.stringify(doc))
     expect(read.pages[0].elements[0].ai).toEqual({ provider: 'openai', model: 'gpt-image-1', prompt: 'un chat' })
     expect(read.pages[0].elements[1].ai).toBeUndefined()
+  })
+})
+
+describe('texte alternatif', () => {
+  it('seulement sur une image, rogné et borné à 500 caractères', () => {
+    const img: { type: string; alt?: unknown } = { type: 'image', alt: '  Une balle rouge  ' }
+    sanitizeAlt(img)
+    expect(img.alt).toBe('Une balle rouge')
+    const long: { type: string; alt?: unknown } = { type: 'image', alt: 'x'.repeat(900) }
+    sanitizeAlt(long)
+    expect((long.alt as string).length).toBe(500)
+    for (const bad of [{ type: 'rect', alt: 'intrus' }, { type: 'image', alt: '   ' }, { type: 'image', alt: 42 }, { type: 'image', alt: '\u0000\u0001' }]) {
+      sanitizeAlt(bad)
+      expect('alt' in bad).toBe(false)
+    }
+  })
+
+  it('traverse la lecture d’un document', () => {
+    const el = { id: 'a', type: 'image', x: 0, y: 0, width: 10, height: 10, rotation: 0, opacity: 1, fill: '#000', src: 'data:image/png;base64,AAAA', alt: 'Un phare au lever du jour' }
+    const doc = { version: 2, name: 'x', width: 100, height: 100, pages: [{ id: 'p', background: '#fff', elements: [el, { ...el, id: 'b', type: 'rect', alt: 'intrus' }] }] }
+    const read = parseDocument(JSON.stringify(doc))
+    expect(read.pages[0].elements[0].alt).toBe('Un phare au lever du jour')
+    expect(read.pages[0].elements[1].alt).toBeUndefined()
   })
 })

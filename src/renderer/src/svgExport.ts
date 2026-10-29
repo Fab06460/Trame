@@ -78,7 +78,7 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       )
     } else if (el.type === 'image' && el.src) {
       const href = hasImageEdits(el) || !el.src.startsWith('data:') ? await editedPng(el) : el.src
-      parts.push(`<image width="${n(el.width)}" height="${n(el.height)}" preserveAspectRatio="none" href="${escXml(href)}"/>`)
+      parts.push(`<image width="${n(el.width)}" height="${n(el.height)}" preserveAspectRatio="none" href="${escXml(href)}"${el.alt ? `><title>${escXml(el.alt)}</title></image>` : '/>'}`)
       if (stroke) parts.push(`<rect width="${n(el.width)}" height="${n(el.height)}" fill="none"${stroke}/>`)
     } else if (el.type === 'text') {
       parts.push(textSvg(el))

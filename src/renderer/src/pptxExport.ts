@@ -8,6 +8,7 @@ import { listIndent } from '@/listStyle'
 import { decodeDataUrl } from '@/pdfMath'
 import { displayText } from '@/textStyle'
 import JSZip from 'jszip'
+import { stripPlaceholderAlt } from '@/pptxAlt'
 import { insertTransition } from '@/pptxTransition'
 import { transitionBetween } from '@/transition'
 import type { TrameDocument, TrameElement } from '@/types'
@@ -69,7 +70,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
     const asImage = async (el: TrameElement, reason: PptxExportResult['rasterized'][number]['reason']): Promise<void> => {
       const r = await renderElementImage(el, 'full')
       if (!r) return
-      slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN })
+      slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN, ...(el.type === 'image' && el.alt ? { altText: el.alt } : {}) })
       rasterized.push({ page: index + 1, reason })
     }
 
@@ -95,7 +96,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
         // une image retouchée est cuite (recadrage, miroir, filtres) ; un format que PowerPoint ne lit pas est converti
         if (hasImageEdits(el) || (mime !== 'image/png' && mime !== 'image/jpeg')) { await asImage({ ...el, stroke: undefined }, hasImageEdits(el) ? 'edited' : 'format'); continue }
         const { x, y } = centredBox(el, el.width, el.height)
-        slide.addImage({ data: el.src, x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation, transparency })
+        slide.addImage({ data: el.src, x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation, transparency, ...(el.alt ? { altText: el.alt } : {}) })
       } else if (el.type === 'text') {
         const text = displayText(el)
         if (!text.trim()) continue
@@ -123,12 +124,13 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
   }
   let base64 = (await pptx.write({ outputType: 'base64' })) as string
   // pptxgenjs ne sait pas écrire les transitions : on les ajoute au XML de chaque diapositive (celle de la page d'arrivée)
-  if (doc.pages.some((_, i) => transitionBetween(doc, null, i) !== 'none')) {
+  // et on retire le faux texte alternatif (nom de fichier) que la bibliothèque met aux images qui n'en ont pas
+  {
     const zip = await JSZip.loadAsync(base64, { base64: true })
     for (const [i] of doc.pages.entries()) {
       const path = `ppt/slides/slide${i + 1}.xml`
       const file = zip.file(path)
-      if (file) zip.file(path, insertTransition(await file.async('string'), transitionBetween(doc, null, i)))
+      if (file) zip.file(path, stripPlaceholderAlt(insertTransition(await file.async('string'), transitionBetween(doc, null, i))))
     }
     base64 = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' })
   }

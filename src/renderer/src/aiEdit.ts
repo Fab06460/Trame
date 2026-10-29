@@ -26,7 +26,7 @@ export interface PreparedSource {
  * L'image telle qu'on la voit (recadrage, miroirs et filtres compris), réduite à `maxSide` px au plus et ré-encodée en PNG : un format
  * que tous les services lisent, quel que soit celui du fichier d'origine (GIF, SVG, WebP…).
  */
-export async function prepareEditSource(el: Pick<TrameElement, 'src' | 'width' | 'filters' | 'crop' | 'flipX' | 'flipY'>, maxSide: number): Promise<PreparedSource> {
+export async function prepareEditSource(el: Pick<TrameElement, 'src' | 'width' | 'filters' | 'crop' | 'flipX' | 'flipY'>, maxSide: number, format: 'png' | 'jpeg' = 'png'): Promise<PreparedSource> {
   if (!el.src) throw new Error('no image')
   const shown = hasImageEdits(el) ? await editedPng(el) : el.src
   const img = await load(shown)
@@ -36,9 +36,17 @@ export async function prepareEditSource(el: Pick<TrameElement, 'src' | 'width' |
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
-  return { dataUrl: canvas.toDataURL('image/png'), width, height }
+  const ctx = canvas.getContext('2d')!
+  if (format === 'jpeg') {
+    ctx.fillStyle = '#ffffff' // le JPEG n'a pas de transparence : fond blanc plutôt que noir
+    ctx.fillRect(0, 0, width, height)
+  }
+  ctx.drawImage(img, 0, 0, width, height)
+  return { dataUrl: format === 'jpeg' ? canvas.toDataURL('image/jpeg', 0.85) : canvas.toDataURL('image/png'), width, height }
 }
+
+/** Image à décrire : telle qu'on la voit, réduite à 1 024 px au plus et en JPEG (bien plus léger que le PNG pour une photo). */
+export const prepareDescribeSource = (el: Parameters<typeof prepareEditSource>[0]): Promise<PreparedSource> => prepareEditSource(el, 1024, 'jpeg')
 
 /** Boîte d'une image retouchée posée à côté de l'originale : dans la même zone (proportions du résultat), décalée pour rester visible. */
 export function nextToBox(source: Pick<TrameElement, 'x' | 'y' | 'width' | 'height'>, w: number, h: number, offset = 24): Pick<TrameElement, 'x' | 'y' | 'width' | 'height'> {

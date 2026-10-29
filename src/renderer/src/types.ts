@@ -106,6 +106,8 @@ export interface TrameElement {
   pdfSource?: { id: string; page: number }
   /** crédit d'une photo en ligne (auteur, licence, page d'origine), à citer si la licence l'exige */
   credit?: string
+  /** texte alternatif (description pour les personnes qui ne voient pas l'image), 500 caractères au plus */
+  alt?: string
   /** image générée par un service d'IA : service, modèle et demande (information seulement) */
   ai?: { provider: 'cloudflare' | 'openai'; model: string; prompt: string; from?: 'edit' | 'variation' }
   /** recadrage : la zone de l'image d'origine qui remplit la boîte de l'élément */

@@ -769,5 +769,17 @@ export const de: Catalog = {
   'aiw.label.formal': 'Förmlicher',
   'aiw.label.casual': 'Lockerer',
   'aiw.label.translate': 'Übersetzt ({language})',
-  'aiw.label.free': 'Freie Anfrage'
+  'aiw.label.free': 'Freie Anfrage',
+  // Texte alternatif des images
+  'alt.label': 'Alternativtext',
+  'alt.placeholder': 'Beschreiben Sie das Bild für Personen, die es nicht sehen können',
+  'alt.hint': 'Wird von Screenreadern vorgelesen; in PowerPoint- und SVG-Exporten enthalten (nicht im PDF).',
+  'alt.describe': 'Mit KI beschreiben',
+  'alt.describing': 'Wird beschrieben …',
+  'alt.language': 'Sprache der Beschreibung',
+  'alt.connect': 'Verbinden Sie einen KI-Dienst (Tab „KI“), um automatisch eine Beschreibung vorzuschlagen.',
+  'alt.aiNote': 'Von {service} vorgeschlagene Beschreibung: Lesen Sie sie durch und korrigieren Sie sie bei Bedarf. „Rückgängig“ entfernt sie.',
+  'alt.sent': 'Das Bild wird zur Beschreibung an {service} gesendet.',
+  'alt.cost.cloudflare': 'Etwa 40 Neurons pro Beschreibung (mehrere hundert pro Tag im kostenlosen Kontingent).',
+  'alt.cost.openai': 'Kostenpflichtig: ein Bruchteil eines Cents pro Beschreibung, von OpenAI berechnet.'
 }

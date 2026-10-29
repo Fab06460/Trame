@@ -40,6 +40,11 @@ export interface AiProviderInfo {
     model: string
     costNote: MessageKey
   }
+  /** description d'une image pour le texte alternatif (modèle qui voit les images) */
+  vision: {
+    model: string
+    costNote: MessageKey
+  }
 }
 
 export const AI_PROVIDERS: readonly AiProviderInfo[] = [
@@ -58,7 +63,9 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     // FLUX.2 klein 4B : « toutes les images en entrée doivent faire moins de 512×512 » (documentation Cloudflare)
     edit: { model: 'FLUX.2 klein 4B', maxInputSide: 512, costNote: 'aie.cost.cloudflare' },
     // point d'accès compatible OpenAI (`/ai/v1/chat/completions`) : même format de réponse que pour OpenAI
-    text: { model: '@cf/meta/llama-3.1-8b-instruct-fp8-fast', costNote: 'aiw.cost.cloudflare' }
+    text: { model: '@cf/meta/llama-3.1-8b-instruct-fp8-fast', costNote: 'aiw.cost.cloudflare' },
+    // Mistral Small 3.1 : licence Apache 2.0 (Llama 3.2 Vision exige d'accepter la licence de Meta par une première requête « agree »), bon en français
+    vision: { model: '@cf/mistralai/mistral-small-3.1-24b-instruct', costNote: 'alt.cost.cloudflare' }
   },
   {
     id: 'openai',
@@ -70,7 +77,8 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     costNote: 'ai.cost.openai',
     signupUrl: 'platform.openai.com',
     edit: { model: 'gpt-image-1', maxInputSide: 1024, costNote: 'aie.cost.openai' },
-    text: { model: 'gpt-4.1-mini', costNote: 'aiw.cost.openai' }
+    text: { model: 'gpt-4.1-mini', costNote: 'aiw.cost.openai' },
+    vision: { model: 'gpt-4.1-mini', costNote: 'alt.cost.openai' }
   }
 ]
 
@@ -175,3 +183,6 @@ export const MAX_WRITE_TEXT = 4000
 export type AiTextResult =
   | { ok: true; text: string; provider: AiProviderId; model: string }
   | { ok: false; error: AiErrorKind; detail?: string }
+
+/** Longueur maximale d'un texte alternatif (PowerPoint en accepte davantage ; au-delà, ce n'est plus une description courte). */
+export const MAX_ALT = 500

@@ -770,7 +770,19 @@ export const fr = {
   'aiw.label.formal': 'Plus formel',
   'aiw.label.casual': 'Plus décontracté',
   'aiw.label.translate': 'Traduit ({language})',
-  'aiw.label.free': 'Demande libre'
+  'aiw.label.free': 'Demande libre',
+  // Texte alternatif des images
+  'alt.label': 'Texte alternatif',
+  'alt.placeholder': 'Décrivez l\'image pour les personnes qui ne la voient pas',
+  'alt.hint': 'Lu par les lecteurs d\'écran ; repris dans les exports PowerPoint et SVG (pas dans le PDF).',
+  'alt.describe': 'Décrire avec l\'IA',
+  'alt.describing': 'Description en cours…',
+  'alt.language': 'Langue de la description',
+  'alt.connect': 'Connectez un service d\'IA (onglet « IA ») pour proposer une description automatiquement.',
+  'alt.aiNote': 'Description proposée par {service} : relisez-la et corrigez-la au besoin. « Annuler » la retire.',
+  'alt.sent': 'L\'image est envoyée à {service} pour être décrite.',
+  'alt.cost.cloudflare': 'Environ 40 neurons par description (plusieurs centaines par jour dans le quota gratuit).',
+  'alt.cost.openai': 'Payant : une fraction de centime par description, facturée par OpenAI.'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

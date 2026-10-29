@@ -68,3 +68,16 @@ export function cleanOutput(raw: string, original = ''): string {
   }
   return t.slice(0, 8000)
 }
+
+/** Conversation pour décrire une image (texte alternatif) dans la langue demandée (nom anglais). L'image est ajoutée par l'appelant. */
+export function describePrompt(languageEnglish: string): { system: string; user: string } {
+  return {
+    system: 'You write alternative text (alt text) for images, for people who cannot see them. Reply with ONLY the description: no introduction, no quotation marks, no markdown.',
+    user: `Describe this image in one or two short sentences (under 200 characters in total): the subject, the setting and anything essential such as visible text. Do not start with "Image of", "Picture of" or "The image shows". Write the description in ${languageEnglish}.`
+  }
+}
+
+/** Réponse d'un modèle de vision réduite à une description sur une ligne, bornée. */
+export function cleanDescription(raw: string, max: number): string {
+  return cleanOutput(raw).replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, max).trim()
+}

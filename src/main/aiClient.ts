@@ -1,5 +1,5 @@
-import { MAX_EDIT_IMAGE_CHARS, editOutput, providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize, type AiTextResult, type WriteAction } from '../shared/ai'
-import { buildMessages, cleanOutput, type ChatMessage } from './aiWriting'
+import { MAX_ALT, MAX_EDIT_IMAGE_CHARS, TRANSLATE_LANGUAGES, editOutput, providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize, type AiTextResult, type WriteAction } from '../shared/ai'
+import { buildMessages, cleanDescription, cleanOutput, describePrompt, type ChatMessage } from './aiWriting'
 import { buildMultipart } from './multipart'
 
 /** Réponse HTTP minimale (celle de `net.fetch`, ou d'un faux en test). */
@@ -231,4 +231,51 @@ export async function writeText(provider: AiProviderId, action: WriteAction, tex
   const cleaned = out ? cleanOutput(out, text) : ''
   if (!cleaned) return { ok: false, error: 'unavailable', detail: 'no text in the response' }
   return { ok: true, text: cleaned, provider, model: providerInfo(provider).text.model }
+}
+
+// ── Texte alternatif : un modèle qui voit l'image la décrit ─────────────────────────────────────────────────────────────
+
+/** Image data URL png / jpeg / webp dont le type est confirmé par les premiers octets (sans contrainte de dimensions), ou null. */
+export function parseImageDataUrl(dataUrl: unknown): { mime: EditSource['mime']; dataUrl: string } | null {
+  if (typeof dataUrl !== 'string' || dataUrl.length > MAX_EDIT_IMAGE_CHARS + 64) return null
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl)
+  if (!m || sniffImageMime(m[2]) !== m[1]) return null
+  return { mime: m[1] as EditSource['mime'], dataUrl }
+}
+
+/** Requête de description d'image : format « chat completions » avec une partie `image_url` (le même chez les deux services). */
+export function buildDescribeRequest(provider: AiProviderId, language: string, imageDataUrl: string, values: Record<string, string>, base: string): BuiltRequest | null {
+  const lang = TRANSLATE_LANGUAGES.find((l) => l.code === language)
+  if (!lang) return null
+  const { system, user } = describePrompt(lang.english)
+  const root = base.replace(/\/+$/, '')
+  const model = providerInfo(provider).vision.model
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user', content: [{ type: 'text', text: user }, { type: 'image_url', image_url: { url: imageDataUrl } }] }
+  ]
+  if (provider === 'cloudflare') {
+    return {
+      url: `${root}/client/v4/accounts/${values.account}/ai/v1/chat/completions`,
+      headers: { Authorization: `Bearer ${values.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, max_tokens: 300 })
+    }
+  }
+  return {
+    url: `${root}/v1/chat/completions`,
+    headers: { Authorization: `Bearer ${values.key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages, max_completion_tokens: 300 })
+  }
+}
+
+/** Décrit une image. Ne lève jamais. */
+export async function describeImage(provider: AiProviderId, language: string, imageDataUrl: string, values: Record<string, string>, o: GenerateOptions): Promise<AiTextResult> {
+  const req = buildDescribeRequest(provider, language, imageDataUrl, values, o.base ?? DEFAULT_BASES[provider])
+  if (!req) return { ok: false, error: 'unavailable', detail: 'language' }
+  const raw = await sendRaw(provider, req, o)
+  if (!raw.ok) return raw
+  const out = extractText(raw.body)
+  const text = out ? cleanDescription(out, MAX_ALT) : ''
+  if (!text) return { ok: false, error: 'unavailable', detail: 'no description in the response' }
+  return { ok: true, text, provider, model: providerInfo(provider).vision.model }
 }

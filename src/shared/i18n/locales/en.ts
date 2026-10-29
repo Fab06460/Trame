@@ -769,5 +769,17 @@ export const en: Catalog = {
   'aiw.label.formal': 'More formal',
   'aiw.label.casual': 'More casual',
   'aiw.label.translate': 'Translated ({language})',
-  'aiw.label.free': 'Free request'
+  'aiw.label.free': 'Free request',
+  // Texte alternatif des images
+  'alt.label': 'Alternative text',
+  'alt.placeholder': 'Describe the image for people who cannot see it',
+  'alt.hint': 'Read by screen readers; kept in PowerPoint and SVG exports (not in the PDF).',
+  'alt.describe': 'Describe with AI',
+  'alt.describing': 'Describing…',
+  'alt.language': 'Description language',
+  'alt.connect': 'Connect an AI service (“AI” tab) to suggest a description automatically.',
+  'alt.aiNote': 'Description suggested by {service}: read it and correct it if needed. “Undo” removes it.',
+  'alt.sent': 'The image is sent to {service} to be described.',
+  'alt.cost.cloudflare': 'About 40 neurons per description (several hundred a day within the free quota).',
+  'alt.cost.openai': 'Paid: a fraction of a cent per description, billed by OpenAI.'
 }

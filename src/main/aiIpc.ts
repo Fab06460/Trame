@@ -1,7 +1,7 @@
 import { app, ipcMain, net, safeStorage } from 'electron'
 import { join } from 'path'
 import { MAX_AI_PROMPT, MAX_WRITE_TEXT, VARIATION_INSTRUCTION, isAiProvider, isAiSize, isEditKind, isWriteAction, providerInfo, type AiGenerateResult, type AiStatus, type AiTextResult } from '../shared/ai'
-import { DEFAULT_BASES, editImage, generateImage, parseEditImage, writeText, type HttpPost } from './aiClient'
+import { DEFAULT_BASES, describeImage, editImage, generateImage, parseEditImage, parseImageDataUrl, writeText, type HttpPost } from './aiClient'
 import { createCredentialStore, type SecretBox } from './aiCredentials'
 import { isAllowedUrl } from './photos'
 
@@ -94,5 +94,16 @@ export function registerAiHandlers(): void {
     const base = BASE_OVERRIDE ?? DEFAULT_BASES[provider]
     if (!isAllowedUrl(base, !!BASE_OVERRIDE)) return { ok: false, error: 'unavailable', detail: 'address refused' }
     return run(requestId, (signal) => writeText(provider, action, body, opt, values, { base, signal, post }), provider)
+  })
+
+  ipcMain.handle('ai:describe', async (_e, provider: unknown, imageDataUrl: unknown, language: unknown, requestId: unknown): Promise<AiTextResult> => {
+    if (!isAiProvider(provider) || typeof language !== 'string') return { ok: false, error: 'unavailable', detail: 'service' }
+    const image = parseImageDataUrl(imageDataUrl)
+    if (!image) return { ok: false, error: 'unavailable', detail: 'image' }
+    const values = await credentials().get(provider)
+    if (!values) return { ok: false, error: 'no-credentials' }
+    const base = BASE_OVERRIDE ?? DEFAULT_BASES[provider]
+    if (!isAllowedUrl(base, !!BASE_OVERRIDE)) return { ok: false, error: 'unavailable', detail: 'address refused' }
+    return run(requestId, (signal) => describeImage(provider, language, image.dataUrl, values, { base, signal, post }), provider)
   })
 }

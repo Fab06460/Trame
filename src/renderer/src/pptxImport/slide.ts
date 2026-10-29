@@ -10,6 +10,7 @@ import { matchFont } from '@/pdfImport/layout'
 import { SHAPES } from '@/shapes'
 import type { Gradient, Shadow, TrameElement } from '@/types'
 import { t as tr } from '@/i18n'
+import { MAX_ALT } from '@shared/ai'
 
 export const EMU_PER_PX = 9525
 const px = (emu: number): number => emu / EMU_PER_PX
@@ -420,6 +421,9 @@ function walk(tree: Element, t: Tf, st: State): void {
       const el = imageElement(src, boxOf(x, t), kid(node, 'blipFill', 'srcRect'), { h: x.flipH, v: x.flipV }, alpha)
       const shadow = readShadow(kid(node, 'spPr'), st.ctx)
       if (shadow) el.shadow = shadow
+      const descr = attr(kid(node, 'nvPicPr', 'cNvPr'), 'descr')?.trim()
+      // un nom de fichier (« image1.png », « preencoded.png ») n'est pas une description : PowerPoint et les bibliothèques en mettent par défaut
+      if (descr && !/^\S+\.(png|jpe?g|gif|webp|bmp|svg|emf|wmf|tiff?)$/i.test(descr)) el.alt = descr.slice(0, MAX_ALT)
       if (st.groupId) el.groupId = st.groupId
       st.out.push({ el })
     } else if (kind === 'grpSp') {

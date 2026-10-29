@@ -1,4 +1,4 @@
-import { MAX_AI_PROMPT, isAiProvider } from '@shared/ai'
+import { MAX_AI_PROMPT, MAX_ALT, isAiProvider } from '@shared/ai'
 import type { TrameElement } from '@/types'
 
 /** Origine d'une image générée par un service d'IA (information enregistrée avec l'élément). */
@@ -10,6 +10,17 @@ export function makeAiInfo(provider: AiInfo['provider'], model: string, prompt: 
 
 /** Nom de calque proposé pour une image générée : le début de la demande. */
 export const aiLayerName = (prompt: string): string => prompt.replace(/\s+/g, ' ').trim().slice(0, 60)
+
+/** Lecture d'un fichier : `alt` n'a de sens que sur une image ; texte rogné, sur une ligne si besoin, borné ; sinon retiré. */
+export function sanitizeAlt(e: { type: string; alt?: unknown }): void {
+  if (e.type !== 'image' || typeof e.alt !== 'string') {
+    delete e.alt
+    return
+  }
+  const alt = e.alt.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').trim().slice(0, MAX_ALT).trim()
+  if (alt) e.alt = alt
+  else delete e.alt
+}
 
 /** Lecture d'un fichier : `ai` n'a de sens que sur une image, avec un service connu et des textes bornés ; sinon il est retiré. */
 export function sanitizeAiInfo(e: { type: string; ai?: unknown }): void {
