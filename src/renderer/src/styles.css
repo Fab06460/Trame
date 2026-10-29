@@ -94,6 +94,8 @@ button.danger { color: #ff7b7b; }
 .card-open span { color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 
+/* flex: none — le panneau est une colonne flex de hauteur limitée : sans cela le champ était écrasé à sa hauteur minimale dès que le panneau était plein, et sa hauteur fixée à la main était ignorée */
+.panel textarea.text-field, .sidebar textarea.text-field { flex: none; display: block; width: 100%; box-sizing: border-box; min-height: 84px; max-height: 55vh; resize: vertical; line-height: 1.4; overflow-y: auto; field-sizing: content; /* s'agrandit avec le texte (Chromium) ; la poignée permet d'aller plus loin */ }
 .text-field { background: #1b1c21; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px; font: inherit; }
 .wide { width: 100%; margin-bottom: 10px; }
 .warn { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.5); color: #fbbf24; font-size: 12px; line-height: 1.4; }

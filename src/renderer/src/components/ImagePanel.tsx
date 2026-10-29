@@ -112,7 +112,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       <textarea
         className="text-field"
         data-field="alt"
-        rows={3}
+        rows={4}
         maxLength={MAX_ALT}
         placeholder={t('alt.placeholder')}
         value={altDraft}
