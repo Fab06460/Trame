@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { AI_PROVIDERS, MAX_AI_PROMPT, providerInfo, type AiSize } from '@shared/ai'
-import { aiLayerName } from '@/aiImage'
-import { insertImage } from '@/clipboardActions'
+import { placeResult } from '@/aiEdit'
+import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
-import { downscaleImage } from '@/photoImport'
 import { aiErrorMessage, useAi, type AiResult } from '@/store/ai'
 
 const SIZES: AiSize[] = ['square', 'landscape', 'portrait']
@@ -15,7 +14,11 @@ const SIZES: AiSize[] = ['square', 'landscape', 'portrait']
  */
 export function AiPanel(): React.JSX.Element {
   const t = useT()
-  const { status, provider, size, prompt, busy, error, results } = useAi()
+  const { status, provider, size, prompt, editPrompt, busy, error, results } = useAi()
+  const selected = useEditor((s) => {
+    const el = selectPage(s).elements.find((e) => e.id === s.selectedIds[0])
+    return s.selectedIds.length === 1 && el?.type === 'image' && el.src ? el : null
+  })
   const info = providerInfo(provider)
   const current = status?.providers.find((p) => p.id === provider)
   const configured = !!current?.configured
@@ -53,15 +56,16 @@ export function AiPanel(): React.JSX.Element {
     await useAi.getState().refresh()
   }
 
-  const insert = async (r: AiResult): Promise<void> => {
+  const place = async (r: AiResult, mode: 'insert' | 'replace'): Promise<void> => {
     if (inserting) return
     setInserting(r.id)
     try {
-      await insertImage(await downscaleImage(r.dataUrl), { name: aiLayerName(r.prompt), ai: r.info })
+      await placeResult(r, mode)
     } finally {
       setInserting(null)
     }
   }
+  const insert = (r: AiResult): Promise<void> => place(r, 'insert')
 
   const showForm = !configured || editing
   return (
@@ -172,10 +176,65 @@ export function AiPanel(): React.JSX.Element {
             )}
           </div>
           <p className="hint">{t('ai.sent', { service: info.name })}</p>
-          {error && (
+          {error?.where === 'generate' && (
             <div className="warn" role="status" data-ai-error={error.kind}>
               {aiErrorMessage(error.kind, provider)}
               {error.detail && <small className="detail" data-ai-detail>{t('ai.detail', { detail: error.detail })}</small>}
+            </div>
+          )}
+        </section>
+      )}
+
+      {configured && !editing && (
+        <section data-ai-edit>
+          <h3>{t('aie.title')}</h3>
+          {selected ? (
+            <>
+              <img className="ai-source" src={selected.src} alt="" draggable={false} data-ai-source={selected.id} />
+              <label>
+                {t('aie.instruction')}
+                <textarea
+                  className="text-field"
+                  data-field="aiEditPrompt"
+                  rows={3}
+                  maxLength={MAX_AI_PROMPT}
+                  placeholder={t('aie.instruction.placeholder')}
+                  value={editPrompt}
+                  disabled={busy !== null}
+                  onChange={(e) => useAi.getState().set({ editPrompt: e.target.value })}
+                  onKeyDown={(e) => {
+                    e.stopPropagation()
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void useAi.getState().edit('edit')
+                  }}
+                />
+              </label>
+              <div className="row">
+                {busy ? (
+                  <>
+                    <button disabled data-aie-busy>{t('ai.generating')}</button>
+                    <button data-action="aie-cancel" onClick={() => useAi.getState().cancel()}>{t('common.cancel')}</button>
+                  </>
+                ) : (
+                  <>
+                    <button className="primary" data-action="ai-edit-run" disabled={!editPrompt.trim()} onClick={() => void useAi.getState().edit('edit')}>
+                      {t('aie.edit')}
+                    </button>
+                    <button data-action="ai-variation" onClick={() => void useAi.getState().edit('variation')}>
+                      {t('aie.variation')}
+                    </button>
+                  </>
+                )}
+              </div>
+              <p className="hint" data-aie-cost>{t(info.edit.costNote)}</p>
+              <p className="hint">{t('aie.sent', { service: info.name, side: info.edit.maxInputSide })}</p>
+            </>
+          ) : (
+            <p className="hint" data-aie-none>{t('aie.none')}</p>
+          )}
+          {error?.where === 'edit' && (
+            <div className="warn" role="status" data-aie-error={error.kind}>
+              {aiErrorMessage(error.kind, provider)}
+              {error.detail && <small className="detail">{t('ai.detail', { detail: error.detail })}</small>}
             </div>
           )}
         </section>
@@ -187,10 +246,23 @@ export function AiPanel(): React.JSX.Element {
           <p className="hint">{t('ai.results.hint')}</p>
           <div className="grid photos">
             {results.map((r) => (
-              <button key={r.id} className="photo ai-result" data-ai-result={r.id} disabled={inserting !== null} title={t('ai.insert.title', { prompt: r.prompt })} onClick={() => void insert(r)}>
-                <img src={r.dataUrl} alt={r.prompt} draggable={false} />
-                {inserting === r.id && <span className="photo-busy">…</span>}
-              </button>
+              <div key={r.id} className="ai-result-card">
+                <button className="photo ai-result" data-ai-result={r.id} data-ai-kind={r.kind ?? 'generate'} disabled={inserting !== null} title={t('ai.insert.title', { prompt: r.prompt })} onClick={() => void insert(r)}>
+                  <img src={r.dataUrl} alt={r.prompt} draggable={false} />
+                  {r.kind && <span className="photo-license">{r.kind === 'variation' ? t('aie.result.variation') : t('aie.result.edit', { prompt: r.prompt })}</span>}
+                  {inserting === r.id && <span className="photo-busy">…</span>}
+                </button>
+                {r.kind && (
+                  <>
+                    <button className="link" data-action="ai-insert-next" disabled={inserting !== null} onClick={() => void place(r, 'insert')}>
+                      {t('aie.insertNext')}
+                    </button>
+                    <button className="link" data-action="ai-replace" disabled={inserting !== null} onClick={() => void place(r, 'replace')}>
+                      {t('aie.replace')}
+                    </button>
+                  </>
+                )}
+              </div>
             ))}
           </div>
         </section>

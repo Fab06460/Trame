@@ -28,6 +28,13 @@ export interface AiProviderInfo {
   costNote: MessageKey
   /** où créer le compte et la clé (affiché en clair, jamais ouvert automatiquement) */
   signupUrl: string
+  /** retouche guidée d'une image existante (et variantes) */
+  edit: {
+    model: string
+    /** plus grand côté de l'image envoyée (le service refuse ou facture davantage au-delà) */
+    maxInputSide: number
+    costNote: MessageKey
+  }
 }
 
 export const AI_PROVIDERS: readonly AiProviderInfo[] = [
@@ -42,7 +49,9 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     sizes: ['square'],
     free: true,
     costNote: 'ai.cost.cloudflare',
-    signupUrl: 'dash.cloudflare.com'
+    signupUrl: 'dash.cloudflare.com',
+    // FLUX.2 klein 4B : « toutes les images en entrée doivent faire moins de 512×512 » (documentation Cloudflare)
+    edit: { model: 'FLUX.2 klein 4B', maxInputSide: 512, costNote: 'aie.cost.cloudflare' }
   },
   {
     id: 'openai',
@@ -52,7 +61,8 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
     sizes: ['square', 'landscape', 'portrait'],
     free: false,
     costNote: 'ai.cost.openai',
-    signupUrl: 'platform.openai.com'
+    signupUrl: 'platform.openai.com',
+    edit: { model: 'gpt-image-1', maxInputSide: 1024, costNote: 'aie.cost.openai' }
   }
 ]
 
@@ -109,4 +119,28 @@ export function checkCredentials(provider: AiProviderId, values: unknown): Crede
     out[f.id] = v
   }
   return { ok: true, values: out }
+}
+
+/** Consigne de la variante : le modèle de retouche reçoit l'image et ce texte (en anglais, langue où ces modèles obéissent le mieux). */
+export const VARIATION_INSTRUCTION = 'Create a variation of this image: keep the same subject and overall style, but change the details, the composition and the colours slightly.'
+
+/** Taille maximale (en base64) de l'image envoyée à un service pour être retouchée. */
+export const MAX_EDIT_IMAGE_CHARS = 8_000_000
+
+export type EditKind = 'edit' | 'variation'
+export const isEditKind = (v: unknown): v is EditKind => v === 'edit' || v === 'variation'
+
+const roundTo16 = (n: number): number => Math.min(1920, Math.max(256, Math.round(n / 16) * 16))
+
+/**
+ * Taille de l'image produite pour une image source de `w` × `h` : même proportions. Cloudflare accepte une largeur et une hauteur
+ * (multiples de 16, de 256 à 1920) ; OpenAI trois formats seulement (carré, paysage, portrait), choisi d'après les proportions.
+ */
+export function editOutput(provider: AiProviderId, w: number, h: number): { width: number; height: number } | { size: AiSize } {
+  const ratio = w > 0 && h > 0 ? w / h : 1
+  if (provider === 'cloudflare') {
+    const long = 1024
+    return ratio >= 1 ? { width: roundTo16(long), height: roundTo16(long / ratio) } : { width: roundTo16(long * ratio), height: roundTo16(long) }
+  }
+  return { size: ratio >= 1.2 ? 'landscape' : ratio <= 1 / 1.2 ? 'portrait' : 'square' }
 }

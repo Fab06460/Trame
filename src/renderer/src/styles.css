@@ -192,6 +192,9 @@ button.danger { color: #ff7b7b; }
 .choice-row em { font-style: normal; font-size: 12px; color: var(--muted); }
 .row.end { justify-content: flex-end; }
 
+.ai-source { width: 100%; max-height: 90px; object-fit: contain; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+.ai-result-card { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ai-result-card .link { font-size: 11px; padding: 0; text-align: left; }
 .grid.photos { grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .photo { position: relative; padding: 0; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 6px; }
 .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -714,5 +714,23 @@ export const es: Catalog = {
   'ai.detail': 'Detalle técnico: {detail}',
   'ai.image.heading': 'Imagen generada con IA',
   'ai.image.info': '{service} · {model}',
-  'ai.image.copyPrompt': 'Copiar la solicitud'
+  'ai.image.copyPrompt': 'Copiar la solicitud',
+  // Retouche guidée et variantes (IA)
+  'aie.title': 'Modificar una imagen',
+  'aie.none': 'Seleccione una imagen de la página para modificarla o crear una variante.',
+  'aie.instruction': '¿Qué hay que cambiar?',
+  'aie.instruction.placeholder': 'p. ej.: sustituye el cielo por una puesta de sol',
+  'aie.edit': 'Modificar',
+  'aie.variation': 'Crear una variante',
+  'aie.sent': 'La imagen seleccionada (tal como aparece, reducida a {side} px como máximo) y su texto se envían a {service}. El resultado se añade a la lista de abajo: usted elige insertarlo junto al original o reemplazarlo.',
+  'aie.cost.cloudflare': 'Unos 110 neurons por modificación (unas 90 al día dentro de la cuota gratuita). La imagen enviada se reduce a 512 px.',
+  'aie.cost.openai': 'De pago: OpenAI factura cada modificación a su cuenta (unos céntimos).',
+  'aie.insertNext': 'Insertar al lado',
+  'aie.replace': 'Reemplazar el original',
+  'aie.result.edit': 'Modificación: {prompt}',
+  'aie.result.variation': 'Variante',
+  'aie.variation.prompt': 'Variante de la imagen',
+  'aie.err.source': 'No se pudo preparar la imagen seleccionada para enviarla.',
+  'ai.image.fromEdit': 'Imagen modificada con IA',
+  'ai.image.fromVariation': 'Variante creada con IA'
 }

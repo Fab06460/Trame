@@ -34,7 +34,7 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
           "strokeWidth": 6,        // optionnel : épaisseur en px, centrée sur le bord (> 0 et ≤ 100)
           "strokeDashed": true,    // optionnel : contour en tirets
           "credit": "« Montagne » par Ada (CC BY 4.0) — https://…",  // optionnel (images) : crédit d'une photo en ligne
-          "ai": { "provider": "openai", "model": "gpt-image-1", "prompt": "un phare au lever du jour" },  // optionnel (images) : image générée par un service d'IA ; sinon retiré à la lecture
+          "ai": { "provider": "openai", "model": "gpt-image-1", "prompt": "un phare au lever du jour", "from": "edit" },  // optionnel (images) : image générée par un service d'IA (`from` : "edit" ou "variation" pour une retouche ou une variante) ; sinon retiré à la lecture
           "protect": "fixed",       // optionnel : "fixed" (figé par le modèle) ou "fill" (à remplir : contenu modifiable, position fixée) ; absent = libre
           "pdfSource": { "id": "a1B2c3D4", "page": 1 },  // optionnel (images) : page d'origine d'un PDF importé (voir « sources »)
           "crop": { "x": 0.25, "y": 0, "width": 0.75, "height": 1 },  // optionnel (images) : zone visible, en fractions de l'image d'origine

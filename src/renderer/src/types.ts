@@ -107,7 +107,7 @@ export interface TrameElement {
   /** crédit d'une photo en ligne (auteur, licence, page d'origine), à citer si la licence l'exige */
   credit?: string
   /** image générée par un service d'IA : service, modèle et demande (information seulement) */
-  ai?: { provider: 'cloudflare' | 'openai'; model: string; prompt: string }
+  ai?: { provider: 'cloudflare' | 'openai'; model: string; prompt: string; from?: 'edit' | 'variation' }
   /** recadrage : la zone de l'image d'origine qui remplit la boîte de l'élément */
   crop?: Crop
   /** miroir horizontal / vertical (images) */

@@ -714,5 +714,23 @@ export const en: Catalog = {
   'ai.detail': 'Technical detail: {detail}',
   'ai.image.heading': 'AI-generated image',
   'ai.image.info': '{service} · {model}',
-  'ai.image.copyPrompt': 'Copy the prompt'
+  'ai.image.copyPrompt': 'Copy the prompt',
+  // Retouche guidée et variantes (IA)
+  'aie.title': 'Edit an image',
+  'aie.none': 'Select an image on the page to edit it or to create a variation.',
+  'aie.instruction': 'What should change?',
+  'aie.instruction.placeholder': 'e.g. replace the sky with a sunset',
+  'aie.edit': 'Edit',
+  'aie.variation': 'Create a variation',
+  'aie.sent': 'The selected image (as it appears, reduced to {side} px at most) and your text are sent to {service}. The result is added to the list below: you choose to insert it next to the original or to replace it.',
+  'aie.cost.cloudflare': 'About 110 neurons per edit (about 90 a day within the free quota). The image sent is reduced to 512 px.',
+  'aie.cost.openai': 'Paid: each edit is billed by OpenAI to your account (a few cents).',
+  'aie.insertNext': 'Insert next to it',
+  'aie.replace': 'Replace the original',
+  'aie.result.edit': 'Edit: {prompt}',
+  'aie.result.variation': 'Variation',
+  'aie.variation.prompt': 'Variation of the image',
+  'aie.err.source': 'Cannot prepare the selected image for sending.',
+  'ai.image.fromEdit': 'Image edited by AI',
+  'ai.image.fromVariation': 'Variation created by AI'
 }

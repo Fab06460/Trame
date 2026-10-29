@@ -119,11 +119,17 @@ const photoServer = createServer((req, res) => {
     return res.end(readFileSync(join(root, `node_modules/@fontsource/lora/files/lora-latin-${fontFile[2]}-normal.woff2`)))
   }
   // faux services d'images IA (Cloudflare Workers AI, OpenAI) : les vrais ne sont jamais contactés par les tests
-  if (req.method === 'POST' && (url.pathname.startsWith('/client/v4/accounts/') || url.pathname === '/v1/images/generations')) {
-    let raw = ''
-    req.on('data', (c) => (raw += c))
+  if (req.method === 'POST' && (url.pathname.startsWith('/client/v4/accounts/') || url.pathname === '/v1/images/generations' || url.pathname === '/v1/images/edits')) {
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
     req.on('end', () => {
-      const body = JSON.parse(raw || '{}')
+      const buf = Buffer.concat(chunks)
+      const multipart = String(req.headers['content-type'] ?? '').startsWith('multipart/form-data')
+      const latin = buf.toString('latin1')
+      const field = (name) => new RegExp(`name="${name}"\\r\\n\\r\\n([^\\r]*)\\r\\n`).exec(latin)?.[1]
+      const body = multipart
+        ? { prompt: field('prompt'), width: field('width'), height: field('height'), size: field('size'), model: field('model'), image: /name="(input_image_0|image)"; filename="image\.png"\r\nContent-Type: image\/png\r\n\r\n\x89PNG/.test(latin) }
+        : JSON.parse(buf.toString('utf-8') || '{}')
       aiRequests.push({ path: url.pathname, auth: req.headers.authorization ?? '', body })
       const reply = (status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
       const b64 = (w, h) => testPng(w, h).toString('base64')
@@ -133,6 +139,7 @@ const photoServer = createServer((req, res) => {
         if (prompt === 'quota') return reply(429, { success: false, errors: [{ code: 4006, message: "you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan" }] })
         if (prompt === 'panne') return reply(500, { success: false, errors: [{ code: 5000, message: 'Internal error' }] })
         if (prompt === 'lent') return // ne répond jamais : annulation ou délai
+        if (multipart) return reply(200, { result: { image: b64(Math.round(Number(body.width) / 8), Math.round(Number(body.height) / 8)) }, success: true, errors: [], messages: [] })
         return reply(200, { result: { image: b64(512, 512) }, success: true, errors: [], messages: [] })
       }
       if (req.headers.authorization !== 'Bearer sk-test-openai') return reply(401, { error: { message: 'Incorrect API key provided', code: 'invalid_api_key' } })
@@ -1155,6 +1162,8 @@ try {
   const aiError = () => run(`document.querySelector('[data-ai-error]')?.dataset.aiError ?? ''`)
   const generateAi = async (prompt) => { await typeText('[data-field="aiPrompt"]', prompt); await sleep(100); await clickSel('[data-action="ai-generate"]') }
   const waitAi = (fn) => waitFor(fn, 9000)
+  const panelText = async () => (await run(`document.querySelector('.panel')?.innerText ?? ''`)).toLowerCase() // les titres du panneau sont en capitales (CSS)
+  const escape = async () => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await sleep(350) }
   check('IA : sans identifiant, seul le formulaire de connexion est proposé', (await nBrand('[data-ai-field]')) === 2 && (await nBrand('[data-field="aiPrompt"]')) === 0 && (await nBrand('[data-ai-connected]')) === 0)
   check('IA : le coût du service est annoncé', (await run(`document.querySelector('[data-ai-cost]')?.innerText ?? ''`)).includes('quota quotidien'))
   await typeInto('[data-ai-field="account"]', 'trop-court')
@@ -1182,6 +1191,44 @@ try {
   check("IA : les propriétés indiquent le service, le modèle et la demande", aiInfo.includes('Cloudflare Workers AI') && aiInfo.includes('FLUX.1 schnell') && (await run(`document.querySelector('.panel [data-field="aiPrompt"]')?.innerText ?? ''`)).includes('Un renard roux'), aiInfo)
   await clickSel('.sidebar .tabs button[data-tab="ai"]')
   await sleep(200)
+
+  // retouche guidée et variantes de l'image sélectionnée (Cloudflare : FLUX.2 klein, multipart)
+  check("IA retouche : l'image sélectionnée est proposée avec son aperçu et la consigne", (await nBrand('[data-ai-source]')) === 1 && (await nBrand('[data-field="aiEditPrompt"]')) === 1 && (await nBrand('[data-aie-none]')) === 0)
+  check("IA retouche : le coût et l'envoi de l'image sont annoncés", (await run(`document.querySelector('[data-aie-cost]')?.innerText ?? ''`)).includes('110 neurons') && (await run(`document.body.innerText`)).includes('sont envoyés à Cloudflare Workers AI'))
+  check('IA retouche : « Modifier » attend une consigne', (await run(`document.querySelector('[data-action="ai-edit-run"]').disabled`)) === true)
+  await typeText('[data-field="aiEditPrompt"]', 'ciel rose')
+  await sleep(100)
+  const editsBefore = aiRequests.length
+  await clickSel('[data-action="ai-edit-run"]')
+  check('IA retouche : un résultat « retouche » est ajouté à la liste', await waitAi(async () => (await nBrand('[data-ai-result][data-ai-kind="edit"]')) === 1))
+  const editReq = aiRequests.at(-1)
+  check("IA retouche : requête Cloudflare multipart (consigne, taille de même proportion, image PNG envoyée, jeton)", aiRequests.length === editsBefore + 1 && editReq.path.endsWith('/ai/run/@cf/black-forest-labs/flux-2-klein-4b') && editReq.auth === 'Bearer cf-token-test' && editReq.body.prompt === 'ciel rose' && editReq.body.width === '1024' && editReq.body.height === '1024' && editReq.body.image === true, JSON.stringify(editReq))
+  const thumbsBeforeEdit = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
+  await clickSel('[data-action="ai-insert-next"]')
+  check("IA retouche : « Insérer à côté » ajoute une image sans toucher à l'original", await waitAi(async () => (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === thumbsBeforeEdit + 1))
+  check('IA retouche : l\'image ajoutée est marquée « retouchée par IA » avec le modèle de retouche et la consigne', await waitAi(async () => panelText().then((p) => p.includes('retouchée par ia') && p.includes('flux.2 klein 4b') && p.includes('ciel rose'))))
+  await clickSel('.sidebar .tabs button[data-tab="ai"]')
+  await sleep(200)
+  const thumbsBeforeVar = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
+  await clickSel('[data-action="ai-variation"]')
+  check('IA variante : un résultat « variante » est ajouté', await waitAi(async () => (await nBrand('[data-ai-result][data-ai-kind="variation"]')) === 1))
+  check("IA variante : la consigne de variante part en anglais, sans texte de l'utilisateur", aiRequests.at(-1).body.prompt.startsWith('Create a variation of this image'))
+  await clickSel('[data-ai-result][data-ai-kind="variation"] + [data-action="ai-insert-next"] + [data-action="ai-replace"]')
+  check("IA variante : « Remplacer l'original » ne change pas le nombre d'images", await waitAi(async () => (await panelText()).includes('variante créée par ia')) && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === thumbsBeforeVar)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check("IA variante : annuler le remplacement rend l'image précédente (retouchée)", (await panelText()).includes('retouchée par ia'))
+  await clickSel('.sidebar .tabs button[data-tab="ai"]')
+  await sleep(200)
+  await typeText('[data-field="aiEditPrompt"]', 'quota')
+  await sleep(100)
+  await clickSel('[data-action="ai-edit-run"]')
+  check('IA retouche : quota épuisé affiché dans la section retouche (pas dans celle de génération)', await waitAi(async () => (await run(`document.querySelector('[data-aie-error]')?.dataset.aieError ?? ''`)) === 'quota') && (await nBrand('[data-ai-error]')) === 0)
+  await escape()
+  await sleep(300)
+  check("IA retouche : sans image sélectionnée, la section invite à en choisir une (pas de bouton)", (await nBrand('[data-aie-none]')) === 1 && (await nBrand('[data-action="ai-edit-run"]')) === 0)
+  check("IA retouche : une image invalide est refusée par le processus principal (aucun appel réseau)", await (async () => { const n = aiRequests.length; const r = await run(`window.trame.aiEdit('cloudflare', 'edit', 'x', 'data:image/png;base64,AAAA', 10, 10, 'rx')`); return r.ok === false && aiRequests.length === n })())
+  check("IA retouche : un type d'image mensonger (jpeg annoncé, png envoyé) est refusé", await (async () => { const png = await run(`(() => { const c = document.createElement('canvas'); c.width = 4; c.height = 4; return c.toDataURL('image/png') })()`); const r = await run(`window.trame.aiEdit('cloudflare', 'edit', 'x', ${JSON.stringify(png.replace('image/png', 'image/jpeg'))}, 4, 4, 'ry')`); return r.ok === false })())
 
   // erreurs : quota (4006), panne, secours en cas de délai, annulation
   await generateAi('quota')
@@ -1212,18 +1259,30 @@ try {
   check('IA : modifier les identifiants les remplace', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
   await clickSel('[data-ai-size="landscape"]')
   await generateAi('Un phare')
-  check('IA : OpenAI : image générée', await waitAi(async () => (await nBrand('[data-ai-result]')) === 2))
+  check('IA : OpenAI : image générée', await waitAi(async () => (await nBrand('[data-ai-result][data-ai-kind="generate"]')) === 2))
   const oaReq = aiRequests.at(-1)
   check('IA : requête OpenAI : modèle, taille paysage, une image, clé en en-tête', oaReq.path === '/v1/images/generations' && oaReq.auth === 'Bearer sk-test-openai' && oaReq.body.model === 'gpt-image-1' && oaReq.body.size === '1536x1024' && oaReq.body.n === 1, JSON.stringify(oaReq))
   const ratio = await run(`(() => { const i = document.querySelector('[data-ai-result] img'); return i.naturalWidth / i.naturalHeight })()`)
   check('IA : l\'image paysage reçue est bien plus large que haute', ratio > 1.4 && ratio < 1.6, String(ratio))
   await generateAi('moderation')
   check('IA : demande refusée par les règles de contenu : message dédié', await waitAi(async () => (await aiError()) === 'refused'))
+  // OpenAI : retouche d'une image paysage (format choisi d'après les proportions de la source)
+  await clickSel('[data-ai-result][data-ai-kind="generate"]')
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="ai"]')
+  await sleep(200)
+  await typeText('[data-field="aiEditPrompt"]', 'noir et blanc')
+  await sleep(100)
+  await clickSel('[data-action="ai-edit-run"]')
+  check('IA retouche OpenAI : résultat ajouté', await waitAi(async () => (await nBrand('[data-ai-result][data-ai-kind="edit"]')) >= 2))
+  const oaEdit = aiRequests.at(-1)
+  check('IA retouche OpenAI : /v1/images/edits, gpt-image-1, format paysage d\'après la source, image envoyée', oaEdit.path === '/v1/images/edits' && oaEdit.auth === 'Bearer sk-test-openai' && oaEdit.body.model === 'gpt-image-1' && oaEdit.body.size === '1536x1024' && oaEdit.body.prompt === 'noir et blanc' && oaEdit.body.image === true, JSON.stringify(oaEdit))
   // le panneau, la liste des images et la demande survivent à un changement d'onglet
+  const aiListed = await nBrand('[data-ai-result]')
   await click('.sidebar .tabs button', 'Photos')
   await click('.sidebar .tabs button', 'IA')
   await sleep(300)
-  check("IA : les images générées restent dans la liste quand on change d'onglet", (await nBrand('[data-ai-result]')) === 2)
+  check("IA : les images générées restent dans la liste quand on change d'onglet", aiListed >= 4 && (await nBrand('[data-ai-result]')) === aiListed)
 
   // sécurité de l'interface IPC
   check('IA : un service inconnu est refusé par le processus principal', (await run(`window.trame.aiGenerate('evil', 'x', 'square', 'r1')`)).ok === false)

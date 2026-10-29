@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
-import type { AiGenerateResult, AiProviderId, AiSize, AiStatus } from '../shared/ai'
+import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, EditKind } from '../shared/ai'
 
 export interface RecentProject {
   path: string
@@ -93,6 +93,8 @@ const api = {
   aiSave: (provider: AiProviderId, values: Record<string, string>): Promise<{ ok: true } | { ok: false; field: string }> => ipcRenderer.invoke('ai:save', provider, values),
   aiForget: (provider: AiProviderId): Promise<void> => ipcRenderer.invoke('ai:forget', provider),
   aiGenerate: (provider: AiProviderId, prompt: string, size: AiSize, requestId: string): Promise<AiGenerateResult> => ipcRenderer.invoke('ai:generate', provider, prompt, size, requestId),
+  aiEdit: (provider: AiProviderId, kind: EditKind, instruction: string, imageDataUrl: string, width: number, height: number, requestId: string): Promise<AiGenerateResult> =>
+    ipcRenderer.invoke('ai:edit', provider, kind, instruction, imageDataUrl, width, height, requestId),
   aiCancel: (requestId: string): Promise<void> => ipcRenderer.invoke('ai:cancel', requestId),
   rendererReady: (): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('app:renderer-ready'),
   writeClipboardElements: (json: string): Promise<void> => ipcRenderer.invoke('clipboard:write-elements', json),

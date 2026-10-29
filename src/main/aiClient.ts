@@ -1,4 +1,5 @@
-import { providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize } from '../shared/ai'
+import { MAX_EDIT_IMAGE_CHARS, editOutput, providerInfo, type AiErrorKind, type AiGenerateResult, type AiProviderId, type AiSize } from '../shared/ai'
+import { buildMultipart } from './multipart'
 
 /** Réponse HTTP minimale (celle de `net.fetch`, ou d'un faux en test). */
 export interface HttpResponse {
@@ -6,7 +7,7 @@ export interface HttpResponse {
   ok: boolean
   text(): Promise<string>
 }
-export type HttpPost = (url: string, init: { headers: Record<string, string>; body: string; signal?: AbortSignal }) => Promise<HttpResponse>
+export type HttpPost = (url: string, init: { headers: Record<string, string>; body: string | Uint8Array; signal?: AbortSignal }) => Promise<HttpResponse>
 
 /** Taille maximale acceptée pour une réponse (image en base64 comprise). */
 export const MAX_RESPONSE_CHARS = 30_000_000
@@ -22,7 +23,7 @@ const OPENAI_SIZE: Record<AiSize, string> = { square: '1024x1024', landscape: '1
 export interface BuiltRequest {
   url: string
   headers: Record<string, string>
-  body: string
+  body: string | Uint8Array
 }
 
 /** Requête d'un service. `values` : champs enregistrés ; `base` : adresse du service (remplacée en test). */
@@ -68,7 +69,7 @@ export function classifyError(provider: AiProviderId, status: number, body: unkn
   if (status === 401 || status === 403 && !/moderation|policy|safety/.test(text)) return 'auth'
   if (/insufficient_quota|billing|daily free allocation|neurons|exceeded your current quota/.test(text)) return 'quota'
   if (status === 429) return 'rate-limit'
-  if (/content_policy|moderation|safety|not allowed|inappropriate|flagged/.test(text)) return 'refused'
+  if (/content_policy|moderation|safety|not allowed|inappropriate|flagged|3030/.test(text)) return 'refused'
   if (status === 400 && provider === 'cloudflare' && /nsfw|policy/.test(text)) return 'refused'
   return 'unavailable'
 }
@@ -104,10 +105,59 @@ export interface GenerateOptions {
   signal?: AbortSignal
 }
 
+/** Image à retoucher, déjà décodée et vérifiée. */
+export interface EditSource {
+  bytes: Uint8Array
+  mime: 'image/png' | 'image/jpeg' | 'image/webp'
+  width: number
+  height: number
+}
+
+/**
+ * Image reçue de l'interface pour être retouchée : data URL png / jpeg / webp dont le type est confirmé par les premiers octets,
+ * de taille bornée, avec ses dimensions (entières, raisonnables). Sinon null.
+ */
+export function parseEditImage(dataUrl: unknown, width: unknown, height: unknown): EditSource | null {
+  if (typeof dataUrl !== 'string' || dataUrl.length > MAX_EDIT_IMAGE_CHARS + 64) return null
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl)
+  if (!m || sniffImageMime(m[2]) !== m[1]) return null
+  const dim = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 8000 ? v : null)
+  const w = dim(width)
+  const h = dim(height)
+  if (!w || !h) return null
+  return { bytes: Buffer.from(m[2], 'base64'), mime: m[1] as EditSource['mime'], width: w, height: h }
+}
+
+const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as const
+
+/** Requête de retouche guidée (ou de variante) : l'image et la consigne partent en `multipart/form-data`. */
+export function buildEditRequest(provider: AiProviderId, instruction: string, src: EditSource, values: Record<string, string>, base: string): BuiltRequest {
+  const root = base.replace(/\/+$/, '')
+  const out = editOutput(provider, src.width, src.height)
+  if (provider === 'cloudflare') {
+    const dims = out as { width: number; height: number }
+    const m = buildMultipart({ prompt: instruction, width: dims.width, height: dims.height }, [{ field: 'input_image_0', filename: `image.${EXT[src.mime]}`, contentType: src.mime, bytes: src.bytes }])
+    return { url: `${root}/client/v4/accounts/${values.account}/ai/run/@cf/black-forest-labs/flux-2-klein-4b`, headers: { Authorization: `Bearer ${values.token}`, 'Content-Type': m.contentType }, body: m.body }
+  }
+  const m = buildMultipart({ model: providerInfo('openai').edit.model, prompt: instruction, n: 1, size: OPENAI_SIZE[(out as { size: AiSize }).size], quality: 'medium' }, [{ field: 'image', filename: `image.${EXT[src.mime]}`, contentType: src.mime, bytes: src.bytes }])
+  return { url: `${root}/v1/images/edits`, headers: { Authorization: `Bearer ${values.key}`, 'Content-Type': m.contentType }, body: m.body }
+}
+
+/** Retouche une image. Ne lève jamais : toute erreur devient un résultat `{ ok: false }`. */
+export function editImage(provider: AiProviderId, instruction: string, src: EditSource, values: Record<string, string>, o: GenerateOptions): Promise<AiGenerateResult> {
+  const info = providerInfo(provider)
+  return send(provider, buildEditRequest(provider, instruction, src, values, o.base ?? DEFAULT_BASES[provider]), info.edit.model, o)
+}
+
 /** Demande une image. Ne lève jamais : toute erreur devient un résultat `{ ok: false }`. */
 export async function generateImage(provider: AiProviderId, prompt: string, size: AiSize, values: Record<string, string>, o: GenerateOptions): Promise<AiGenerateResult> {
   const info = providerInfo(provider)
   const req = buildRequest(provider, prompt, info.sizes.includes(size) ? size : info.sizes[0], values, o.base ?? DEFAULT_BASES[provider])
+  return send(provider, req, info.model, o)
+}
+
+/** Envoie une requête et lit l'image de la réponse (génération comme retouche). */
+async function send(provider: AiProviderId, req: BuiltRequest, model: string, o: GenerateOptions): Promise<AiGenerateResult> {
   let res: HttpResponse
   let text: string
   try {
@@ -126,5 +176,5 @@ export async function generateImage(provider: AiProviderId, prompt: string, size
   const b64 = extractImage(provider, body)
   const mime = b64 ? sniffImageMime(b64) : null
   if (!b64 || !mime) return { ok: false, error: 'unavailable', detail: 'no image in the response' }
-  return { ok: true, dataUrl: `data:${mime};base64,${b64}`, provider, model: info.model }
+  return { ok: true, dataUrl: `data:${mime};base64,${b64}`, provider, model }
 }

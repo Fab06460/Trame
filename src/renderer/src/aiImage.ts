@@ -4,8 +4,8 @@ import type { TrameElement } from '@/types'
 /** Origine d'une image générée par un service d'IA (information enregistrée avec l'élément). */
 export type AiInfo = NonNullable<TrameElement['ai']>
 
-export function makeAiInfo(provider: AiInfo['provider'], model: string, prompt: string): AiInfo {
-  return { provider, model: model.slice(0, 60), prompt: prompt.trim().slice(0, MAX_AI_PROMPT) }
+export function makeAiInfo(provider: AiInfo['provider'], model: string, prompt: string, from?: AiInfo['from']): AiInfo {
+  return { provider, model: model.slice(0, 60), prompt: prompt.trim().slice(0, MAX_AI_PROMPT), ...(from ? { from } : {}) }
 }
 
 /** Nom de calque proposé pour une image générée : le début de la demande. */
@@ -18,5 +18,5 @@ export function sanitizeAiInfo(e: { type: string; ai?: unknown }): void {
     delete e.ai
     return
   }
-  e.ai = makeAiInfo(a.provider, a.model, a.prompt)
+  e.ai = makeAiInfo(a.provider, a.model, a.prompt, a.from === 'edit' || a.from === 'variation' ? a.from : undefined)
 }

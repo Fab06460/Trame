@@ -715,7 +715,25 @@ export const fr = {
   'ai.detail': 'Détail technique : {detail}',
   'ai.image.heading': 'Image générée par IA',
   'ai.image.info': '{service} · {model}',
-  'ai.image.copyPrompt': 'Copier la demande'
+  'ai.image.copyPrompt': 'Copier la demande',
+  // Retouche guidée et variantes (IA)
+  'aie.title': 'Modifier une image',
+  'aie.none': 'Sélectionnez une image de la page pour la modifier ou en créer une variante.',
+  'aie.instruction': 'Que faut-il changer ?',
+  'aie.instruction.placeholder': 'ex. : remplace le ciel par un coucher de soleil',
+  'aie.edit': 'Modifier',
+  'aie.variation': 'Créer une variante',
+  'aie.sent': 'L\'image sélectionnée (telle qu\'elle apparaît, réduite à {side} px au plus) et votre texte sont envoyés à {service}. Le résultat s\'ajoute à la liste ci-dessous : vous choisissez de l\'insérer à côté de l\'original ou de le remplacer.',
+  'aie.cost.cloudflare': 'Environ 110 neurons par retouche (environ 90 par jour dans le quota gratuit). L\'image envoyée est réduite à 512 px.',
+  'aie.cost.openai': 'Payant : chaque retouche est facturée par OpenAI sur votre compte (quelques centimes).',
+  'aie.insertNext': 'Insérer à côté',
+  'aie.replace': 'Remplacer l\'original',
+  'aie.result.edit': 'Retouche : {prompt}',
+  'aie.result.variation': 'Variante',
+  'aie.variation.prompt': 'Variante de l\'image',
+  'aie.err.source': 'Impossible de préparer l\'image sélectionnée pour l\'envoi.',
+  'ai.image.fromEdit': 'Image retouchée par IA',
+  'ai.image.fromVariation': 'Variante créée par IA'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

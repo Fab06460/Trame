@@ -714,5 +714,23 @@ export const de: Catalog = {
   'ai.detail': 'Technische Details: {detail}',
   'ai.image.heading': 'KI-generiertes Bild',
   'ai.image.info': '{service} · {model}',
-  'ai.image.copyPrompt': 'Anfrage kopieren'
+  'ai.image.copyPrompt': 'Anfrage kopieren',
+  // Retouche guidée et variantes (IA)
+  'aie.title': 'Bild bearbeiten',
+  'aie.none': 'Wählen Sie ein Bild auf der Seite aus, um es zu bearbeiten oder eine Variante zu erstellen.',
+  'aie.instruction': 'Was soll sich ändern?',
+  'aie.instruction.placeholder': 'z. B. ersetze den Himmel durch einen Sonnenuntergang',
+  'aie.edit': 'Bearbeiten',
+  'aie.variation': 'Variante erstellen',
+  'aie.sent': 'Das ausgewählte Bild (wie es erscheint, auf höchstens {side} px verkleinert) und Ihr Text werden an {service} gesendet. Das Ergebnis erscheint in der Liste unten: Sie wählen, ob es neben dem Original eingefügt wird oder es ersetzt.',
+  'aie.cost.cloudflare': 'Etwa 110 Neurons pro Bearbeitung (etwa 90 pro Tag im kostenlosen Kontingent). Das gesendete Bild wird auf 512 px verkleinert.',
+  'aie.cost.openai': 'Kostenpflichtig: Jede Bearbeitung wird von OpenAI Ihrem Konto belastet (wenige Cent).',
+  'aie.insertNext': 'Daneben einfügen',
+  'aie.replace': 'Original ersetzen',
+  'aie.result.edit': 'Bearbeitung: {prompt}',
+  'aie.result.variation': 'Variante',
+  'aie.variation.prompt': 'Variante des Bildes',
+  'aie.err.source': 'Das ausgewählte Bild konnte nicht zum Senden vorbereitet werden.',
+  'ai.image.fromEdit': 'Von KI bearbeitetes Bild',
+  'ai.image.fromVariation': 'Von KI erstellte Variante'
 }
