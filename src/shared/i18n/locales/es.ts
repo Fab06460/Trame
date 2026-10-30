@@ -803,5 +803,16 @@ export const es: Catalog = {
   'alt.decorative': 'Imagen decorativa (sin descripción)',
   'alt.decorative.hint': 'Márquela para un simple adorno: la imagen deja de señalarse como «sin descripción».',
   'alt.missing': 'Esta imagen no tiene descripción.',
-  'strip.missingAlt': { one: '{count} imagen sin descripción', other: '{count} imágenes sin descripción' }
+  'strip.missingAlt': { one: '{count} imagen sin descripción', other: '{count} imágenes sin descripción' },
+  // Annotation à l'écran
+  'pres.draw': 'Dibujar',
+  'pres.draw.title': 'Anotar la página con el ratón (D). Los trazos no se guardan.',
+  'pres.ink.tools': 'Herramientas de dibujo',
+  'pres.ink.color': 'Color {n}',
+  'pres.ink.highlighter': 'Resaltador',
+  'pres.ink.highlighter.title': 'Trazo ancho y translúcido (H)',
+  'pres.ink.undo': '↶ Trazo',
+  'pres.ink.undo.title': 'Deshacer el último trazo de esta página (Z)',
+  'pres.ink.clear': 'Borrar',
+  'pres.ink.clear.title': 'Borrar todos los trazos de esta página (C)'
 }

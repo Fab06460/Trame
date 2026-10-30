@@ -803,5 +803,16 @@ export const de: Catalog = {
   'alt.decorative': 'Dekoratives Bild (keine Beschreibung)',
   'alt.decorative.hint': 'Für reine Zierde ankreuzen: Das Bild wird nicht mehr als „ohne Beschreibung“ markiert.',
   'alt.missing': 'Dieses Bild hat keine Beschreibung.',
-  'strip.missingAlt': { one: '{count} Bild ohne Beschreibung', other: '{count} Bilder ohne Beschreibung' }
+  'strip.missingAlt': { one: '{count} Bild ohne Beschreibung', other: '{count} Bilder ohne Beschreibung' },
+  // Annotation à l'écran
+  'pres.draw': 'Zeichnen',
+  'pres.draw.title': 'Die Seite mit der Maus beschriften (D). Striche werden nicht gespeichert.',
+  'pres.ink.tools': 'Zeichenwerkzeuge',
+  'pres.ink.color': 'Farbe {n}',
+  'pres.ink.highlighter': 'Textmarker',
+  'pres.ink.highlighter.title': 'Breiter, durchscheinender Strich (H)',
+  'pres.ink.undo': '↶ Strich',
+  'pres.ink.undo.title': 'Letzten Strich dieser Seite zurücknehmen (Z)',
+  'pres.ink.clear': 'Löschen',
+  'pres.ink.clear.title': 'Alle Striche dieser Seite löschen (C)'
 }

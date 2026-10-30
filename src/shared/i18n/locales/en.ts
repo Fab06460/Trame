@@ -803,5 +803,16 @@ export const en: Catalog = {
   'alt.decorative': 'Decorative image (no description)',
   'alt.decorative.hint': 'Tick for a pure ornament: the image is no longer flagged as “no description”.',
   'alt.missing': 'This image has no description.',
-  'strip.missingAlt': { one: '{count} image without description', other: '{count} images without description' }
+  'strip.missingAlt': { one: '{count} image without description', other: '{count} images without description' },
+  // Annotation à l'écran
+  'pres.draw': 'Draw',
+  'pres.draw.title': 'Annotate the page with the mouse (D). Strokes are not saved.',
+  'pres.ink.tools': 'Drawing tools',
+  'pres.ink.color': 'Colour {n}',
+  'pres.ink.highlighter': 'Highlighter',
+  'pres.ink.highlighter.title': 'Wide, translucent stroke (H)',
+  'pres.ink.undo': '↶ Stroke',
+  'pres.ink.undo.title': 'Undo the last stroke on this page (Z)',
+  'pres.ink.clear': 'Clear',
+  'pres.ink.clear.title': 'Clear all strokes on this page (C)'
 }

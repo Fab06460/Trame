@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LaserPointer } from '@/components/LaserPointer'
+import { InkLayer } from '@/components/InkLayer'
+import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
 import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, transitionLabel, type PageTransition } from '@/transition'
@@ -31,6 +33,11 @@ export function PresentationMode(): React.JSX.Element | null {
   const [speaker, setSpeaker] = useState(false)
   const [laser, setLaser] = useState(false)
   const [onBar, setOnBar] = useState(false)
+  /** annotations à l'écran : traits par page (le temps de la présentation seulement) et réglages du stylo */
+  const [draw, setDraw] = useState(false)
+  const [ink, setInk] = useState<Record<string, Stroke[]>>({})
+  const [tool, setTool] = useState<InkTool>('pen')
+  const [color, setColor] = useState<string>(INK_COLORS[0])
   const startedAt = usePresentation((s) => s.startedAt)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<number, Promise<string>>())
@@ -42,6 +49,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const inUse = (): boolean => !!bar.current && (overBar.current || bar.current.contains(document.activeElement))
 
   const kind = doc?.transition ?? DEFAULT_TRANSITION
+  const drawRef = useRef(false)
+  drawRef.current = draw
 
   // Écran de l'orateur : seconde fenêtre (voir main/speakerProtocol.ts), synchronisée dans les deux sens
   const toggleSpeaker = (): void => {
@@ -105,6 +114,10 @@ export function PresentationMode(): React.JSX.Element | null {
     setShowNotes(false)
     setSpeaker(false)
     setLaser(false)
+    setDraw(false)
+    setInk({})
+    setTool('pen')
+    setColor(INK_COLORS[0])
     setOnBar(false)
     setAuto(0)
     setPaused(false)
@@ -193,7 +206,11 @@ export function PresentationMode(): React.JSX.Element | null {
       const last = (s.doc?.pages.length ?? 1) - 1
       const k = e.key
       let handled = true
-      if (k === 'Escape') exit()
+      const pageId = s.doc?.pages[s.index]?.id
+      if (k === 'Escape') {
+        if (drawRef.current) setDraw(false)
+        else exit()
+      }
       else if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) s.go(s.index + 1)
       else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) s.go(s.index - 1)
       else if (k === 'Home') s.go(0)
@@ -201,7 +218,16 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (k.toLowerCase() === 'b') setBlack((b) => !b)
       else if (k.toLowerCase() === 'p') setPaused((p) => !p)
       else if (k.toLowerCase() === 'n') setShowNotes((n) => !n)
-      else if (k.toLowerCase() === 'l') setLaser((l) => !l)
+      else if (k.toLowerCase() === 'l') {
+        setDraw(false)
+        setLaser((l) => !l)
+      } else if (k.toLowerCase() === 'd') {
+        setLaser(false)
+        setDraw((d) => !d)
+      } else if (k.toLowerCase() === 'h' && drawRef.current) setTool((x) => (x === 'pen' ? 'highlighter' : 'pen'))
+      else if (k.toLowerCase() === 'z' && !(e.metaKey || e.ctrlKey) && pageId) setInk((m) => (m[pageId]?.length ? { ...m, [pageId]: m[pageId].slice(0, -1) } : m))
+      else if (k.toLowerCase() === 'c' && !(e.metaKey || e.ctrlKey) && pageId) setInk((m) => (m[pageId]?.length ? { ...m, [pageId]: [] } : m))
+      else if (drawRef.current && /^[1-5]$/.test(k)) setColor(INK_COLORS[Number(k) - 1])
       else if (k.toLowerCase() === 's') toggleSpeakerRef.current()
       else handled = false
       if (handled || !(e.metaKey || e.ctrlKey)) {
@@ -225,7 +251,7 @@ export function PresentationMode(): React.JSX.Element | null {
   if (!active || !doc) return null
   const last = doc.pages.length - 1
   return (
-    <div className={`presentation${controls ? '' : ' idle'}${laser ? ' laser' : ''}`} data-presentation data-pres-index={index} data-pres-laser={laser || undefined} role="dialog" aria-modal="true" aria-label={t('pres.dialog')} onMouseMove={(e) => {
+    <div className={`presentation${controls ? '' : ' idle'}${laser ? ' laser' : ''}${draw ? ' drawing' : ''}`} data-presentation data-pres-index={index} data-pres-laser={laser || undefined} data-pres-draw={draw || undefined} role="dialog" aria-modal="true" aria-label={t('pres.dialog')} onMouseMove={(e) => {
         overBar.current = !!bar.current?.contains(e.target as Node)
         if (laser) setOnBar(overBar.current)
         wake()
@@ -238,6 +264,7 @@ export function PresentationMode(): React.JSX.Element | null {
           {doc.pages[index].notes ?? t('pres.notes.none')}
         </div>
       )}
+      {!black && <InkLayer strokes={ink[doc.pages[index].id] ?? []} drawing={draw} tool={tool} color={color} docWidth={doc.width} docHeight={doc.height} onStroke={(st) => setInk((m) => ({ ...m, [doc.pages[index].id]: addStroke(m[doc.pages[index].id] ?? [], st) }))} />}
       {laser && <LaserPointer hidden={onBar} />}
       <div
         ref={bar}
@@ -270,8 +297,19 @@ export function PresentationMode(): React.JSX.Element | null {
             ))}
           </select>
         </label>
-        <button data-pres="laser" aria-pressed={laser} onClick={() => setLaser((l) => !l)} title={t('pres.laser.title')}>{t('pres.laser')}</button>
+        <button data-pres="laser" aria-pressed={laser} onClick={() => { setDraw(false); setLaser((l) => !l) }} title={t('pres.laser.title')}>{t('pres.laser')}</button>
+        <button data-pres="draw" aria-pressed={draw} onClick={() => { setLaser(false); setDraw((d) => !d) }} title={t('pres.draw.title')}>{t('pres.draw')}</button>
         <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title={t('pres.speaker.title')}>{t('pres.speaker')}</button>
+        {draw && (
+          <div className="presentation-ink" data-pres="ink-tools" role="toolbar" aria-label={t('pres.ink.tools')}>
+            {INK_COLORS.map((c, i) => (
+              <button key={c} className="ink-swatch" data-pres-color={c} aria-pressed={color === c} aria-label={t('pres.ink.color', { n: i + 1 })} title={t('pres.ink.color', { n: i + 1 })} style={{ background: c }} onClick={() => setColor(c)} />
+            ))}
+            <button data-pres="highlighter" aria-pressed={tool === 'highlighter'} onClick={() => setTool((x) => (x === 'pen' ? 'highlighter' : 'pen'))} title={t('pres.ink.highlighter.title')}>{t('pres.ink.highlighter')}</button>
+            <button data-pres="ink-undo" disabled={!(ink[doc.pages[index].id]?.length)} onClick={() => setInk((m) => ({ ...m, [doc.pages[index].id]: (m[doc.pages[index].id] ?? []).slice(0, -1) }))} title={t('pres.ink.undo.title')}>{t('pres.ink.undo')}</button>
+            <button data-pres="ink-clear" disabled={!(ink[doc.pages[index].id]?.length)} onClick={() => setInk((m) => ({ ...m, [doc.pages[index].id]: [] }))} title={t('pres.ink.clear.title')}>{t('pres.ink.clear')}</button>
+          </div>
+        )}
         <button data-pres="notes-toggle" aria-pressed={showNotes} onClick={() => setShowNotes((n) => !n)} title={t('pres.notes.title')}>{t('pres.notes')}</button>
         <button data-pres="exit" onClick={exit} title={t('pres.exit.title')}>{t('pres.exit')}</button>
       </div>

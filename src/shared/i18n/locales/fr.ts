@@ -804,7 +804,18 @@ export const fr = {
   'alt.decorative': 'Image décorative (pas de description)',
   'alt.decorative.hint': 'À cocher pour un simple ornement : l\'image n\'est plus signalée comme « sans description ».',
   'alt.missing': 'Cette image n\'a pas de description.',
-  'strip.missingAlt': { one: '{count} image sans description', other: '{count} images sans description' }
+  'strip.missingAlt': { one: '{count} image sans description', other: '{count} images sans description' },
+  // Annotation à l'écran
+  'pres.draw': 'Dessiner',
+  'pres.draw.title': 'Annoter la page avec la souris (D). Les traits ne sont pas enregistrés.',
+  'pres.ink.tools': 'Outils de dessin',
+  'pres.ink.color': 'Couleur {n}',
+  'pres.ink.highlighter': 'Surligneur',
+  'pres.ink.highlighter.title': 'Trait large et translucide (H)',
+  'pres.ink.undo': '↶ Trait',
+  'pres.ink.undo.title': 'Annuler le dernier trait de cette page (Z)',
+  'pres.ink.clear': 'Effacer',
+  'pres.ink.clear.title': 'Effacer tous les traits de cette page (C)'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr
