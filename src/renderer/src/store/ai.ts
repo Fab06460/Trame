@@ -28,6 +28,8 @@ export interface AiDraft {
   model: string
 }
 
+export type AiMode = 'image' | 'text' | 'alt'
+
 export const MAX_DRAFTS = 8
 
 /** Nombre d'images gardées dans la liste (elles pèsent plusieurs Mo chacune et disparaissent à la fermeture). */
@@ -37,6 +39,8 @@ export const MAX_RESULTS = 12
 export const useAi = create<{
   status: AiStatus | null
   provider: AiProviderId
+  /** sous-onglet du panneau : images, texte ou descriptions */
+  mode: AiMode
   size: AiSize
   prompt: string
   editPrompt: string
@@ -47,7 +51,7 @@ export const useAi = create<{
   error: { kind: string; detail?: string; where: 'generate' | 'edit' | 'write' } | null
   results: AiResult[]
   refresh: () => Promise<void>
-  set: (patch: Partial<{ provider: AiProviderId; size: AiSize; prompt: string; editPrompt: string; writePrompt: string; writeLanguage: string }>) => void
+  set: (patch: Partial<{ provider: AiProviderId; mode: AiMode; size: AiSize; prompt: string; editPrompt: string; writePrompt: string; writeLanguage: string }>) => void
   generate: () => Promise<void>
   /** Retouche guidée (consigne) ou variante de l'image sélectionnée. */
   edit: (kind: EditKind) => Promise<void>
@@ -60,6 +64,7 @@ export const useAi = create<{
 }>((set, get) => ({
   status: null,
   provider: 'cloudflare',
+  mode: 'image',
   size: 'square',
   prompt: '',
   editPrompt: '',

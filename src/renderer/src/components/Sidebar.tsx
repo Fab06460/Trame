@@ -18,6 +18,7 @@ import { LanguageSelect } from './LanguageSelect'
 import { AiPanel } from './AiPanel'
 import { useSidebar, type SidebarTab } from '@/store/sidebar'
 import { SideIcon } from './SideIcons'
+import { imagesMissingAlt } from '@/altCheck'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
@@ -43,6 +44,7 @@ export function Sidebar(): React.JSX.Element {
   const userTemplates = useTemplates((s) => s.user)
   const hidden = useTemplates((s) => s.hidden)
   const filePath = useEditor((s) => s.filePath)
+  const missingAlt = useEditor((s) => imagesMissingAlt(s.doc).length)
 
   const refreshRecents = useCallback((): void => {
     window.trame.listRecents().then(setRecents, () => setRecents([]))
@@ -98,10 +100,11 @@ export function Sidebar(): React.JSX.Element {
                 tabIndex={tab === x.id ? 0 : -1}
                 className={`side-tab${tab === x.id ? ' active' : ''}`}
                 data-tab={x.id}
-                title={t(x.label)}
+                title={x.id === 'ai' && missingAlt > 0 ? `${t(x.label)} · ${t('altAudit.missing', { count: missingAlt })}` : t(x.label)}
                 onClick={() => setTab(x.id)}
               >
                 <SideIcon tab={x.id} />
+                {x.id === 'ai' && missingAlt > 0 && <span className="side-dot" data-side-alert="ai" aria-hidden="true" />}
                 <span className="side-label">{t(x.label)}</span>
               </button>
             ))}

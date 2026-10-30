@@ -39,7 +39,7 @@ export function TextAiHelp({ el, enforced }: { el: TrameElement; enforced: boole
       {!status || (!ready && !configured.length) ? (
         <>
           <p className="hint" data-aiw-inline-connect>{t('aiw.inline.connect')}</p>
-          <button data-action="ai-open-tab" onClick={() => openSidebarTab('ai')}>{t('aiw.inline.openTab')}</button>
+          <button data-action="ai-open-tab" onClick={() => { useAi.getState().set({ mode: 'text' }); openSidebarTab('ai') }}>{t('aiw.inline.openTab')}</button>
         </>
       ) : (
         <>
@@ -101,7 +101,7 @@ export function TextAiHelp({ el, enforced }: { el: TrameElement; enforced: boole
           )}
           <p className="hint">
             {t('aiw.inline.sent', { service: providerInfo(provider).name })}{' '}
-            <button className="link" data-action="ai-open-tab" onClick={() => openSidebarTab('ai')}>{t('aiw.inline.more')}</button>
+            <button className="link" data-action="ai-open-tab" onClick={() => { useAi.getState().set({ mode: 'text' }); openSidebarTab('ai') }}>{t('aiw.inline.more')}</button>
           </p>
         </>
       )}

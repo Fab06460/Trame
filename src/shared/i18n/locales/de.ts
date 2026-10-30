@@ -674,8 +674,7 @@ export const de: Catalog = {
   'lang.title': 'Sprache der Oberfläche',
   // Images générées par IA
   'ai.tab': 'KI',
-  'ai.title': 'KI-Bilder',
-  'ai.intro': 'Erzeugt aus einem Text ein Bild mit einem Online-Dienst Ihrer Wahl, mit Ihrem eigenen Konto: Trame hat keinen Server und erhält nichts. Optional: Alles andere in Trame funktioniert ohne.',
+  'ai.intro': 'Optional, mit Ihrem eigenen Konto: Trame hat keinen Server und empfängt nichts.',
   'ai.provider': 'Dienst',
   'ai.cost.cloudflare': 'Kostenlos im Rahmen eines Tageskontingents (laut Preisliste von Cloudflare etwa 170 Bilder pro Tag). Quadratische Bilder.',
   'ai.cost.openai': 'Kostenpflichtig: Jedes Bild wird von OpenAI Ihrem Konto belastet (wenige Cent).',
@@ -686,7 +685,6 @@ export const de: Catalog = {
   'ai.signup': 'Konto und Schlüssel erstellen: {url}',
   'ai.save': 'Speichern',
   'ai.connected': 'Mit {service} verbunden',
-  'ai.edit': 'Ändern',
   'ai.forget': 'Meine Zugangsdaten vergessen',
   'ai.storage.persistent': 'Ihre Zugangsdaten werden vom System verschlüsselt und bleiben auf diesem Computer.',
   'ai.storage.session': 'Die Systemverschlüsselung ist nicht verfügbar: Ihre Zugangsdaten bleiben nur bis zum Schließen von Trame im Speicher.',
@@ -717,7 +715,7 @@ export const de: Catalog = {
   'ai.image.copyPrompt': 'Anfrage kopieren',
   // Retouche guidée et variantes (IA)
   'aie.title': 'Bild bearbeiten',
-  'aie.none': 'Wählen Sie ein Bild auf der Seite aus, um es zu bearbeiten oder eine Variante zu erstellen.',
+  'aie.none': 'Wählen Sie ein Bild auf der Seite aus, um es zu ändern.',
   'aie.instruction': 'Was soll sich ändern?',
   'aie.instruction.placeholder': 'z. B. ersetze den Himmel durch einen Sonnenuntergang',
   'aie.edit': 'Bearbeiten',
@@ -736,7 +734,7 @@ export const de: Catalog = {
   // Aide à la rédaction (IA)
   'aiw.title': 'Schreibhilfe',
   'aiw.selected': 'Ausgewählter Text',
-  'aiw.none': 'Wählen Sie einen Text auf der Seite aus, um ihn umzuformulieren, zu kürzen, zu korrigieren oder zu übersetzen. Ohne ausgewählten Text können Sie einen ganz neuen Text anfordern.',
+  'aiw.none': 'Wählen Sie einen Text zum Überarbeiten aus oder beschreiben Sie unten einen neuen Text.',
   'aiw.rewrite': 'Umformulieren',
   'aiw.shorten': 'Kürzen',
   'aiw.expand': 'Ausführen',
@@ -799,7 +797,7 @@ export const de: Catalog = {
   'altAudit.all': { one: 'Dieses Bild beschreiben', other: 'Alle {count} Bilder beschreiben' },
   'altAudit.progress': 'Beschreibe {done} / {total} …',
   'altAudit.sent': { one: 'Das Bild wird zur Beschreibung an {service} gesendet.', other: 'Die {count} Bilder werden einzeln zur Beschreibung an {service} gesendet.' },
-  'altAudit.connect': 'Verbinden Sie einen KI-Dienst (oben in diesem Tab), um sie automatisch zu beschreiben, oder öffnen Sie jedes Bild und geben Sie die Beschreibung ein.',
+  'altAudit.connect': 'Verbinden Sie einen KI-Dienst (Einstellungen ⚙), um sie automatisch zu beschreiben, oder öffnen Sie jedes Bild, um die Beschreibung einzugeben.',
   'alt.decorative': 'Dekoratives Bild (keine Beschreibung)',
   'alt.decorative.hint': 'Für reine Zierde ankreuzen: Das Bild wird nicht mehr als „ohne Beschreibung“ markiert.',
   'alt.missing': 'Dieses Bild hat keine Beschreibung.',
@@ -819,5 +817,12 @@ export const de: Catalog = {
   'pres.ink.pen': 'Stift',
   'pres.ink.pen.title': 'Dünner, deckender Strich (H zum Wechseln)',
   // Colonne d'onglets
-  'sidebar.tabs': 'Bereiche der Seitenleiste'
+  'sidebar.tabs': 'Bereiche der Seitenleiste',
+  // Panneau IA : sous-onglets
+  'ai.mode.image': 'Bilder',
+  'ai.mode.text': 'Text',
+  'ai.mode.alt': 'Beschreibungen',
+  'ai.modes': 'Funktionen des Assistenten',
+  'ai.settings': 'Diensteinstellungen',
+  'ai.about': 'Kosten und gesendete Daten',
 }

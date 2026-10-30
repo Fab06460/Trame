@@ -674,8 +674,7 @@ export const en: Catalog = {
   'lang.title': 'Interface language',
   // Images générées par IA
   'ai.tab': 'AI',
-  'ai.title': 'AI images',
-  'ai.intro': 'Generates an image from a text using an online service of your choice, with your own account: Trame has no server and receives nothing. Optional: everything else in Trame works without it.',
+  'ai.intro': 'Optional, with your own account: Trame has no server and receives nothing.',
   'ai.provider': 'Service',
   'ai.cost.cloudflare': 'Free within a daily quota (about 170 images a day according to Cloudflare\'s price list). Square images.',
   'ai.cost.openai': 'Paid: each image is billed by OpenAI to your account (a few cents).',
@@ -686,7 +685,6 @@ export const en: Catalog = {
   'ai.signup': 'Create an account and a key: {url}',
   'ai.save': 'Save',
   'ai.connected': 'Connected to {service}',
-  'ai.edit': 'Edit',
   'ai.forget': 'Forget my credentials',
   'ai.storage.persistent': 'Your credentials are encrypted by the system and stay on this computer.',
   'ai.storage.session': 'System encryption is unavailable: your credentials are only kept in memory until Trame is closed.',
@@ -717,7 +715,7 @@ export const en: Catalog = {
   'ai.image.copyPrompt': 'Copy the prompt',
   // Retouche guidée et variantes (IA)
   'aie.title': 'Edit an image',
-  'aie.none': 'Select an image on the page to edit it or to create a variation.',
+  'aie.none': 'Select an image on the page to edit it.',
   'aie.instruction': 'What should change?',
   'aie.instruction.placeholder': 'e.g. replace the sky with a sunset',
   'aie.edit': 'Edit',
@@ -736,7 +734,7 @@ export const en: Catalog = {
   // Aide à la rédaction (IA)
   'aiw.title': 'Writing help',
   'aiw.selected': 'Selected text',
-  'aiw.none': 'Select a text on the page to rewrite, shorten, fix or translate it. With no text selected, you can ask for a brand new text.',
+  'aiw.none': 'Select a text to rework it, or describe a new text below.',
   'aiw.rewrite': 'Rewrite',
   'aiw.shorten': 'Shorten',
   'aiw.expand': 'Expand',
@@ -799,7 +797,7 @@ export const en: Catalog = {
   'altAudit.all': { one: 'Describe this image', other: 'Describe all {count} images' },
   'altAudit.progress': 'Describing {done} / {total}…',
   'altAudit.sent': { one: 'The image is sent to {service} to be described.', other: 'The {count} images are sent to {service}, one at a time, to be described.' },
-  'altAudit.connect': 'Connect an AI service (at the top of this tab) to describe them automatically, or open each image to type its description.',
+  'altAudit.connect': 'Connect an AI service (settings ⚙) to describe them automatically, or open each image to type its description.',
   'alt.decorative': 'Decorative image (no description)',
   'alt.decorative.hint': 'Tick for a pure ornament: the image is no longer flagged as “no description”.',
   'alt.missing': 'This image has no description.',
@@ -819,5 +817,12 @@ export const en: Catalog = {
   'pres.ink.pen': 'Pen',
   'pres.ink.pen.title': 'Thin, opaque stroke (H to switch)',
   // Colonne d'onglets
-  'sidebar.tabs': 'Sidebar sections'
+  'sidebar.tabs': 'Sidebar sections',
+  // Panneau IA : sous-onglets
+  'ai.mode.image': 'Images',
+  'ai.mode.text': 'Text',
+  'ai.mode.alt': 'Descriptions',
+  'ai.modes': 'Assistant functions',
+  'ai.settings': 'Service settings',
+  'ai.about': 'Costs and data sent',
 }

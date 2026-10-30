@@ -14,6 +14,7 @@
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
 - **Texte alternatif des images** (saisi ou proposé par IA), repris dans les exports PowerPoint et SVG ; alerte « image sans description » (⚠ sur les pages, case « image décorative », « Décrire toutes » par IA)
+- **Panneau IA en trois sous-onglets** (Images, Texte, Descriptions), pastille d'alerte sur l'onglet quand des images n'ont pas de description
 - **Aide à la rédaction par IA** (reformuler, raccourcir, corriger, traduire…, aussi directement dans les propriétés d'un texte) et **images générées, retouchées ou déclinées en variantes par IA** (facultatif, service en ligne avec votre propre compte) : Cloudflare Workers AI (quota gratuit quotidien) ou OpenAI ; les identifiants sont chiffrés par le système et l'image est copiée dans le document
 - Interface en **français, anglais, allemand et espagnol**, au choix en bas de la barre latérale, changement immédiat ; autres langues faciles à ajouter ([docs/I18N.md](docs/I18N.md))
 - Mode présentation plein écran (F5), avec pointeur laser (L) et annotation à l'écran au stylo ou au surligneur (D) : navigation clavier et souris, écran noir, lecture automatique en boucle, transitions par document ou par page (fondu, glissement, recouvrement, zoom), exportées vers PowerPoint, notes de l'orateur (touche N), pointeur laser (touche L), écran de l'orateur dans une seconde fenêtre (touche S : page suivante, notes, chronomètre)

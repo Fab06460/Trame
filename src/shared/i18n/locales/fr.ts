@@ -675,8 +675,7 @@ export const fr = {
   'lang.title': 'Langue de l\'interface',
   // Images générées par IA
   'ai.tab': 'IA',
-  'ai.title': 'Images par IA',
-  'ai.intro': 'Génère une image à partir d\'un texte avec un service en ligne de votre choix, avec votre propre compte : Trame n\'a pas de serveur et ne reçoit rien. Facultatif : le reste de Trame fonctionne sans.',
+  'ai.intro': 'Facultatif, avec votre propre compte : Trame n\'a pas de serveur et ne reçoit rien.',
   'ai.provider': 'Service',
   'ai.cost.cloudflare': 'Gratuit dans la limite d\'un quota quotidien (environ 170 images par jour d\'après la grille de prix de Cloudflare). Images carrées.',
   'ai.cost.openai': 'Payant : chaque image est facturée par OpenAI sur votre compte (quelques centimes).',
@@ -687,7 +686,6 @@ export const fr = {
   'ai.signup': 'Créer un compte et une clé : {url}',
   'ai.save': 'Enregistrer',
   'ai.connected': 'Connecté à {service}',
-  'ai.edit': 'Modifier',
   'ai.forget': 'Oublier mes identifiants',
   'ai.storage.persistent': 'Vos identifiants sont chiffrés par le système et restent sur ce poste.',
   'ai.storage.session': 'Le chiffrement du système est indisponible : vos identifiants ne sont gardés qu\'en mémoire jusqu\'à la fermeture de Trame.',
@@ -718,7 +716,7 @@ export const fr = {
   'ai.image.copyPrompt': 'Copier la demande',
   // Retouche guidée et variantes (IA)
   'aie.title': 'Modifier une image',
-  'aie.none': 'Sélectionnez une image de la page pour la modifier ou en créer une variante.',
+  'aie.none': 'Sélectionnez une image de la page pour la modifier.',
   'aie.instruction': 'Que faut-il changer ?',
   'aie.instruction.placeholder': 'ex. : remplace le ciel par un coucher de soleil',
   'aie.edit': 'Modifier',
@@ -737,7 +735,7 @@ export const fr = {
   // Aide à la rédaction (IA)
   'aiw.title': 'Aide à la rédaction',
   'aiw.selected': 'Texte sélectionné',
-  'aiw.none': 'Sélectionnez un texte de la page pour le reformuler, le raccourcir, le corriger ou le traduire. Sans texte sélectionné, vous pouvez demander la rédaction d\'un texte neuf.',
+  'aiw.none': 'Sélectionnez un texte pour le retravailler, ou décrivez un texte neuf ci-dessous.',
   'aiw.rewrite': 'Reformuler',
   'aiw.shorten': 'Raccourcir',
   'aiw.expand': 'Développer',
@@ -800,7 +798,7 @@ export const fr = {
   'altAudit.all': { one: 'Décrire cette image', other: 'Décrire les {count} images' },
   'altAudit.progress': 'Description {done} / {total}…',
   'altAudit.sent': { one: 'L\'image est envoyée à {service} pour être décrite.', other: 'Les {count} images sont envoyées à {service}, une par une, pour être décrites.' },
-  'altAudit.connect': 'Connectez un service d\'IA (en haut de cet onglet) pour les décrire automatiquement, ou ouvrez chaque image pour saisir sa description.',
+  'altAudit.connect': 'Connectez un service d\'IA (réglages ⚙) pour les décrire automatiquement, ou ouvrez chaque image pour saisir sa description.',
   'alt.decorative': 'Image décorative (pas de description)',
   'alt.decorative.hint': 'À cocher pour un simple ornement : l\'image n\'est plus signalée comme « sans description ».',
   'alt.missing': 'Cette image n\'a pas de description.',
@@ -820,7 +818,14 @@ export const fr = {
   'pres.ink.pen': 'Stylo',
   'pres.ink.pen.title': 'Trait fin et opaque (H pour alterner)',
   // Colonne d'onglets
-  'sidebar.tabs': 'Sections de la barre latérale'
+  'sidebar.tabs': 'Sections de la barre latérale',
+  // Panneau IA : sous-onglets
+  'ai.mode.image': 'Images',
+  'ai.mode.text': 'Texte',
+  'ai.mode.alt': 'Descriptions',
+  'ai.modes': 'Fonctions de l\'assistant',
+  'ai.settings': 'Réglages du service',
+  'ai.about': 'Coûts et données envoyées',
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

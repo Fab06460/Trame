@@ -674,8 +674,7 @@ export const es: Catalog = {
   'lang.title': 'Idioma de la interfaz',
   // Images générées par IA
   'ai.tab': 'IA',
-  'ai.title': 'Imágenes con IA',
-  'ai.intro': 'Genera una imagen a partir de un texto con el servicio en línea que elija, con su propia cuenta: Trame no tiene servidor y no recibe nada. Opcional: el resto de Trame funciona sin ello.',
+  'ai.intro': 'Opcional, con su propia cuenta: Trame no tiene servidor y no recibe nada.',
   'ai.provider': 'Servicio',
   'ai.cost.cloudflare': 'Gratis dentro de una cuota diaria (unas 170 imágenes al día según la tarifa de Cloudflare). Imágenes cuadradas.',
   'ai.cost.openai': 'De pago: OpenAI factura cada imagen a su cuenta (unos céntimos).',
@@ -686,7 +685,6 @@ export const es: Catalog = {
   'ai.signup': 'Crear una cuenta y una clave: {url}',
   'ai.save': 'Guardar',
   'ai.connected': 'Conectado a {service}',
-  'ai.edit': 'Modificar',
   'ai.forget': 'Olvidar mis credenciales',
   'ai.storage.persistent': 'Sus credenciales las cifra el sistema y permanecen en este equipo.',
   'ai.storage.session': 'El cifrado del sistema no está disponible: sus credenciales solo se guardan en memoria hasta que cierre Trame.',
@@ -717,7 +715,7 @@ export const es: Catalog = {
   'ai.image.copyPrompt': 'Copiar la solicitud',
   // Retouche guidée et variantes (IA)
   'aie.title': 'Modificar una imagen',
-  'aie.none': 'Seleccione una imagen de la página para modificarla o crear una variante.',
+  'aie.none': 'Seleccione una imagen de la página para modificarla.',
   'aie.instruction': '¿Qué hay que cambiar?',
   'aie.instruction.placeholder': 'p. ej.: sustituye el cielo por una puesta de sol',
   'aie.edit': 'Modificar',
@@ -736,7 +734,7 @@ export const es: Catalog = {
   // Aide à la rédaction (IA)
   'aiw.title': 'Ayuda para redactar',
   'aiw.selected': 'Texto seleccionado',
-  'aiw.none': 'Seleccione un texto de la página para reformularlo, acortarlo, corregirlo o traducirlo. Sin texto seleccionado, puede pedir que se redacte un texto nuevo.',
+  'aiw.none': 'Seleccione un texto para retocarlo o describa un texto nuevo más abajo.',
   'aiw.rewrite': 'Reformular',
   'aiw.shorten': 'Acortar',
   'aiw.expand': 'Ampliar',
@@ -799,7 +797,7 @@ export const es: Catalog = {
   'altAudit.all': { one: 'Describir esta imagen', other: 'Describir las {count} imágenes' },
   'altAudit.progress': 'Describiendo {done} / {total}…',
   'altAudit.sent': { one: 'La imagen se envía a {service} para describirla.', other: 'Las {count} imágenes se envían a {service}, una a una, para describirlas.' },
-  'altAudit.connect': 'Conecte un servicio de IA (arriba en esta pestaña) para describirlas automáticamente, o abra cada imagen para escribir su descripción.',
+  'altAudit.connect': 'Conecte un servicio de IA (ajustes ⚙) para describirlas automáticamente, o abra cada imagen para escribir su descripción.',
   'alt.decorative': 'Imagen decorativa (sin descripción)',
   'alt.decorative.hint': 'Márquela para un simple adorno: la imagen deja de señalarse como «sin descripción».',
   'alt.missing': 'Esta imagen no tiene descripción.',
@@ -819,5 +817,12 @@ export const es: Catalog = {
   'pres.ink.pen': 'Lápiz',
   'pres.ink.pen.title': 'Trazo fino y opaco (H para alternar)',
   // Colonne d'onglets
-  'sidebar.tabs': 'Secciones de la barra lateral'
+  'sidebar.tabs': 'Secciones de la barra lateral',
+  // Panneau IA : sous-onglets
+  'ai.mode.image': 'Imágenes',
+  'ai.mode.text': 'Texto',
+  'ai.mode.alt': 'Descripciones',
+  'ai.modes': 'Funciones del asistente',
+  'ai.settings': 'Ajustes del servicio',
+  'ai.about': 'Costes y datos enviados',
 }

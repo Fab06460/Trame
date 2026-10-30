@@ -65,6 +65,8 @@ button.danger { color: #ff7b7b; }
 .side-tab:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 .side-tab.active { background: rgba(124, 92, 255, 0.22); border-color: rgba(124, 92, 255, 0.55); color: #fff; }
 .side-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.side-tab { position: relative; }
+.side-dot { position: absolute; top: 5px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; border: 2px solid var(--panel); box-sizing: content-box; }
 .side-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-footer { margin-top: auto; position: sticky; bottom: -12px; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 8px 0 4px; background: var(--panel); color: var(--muted); font-size: 12px; }
 .sidebar-footer select { flex: 1; min-width: 0; }
@@ -360,3 +362,16 @@ button.danger { color: #ff7b7b; }
 .speaker-notes-text { flex: 1; min-height: 0; overflow-y: auto; white-space: pre-wrap; line-height: 1.45; padding: 12px 14px; background: #1b1c21; border: 1px solid var(--border); border-radius: 8px; }
 .speaker-notes-text.empty { color: var(--muted); font-style: italic; }
 .speaker-size button { padding: 1px 8px; margin-left: 4px; font-size: 12px; }
+
+/* panneau IA : en-tête de service, sous-onglets, détails repliés */
+.ai-head { display: flex; flex-direction: column; gap: 8px; }
+.ai-service { display: flex; gap: 6px; align-items: center; }
+.ai-service select { flex: 1; min-width: 0; }
+.icon-btn { flex: none; width: 32px; padding: 4px 0; font-size: 16px; line-height: 1; }
+.icon-btn[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.ai-state { font-size: 12px; color: var(--muted); }
+.ai-modes button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 4px; font-size: 13px; }
+.count-dot { min-width: 18px; padding: 0 5px; border-radius: 9px; background: #f59e0b; color: #1b1c20; font-size: 11px; font-weight: 700; line-height: 18px; }
+.ai-about { font-size: 12px; color: var(--muted); }
+.ai-about summary { cursor: pointer; padding: 2px 0; }
+.ai-about .hint { margin: 6px 0 0; }

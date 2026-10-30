@@ -1182,6 +1182,8 @@ try {
   const aiError = () => run(`document.querySelector('[data-ai-error]')?.dataset.aiError ?? ''`)
   const generateAi = async (prompt) => { await typeText('[data-field="aiPrompt"]', prompt); await sleep(100); await clickSel('[data-action="ai-generate"]') }
   const waitAi = (fn) => waitFor(fn, 9000)
+  // sous-onglet du panneau IA (images, texte, descriptions)
+  const aiMode = async (m) => { await clickSel(`[data-ai-mode="${m}"]`); await sleep(150) }
   const panelText = async () => (await run(`document.querySelector('.panel')?.innerText ?? ''`)).toLowerCase() // les titres du panneau sont en capitales (CSS)
   const escape = async () => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' }); await sleep(350) }
   check('IA : sans identifiant, seul le formulaire de connexion est proposé', (await nBrand('[data-ai-field]')) === 2 && (await nBrand('[data-field="aiPrompt"]')) === 0 && (await nBrand('[data-ai-connected]')) === 0)
@@ -1213,7 +1215,12 @@ try {
   check('IA : identifiants valides : le service est connecté', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
   const aiStatusJson = JSON.stringify(await run('window.trame.aiStatus()'))
   check("IA : l'interface ne reçoit jamais le jeton (seulement l'identifiant de compte, non secret)", !aiStatusJson.includes('cf-token-test') && aiStatusJson.includes('0123456789abcdef0123456789abcdef') && aiStatusJson.includes('"persistent":true'), aiStatusJson)
-  check("IA : le chiffrement est annoncé", (await run(`document.body.innerText`)).includes('chiffrés par le système'))
+  await aiMode('image') // « Ouvrir l'onglet IA » (propriétés du texte) a laissé le sous-onglet Texte
+  await clickSel('[data-action="ai-edit"]')
+  await sleep(150)
+  check("IA : le chiffrement est annoncé (dans les réglages du service)", (await run(`document.body.innerText`)).includes('chiffrés par le système'))
+  await clickSel('[data-action="ai-edit"]')
+  await sleep(150)
   check("IA : aucune requête réseau avant la première génération", aiRequests.length === 0)
 
   await generateAi('Un renard roux')
@@ -1231,7 +1238,7 @@ try {
 
   // retouche guidée et variantes de l'image sélectionnée (Cloudflare : FLUX.2 klein, multipart)
   check("IA retouche : l'image sélectionnée est proposée avec son aperçu et la consigne", (await nBrand('[data-ai-source]')) === 1 && (await nBrand('[data-field="aiEditPrompt"]')) === 1 && (await nBrand('[data-aie-none]')) === 0)
-  check("IA retouche : le coût et l'envoi de l'image sont annoncés", (await run(`document.querySelector('[data-aie-cost]')?.innerText ?? ''`)).includes('110 neurons') && (await run(`document.body.innerText`)).includes('sont envoyés à Cloudflare Workers AI'))
+  check("IA retouche : le coût et l'envoi de l'image sont annoncés", (await run(`document.querySelector('[data-aie-cost]')?.textContent ?? ''`)).includes('110 neurons') && (await run(`document.body.textContent`)).includes('sont envoyés à Cloudflare Workers AI'))
   check('IA retouche : « Modifier » attend une consigne', (await run(`document.querySelector('[data-action="ai-edit-run"]').disabled`)) === true)
   await typeText('[data-field="aiEditPrompt"]', 'ciel rose')
   await sleep(100)
@@ -1282,6 +1289,7 @@ try {
 
   // aide à la rédaction (Cloudflare, Llama via le point d'accès compatible OpenAI)
   const textReqs = () => aiRequests.filter((r) => r.path.endsWith('/chat/completions'))
+  await aiMode('text')
   check('IA rédaction : aucune demande de texte avant un clic', textReqs().length === 0)
   check('IA rédaction : sans texte sélectionné, la section invite à en choisir un et propose seulement la demande libre', (await nBrand('[data-aiw-none]')) === 1 && (await nBrand('[data-ai-write="rewrite"]')) === 0 && (await nBrand('[data-ai-write="free"]')) === 1)
   await click('header.toolbar button', 'Texte')
@@ -1290,7 +1298,7 @@ try {
   await clickSel('.sidebar .tabs button[data-tab="ai"]')
   await sleep(300)
   check('IA rédaction : le texte sélectionné est cité et les actions apparaissent', (await run(`document.querySelector('[data-ai-excerpt]')?.innerText ?? ''`)).includes('Votre texte') && (await nBrand('[data-ai-write="rewrite"]')) === 1 && (await nBrand('[data-ai-write="translate"]')) === 1)
-  check("IA rédaction : le coût et l'envoi du texte sont annoncés", (await run(`document.querySelector('[data-aiw-cost]')?.innerText ?? ''`)).includes('neurons') && (await run(`document.body.innerText`)).includes('sont envoyés à Cloudflare Workers AI'))
+  check("IA rédaction : le coût et l'envoi du texte sont annoncés", (await run(`document.querySelector('[data-aiw-cost]')?.textContent ?? ''`)).includes('neurons') && (await run(`document.body.textContent`)).includes('sont envoyés à Cloudflare Workers AI'))
   await clickSel('[data-ai-write="rewrite"]')
   check('IA rédaction : « Reformuler » produit une proposition (guillemets ajoutés par le modèle retirés)', await waitAi(async () => (await nBrand('[data-ai-draft]')) === 1) && (await run(`document.querySelector('[data-ai-draft-text]')?.innerText ?? ''`)) === 'Reformulé : Votre texte')
   const wr = textReqs().at(-1)
@@ -1335,6 +1343,7 @@ try {
   check("rédaction (propriétés) : annuler rend le texte d'origine", (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).includes('Du pain frais tous les matins'))
 
   // texte alternatif d'une image : saisie, description par un modèle de vision, exports PowerPoint et SVG
+  await aiMode('image')
   await clickSel('[data-ai-result][data-ai-kind="generate"]')
   await sleep(600)
   check("alt : une image sélectionnée propose le champ « Texte alternatif » et la description par IA", (await nBrand('.panel [data-field="alt"]')) === 1 && (await nBrand('.panel [data-action="alt-describe"]')) === 1 && (await nBrand('.panel [data-alt-connect]')) === 0)
@@ -1380,11 +1389,13 @@ try {
   await rm(join(exportsDir, altSvg ?? 'x.svg'), { force: true })
   await clickSel('.sidebar .tabs button[data-tab="ai"]')
   await sleep(300)
+  await aiMode('image')
 
   // alerte « image sans description » : compteur, repère sur la page, image décorative, « Décrire toutes »
   const auditCount = () => run(`Number(document.querySelector('[data-alt-audit-count]')?.getAttribute('data-alt-audit-count') ?? 0)`)
   await clickSel('[data-ai-result][data-ai-kind="generate"]')
   await sleep(800)
+  await aiMode('alt')
   const missing1 = await auditCount()
   check("alt : une image insérée sans description est signalée dans l'onglet IA et sur la page", missing1 >= 1 && (await nBrand('.page-item.current [data-alt-flag]')) === 1, String(missing1))
   check("alt : le panneau de l'image sélectionnée le dit aussi", (await nBrand('.panel [data-alt-missing]')) === 1)
@@ -1411,6 +1422,7 @@ try {
   await typeInto('[data-ai-field="key"]', 'sk-wrong')
   await clickSel('[data-action="ai-save"]')
   check('IA : OpenAI connecté', await waitAi(async () => (await nBrand('[data-ai-connected]')) === 1))
+  await aiMode('image')
   check('IA : OpenAI propose les trois formats, le carré par défaut', (await nBrand('[data-ai-size]')) === 3 && (await run(`document.querySelector('[data-ai-size="square"]').getAttribute('aria-pressed')`)) === 'true')
   await generateAi('Un phare')
   check('IA : mauvaise clé : erreur « identifiants refusés »', await waitAi(async () => (await aiError()) === 'auth'))
@@ -1451,6 +1463,8 @@ try {
   check("IA : un identifiant de compte qui sortirait de l'adresse est refusé", (await run(`window.trame.aiSave('cloudflare', { account: '../../../x'.padEnd(32, 'a'), token: 'x' })`)).ok === false)
   check('IA : une demande trop longue est refusée avant tout appel réseau', (await run(`window.trame.aiGenerate('openai', 'x'.repeat(1001), 'square', 'r2')`)).ok === false && aiRequests.every((r) => r.body.prompt !== 'x'.repeat(1001)))
   const aiCallsBefore = aiRequests.length
+  await clickSel('[data-action="ai-edit"]')
+  await sleep(150)
   await clickSel('[data-action="ai-forget"]')
   check('IA : « Oublier mes identifiants » ramène au formulaire', await waitAi(async () => (await nBrand('[data-ai-field]')) === 1 && (await nBrand('[data-ai-connected]')) === 0))
   check('IA : sans identifiant, le processus principal refuse de générer (aucun appel réseau)', (await run(`window.trame.aiGenerate('openai', 'Un phare', 'square', 'r3')`)).error === 'no-credentials' && aiRequests.length === aiCallsBefore)
@@ -2210,22 +2224,22 @@ try {
   }
   await reloadApp()
   await sleep(400)
-  check('disposition par défaut : panneau de gauche 340 px (colonne d\'onglets comprise), de droite 240 px', (await rectOf('[data-dock="left"]'))?.w === 340 && (await rectOf('[data-dock="right"]'))?.w === 240, JSON.stringify([await rectOf('[data-dock="left"]'), await rectOf('[data-dock="right"]')]))
+  check('disposition par défaut : panneau de gauche 400 px (colonne d\'onglets comprise), de droite 240 px', (await rectOf('[data-dock="left"]'))?.w === 400 && (await rectOf('[data-dock="right"]'))?.w === 240, JSON.stringify([await rectOf('[data-dock="left"]'), await rectOf('[data-dock="right"]')]))
   await dragBy('[data-splitter="left"]', 60, 0)
-  check('glisser la poignée de gauche élargit le panneau (400 px)', (await rectOf('[data-dock="left"]'))?.w === 400, JSON.stringify(await rectOf('[data-dock="left"]')))
+  check('glisser la poignée de gauche élargit le panneau (460 px)', (await rectOf('[data-dock="left"]'))?.w === 460, JSON.stringify(await rectOf('[data-dock="left"]')))
   await dragBy('[data-splitter="right"]', -50, 0)
   check('glisser la poignée de droite vers la gauche élargit le panneau de droite (290 px)', (await rectOf('[data-dock="right"]'))?.w === 290, JSON.stringify(await rectOf('[data-dock="right"]')))
   await dragBy('[data-splitter="left"]', -900, 0)
-  check('la largeur est bornée (minimum 280 px)', (await rectOf('[data-dock="left"]'))?.w === 280)
+  check('la largeur est bornée (minimum 300 px)', (await rectOf('[data-dock="left"]'))?.w === 300)
   await run(`document.querySelector('[data-splitter="left"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
   await run(`document.querySelector('[data-splitter="right"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
   await sleep(200)
-  check('double-clic sur une poignée : taille par défaut', (await rectOf('[data-dock="left"]'))?.w === 340 && (await rectOf('[data-dock="right"]'))?.w === 240)
+  check('double-clic sur une poignée : taille par défaut', (await rectOf('[data-dock="left"]'))?.w === 400 && (await rectOf('[data-dock="right"]'))?.w === 240)
   await run(`document.querySelector('[data-splitter="left"]').focus()`)
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight' })
   await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight' })
   await sleep(150)
-  check('flèche droite sur la poignée : +16 px au clavier', (await rectOf('[data-dock="left"]'))?.w === 356)
+  check('flèche droite sur la poignée : +16 px au clavier', (await rectOf('[data-dock="left"]'))?.w === 416)
   await run(`document.querySelector('[data-splitter="left"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`)
 
   const canvasW = async () => (await rectOf('.canvas-wrap')).w
@@ -2275,7 +2289,7 @@ try {
   await sleep(300)
   await moveTo(700, 300)
   await sleep(900)
-  check('cliquer « ◧ » pendant l\'aperçu ancre le panneau (il reste, avec sa poignée)', (await rectOf('[data-dock="left"]'))?.w === 340 && (await rectOf('[data-splitter="left"]')) !== null)
+  check('cliquer « ◧ » pendant l\'aperçu ancre le panneau (il reste, avec sa poignée)', (await rectOf('[data-dock="left"]'))?.w === 400 && (await rectOf('[data-splitter="left"]')) !== null)
   await moveTo(700, 300)
 
   // fenêtre étroite : les panneaux passent en recouvrement, à la demande
@@ -2285,7 +2299,7 @@ try {
   await clickSel('[data-panel-toggle="left"]')
   await sleep(300)
   const ov = await rectOf('[data-dock="left"]')
-  check('« ◧ » ouvre le panneau de gauche en recouvrement (par-dessus le canevas, sans le réduire)', ov !== null && ov.w === 340 && (await canvasW()) > 800, JSON.stringify([ov, await canvasW()]))
+  check('« ◧ » ouvre le panneau de gauche en recouvrement (par-dessus le canevas, sans le réduire)', ov !== null && ov.w === 400 && (await canvasW()) > 800, JSON.stringify([ov, await canvasW()]))
   await key('Escape')
   await sleep(250)
   check('Échap referme le recouvrement', (await rectOf('[data-dock="left"]')) === null)
