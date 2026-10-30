@@ -1,7 +1,7 @@
 import { basename } from 'path'
 
 /** Extensions que l'export vers un dossier accepte d'écrire. */
-export const EXPORT_EXTENSIONS = ['png', 'jpg', 'svg']
+export const EXPORT_EXTENSIONS = ['png', 'jpg', 'svg', 'pdf']
 
 /**
  * Nom de fichier accepté pour un export vers un dossier : un simple nom (jamais de chemin), à l'extension connue, sans caractère

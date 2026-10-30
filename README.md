@@ -14,6 +14,7 @@
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
 - **Texte alternatif des images** (saisi ou proposé par IA), repris dans les exports PowerPoint et SVG ; alerte « image sans description » (⚠ sur les pages, case « image décorative », « Décrire toutes » par IA)
+- **Publipostage** : écrivez `{{prénom}}` dans un texte, choisissez un tableau CSV, et Trame produit une fiche par ligne (diplômes, badges, étiquettes…) en un PDF ou un PDF par ligne ; tout reste sur le poste
 - **Panneau IA en trois sous-onglets** (Images, Texte, Descriptions), pastille d'alerte sur l'onglet quand des images n'ont pas de description
 - **Aide à la rédaction par IA** (reformuler, raccourcir, corriger, traduire…, aussi directement dans les propriétés d'un texte) et **images générées, retouchées ou déclinées en variantes par IA** (facultatif, service en ligne avec votre propre compte) : Cloudflare Workers AI (quota gratuit quotidien) ou OpenAI ; les identifiants sont chiffrés par le système et l'image est copiée dans le document
 - Interface en **français, anglais, allemand et espagnol**, au choix en bas de la barre latérale, changement immédiat ; autres langues faciles à ajouter ([docs/I18N.md](docs/I18N.md))

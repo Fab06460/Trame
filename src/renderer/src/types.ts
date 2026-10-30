@@ -150,6 +150,12 @@ export interface EmbeddedFont {
   variants: Record<string, string>
 }
 
+/** Tableau du publipostage (champs « {{colonne}} » des textes), enregistré avec le document. */
+export interface MergeData {
+  columns: string[]
+  rows: string[][]
+}
+
 export interface TrameDocument {
   version: 2
   name: string
@@ -164,6 +170,8 @@ export interface TrameDocument {
   transition?: PageTransition
   /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */
   sources?: Record<string, string>
+  /** données du publipostage : un tableau dont les colonnes remplissent les champs « {{colonne}} » des textes */
+  mailMerge?: MergeData
 }
 
 declare global {

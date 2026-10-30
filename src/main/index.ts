@@ -375,14 +375,14 @@ ipcMain.on('app:close-confirmed', () => {
 const MAX_IMPORT_BYTES = 150_000_000
 
 /** Choix d'un fichier à importer (PDF, PPTX) : retourne son nom (sans extension) et son contenu. */
-async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
+async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
   let path: string
   if (TEST_EXPORT_DIR) {
     // tests de bout en bout : le fichier pick-import.<ext> du dossier de test tient lieu de choix (aucun dialogue natif)
     path = join(TEST_EXPORT_DIR, `pick-import.${ext}`)
     if (!(await stat(path).catch(() => null))) return null
   } else {
-    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: label, extensions: [ext] }] })
+    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: label, extensions: ext === 'csv' ? ['csv', 'tsv', 'txt'] : [ext] }] })
     if (res.canceled || !res.filePaths[0]) return null
     path = res.filePaths[0]
   }
@@ -390,7 +390,7 @@ async function pickImportFile(ext: 'pdf' | 'pptx', label: string): Promise<{ nam
     dialog.showErrorBox(tm('main.import.tooBig.title'), tm('main.import.tooBig'))
     return null
   }
-  return { name: basename(path).replace(new RegExp(`\\.${ext}$`, 'i'), ''), bytes: new Uint8Array(await readFile(path)) }
+  return { name: basename(path).replace(/\.(pdf|pptx|csv|tsv|txt)$/i, ''), bytes: new Uint8Array(await readFile(path)) }
 }
 
 // --- Photos libres (Openverse) -------------------------------------------------------------------------------------------------
@@ -828,6 +828,7 @@ ipcMain.on('speaker:close', (e) => {
 
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))
 ipcMain.handle('pptx:pick', () => pickImportFile('pptx', 'PowerPoint'))
+ipcMain.handle('csv:pick', () => pickImportFile('csv', tm('main.filter.csv')))
 
 ipcMain.handle('image:pick', async () => {
   // tests de bout en bout : l'image « choisie » est le fichier pick-image.png du dossier de test (aucun dialogue natif)

@@ -48,6 +48,7 @@ const api = {
   /** Import de fichiers de police personnels (TTF, OTF, WOFF, WOFF2). */
   pickFontFiles: (): Promise<Array<{ name: string; size: number; bytes: Uint8Array }>> => ipcRenderer.invoke('fonts:pick-files'),
   saveCustomFont: (id: string, name: string, category: string, variants: Record<string, string>): Promise<{ ok: true; font: InstalledFont } | FontsFailure> => ipcRenderer.invoke('fonts:save-custom', id, name, category, variants),
+  pickCsv: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('csv:pick'),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>

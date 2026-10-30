@@ -11,6 +11,7 @@ import { useFind } from '@/store/find'
 import { PresentationMode } from '@/components/PresentationMode'
 import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
+import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
@@ -173,6 +174,7 @@ export default function App(): React.JSX.Element {
       <PdfImportDialog />
       <FontCatalogDialog />
       <ExportPagesDialog />
+      <MailMergeDialog />
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>
