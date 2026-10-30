@@ -2,7 +2,8 @@ import { nanoid } from 'nanoid'
 import { t } from '@/i18n'
 import { SHAPES } from '@/shapes'
 import type { MessageKey, Params } from '@shared/i18n'
-import type { TrameDocument, TrameElement, TramePage } from '@/types'
+import { fillText } from '@/mailMerge'
+import type { MergeData, TrameDocument, TrameElement, TramePage } from '@/types'
 
 type Draft = Omit<TrameElement, 'id'>
 interface TemplatePage {
@@ -10,10 +11,18 @@ interface TemplatePage {
   elements: Draft[]
 }
 
-export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster'
-export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster'
+export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'certificate' | 'badge' | 'label' | 'flashcard'
+export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'mailmerge'
+
+/** Tableau d'exemple d'un modèle de publipostage : noms des champs (clés `tpl.field.<id>`) et lignes fictives. */
+interface MergeSample {
+  fields: string[]
+  rows: string[][]
+}
 
 export interface Template {
+  /** modèle de publipostage : les champs et un tableau d'exemple (remplacé par le CSV de la personne) */
+  merge?: MergeSample
   id: TemplateId
   category: TemplateCategory
   width: number
@@ -28,11 +37,18 @@ export interface Template {
 const PREFIX = 'i18n:'
 const L = (key: MessageKey, params?: Params): string => PREFIX + JSON.stringify([key, params])
 
-const localize = <T extends { text?: string }>(e: T): T => {
-  if (!e.text?.startsWith(PREFIX)) return e
-  const [key, params] = JSON.parse(e.text.slice(PREFIX.length)) as [MessageKey, Params | undefined]
-  return { ...e, text: t(key, params) }
+/** Un champ de publipostage dans un texte de modèle : « ⟦first⟧ » devient « {{Prénom}} » (le nom du champ suit la langue). */
+const F = (id: string): string => `\u27e6${id}\u27e7`
+const fieldName = (id: string): string => t(`tpl.field.${id}` as MessageKey)
+const withFields = (s: string): string => s.replace(/\u27e6(\w+)\u27e7/g, (_, id: string) => `{{${fieldName(id)}}}`)
+
+const resolve = (text: string): string => {
+  if (!text.startsWith(PREFIX)) return withFields(text)
+  const [key, params] = JSON.parse(text.slice(PREFIX.length)) as [MessageKey, Params | undefined]
+  return withFields(t(key, params))
 }
+
+const localize = <T extends { text?: string }>(e: T): T => (e.text === undefined ? e : { ...e, text: resolve(e.text) })
 
 export const templateName = (tpl: Pick<Template, 'id'>): string => t(`tpl.${tpl.id}.name`)
 export const templateCategory = (tpl: Pick<Template, 'category'>): string => t(`tpl.cat.${tpl.category}`)
@@ -186,8 +202,134 @@ export const TEMPLATES: Template[] = [
         ]
       }
     ]
+  },
+  {
+    id: 'certificate',
+    category: 'mailmerge',
+    width: 1123,
+    height: 794,
+    merge: {
+      fields: ['first', 'last', 'reason'],
+      rows: [
+        ['Ada', 'Lovelace', L('tpl.sample.reason1')],
+        ['Alan', 'Turing', L('tpl.sample.reason2')],
+        ['Grace', 'Hopper', L('tpl.sample.reason3')]
+      ]
+    },
+    pages: [
+      {
+        background: '#fffaf0',
+        elements: [
+          shape('rect', { x: 28, y: 28, width: 1067, height: 738 }, '#b8893b'),
+          shape('rect', { x: 36, y: 36, width: 1051, height: 722 }, '#fffaf0'),
+          shape('rect', { x: 52, y: 52, width: 1019, height: 690 }, '#b8893b'),
+          shape('rect', { x: 55, y: 55, width: 1013, height: 684 }, '#fffaf0'),
+          icon('star', { x: 521, y: 88, ...sq(80) }, '#b8893b'),
+          text(100, 190, 923, L('tpl.certificate.title'), 96, '#1e1f24', { align: 'center', fontFamily: SERIF, letterSpacing: 8 }),
+          text(100, 318, 923, L('tpl.certificate.to'), 34, '#6b6b80', { align: 'center', fontStyle: 'normal' }),
+          text(100, 378, 923, `${F('first')} ${F('last')}`, 84, '#b8893b', { align: 'center', fontFamily: SERIF, fontStyle: 'italic', height: 110 }),
+          text(160, 510, 803, F('reason'), 36, '#3a3b45', { align: 'center', fontStyle: 'normal', height: 90 }),
+          shape('rect', { x: 180, y: 660, width: 300, height: 2 }, '#1e1f24'),
+          text(180, 672, 300, L('tpl.certificate.date'), 26, '#6b6b80', { align: 'center', fontStyle: 'normal' }),
+          shape('rect', { x: 643, y: 660, width: 300, height: 2 }, '#1e1f24'),
+          text(643, 672, 300, L('tpl.certificate.signature'), 26, '#6b6b80', { align: 'center', fontStyle: 'normal' })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'badge',
+    category: 'mailmerge',
+    width: 640,
+    height: 420,
+    merge: {
+      fields: ['first', 'last', 'class'],
+      rows: [
+        ['Ada', 'Lovelace', '6A'],
+        ['Alan', 'Turing', '6B'],
+        ['Grace', 'Hopper', '6A']
+      ]
+    },
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 640, height: 150 }, '#e63946'),
+          text(0, 22, 640, L('tpl.badge.hello'), 72, '#ffffff', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal', letterSpacing: 4 }),
+          text(0, 100, 640, L('tpl.badge.myname'), 34, '#ffffff', { align: 'center', fontStyle: 'normal' }),
+          text(30, 180, 580, F('first'), 92, '#1e1f24', { align: 'center', height: 112 }),
+          text(30, 295, 580, F('last'), 44, '#6b6b80', { align: 'center', fontStyle: 'normal', height: 54 }),
+          shape('rect', { x: 220, y: 358, width: 200, height: 50 }, '#1e1f24', { cornerRadius: 25 }),
+          text(220, 367, 200, F('class'), 30, '#ffffff', { align: 'center', height: 36 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'label',
+    category: 'mailmerge',
+    width: 680,
+    height: 260,
+    merge: {
+      fields: ['first', 'last', 'class'],
+      rows: [
+        ['Ada', 'Lovelace', '6A'],
+        ['Alan', 'Turing', '6B'],
+        ['Grace', 'Hopper', '6A']
+      ]
+    },
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 24, height: 260 }, '#2a9d8f'),
+          text(60, 38, 590, `${F('last')} ${F('first')}`, 64, '#1e1f24', { height: 78 }),
+          text(60, 126, 590, L('tpl.label.class', { field: F('class') }), 40, '#2a9d8f', { height: 48 }),
+          shape('rect', { x: 60, y: 196, width: 560, height: 2 }, '#cfd2d8'),
+          text(60, 210, 560, L('tpl.label.subject'), 28, '#6b6b80', { fontStyle: 'normal', height: 34 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'flashcard',
+    category: 'mailmerge',
+    width: 794,
+    height: 563,
+    merge: {
+      fields: ['word', 'translation'],
+      rows: [
+        ['le chat', 'the cat'],
+        ['le chien', 'the dog'],
+        ['le livre', 'the book']
+      ]
+    },
+    pages: [
+      {
+        background: '#fff7e6',
+        elements: [
+          shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#c9822b'),
+          shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#fff7e6'),
+          text(60, 56, 400, L('tpl.flashcard.front'), 28, '#c9822b', { fontStyle: 'normal', height: 34 }),
+          text(60, 230, 674, F('word'), 84, '#1e1f24', { align: 'center', fontFamily: SERIF, height: 102 })
+        ]
+      },
+      {
+        background: '#e8f4ff',
+        elements: [
+          shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#2f6fb3'),
+          shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#e8f4ff'),
+          text(60, 56, 400, L('tpl.flashcard.back'), 28, '#2f6fb3', { fontStyle: 'normal', height: 34 }),
+          text(60, 230, 674, F('translation'), 84, '#1e1f24', { align: 'center', fontFamily: SERIF, height: 102 })
+        ]
+      }
+    ]
   }
 ]
+
+/** Tableau d'exemple d'un modèle, dans la langue courante. */
+const sampleData = (tpl: Template): MergeData | undefined =>
+  tpl.merge && { columns: tpl.merge.fields.map(fieldName), rows: tpl.merge.rows.map((r) => r.map(resolve)) }
 
 /** Construit un document neuf (identifiants frais) à partir d'un modèle. */
 export function instantiate(tpl: Template): TrameDocument {
@@ -202,16 +344,23 @@ export function instantiate(tpl: Template): TrameDocument {
         background: p.background,
         elements: p.elements.map((e) => ({ ...localize(e), id: nanoid(8) }))
       })
-    )
+    ),
+    ...(tpl.merge ? { mailMerge: sampleData(tpl) } : {})
   }
 }
 
-/** Version page pour l'aperçu (ids stables non nécessaires). */
-export const previewPage = (p: TemplatePage): TramePage => ({
-  id: 'preview',
-  background: p.background,
-  elements: p.elements.map((e, i) => ({ ...localize(e), id: String(i) }))
-})
+/** Version page pour l'aperçu (ids stables non nécessaires) : pour un modèle de publipostage, remplie avec la première ligne d'exemple. */
+export const previewPage = (p: TemplatePage, tpl?: Pick<Template, 'merge'>): TramePage => {
+  const sample = tpl?.merge && { columns: tpl.merge.fields.map(fieldName), row: tpl.merge.rows[0].map(resolve) }
+  return {
+    id: 'preview',
+    background: p.background,
+    elements: p.elements.map((e, i) => {
+      const local = localize(e)
+      return { ...local, id: String(i), ...(sample && local.text ? { text: fillText(local.text, sample.columns, sample.row) } : {}) }
+    })
+  }
+}
 
 /**
  * Copie d'un document dont tous les identifiants (pages, éléments, groupes) sont renouvelés :

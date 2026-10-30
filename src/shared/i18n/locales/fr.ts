@@ -857,7 +857,32 @@ export const fr = {
   'mm.dataSaved': 'Le tableau est enregistré dans le document : si les données sont personnelles, retirez-les avant de partager le fichier.',
   'mm.progress': 'Fichier {done} / {total}…',
   'mm.working': 'Création du PDF…',
-  'mm.close': 'Fermer'
+  'mm.close': 'Fermer',
+  // Modèles de publipostage
+  'tpl.cat.mailmerge': 'Publipostage',
+  'tpl.certificate.name': 'Diplôme',
+  'tpl.certificate.title': 'DIPLÔME',
+  'tpl.certificate.to': 'décerné à',
+  'tpl.certificate.date': 'Date',
+  'tpl.certificate.signature': 'Signature',
+  'tpl.badge.name': 'Badge nominatif',
+  'tpl.badge.hello': 'BONJOUR',
+  'tpl.badge.myname': 'je m\'appelle',
+  'tpl.label.name': 'Étiquette',
+  'tpl.label.class': 'Classe {field}',
+  'tpl.label.subject': 'Matière : ',
+  'tpl.flashcard.name': 'Carte de vocabulaire',
+  'tpl.flashcard.front': 'Mot',
+  'tpl.flashcard.back': 'Traduction',
+  'tpl.field.first': 'Prénom',
+  'tpl.field.last': 'Nom',
+  'tpl.field.class': 'Classe',
+  'tpl.field.reason': 'Motif',
+  'tpl.field.word': 'Mot',
+  'tpl.field.translation': 'Traduction',
+  'tpl.sample.reason1': 'pour l\'excellence de son travail ce trimestre',
+  'tpl.sample.reason2': 'pour sa participation active',
+  'tpl.sample.reason3': 'pour ses progrès remarquables'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

@@ -408,15 +408,15 @@ try {
 
   await click('.sidebar .tabs button', 'Modèles')
   await sleep(300)
-  check('6 modèles intégrés affichés au départ', (await count('.builtin-template')) === 6, await builtinIds())
+  check('10 modèles intégrés affichés au départ', (await count('.builtin-template')) === 10, await builtinIds())
 
   // masquer un modèle intégré, puis le restaurer
   await clickSel('.builtin-template[data-template-id="quote"] .card-remove')
-  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 5 && !(await builtinIds()).includes('quote')))
+  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 9 && !(await builtinIds()).includes('quote')))
   check('une confirmation est demandée avant de masquer', (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes('Masquer le modèle'))
   check('le modèle masqué est mémorisé côté système', (await run('window.trame.listHiddenTemplates()')).join() === 'quote')
   check('le lien « Restaurer les modèles masqués (1) » apparaît', (await click('.sidebar button.link', 'Restaurer les modèles masqués (1)')) === true)
-  check('restaurer remet les 6 modèles', await waitFor(async () => (await count('.builtin-template')) === 6 && (await run('window.trame.listHiddenTemplates()')).length === 0))
+  check('restaurer remet les 10 modèles', await waitFor(async () => (await count('.builtin-template')) === 10 && (await run('window.trame.listHiddenTemplates()')).length === 0))
 
   // renommer un modèle intégré : crée la version personnalisée, l'original disparaît de sa catégorie
   await clickSel('.builtin-template[data-template-id="promo"] .card-rename')
@@ -424,7 +424,7 @@ try {
   await typeInto('.builtin-template[data-template-id="promo"] .card-rename-input', 'Promo été')
   await pressEnter('.builtin-template[data-template-id="promo"] .card-rename-input')
   check('renommer un modèle intégré crée « votre version » (basedOn) sous le nouveau nom', await waitFor(async () => (await run('window.trame.listUserTemplates()')).some((t) => t.name === 'Promo été' && t.basedOn === 'promo')))
-  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 5))
+  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 9))
   check('la version personnalisée porte l’étiquette « personnalisé »', (await run(`document.querySelector('.user-template .badge')?.textContent`)) === 'personnalisé')
 
   // renommer un modèle personnel
@@ -436,7 +436,7 @@ try {
 
   // rétablir l'original = supprimer la version personnalisée
   await clickSel('.user-template .card-remove')
-  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 6))
+  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 10))
   check("la confirmation parle de rétablir l'original", (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes("Rétablir le modèle d'origine"))
 
   // modifier le contenu : appliquer, retoucher, enregistrer en REMPLAÇANT
@@ -1544,6 +1544,22 @@ try {
   await escape()
   await sleep(200)
   check('publipostage : Échap ferme la fenêtre', (await nBrand('.mail-merge')) === 0)
+
+  // modèles de publipostage : un modèle arrive avec son tableau d'exemple, le publipostage est utilisable tout de suite
+  await reloadApp()
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="templates"]')
+  await sleep(300)
+  check('modèles de publipostage : 4 modèles dans leur catégorie', (await nBrand('.builtin-template[data-template-id="certificate"], .builtin-template[data-template-id="badge"], .builtin-template[data-template-id="label"], .builtin-template[data-template-id="flashcard"]')) === 4)
+  await clickSel('.builtin-template[data-template-id="flashcard"] .card-open')
+  await sleep(600)
+  await exportVia('merge')
+  await sleep(400)
+  check('modèle « Carte de vocabulaire » : 3 lignes d\'exemple, 2 champs, aucun avertissement', (await run(`document.querySelector('[data-mm-summary]')?.innerText ?? ''`)).startsWith('3 lignes · 2 champs') && (await nBrand('[data-mm-none]')) === 0 && (await nBrand('[data-mm-unknown]')) === 0)
+  check('modèle « Carte de vocabulaire » : l\'aperçu montre recto et verso remplis', (await mmPreview()).includes('le chat') && (await mmPreview()).includes('the cat'), await mmPreview())
+  check('modèle « Carte de vocabulaire » : 3 lignes × 2 pages = un PDF de 6 pages annoncé', (await run(`document.querySelector('[data-mm-export-summary]')?.innerText ?? ''`)).includes('6 pages'))
+  await escape()
+  await sleep(200)
 
   // polices en ligne : catalogue, aperçu, installation, utilisation, export PDF, persistance, embarquement dans le document
   await reloadApp()

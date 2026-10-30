@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { SHAPES } from '@/shapes'
-import { TEMPLATES, cloneWithNewIds, instantiate } from '@/templates'
+import { useLocale } from '@/i18n'
+import { fieldsUsed, unknownFields } from '@/mailMerge'
+import { TEMPLATES, cloneWithNewIds, instantiate, previewPage } from '@/templates'
 import type { TrameElement } from '@/types'
 
 const allElements = (): Array<{ t: string; e: Omit<TrameElement, 'id'> }> =>
@@ -102,5 +104,42 @@ describe('cloneWithNewIds', () => {
       doc.pages.map((p) => p.elements.map((e) => e.text ?? e.type))
     )
     expect(copy.width).toBe(doc.width)
+  })
+})
+
+describe('modèles de publipostage', () => {
+  const merge = TEMPLATES.filter((t) => t.merge)
+  it('il y en a et ils forment leur propre catégorie', () => {
+    expect(merge.map((t) => t.id)).toEqual(['certificate', 'badge', 'label', 'flashcard'])
+    expect(merge.every((t) => t.category === 'mailmerge')).toBe(true)
+  })
+  it.each(['fr', 'en', 'de', 'es'])('en %s : chaque champ des textes a une colonne et chaque ligne a toutes ses valeurs', (lang) => {
+    useLocale.getState().setLocale(lang)
+    try {
+      for (const t of merge) {
+        const doc = instantiate(t)
+        expect(doc.mailMerge, t.id).toBeDefined()
+        expect(doc.mailMerge!.rows.length, t.id).toBeGreaterThanOrEqual(3)
+        for (const row of doc.mailMerge!.rows) {
+          expect(row.length, t.id).toBe(doc.mailMerge!.columns.length)
+          expect(row.every((c) => c.trim() && !c.includes('i18n:')), `${t.id} ${lang}`).toBe(true)
+        }
+        expect(fieldsUsed(doc).length, t.id).toBeGreaterThan(0)
+        expect(unknownFields(doc, doc.mailMerge!.columns), `${t.id} ${lang}`).toEqual([])
+        expect(new Set(doc.mailMerge!.columns.map((c) => c.toLowerCase())).size, t.id).toBe(doc.mailMerge!.columns.length)
+      }
+    } finally {
+      useLocale.getState().setLocale('fr')
+    }
+  })
+  it('l\'aperçu est rempli avec la première ligne d\'exemple, sans champ restant', () => {
+    for (const t of merge) {
+      const texts = previewPage(t.pages[0], t).elements.map((e) => e.text ?? '').join(' ')
+      expect(texts, t.id).not.toContain('{{')
+      expect(texts, t.id).toContain(t.id === 'flashcard' ? 'le chat' : 'Ada')
+    }
+  })
+  it('les autres modèles n\'ont pas de tableau', () => {
+    expect(instantiate(TEMPLATES.find((t) => t.id === 'promo')!).mailMerge).toBeUndefined()
   })
 })

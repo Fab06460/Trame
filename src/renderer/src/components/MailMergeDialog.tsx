@@ -121,7 +121,7 @@ export function MailMergeDialog(): React.JSX.Element | null {
               </div>
               <div className="mm-preview">
                 {preview.slice(0, 3).map((p) => (
-                  <PageThumb key={p.id} page={p} width={doc.width} height={doc.height} maxW={150} maxH={150} />
+                  <PageThumb key={p.id} page={p} width={doc.width} height={doc.height} maxW={250} maxH={200} />
                 ))}
               </div>
             </fieldset>

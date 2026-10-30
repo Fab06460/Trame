@@ -139,7 +139,7 @@ export function Sidebar(): React.JSX.Element {
                   kind="builtin"
                   name={templateName(tpl)}
                   suffix={tpl.pages.length > 1 ? t('tpl.pagesSuffix', { count: tpl.pages.length }) : undefined}
-                  thumb={<PageThumb page={previewPage(tpl.pages[0])} width={tpl.width} height={tpl.height} maxW={110} maxH={110} />}
+                  thumb={<PageThumb page={previewPage(tpl.pages[0], tpl)} width={tpl.width} height={tpl.height} maxW={110} maxH={110} />}
                   onOpen={() => void applyBuiltinTemplate(tpl.id)}
                   onRename={(n) => void renameBuiltinTemplate(tpl.id, n)}
                   onRemove={() => void hideBuiltinTemplate(tpl.id)}
