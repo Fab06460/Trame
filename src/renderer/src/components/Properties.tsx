@@ -18,6 +18,7 @@ import { defaultGradient } from '@/gradient'
 import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
+import { TextAiHelp } from './TextAiHelp'
 
 const MORE_FONTS = '__more-fonts__'
 
@@ -327,6 +328,7 @@ export function Properties(): React.JSX.Element {
             <NumberField label={t('prop.letterSpacing')} field="letterSpacing" value={el.letterSpacing ?? 0} min={LETTER_SPACING.min} max={LETTER_SPACING.max} step={0.5} suffix="px" onCommit={(v) => updateElement(el.id, { letterSpacing: v || undefined })} />
             <NumberField label={t('prop.lineHeight')} field="lineHeight" value={el.lineHeight ?? LINE_HEIGHT.default} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.05} suffix="×" onCommit={(v) => updateElement(el.id, { lineHeight: v === LINE_HEIGHT.default ? undefined : v })} />
           </div>
+          <TextAiHelp el={el} enforced={enforced} />
         </>
       )}
 

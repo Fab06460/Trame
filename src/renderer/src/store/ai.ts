@@ -55,6 +55,8 @@ export const useAi = create<{
   write: (action: WriteAction) => Promise<void>
   cancel: () => void
   clearError: () => void
+  /** Retire une proposition de texte (après l'avoir appliquée ou ignorée). */
+  dropDraft: (id: string) => void
 }>((set, get) => ({
   status: null,
   provider: 'cloudflare',
@@ -150,7 +152,8 @@ export const useAi = create<{
     void window.trame.aiCancel(id)
   },
 
-  clearError: () => set({ error: null })
+  clearError: () => set({ error: null }),
+  dropDraft: (id) => set({ drafts: get().drafts.filter((d) => d.id !== id) })
 }))
 
 /** Message d'erreur dans la langue courante. */

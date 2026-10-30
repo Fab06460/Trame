@@ -782,7 +782,15 @@ export const fr = {
   'alt.aiNote': 'Description proposée par {service} : relisez-la et corrigez-la au besoin. « Annuler » la retire.',
   'alt.sent': 'L\'image est envoyée à {service} pour être décrite.',
   'alt.cost.cloudflare': 'Environ 40 neurons par description (plusieurs centaines par jour dans le quota gratuit).',
-  'alt.cost.openai': 'Payant : une fraction de centime par description, facturée par OpenAI.'
+  'alt.cost.openai': 'Payant : une fraction de centime par description, facturée par OpenAI.',
+  // Rédaction assistée depuis les propriétés du texte
+  'aiw.inline.title': 'Rédaction assistée',
+  'aiw.inline.connect': 'Connectez un service d\'IA pour reformuler, raccourcir, corriger ou traduire ce texte.',
+  'aiw.inline.openTab': 'Ouvrir l\'onglet IA',
+  'aiw.inline.more': 'Plus d\'options…',
+  'aiw.inline.empty': 'Écrivez d\'abord un texte.',
+  'aiw.inline.sent': 'Chaque demande envoie ce texte à {service}.',
+  'aiw.inline.dismiss': 'Ignorer'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

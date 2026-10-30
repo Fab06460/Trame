@@ -781,5 +781,13 @@ export const en: Catalog = {
   'alt.aiNote': 'Description suggested by {service}: read it and correct it if needed. “Undo” removes it.',
   'alt.sent': 'The image is sent to {service} to be described.',
   'alt.cost.cloudflare': 'About 40 neurons per description (several hundred a day within the free quota).',
-  'alt.cost.openai': 'Paid: a fraction of a cent per description, billed by OpenAI.'
+  'alt.cost.openai': 'Paid: a fraction of a cent per description, billed by OpenAI.',
+  // Rédaction assistée depuis les propriétés du texte
+  'aiw.inline.title': 'Writing assistant',
+  'aiw.inline.connect': 'Connect an AI service to rewrite, shorten, fix or translate this text.',
+  'aiw.inline.openTab': 'Open the AI tab',
+  'aiw.inline.more': 'More options…',
+  'aiw.inline.empty': 'Write some text first.',
+  'aiw.inline.sent': 'Each request sends this text to {service}.',
+  'aiw.inline.dismiss': 'Dismiss'
 }

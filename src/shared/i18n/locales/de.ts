@@ -781,5 +781,13 @@ export const de: Catalog = {
   'alt.aiNote': 'Von {service} vorgeschlagene Beschreibung: Lesen Sie sie durch und korrigieren Sie sie bei Bedarf. „Rückgängig“ entfernt sie.',
   'alt.sent': 'Das Bild wird zur Beschreibung an {service} gesendet.',
   'alt.cost.cloudflare': 'Etwa 40 Neurons pro Beschreibung (mehrere hundert pro Tag im kostenlosen Kontingent).',
-  'alt.cost.openai': 'Kostenpflichtig: ein Bruchteil eines Cents pro Beschreibung, von OpenAI berechnet.'
+  'alt.cost.openai': 'Kostenpflichtig: ein Bruchteil eines Cents pro Beschreibung, von OpenAI berechnet.',
+  // Rédaction assistée depuis les propriétés du texte
+  'aiw.inline.title': 'Schreibassistent',
+  'aiw.inline.connect': 'Verbinden Sie einen KI-Dienst, um diesen Text umzuformulieren, zu kürzen, zu korrigieren oder zu übersetzen.',
+  'aiw.inline.openTab': 'KI-Tab öffnen',
+  'aiw.inline.more': 'Weitere Optionen …',
+  'aiw.inline.empty': 'Schreiben Sie zuerst einen Text.',
+  'aiw.inline.sent': 'Jede Anfrage sendet diesen Text an {service}.',
+  'aiw.inline.dismiss': 'Verwerfen'
 }

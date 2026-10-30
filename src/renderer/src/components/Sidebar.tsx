@@ -16,8 +16,8 @@ import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
 import { LanguageSelect } from './LanguageSelect'
 import { AiPanel } from './AiPanel'
+import { useSidebar } from '@/store/sidebar'
 
-type Tab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand' | 'photos' | 'ai'
 
 const TEXT_PRESETS = [
   { label: 'sidebar.preset.title', fontSize: 110, fontStyle: 'bold', text: 'sidebar.preset.title' },
@@ -27,7 +27,8 @@ const TEXT_PRESETS = [
 
 export function Sidebar(): React.JSX.Element {
   const t = useT()
-  const [tab, setTab] = useState<Tab>('templates')
+  const tab = useSidebar((s) => s.tab)
+  const setTab = useSidebar((s) => s.setTab)
   const [recents, setRecents] = useState<RecentProject[]>([])
   const { addElement } = useEditor.getState()
   const userTemplates = useTemplates((s) => s.user)

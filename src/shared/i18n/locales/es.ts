@@ -781,5 +781,13 @@ export const es: Catalog = {
   'alt.aiNote': 'Descripción propuesta por {service}: léala y corríjala si hace falta. «Deshacer» la quita.',
   'alt.sent': 'La imagen se envía a {service} para que la describa.',
   'alt.cost.cloudflare': 'Unos 40 neurons por descripción (varios cientos al día dentro de la cuota gratuita).',
-  'alt.cost.openai': 'De pago: una fracción de céntimo por descripción, que factura OpenAI.'
+  'alt.cost.openai': 'De pago: una fracción de céntimo por descripción, que factura OpenAI.',
+  // Rédaction assistée depuis les propriétés du texte
+  'aiw.inline.title': 'Asistente de redacción',
+  'aiw.inline.connect': 'Conecte un servicio de IA para reformular, acortar, corregir o traducir este texto.',
+  'aiw.inline.openTab': 'Abrir la pestaña IA',
+  'aiw.inline.more': 'Más opciones…',
+  'aiw.inline.empty': 'Escriba primero un texto.',
+  'aiw.inline.sent': 'Cada solicitud envía este texto a {service}.',
+  'aiw.inline.dismiss': 'Descartar'
 }
