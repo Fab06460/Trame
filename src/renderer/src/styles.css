@@ -379,3 +379,9 @@ button.danger { color: #ff7b7b; }
 /* publipostage */
 .mail-merge .chips button.active { background: rgba(124, 92, 255, 0.25); border-color: var(--accent); }
 .mm-preview { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; padding-top: 6px; }
+
+.mm-sheet { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.mm-sheet label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.mm-sheet label.choice-row { flex-direction: row; color: inherit; font-size: inherit; }
+.mm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mm-grid input[type='number'] { width: 100%; min-width: 0; }

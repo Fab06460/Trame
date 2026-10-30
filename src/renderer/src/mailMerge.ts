@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid'
 import { fileSafeName } from '@/docName'
+import { t } from '@/i18n'
 import type { MergeData, TrameDocument, TrameElement } from '@/types'
 
 export type { MergeData }
@@ -199,4 +200,31 @@ export function rowFileNames(docName: string, data: MergeData, rowIndexes: numbe
     used.add(name.toLowerCase())
     return name
   })
+}
+
+/** Lignes choisies dans une saisie comme « 1-3, 5, 8-9 » (numéros à partir de 1) : indices triés (à partir de 0), ou la raison du refus. */
+export function parseRowRange(text: string, rowCount: number): { ok: true; rows: number[] } | { ok: false; error: string } {
+  const parts = text.split(/[,;\s]+/).filter(Boolean)
+  if (parts.length === 0) return { ok: false, error: t('mm.range.empty') }
+  const out = new Set<number>()
+  for (const part of parts) {
+    const m = /^(\d+)(?:-(\d+))?$/.exec(part)
+    if (!m) return { ok: false, error: t('mm.range.invalid', { part }) }
+    const from = Number(m[1])
+    const to = m[2] === undefined ? from : Number(m[2])
+    if (from < 1 || to < 1 || from > rowCount || to > rowCount) return { ok: false, error: t('mm.range.missing', { row: from > rowCount || from < 1 ? from : to, count: rowCount }) }
+    if (from > to) return { ok: false, error: t('mm.range.order', { part }) }
+    for (let r = from; r <= to; r++) out.add(r - 1)
+  }
+  return { ok: true, rows: [...out].sort((a, b) => a - b) }
+}
+
+/** Valeurs différentes d'une colonne, triées (pour filtrer : « Classe = 6A »). */
+export const distinctValues = (data: MergeData, column: number): string[] =>
+  [...new Set(data.rows.map((r) => r[column] ?? '').filter((v) => v !== ''))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).slice(0, 200)
+
+/** Lignes à produire : celles de `only` (indices, null = toutes) dont la colonne `filter.column` vaut `filter.value`. */
+export function selectRows(data: MergeData, only: number[] | null, filter: { column: number; value: string } | null): number[] {
+  const base = only ?? data.rows.map((_, i) => i)
+  return base.filter((r) => r >= 0 && r < data.rows.length && (!filter || (data.rows[r][filter.column] ?? '') === filter.value))
 }

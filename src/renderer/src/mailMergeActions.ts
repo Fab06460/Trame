@@ -2,6 +2,7 @@ import { fileSafeName } from '@/docName'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPdf } from '@/pdfExport'
 import { decodeCsv, mergeDocument, parseCsv, rowFileNames, toMergeData, type MergeData } from '@/mailMerge'
+import { sheetsFromMerged, type SheetLayout } from '@/mergeSheets'
 import { useEditor } from '@/store/editor'
 import { t } from '@/i18n'
 
@@ -17,6 +18,10 @@ export async function pickMergeData(): Promise<CsvImport> {
 
 export interface MergeExportOptions {
   mode: 'single' | 'folder'
+  /** lignes à produire (indices à partir de 0) */
+  rows: number[]
+  /** plusieurs fiches par feuille (mode « un seul PDF » seulement) ; null = une fiche par page */
+  layout: SheetLayout | null
   /** colonne qui nomme les fichiers (mode « dossier »), null = numéro de ligne */
   nameColumn: number | null
   onProgress?: (done: number, total: number) => void
@@ -36,8 +41,8 @@ export interface MergeExportResult {
 export async function exportMerge(o: MergeExportOptions): Promise<MergeExportResult> {
   const { doc } = useEditor.getState()
   const data = doc.mailMerge
-  if (!data || data.rows.length === 0) return { saved: null, files: 0 }
-  const rows = data.rows.map((_, i) => i)
+  const rows = o.rows
+  if (!data || rows.length === 0) return { saved: null, files: 0 }
   const base = fileSafeName(doc.name)
   const warn = async (fallbacks: Parameters<typeof describeFallbacks>[0]): Promise<void> => {
     const warning = describeFallbacks(fallbacks, doc.pages.length)
@@ -46,7 +51,8 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
 
   if (o.mode === 'single') {
     o.onProgress?.(0, 1)
-    const { dataUrl, fallbacks } = await exportPdf(mergeDocument(doc, data, rows))
+    const merged = mergeDocument(doc, data, rows)
+    const { dataUrl, fallbacks } = await exportPdf(o.layout ? sheetsFromMerged(merged, doc.pages.length, o.layout).doc : merged)
     o.onProgress?.(1, 1)
     const saved = await window.trame.saveExport(dataUrl, `${base}.pdf`)
     if (saved) await warn(fallbacks)

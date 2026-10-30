@@ -120,3 +120,24 @@ describe('noms de fichiers', () => {
     expect(rowFileNames('Badge', { columns: ['a'], rows: [['x'], ['y']] }, [0, 1], null, 'pdf')).toEqual(['Badge-1.pdf', 'Badge-2.pdf'])
   })
 })
+
+describe('choix des lignes', () => {
+  it('plage de lignes (à partir de 1) : indices triés sans doublon, erreurs expliquées', async () => {
+    const { parseRowRange } = await import('./mailMerge')
+    expect(parseRowRange('2-3, 1, 3', 5)).toEqual({ ok: true, rows: [0, 1, 2] })
+    expect(parseRowRange('', 5).ok).toBe(false)
+    expect(parseRowRange('abc', 5).ok).toBe(false)
+    expect(parseRowRange('6', 5).ok).toBe(false)
+    expect(parseRowRange('3-2', 5).ok).toBe(false)
+    expect(parseRowRange('0', 5).ok).toBe(false)
+  })
+  it('valeurs distinctes d\'une colonne et filtre', async () => {
+    const { distinctValues, selectRows } = await import('./mailMerge')
+    const d = { columns: ['Nom', 'Classe'], rows: [['a', '6B'], ['b', '6A'], ['c', '6A'], ['d', '']] }
+    expect(distinctValues(d, 1)).toEqual(['6A', '6B'])
+    expect(selectRows(d, null, null)).toEqual([0, 1, 2, 3])
+    expect(selectRows(d, null, { column: 1, value: '6A' })).toEqual([1, 2])
+    expect(selectRows(d, [0, 2, 9], { column: 1, value: '6A' })).toEqual([2])
+    expect(selectRows(d, [3, 1], null)).toEqual([3, 1])
+  })
+})

@@ -1,4 +1,5 @@
 import { mergeDocument } from '@/mailMerge'
+import { sheetsFromMerged } from '@/mergeSheets'
 import { TEMPLATES, instantiate } from '@/templates'
 import type { TrameDocument, TrameElement } from '@/types'
 
@@ -187,5 +188,12 @@ export const cases = (): Case[] => [
       expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
       expectText: doc.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && e.text && e.text.length < 14).map((e) => e.text!))
     }
+  }),
+  // planche de badges (publipostage, plusieurs fiches par feuille) : textes réduits, contours fins, versos des cartes en miroir
+  ...(['badge', 'flashcard'] as const).map((id): Case => {
+    const base = instantiate(TEMPLATES.find((t) => t.id === id)!)
+    const merged = mergeDocument(base, base.mailMerge!, [0, 1, 2])
+    const doc = sheetsFromMerged(merged, base.pages.length, { paper: 'a4', landscape: false, cols: 2, rows: 3, marginMm: 10, gapMm: 3, cutMarks: true, mirrorBacks: true }).doc
+    return { name: `planche-${id}`, doc, expectFallbacks: 0, expectText: ['Ada', 'Alan', 'Grace'].filter(() => id === 'badge') }
   })
 ]
