@@ -19,6 +19,7 @@ import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } fro
 import type { Guide, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
+import { sanitizeDecorative } from '@/altCheck'
 
 const HISTORY_LIMIT = 100
 
@@ -99,6 +100,7 @@ export function parseDocument(json: string): TrameDocument {
       if (e.type === 'image') sanitizeImageStyle(e)
       sanitizeAiInfo(e)
       sanitizeAlt(e)
+      sanitizeDecorative(e)
       if (e.locked !== true) delete e.locked
       sanitizeProtection(e)
       if (e.hidden !== true) delete e.hidden
@@ -158,6 +160,10 @@ interface EditorState {
   clearEditRequest: () => void
   /** commit=false pour les mises à jour continues (drag, saisie) : un seul point d'historique via beginChange. */
   updateElement: (id: string, patch: Partial<TrameElement>, commit?: boolean) => void
+  /** descriptions d'images, sur toutes les pages, en un seul pas d'historique ; renvoie le nombre appliqué */
+  setImageAlts: (changes: Array<{ id: string; alt: string }>) => number
+  /** affiche la page de l'élément et le sélectionne */
+  revealElement: (pageId: string, elementId: string) => void
   beginChange: () => void
   removeSelected: () => void
   /** Remplace le texte de plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément figé par le modèle est ignoré et compté. */
@@ -441,6 +447,26 @@ export const useEditor = create<EditorState>((set, get) => {
         dirty: true
       }))
     },
+
+    setImageAlts: (changes) => {
+      const wanted = new Map(changes.map((c) => [c.id, c.alt]))
+      const enforced = enforcedNow()
+      let applied = 0
+      const pages = get().doc.pages.map((p) => ({
+        ...p,
+        elements: p.elements.map((e) => {
+          const alt = wanted.get(e.id)
+          if (alt === undefined || e.type !== 'image' || !allowedPatch(e, { alt }, enforced)) return e
+          applied += 1
+          const { decorative: _d, ...rest } = e
+          return { ...rest, alt }
+        })
+      }))
+      if (applied > 0) set({ ...snapshot(), doc: { ...get().doc, pages }, dirty: true })
+      return applied
+    },
+
+    revealElement: (pageId, elementId) => set({ pageId, selectedIds: [elementId] }),
 
     removeSelected: () => {
       // un élément verrouillé ne se supprime pas : il faut d'abord le déverrouiller (il reste sélectionné)

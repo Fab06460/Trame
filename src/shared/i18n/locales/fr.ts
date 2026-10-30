@@ -790,7 +790,21 @@ export const fr = {
   'aiw.inline.more': 'Plus d\'options…',
   'aiw.inline.empty': 'Écrivez d\'abord un texte.',
   'aiw.inline.sent': 'Chaque demande envoie ce texte à {service}.',
-  'aiw.inline.dismiss': 'Ignorer'
+  'aiw.inline.dismiss': 'Ignorer',
+  // Images sans description
+  'altAudit.title': 'Descriptions des images',
+  'altAudit.ok': 'Toutes les images ont une description (ou sont décoratives).',
+  'altAudit.missing': { one: '{count} image n\'a pas de description.', other: '{count} images n\'ont pas de description.' },
+  'altAudit.done': { one: '{count} description ajoutée. « Annuler » la retire ; relisez-la.', other: '{count} descriptions ajoutées. « Annuler » les retire toutes ; relisez-les.' },
+  'altAudit.next': 'Aller à l\'image suivante',
+  'altAudit.all': { one: 'Décrire cette image', other: 'Décrire les {count} images' },
+  'altAudit.progress': 'Description {done} / {total}…',
+  'altAudit.sent': { one: 'L\'image est envoyée à {service} pour être décrite.', other: 'Les {count} images sont envoyées à {service}, une par une, pour être décrites.' },
+  'altAudit.connect': 'Connectez un service d\'IA (en haut de cet onglet) pour les décrire automatiquement, ou ouvrez chaque image pour saisir sa description.',
+  'alt.decorative': 'Image décorative (pas de description)',
+  'alt.decorative.hint': 'À cocher pour un simple ornement : l\'image n\'est plus signalée comme « sans description ».',
+  'alt.missing': 'Cette image n\'a pas de description.',
+  'strip.missingAlt': { one: '{count} image sans description', other: '{count} images sans description' }
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

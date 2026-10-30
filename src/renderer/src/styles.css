@@ -53,6 +53,7 @@ button.danger { color: #ff7b7b; }
 .thumb { overflow: hidden; border-radius: 3px; position: relative; pointer-events: none; }
 .page-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--muted); }
 .page-actions { display: flex; gap: 2px; }
+.alt-flag { margin-left: 6px; color: var(--warn, #b45309); cursor: help; }
 .page-actions button { padding: 0 6px; font-size: 11px; background: none; border: none; }
 .add-page { width: 56px; height: 56px; font-size: 22px; align-self: center; flex: none; }
 .sidebar { width: 100%; flex: none; background: var(--panel); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { missingAltByPage } from '@/altCheck'
 import { useEditor } from '@/store/editor'
 import { PageThumb } from './PageThumb'
 import { Splitter } from './Splitter'
@@ -16,6 +17,7 @@ export function PageStrip(): React.JSX.Element {
   const open = useLayout((s) => s.stripOpen)
   const height = useLayout((s) => stripHeight(s.stripHeight, s.windowHeight))
   const box = thumbBox(height)
+  const noAlt = useMemo(() => missingAltByPage(doc), [doc])
 
   return (
     <>
@@ -56,7 +58,14 @@ export function PageStrip(): React.JSX.Element {
         >
           <PageThumb page={p} width={doc.width} height={doc.height} maxW={box.maxW} maxH={box.maxH} />
           <div className="page-meta">
-            <span>{i + 1}</span>
+            <span>
+              {i + 1}
+              {noAlt.has(p.id) && (
+                <span className="alt-flag" data-alt-flag={noAlt.get(p.id)} title={t('strip.missingAlt', { count: noAlt.get(p.id)! })} role="img" aria-label={t('strip.missingAlt', { count: noAlt.get(p.id)! })}>
+                  ⚠
+                </span>
+              )}
+            </span>
             <span className="page-actions">
               <button title={t('strip.duplicate')} onClick={(e) => { e.stopPropagation(); duplicatePage(p.id) }}>⧉</button>
               <button

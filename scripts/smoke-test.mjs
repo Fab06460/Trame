@@ -1381,6 +1381,30 @@ try {
   await clickSel('.sidebar .tabs button[data-tab="ai"]')
   await sleep(300)
 
+  // alerte « image sans description » : compteur, repère sur la page, image décorative, « Décrire toutes »
+  const auditCount = () => run(`Number(document.querySelector('[data-alt-audit-count]')?.getAttribute('data-alt-audit-count') ?? 0)`)
+  await clickSel('[data-ai-result][data-ai-kind="generate"]')
+  await sleep(800)
+  const missing1 = await auditCount()
+  check("alt : une image insérée sans description est signalée dans l'onglet IA et sur la page", missing1 >= 1 && (await nBrand('.page-item.current [data-alt-flag]')) === 1, String(missing1))
+  check("alt : le panneau de l'image sélectionnée le dit aussi", (await nBrand('.panel [data-alt-missing]')) === 1)
+  await clickSel('.panel [data-field="decorative"]')
+  await sleep(300)
+  check("alt : « image décorative » la retire de l'alerte", (await auditCount()) === missing1 - 1 && (await nBrand('.panel [data-alt-missing]')) === 0)
+  await clickSel('.panel [data-field="decorative"]')
+  await sleep(300)
+  check("alt : décocher la remet dans l'alerte", (await auditCount()) === missing1)
+  await clickSel('[data-action="alt-audit-next"]')
+  await sleep(300)
+  check("alt : « Aller à l'image suivante » sélectionne une image sans description", (await nBrand('.panel [data-alt-missing]')) === 1)
+  const describeBefore = describeReqs().length
+  await clickSel('[data-action="alt-audit-all"]')
+  check("alt : « Décrire toutes » envoie une demande par image", await waitAi(async () => (await nBrand('[data-alt-audit-ok]')) === 1) && describeReqs().length === describeBefore + missing1)
+  check("alt : l'alerte disparaît et le résultat est annoncé", (await nBrand('.page-item.current [data-alt-flag]')) === 0 && (await nBrand('[data-alt-audit-done]')) === 1)
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(300)
+  check("alt : un seul « Annuler » retire toutes les descriptions ajoutées", (await auditCount()) === missing1)
+
   // OpenAI : mauvaise clé puis bonne clé, formats, refus de contenu
   await pickProvider('openai')
   check('IA : OpenAI : un seul champ (la clé), le coût payant est annoncé', (await nBrand('[data-ai-field]')) === 1 && (await run(`document.querySelector('[data-ai-cost]')?.innerText ?? ''`)).includes('Payant'))

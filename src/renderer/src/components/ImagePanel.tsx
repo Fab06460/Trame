@@ -43,7 +43,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
   const describeWith = aiStatus?.providers.find((p) => p.configured && p.id === aiProvider)?.id ?? aiStatus?.providers.find((p) => p.configured)?.id
   const commitAlt = (): void => {
     const v = altDraft.trim().slice(0, MAX_ALT)
-    if (v !== (el.alt ?? '')) updateElement(el.id, { alt: v || undefined })
+    if (v !== (el.alt ?? '')) updateElement(el.id, { alt: v || undefined, ...(v ? { decorative: undefined } : {}) })
     setAltNote(null)
   }
   const describe = async (): Promise<void> => {
@@ -56,7 +56,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       const source = await prepareDescribeSource(el)
       const res = await window.trame.aiDescribe(describeWith, source.dataUrl, altLang, id)
       if (res.ok) {
-        updateElement(el.id, { alt: res.text })
+        updateElement(el.id, { alt: res.text, decorative: undefined })
         setAltNote(providerInfo(describeWith).name)
       } else if (res.error !== 'cancelled') setAltError({ kind: res.error, detail: res.detail })
     } catch {
@@ -122,6 +122,13 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
         onKeyDown={(e) => e.stopPropagation()}
       />
       <p className="hint">{t('alt.hint')}</p>
+      {!altDraft.trim() && !el.decorative && <p className="warn" data-alt-missing>{t('alt.missing')}</p>}
+      {!altDraft.trim() && (
+        <label className="check" title={t('alt.decorative.hint')}>
+          <input type="checkbox" data-field="decorative" checked={!!el.decorative} onChange={(e) => updateElement(el.id, { decorative: e.target.checked ? true : undefined })} />
+          {t('alt.decorative')}
+        </label>
+      )}
       {describeWith ? (
         <>
           <div className="row">

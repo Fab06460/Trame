@@ -789,5 +789,19 @@ export const en: Catalog = {
   'aiw.inline.more': 'More options…',
   'aiw.inline.empty': 'Write some text first.',
   'aiw.inline.sent': 'Each request sends this text to {service}.',
-  'aiw.inline.dismiss': 'Dismiss'
+  'aiw.inline.dismiss': 'Dismiss',
+  // Images sans description
+  'altAudit.title': 'Image descriptions',
+  'altAudit.ok': 'All images have a description (or are decorative).',
+  'altAudit.missing': { one: '{count} image has no description.', other: '{count} images have no description.' },
+  'altAudit.done': { one: '{count} description added. “Undo” removes it; please review it.', other: '{count} descriptions added. “Undo” removes them all; please review them.' },
+  'altAudit.next': 'Go to the next image',
+  'altAudit.all': { one: 'Describe this image', other: 'Describe all {count} images' },
+  'altAudit.progress': 'Describing {done} / {total}…',
+  'altAudit.sent': { one: 'The image is sent to {service} to be described.', other: 'The {count} images are sent to {service}, one at a time, to be described.' },
+  'altAudit.connect': 'Connect an AI service (at the top of this tab) to describe them automatically, or open each image to type its description.',
+  'alt.decorative': 'Decorative image (no description)',
+  'alt.decorative.hint': 'Tick for a pure ornament: the image is no longer flagged as “no description”.',
+  'alt.missing': 'This image has no description.',
+  'strip.missingAlt': { one: '{count} image without description', other: '{count} images without description' }
 }

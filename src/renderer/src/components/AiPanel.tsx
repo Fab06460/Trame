@@ -4,6 +4,7 @@ import { contentLocked, isEnforced } from '@/protection'
 import { placeResult } from '@/aiEdit'
 import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
+import { AltAudit } from './AltAudit'
 import { aiErrorMessage, useAi, type AiResult } from '@/store/ai'
 
 const SIZES: AiSize[] = ['square', 'landscape', 'portrait']
@@ -317,6 +318,8 @@ export function AiPanel(): React.JSX.Element {
           )}
         </section>
       )}
+
+      <AltAudit />
 
       {drafts.length > 0 && (
         <section data-ai-drafts>

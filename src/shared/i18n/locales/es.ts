@@ -789,5 +789,19 @@ export const es: Catalog = {
   'aiw.inline.more': 'Más opciones…',
   'aiw.inline.empty': 'Escriba primero un texto.',
   'aiw.inline.sent': 'Cada solicitud envía este texto a {service}.',
-  'aiw.inline.dismiss': 'Descartar'
+  'aiw.inline.dismiss': 'Descartar',
+  // Images sans description
+  'altAudit.title': 'Descripciones de imágenes',
+  'altAudit.ok': 'Todas las imágenes tienen descripción (o son decorativas).',
+  'altAudit.missing': { one: '{count} imagen no tiene descripción.', other: '{count} imágenes no tienen descripción.' },
+  'altAudit.done': { one: '{count} descripción añadida. «Deshacer» la quita; revísela.', other: '{count} descripciones añadidas. «Deshacer» las quita todas; revíselas.' },
+  'altAudit.next': 'Ir a la siguiente imagen',
+  'altAudit.all': { one: 'Describir esta imagen', other: 'Describir las {count} imágenes' },
+  'altAudit.progress': 'Describiendo {done} / {total}…',
+  'altAudit.sent': { one: 'La imagen se envía a {service} para describirla.', other: 'Las {count} imágenes se envían a {service}, una a una, para describirlas.' },
+  'altAudit.connect': 'Conecte un servicio de IA (arriba en esta pestaña) para describirlas automáticamente, o abra cada imagen para escribir su descripción.',
+  'alt.decorative': 'Imagen decorativa (sin descripción)',
+  'alt.decorative.hint': 'Márquela para un simple adorno: la imagen deja de señalarse como «sin descripción».',
+  'alt.missing': 'Esta imagen no tiene descripción.',
+  'strip.missingAlt': { one: '{count} imagen sin descripción', other: '{count} imágenes sin descripción' }
 }

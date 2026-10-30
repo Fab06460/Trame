@@ -789,5 +789,19 @@ export const de: Catalog = {
   'aiw.inline.more': 'Weitere Optionen …',
   'aiw.inline.empty': 'Schreiben Sie zuerst einen Text.',
   'aiw.inline.sent': 'Jede Anfrage sendet diesen Text an {service}.',
-  'aiw.inline.dismiss': 'Verwerfen'
+  'aiw.inline.dismiss': 'Verwerfen',
+  // Images sans description
+  'altAudit.title': 'Bildbeschreibungen',
+  'altAudit.ok': 'Alle Bilder haben eine Beschreibung (oder sind dekorativ).',
+  'altAudit.missing': { one: '{count} Bild hat keine Beschreibung.', other: '{count} Bilder haben keine Beschreibung.' },
+  'altAudit.done': { one: '{count} Beschreibung hinzugefügt. „Rückgängig“ entfernt sie; bitte prüfen.', other: '{count} Beschreibungen hinzugefügt. „Rückgängig“ entfernt sie alle; bitte prüfen.' },
+  'altAudit.next': 'Zum nächsten Bild',
+  'altAudit.all': { one: 'Dieses Bild beschreiben', other: 'Alle {count} Bilder beschreiben' },
+  'altAudit.progress': 'Beschreibe {done} / {total} …',
+  'altAudit.sent': { one: 'Das Bild wird zur Beschreibung an {service} gesendet.', other: 'Die {count} Bilder werden einzeln zur Beschreibung an {service} gesendet.' },
+  'altAudit.connect': 'Verbinden Sie einen KI-Dienst (oben in diesem Tab), um sie automatisch zu beschreiben, oder öffnen Sie jedes Bild und geben Sie die Beschreibung ein.',
+  'alt.decorative': 'Dekoratives Bild (keine Beschreibung)',
+  'alt.decorative.hint': 'Für reine Zierde ankreuzen: Das Bild wird nicht mehr als „ohne Beschreibung“ markiert.',
+  'alt.missing': 'Dieses Bild hat keine Beschreibung.',
+  'strip.missingAlt': { one: '{count} Bild ohne Beschreibung', other: '{count} Bilder ohne Beschreibung' }
 }
