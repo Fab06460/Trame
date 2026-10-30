@@ -1458,6 +1458,33 @@ try {
   await sleep(300)
   check("IA : les images générées restent dans la liste quand on change d'onglet", aiListed >= 4 && (await nBrand('[data-ai-result]')) === aiListed)
 
+  // colonne d'onglets de la barre latérale : navigation au clavier (flèches, Début, Fin), un seul onglet dans l'ordre de tabulation
+  const railKey = async (k) => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k }); await sleep(250) }
+  const railState = () => run(`(() => { const a = document.querySelector('.side-rail [role="tab"][aria-selected="true"]'); return { tab: a?.dataset.tab, focus: document.activeElement?.dataset?.tab, stops: [...document.querySelectorAll('.side-rail [role="tab"]')].filter((b) => b.tabIndex === 0).length } })()`)
+  await clickSel('.side-rail [data-tab="ai"]')
+  await run(`document.querySelector('.side-rail [data-tab="ai"]').focus()`)
+  await sleep(150)
+  await railKey('ArrowDown')
+  let rail = await railState()
+  check('onglets : flèche bas passe à l\'onglet suivant (Calques) et le focus le suit', rail.tab === 'layers' && rail.focus === 'layers', JSON.stringify(rail))
+  await railKey('ArrowUp')
+  rail = await railState()
+  check('onglets : flèche haut revient à l\'onglet précédent (IA)', rail.tab === 'ai' && rail.focus === 'ai', JSON.stringify(rail))
+  await railKey('Home')
+  rail = await railState()
+  check('onglets : Début ouvre le premier onglet (Récents)', rail.tab === 'recents' && rail.focus === 'recents', JSON.stringify(rail))
+  await railKey('ArrowUp')
+  rail = await railState()
+  check('onglets : flèche haut sur le premier onglet boucle sur le dernier (Marque)', rail.tab === 'brand' && rail.focus === 'brand', JSON.stringify(rail))
+  await railKey('ArrowDown')
+  rail = await railState()
+  check('onglets : flèche bas sur le dernier onglet boucle sur le premier', rail.tab === 'recents', JSON.stringify(rail))
+  await railKey('End')
+  rail = await railState()
+  check('onglets : Fin ouvre le dernier onglet, un seul onglet reste dans l\'ordre de tabulation', rail.tab === 'brand' && rail.stops === 1, JSON.stringify(rail))
+  await click('.sidebar .tabs button', 'IA')
+  await sleep(300)
+
   // sécurité de l'interface IPC
   check('IA : un service inconnu est refusé par le processus principal', (await run(`window.trame.aiGenerate('evil', 'x', 'square', 'r1')`)).ok === false)
   check("IA : un identifiant de compte qui sortirait de l'adresse est refusé", (await run(`window.trame.aiSave('cloudflare', { account: '../../../x'.padEnd(32, 'a'), token: 'x' })`)).ok === false)

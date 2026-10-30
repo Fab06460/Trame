@@ -85,7 +85,8 @@ export function Sidebar(): React.JSX.Element {
           const at = TAB_ORDER.indexOf(tab)
           const next = move === 'first' ? 0 : move === 'last' ? TAB_ORDER.length - 1 : (at + move + TAB_ORDER.length) % TAB_ORDER.length
           setTab(TAB_ORDER[next])
-          requestAnimationFrame(() => e.currentTarget.querySelector<HTMLElement>(`[data-tab="${TAB_ORDER[next]}"]`)?.focus())
+          const rail = e.currentTarget // React vide currentTarget à la fin du gestionnaire
+          requestAnimationFrame(() => rail.querySelector<HTMLElement>(`[data-tab="${TAB_ORDER[next]}"]`)?.focus())
         }}
       >
         {TAB_GROUPS.map((group, i) => (
