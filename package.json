@@ -17,7 +17,11 @@
     "fidelity": "node scripts/pdf-fidelity/run.mjs",
     "resize-gallery": "node scripts/pdf-fidelity/run-gallery.mjs",
     "release:check": "node scripts/release-mac.mjs --check",
-    "release:mac": "node scripts/release-mac.mjs"
+    "release:mac": "node scripts/release-mac.mjs",
+    "pack:win": "electron-vite build && electron-builder --win --dir",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "pack:linux": "electron-vite build && electron-builder --linux --dir",
+    "dist:linux": "electron-vite build && electron-builder --linux"
   },
   "devDependencies": {
     "@fontsource/bebas-neue": "^5.3.0",
@@ -93,9 +97,55 @@
         "name": "Projet Trame",
         "description": "Projet Trame",
         "role": "Editor",
-        "icon": "build/icon.icns"
+        "mimeType": "application/x-trame"
       }
-    ]
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "multiLanguageInstaller": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Graphics",
+      "icon": "build/icon.png",
+      "synopsis": "Éditeur de design hors-ligne",
+      "description": "Trame est un éditeur de design (affiches, présentations, documents) qui fonctionne entièrement hors ligne.",
+      "maintainer": "Fabrice Belloncle <fabrice.belloncle@gmail.com>",
+      "syncDesktopName": true
+    }
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
@@ -103,5 +153,6 @@
     "jszip": "^3.10.2",
     "pdfjs-dist": "^6.4.299",
     "pptxgenjs": "^4.0.1"
-  }
+  },
+  "desktopName": "trame.desktop"
 }

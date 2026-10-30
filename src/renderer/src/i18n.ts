@@ -1,8 +1,15 @@
 import { useCallback } from 'react'
 import { create } from 'zustand'
+import { ctrlNameFor, shortcutText } from '@shared/shortcuts'
 import { DEFAULT_LOCALE, LOCALES, isLocale, resolveLocale, translator, type MessageKey, type Params } from '@shared/i18n'
 
 const KEY = 'trame.lang'
+
+/** macOS : raccourcis notés ⌘ ; ailleurs ils sont affichés Ctrl+… (voir shared/shortcuts.ts). */
+export const isMac = typeof navigator !== 'undefined' && /^Mac/i.test(navigator.platform)
+
+/** Un raccourci noté à la façon de macOS, écrit pour la plateforme courante. */
+export const shortcut = (text: string): string => shortcutText(text, isMac, ctrlNameFor(useLocale.getState().locale))
 
 /** Langue au démarrage : choix enregistré, sinon langue du système (imposée par `TRAME_LANG` en test), sinon l'anglais. */
 function initialLocale(): string {
@@ -41,15 +48,19 @@ export const useLocale = create<{ locale: string; setLocale: (code: string) => v
 export const isUntitledName = (name: string): boolean => LOCALES.some((l) => l.catalog['doc.untitled'] === name)
 
 /** Traduction hors composant (actions, messages d'erreur) : langue courante au moment de l'appel. */
-export const t = (key: MessageKey, params?: Params): string => translator(useLocale.getState().locale)(key, params)
+export const t = (key: MessageKey, params?: Params): string => {
+  const locale = useLocale.getState().locale
+  return shortcutText(translator(locale)(key, params), isMac, ctrlNameFor(locale))
+}
 
 /** Traduction dans un composant : le composant se redessine quand la langue change. */
 export function useT(): (key: MessageKey, params?: Params) => string {
   const locale = useLocale((s) => s.locale)
-  return useCallback((key, params) => translator(locale)(key, params), [locale])
+  return useCallback((key, params) => shortcutText(translator(locale)(key, params), isMac, ctrlNameFor(locale)), [locale])
 }
 
 if (typeof window !== 'undefined') {
+  document.documentElement.dataset.platform = isMac ? 'mac' : 'other'
   apply(useLocale.getState().locale)
   // l'écran de l'orateur est une autre fenêtre : il suit le choix fait dans la fenêtre principale
   window.addEventListener('storage', (e) => {

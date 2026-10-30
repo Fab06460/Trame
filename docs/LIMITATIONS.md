@@ -7,12 +7,12 @@
 - **Tests unitaires limités à la logique pure** (Vitest, `npm test`) : `geometry.ts`, le store (éléments, historique, sélection/groupes, calques, alignement, pages), `migrateDocument`, cohérence des modèles et des formes. **Rien ne teste l'interface** : `Canvas.tsx` (glisser, redimensionner, lasso, édition de texte), les exports (`renderPage`, PDF), l'IPC et le process principal. Un test de fumée (`npm run smoke`) couvre le pont IPC, les récents et la sortie de l'application, mais pas l'interface visuelle (Playwright + Electron serait la piste).
 - **Pas de linter ni de formateur** (ESLint/Prettier non configurés).
 - **Pas d'intégration continue.**
-- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, build quotidien signé « ad hoc » (avertissement Gatekeeper sur les autres Macs) ; `npm run release:mac` produit une version signée Developer ID et notarisée (vérifiée sur cette machine, pas sur un autre Mac), `appId` provisoire, icône provisoire, pas de mise à jour automatique, icône de document = icône de l'app. Aucun packaging Windows/Linux.
+- **Packaging macOS limité** (voir [PACKAGING.md](PACKAGING.md)) : Apple Silicon uniquement, build quotidien signé « ad hoc » (avertissement Gatekeeper sur les autres Macs) ; `npm run release:mac` produit une version signée Developer ID et notarisée (vérifiée sur cette machine, pas sur un autre Mac), `appId` provisoire, icône provisoire, pas de mise à jour automatique, icône de document = icône de l'app. Windows (installeur NSIS et zip, x64) et Linux (AppImage et tar.gz, x64) se construisent (`npm run dist:win`, `dist:linux`) mais **n'ont jamais été lancés** ; non signés (SmartScreen sous Windows), pas de `.deb` (il faut une adresse de page d'accueil).
 - Le bundle du renderer est volumineux (~2,4 Mo hors polices) : aucun découpage de code.
 
 ## Plateformes
 
-- Développé et utilisé uniquement sur **macOS**. Windows et Linux : **non testés**. Points macOS connus : `titleBarStyle: 'hiddenInset'` et marge de 84 px à gauche de la barre d'outils (boutons de fenêtre), raccourcis écrits pour `⌘` (`Ctrl` est géré dans le code, non vérifié).
+- Développé et utilisé uniquement sur **macOS**. Windows et Linux : **adaptés mais non testés sur une vraie machine** — raccourcis affichés `Ctrl+…` hors macOS, marge de la barre d'outils et barre de menus Electron selon la plateforme, ouverture d'un `.trame` par argument de ligne de commande avec instance unique, identifiants d'IA non écrits sur disque si Linux n'a pas de trousseau (voir [PACKAGING.md](PACKAGING.md)). Le smoke test et l'empreinte de fidélité PDF ne tournent que sous macOS ; le rendu des polices et des PDF sous Windows/Linux n'est pas vérifié.
 
 ## Risques de perte de données
 

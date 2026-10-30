@@ -1,4 +1,4 @@
-# Packaging et distribution (macOS)
+# Packaging et distribution (macOS, Windows, Linux)
 
 Trame est empaquetée avec **electron-builder** (configuration dans `package.json`, champ `build`).
 
@@ -7,11 +7,31 @@ Trame est empaquetée avec **electron-builder** (configuration dans `package.jso
 | Commande        | Résultat                                                                        |
 | --------------- | ------------------------------------------------------------------------------- |
 | `npm run pack`  | `dist/mac-arm64/Trame.app` : app non compressée, pour tester rapidement          |
+| `npm run pack:win` / `pack:linux` | `dist/win-unpacked/` (Windows) ou `dist/linux-unpacked/` (Linux) : application non compressée |
+| `npm run dist:win` | `dist/Trame Setup <version>.exe` (installeur NSIS x64, multilingue, au choix du dossier et sans droits administrateur) et `dist/Trame-<version>-win.zip` (version portable) |
+| `npm run dist:linux` | `dist/Trame-<version>.AppImage` (un seul fichier exécutable) et `dist/trame-<version>.tar.gz` (x64) |
 | `npm run dist`  | Build complet + `dist/Trame-<version>-arm64.dmg` et `dist/Trame-<version>-arm64-mac.zip` |
 
 `dist/` est ignoré par git. Le premier build télécharge (et met en cache) l'archive Electron et les outils DMG : **il faut du réseau une fois**, ensuite plus rien (l'application, elle, n'a jamais besoin de réseau).
 
 Pour changer la version de l'application : modifier `version` dans `package.json` (elle apparaît dans les noms de fichiers et dans « À propos »).
+
+## Windows et Linux
+
+Les trois systèmes se construisent **depuis un Mac** (les installeurs ci-dessus ont été produits ainsi, le premier build télécharge Electron et les outils NSIS / AppImage), mais **seul le build macOS a été lancé et essayé en vrai**. Les exécutables Windows et Linux ont été construits et leur format vérifié (`PE32+ x86-64`, `ELF x86-64`), **pas exécutés** : à essayer sur une vraie machine avant de les diffuser.
+
+Pour un résultat de référence, le workflow `.github/workflows/build.yml` construit chaque plateforme sur son propre système (Windows, Ubuntu, macOS) après `typecheck` et les tests, et joint les installeurs à l'exécution. Il se déclenche sur une étiquette `v*` ou à la main (*Run workflow*) et suppose un dépôt GitHub (il n'y en a pas encore). Aucune signature n'y est faite.
+
+**Non signés.** Windows affichera l'avertissement SmartScreen (« Windows a protégé votre ordinateur » → *Informations complémentaires* → *Exécuter quand même*) tant qu'un certificat de signature de code n'est pas configuré (variables `CSC_LINK` / `CSC_KEY_PASSWORD` d'electron-builder). Sous Linux, l'AppImage se lance après `chmod +x`.
+
+**Ce qui est adapté à la plateforme** :
+- raccourcis : les textes notent `⌘N`, `⇧⌘S`… à la façon de macOS ; hors macOS ils sont affichés `Ctrl+N`, `Ctrl+Shift+S`, `Ctrl+Alt+3` (`Strg` en allemand), voir `src/shared/shortcuts.ts`. Les raccourcis eux-mêmes acceptent déjà `Ctrl` comme `⌘` ;
+- barre d'outils : la réserve de 84 px pour les boutons de fenêtre ne vaut que sous macOS (`[data-platform="mac"]`) ; ailleurs la fenêtre garde son cadre et la barre de menus d'Electron est masquée (Alt l'affiche) ;
+- fichiers `.trame` : un double-clic lance `Trame fichier.trame` (Windows, Linux). Une seule instance tourne (`requestSingleInstanceLock`) : un second double-clic ouvre le projet dans la fenêtre existante (`second-instance`, `src/main/launchArgs.ts`). macOS garde son événement `open-file` ;
+- identifiants des services d'IA : chiffrés par DPAPI (Windows). Sous Linux, sans trousseau (gnome-libsecret, kwallet), Electron se rabattrait sur une clé en clair : on refuse alors d'écrire quoi que ce soit, les identifiants restent en mémoire jusqu'à la fermeture ;
+- architectures : x64 seulement. Pour Windows ou Linux arm64, ajouter `arm64` dans `build.win.target[].arch` ou `build.linux.target[].arch`.
+
+Le paquet `.deb` n'est pas produit : electron-builder exige une adresse de page d'accueil du projet (`homepage` dans `package.json`), à ajouter quand elle existera, puis `deb` dans `build.linux.target`.
 
 ## Contenu et taille
 
@@ -113,7 +133,7 @@ Points à connaître :
 - macOS retient les applications qu'il a **vues** : lancer un build de `dist/` l'enregistre auprès de LaunchServices. Si plusieurs copies de Trame existent (dist, Applications, DMG monté), le Finder peut en choisir une inattendue. Pour désenregistrer une copie : `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u chemin/vers/Trame.app`.
 - L'icône des fichiers `.trame` est celle de l'application (pas d'icône de document dédiée).
 - Tant que l'app n'est pas signée et notarisée, le premier double-clic sur un autre Mac passe d'abord par l'avertissement Gatekeeper (voir plus haut).
-- Windows / Linux : non gérés (il faudrait lire le chemin dans `process.argv` et utiliser `app.requestSingleInstanceLock` / `second-instance`).
+- Windows / Linux : gérés par `process.argv` et `second-instance` (voir « Windows et Linux » plus haut) ; l'association de l'extension est faite par l'installeur NSIS (Windows). Non essayé sur une vraie machine.
 
 ## Pièges connus
 

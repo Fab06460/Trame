@@ -47,7 +47,7 @@
 - Projets enregistrés en fichiers `.trame` ; export PNG / JPG (page courante) et PDF vectoriel (toutes les pages, texte sélectionnable), avec avertissement en direct quand un texte ne pourra pas être sélectionnable dans le PDF
 
 Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘C` / `⌘X` / `⌘V` copier / couper / coller · `⌘D` dupliquer · `⌘A` tout sélectionner · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue · `⇧R` / `⇧G` / `⇧A` règles / repères / aimantation · pendant un glisser : `⌘` suspend l'aimantation, `Maj` bloque l'axe, `Alt` duplique.
-(Sous Windows/Linux, `Ctrl` remplace `⌘`, mais ces plateformes n'ont pas été testées, voir [limitations](docs/LIMITATIONS.md).)
+(Sous Windows/Linux, `Ctrl` remplace `⌘` et s'affiche comme tel ; ces plateformes se construisent mais n'ont pas été testées sur une vraie machine, voir [limitations](docs/LIMITATIONS.md).)
 
 ## Démarrage rapide
 
@@ -66,6 +66,8 @@ npm run dev        # lance l'appli en mode développement (rechargement à chaud
 | `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`)                           |
 | `npm run pack`      | Construit `dist/mac-arm64/Trame.app` (test rapide du packaging)    |
 | `npm run dist`      | Construit le `.dmg` et le `.zip` macOS dans `dist/`                |
+| `npm run dist:win`  | Installeur Windows (`.exe` NSIS) et `.zip` portable, x64           |
+| `npm run dist:linux` | `.AppImage` et `.tar.gz` Linux, x64                               |
 | `npm run fidelity`  | Compare le PDF vectoriel à l'image de l'éditeur, pixel à pixel (macOS) |
 | `npm run release:check` | Vérifie les prérequis de signature et de notarisation (rien n'est construit) |
 | `npm run release:mac` | Publie : signe (Developer ID), notarise, agrafe, vérifie (macOS) |
@@ -139,6 +141,6 @@ FEATURES.md              Notes de référence sur les fonctionnalités de Canva 
 - [Architecture](docs/ARCHITECTURE.md) : processus, flux de données, store, historique, rendu
 - [Format de fichier `.trame`](docs/FILE_FORMAT.md) : schéma, versions, migration
 - [Langues de l'interface](docs/I18N.md) : traductions, ajouter une langue
-- [Packaging et distribution macOS](docs/PACKAGING.md) : build du `.dmg`, signature, notarisation, pièges
+- [Packaging et distribution](docs/PACKAGING.md) : macOS (`.dmg`, signature, notarisation), Windows, Linux, pièges
 - [Étendre l'appli](docs/EXTENDING.md) : ajouter un type d'élément, un modèle, une police, une action
 - [Limitations connues et dette technique](docs/LIMITATIONS.md) : à lire avant de modifier le code

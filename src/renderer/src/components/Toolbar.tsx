@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { useT } from '@/i18n'
+import { shortcut, useT } from '@/i18n'
 import { useLayout } from '@/store/layout'
 import { fitStep, type FitState } from '@/toolbarFit'
 import { DropMenu } from './DropMenu'
@@ -72,11 +72,11 @@ export function Toolbar(): React.JSX.Element {
             label={t('toolbar.file')}
             title={t('toolbar.file.title')}
             items={[
-              { key: 'new', label: t('toolbar.new'), hint: '⌘N', onSelect: newProject },
-              { key: 'open', label: t('toolbar.open.dots'), hint: '⌘O', onSelect: openProject },
+              { key: 'new', label: t('toolbar.new'), hint: shortcut('⌘N'), onSelect: newProject },
+              { key: 'open', label: t('toolbar.open.dots'), hint: shortcut('⌘O'), onSelect: openProject },
               { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
-              { key: 'save-as', label: t('toolbar.saveAs'), hint: '⇧⌘S', onSelect: () => saveProject(true) }
+              { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) }
             ]}
           />
           {save}
@@ -128,7 +128,7 @@ function PanelToggle({ side }: { side: 'left' | 'right' }): React.JSX.Element {
       data-panel-toggle={side}
       aria-pressed={visible}
       aria-label={label}
-      title={`${label} (⌘⌥${side === 'left' ? 1 : 2})`}
+      title={`${label} (${shortcut(`⌘⌥${side === 'left' ? 1 : 2}`)})`}
       onClick={() => useLayout.getState().toggle(side)}
     >
       {side === 'left' ? '◧' : '◨'}

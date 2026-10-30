@@ -13,11 +13,11 @@ body { background: var(--bg); color: var(--text); font: 13px -apple-system, 'Hel
 .app { display: flex; flex-direction: column; height: 100%; }
 .toolbar {
   display: flex; align-items: center; gap: 4px; padding: 8px 10px;
-  padding-left: 84px; /* place pour les boutons macOS */
   flex-wrap: nowrap; flex: none; white-space: nowrap; /* une seule ligne : voir toolbarFit.ts */
   background: var(--panel); border-bottom: 1px solid var(--border); -webkit-app-region: drag;
 }
 .toolbar > * { -webkit-app-region: no-drag; }
+:root[data-platform="mac"] .toolbar { padding-left: 84px; } /* place pour les boutons de fenêtre macOS */
 .brand { font-weight: 700; font-size: 15px; color: var(--accent); margin-right: 8px; -webkit-app-region: drag; }
 .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
 .spacer { flex: 1; -webkit-app-region: drag; }

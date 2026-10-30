@@ -12,6 +12,7 @@ import { safeExportName } from './exportFolder'
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
+import { projectFilesFromArgv } from './launchArgs'
 import { initMainLocale, setMainLocale, tm } from './i18n'
 import {
   addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
@@ -92,6 +93,8 @@ function createWindow(): void {
     title: 'Trame',
     backgroundColor: '#1e1f24',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    // Windows et Linux : pas de barre de menus Electron en permanence (Alt la montre) ; l'application a sa propre barre d'outils
+    autoHideMenuBar: process.platform !== 'darwin',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       additionalArguments: FORCED_LANG ? [`--trame-lang=${FORCED_LANG}`] : [],
@@ -927,9 +930,29 @@ ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 
 registerAiHandlers()
 
+// Windows et Linux : une seule instance (un double-clic sur un .trame ouvre le projet dans la fenêtre existante). macOS le fait déjà seul.
+const gotLock = process.platform === 'darwin' || app.requestSingleInstanceLock()
+if (!gotLock) app.quit()
+else if (process.platform !== 'darwin') {
+  app.on('second-instance', (_e, argv) => {
+    const files = projectFilesFromArgv(argv.slice(1))
+    if (files.length) void openFromSystem(files[files.length - 1])
+    else if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+}
+
 app.whenReady().then(() => {
+  if (!gotLock) return
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   createWindow()
+  // projet donné en argument au lancement (Windows, Linux)
+  if (process.platform !== 'darwin') {
+    const files = projectFilesFromArgv(process.argv.slice(app.isPackaged ? 1 : 2))
+    if (files.length) void openFromSystem(files[files.length - 1])
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

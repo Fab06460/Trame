@@ -1,0 +1,60 @@
+# Construit Trame sur chaque système (Windows, Linux, macOS) avec les tests. Les installeurs sont joints à l'exécution (onglet « Artifacts »).
+# Les builds Windows et Linux se font sur leur propre système : c'est le plus fiable (icônes et ressources de l'exécutable, paquets deb).
+name: build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+            artifacts: |
+              dist/*.exe
+              dist/*.zip
+          - os: ubuntu-latest
+            script: dist:linux
+            artifacts: |
+              dist/*.AppImage
+              dist/*.tar.gz
+          - os: macos-latest
+            script: dist
+            artifacts: |
+              dist/*.dmg
+              dist/*.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          # aucune signature dans cette chaîne : voir docs/PACKAGING.md
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trame-${{ matrix.os }}
+          path: ${{ matrix.artifacts }}
+          if-no-files-found: error
