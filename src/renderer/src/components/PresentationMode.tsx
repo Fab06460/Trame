@@ -305,7 +305,14 @@ export function PresentationMode(): React.JSX.Element | null {
             {INK_COLORS.map((c, i) => (
               <button key={c} className="ink-swatch" data-pres-color={c} aria-pressed={color === c} aria-label={t('pres.ink.color', { n: i + 1 })} title={t('pres.ink.color', { n: i + 1 })} style={{ background: c }} onClick={() => setColor(c)} />
             ))}
-            <button data-pres="highlighter" aria-pressed={tool === 'highlighter'} onClick={() => setTool((x) => (x === 'pen' ? 'highlighter' : 'pen'))} title={t('pres.ink.highlighter.title')}>{t('pres.ink.highlighter')}</button>
+            <button data-pres="pen" className="ink-tool" aria-pressed={tool === 'pen'} onClick={() => setTool('pen')} title={t('pres.ink.pen.title')}>
+              <span className="ink-sample pen" style={{ background: color }} aria-hidden />
+              {t('pres.ink.pen')}
+            </button>
+            <button data-pres="highlighter" className="ink-tool" aria-pressed={tool === 'highlighter'} onClick={() => setTool('highlighter')} title={t('pres.ink.highlighter.title')}>
+              <span className="ink-sample highlighter" style={{ background: color }} aria-hidden />
+              {t('pres.ink.highlighter')}
+            </button>
             <button data-pres="ink-undo" disabled={!(ink[doc.pages[index].id]?.length)} onClick={() => setInk((m) => ({ ...m, [doc.pages[index].id]: (m[doc.pages[index].id] ?? []).slice(0, -1) }))} title={t('pres.ink.undo.title')}>{t('pres.ink.undo')}</button>
             <button data-pres="ink-clear" disabled={!(ink[doc.pages[index].id]?.length)} onClick={() => setInk((m) => ({ ...m, [doc.pages[index].id]: [] }))} title={t('pres.ink.clear.title')}>{t('pres.ink.clear')}</button>
           </div>

@@ -814,5 +814,8 @@ export const de: Catalog = {
   'pres.ink.undo': '↶ Strich',
   'pres.ink.undo.title': 'Letzten Strich dieser Seite zurücknehmen (Z)',
   'pres.ink.clear': 'Löschen',
-  'pres.ink.clear.title': 'Alle Striche dieser Seite löschen (C)'
+  'pres.ink.clear.title': 'Alle Striche dieser Seite löschen (C)',
+  // Annotation : stylo
+  'pres.ink.pen': 'Stift',
+  'pres.ink.pen.title': 'Dünner, deckender Strich (H zum Wechseln)'
 }

@@ -814,5 +814,8 @@ export const en: Catalog = {
   'pres.ink.undo': '↶ Stroke',
   'pres.ink.undo.title': 'Undo the last stroke on this page (Z)',
   'pres.ink.clear': 'Clear',
-  'pres.ink.clear.title': 'Clear all strokes on this page (C)'
+  'pres.ink.clear.title': 'Clear all strokes on this page (C)',
+  // Annotation : stylo
+  'pres.ink.pen': 'Pen',
+  'pres.ink.pen.title': 'Thin, opaque stroke (H to switch)'
 }

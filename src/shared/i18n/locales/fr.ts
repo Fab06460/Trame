@@ -811,11 +811,14 @@ export const fr = {
   'pres.ink.tools': 'Outils de dessin',
   'pres.ink.color': 'Couleur {n}',
   'pres.ink.highlighter': 'Surligneur',
-  'pres.ink.highlighter.title': 'Trait large et translucide (H)',
+  'pres.ink.highlighter.title': 'Trait large et translucide (H pour alterner)',
   'pres.ink.undo': '↶ Trait',
   'pres.ink.undo.title': 'Annuler le dernier trait de cette page (Z)',
   'pres.ink.clear': 'Effacer',
-  'pres.ink.clear.title': 'Effacer tous les traits de cette page (C)'
+  'pres.ink.clear.title': 'Effacer tous les traits de cette page (C)',
+  // Annotation : stylo
+  'pres.ink.pen': 'Stylo',
+  'pres.ink.pen.title': 'Trait fin et opaque (H pour alterner)'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

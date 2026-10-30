@@ -814,5 +814,8 @@ export const es: Catalog = {
   'pres.ink.undo': '↶ Trazo',
   'pres.ink.undo.title': 'Deshacer el último trazo de esta página (Z)',
   'pres.ink.clear': 'Borrar',
-  'pres.ink.clear.title': 'Borrar todos los trazos de esta página (C)'
+  'pres.ink.clear.title': 'Borrar todos los trazos de esta página (C)',
+  // Annotation : stylo
+  'pres.ink.pen': 'Lápiz',
+  'pres.ink.pen.title': 'Trazo fino y opaco (H para alternar)'
 }
