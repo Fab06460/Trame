@@ -817,5 +817,7 @@ export const de: Catalog = {
   'pres.ink.clear.title': 'Alle Striche dieser Seite löschen (C)',
   // Annotation : stylo
   'pres.ink.pen': 'Stift',
-  'pres.ink.pen.title': 'Dünner, deckender Strich (H zum Wechseln)'
+  'pres.ink.pen.title': 'Dünner, deckender Strich (H zum Wechseln)',
+  // Colonne d'onglets
+  'sidebar.tabs': 'Bereiche der Seitenleiste'
 }

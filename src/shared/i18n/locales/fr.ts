@@ -818,7 +818,9 @@ export const fr = {
   'pres.ink.clear.title': 'Effacer tous les traits de cette page (C)',
   // Annotation : stylo
   'pres.ink.pen': 'Stylo',
-  'pres.ink.pen.title': 'Trait fin et opaque (H pour alterner)'
+  'pres.ink.pen.title': 'Trait fin et opaque (H pour alterner)',
+  // Colonne d'onglets
+  'sidebar.tabs': 'Sections de la barre latérale'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

@@ -16,8 +16,17 @@ import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
 import { LanguageSelect } from './LanguageSelect'
 import { AiPanel } from './AiPanel'
-import { useSidebar } from '@/store/sidebar'
+import { useSidebar, type SidebarTab } from '@/store/sidebar'
+import { SideIcon } from './SideIcons'
 
+
+/** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
+const TAB_GROUPS: Array<Array<{ id: SidebarTab; label: MessageKey }>> = [
+  [{ id: 'recents', label: 'sidebar.recents' }, { id: 'templates', label: 'sidebar.templates' }],
+  [{ id: 'elements', label: 'sidebar.elements' }, { id: 'photos', label: 'sidebar.photos' }, { id: 'ai', label: 'ai.tab' }],
+  [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }]
+]
+const TAB_ORDER = TAB_GROUPS.flat().map((x) => x.id)
 
 const TEXT_PRESETS = [
   { label: 'sidebar.preset.title', fontSize: 110, fontStyle: 'bold', text: 'sidebar.preset.title' },
@@ -61,15 +70,46 @@ export function Sidebar(): React.JSX.Element {
 
   return (
     <aside className="sidebar">
-      <div className="tabs">
-        <button className={tab === 'recents' ? 'active' : ''} onClick={() => setTab('recents')}>{t('sidebar.recents')}</button>
-        <button className={tab === 'templates' ? 'active' : ''} onClick={() => setTab('templates')}>{t('sidebar.templates')}</button>
-        <button className={tab === 'elements' ? 'active' : ''} onClick={() => setTab('elements')}>{t('sidebar.elements')}</button>
-        <button className={tab === 'layers' ? 'active' : ''} onClick={() => setTab('layers')}>{t('sidebar.layers')}</button>
-        <button className={tab === 'brand' ? 'active' : ''} onClick={() => setTab('brand')}>{t('sidebar.brand')}</button>
-        <button className={tab === 'photos' ? 'active' : ''} onClick={() => setTab('photos')}>{t('sidebar.photos')}</button>
-        <button className={tab === 'ai' ? 'active' : ''} data-tab="ai" onClick={() => setTab('ai')}>{t('ai.tab')}</button>
-      </div>
+      <nav
+        className="tabs side-rail"
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label={t('sidebar.tabs')}
+        onKeyDown={(e) => {
+          // flèches haut / bas, Début / Fin : on passe d'un onglet à l'autre (le focus suit)
+          const move = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : e.key === 'Home' ? 'first' : e.key === 'End' ? 'last' : 0
+          if (!move) return
+          e.preventDefault()
+          const at = TAB_ORDER.indexOf(tab)
+          const next = move === 'first' ? 0 : move === 'last' ? TAB_ORDER.length - 1 : (at + move + TAB_ORDER.length) % TAB_ORDER.length
+          setTab(TAB_ORDER[next])
+          requestAnimationFrame(() => e.currentTarget.querySelector<HTMLElement>(`[data-tab="${TAB_ORDER[next]}"]`)?.focus())
+        }}
+      >
+        {TAB_GROUPS.map((group, i) => (
+          <div key={i} className="side-group" role="presentation">
+            {group.map((x) => (
+              <button
+                key={x.id}
+                role="tab"
+                id={`side-tab-${x.id}`}
+                aria-selected={tab === x.id}
+                aria-controls="side-panel"
+                tabIndex={tab === x.id ? 0 : -1}
+                className={`side-tab${tab === x.id ? ' active' : ''}`}
+                data-tab={x.id}
+                title={t(x.label)}
+                onClick={() => setTab(x.id)}
+              >
+                <SideIcon tab={x.id} />
+                <span className="side-label">{t(x.label)}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      <div className="side-content" id="side-panel" role="tabpanel" aria-labelledby={`side-tab-${tab}`}>
 
       {tab === 'layers' && <LayersPanel />}
 
@@ -156,6 +196,7 @@ export function Sidebar(): React.JSX.Element {
         </>
       )}
       <LanguageSelect />
+      </div>
     </aside>
   )
 }

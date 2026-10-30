@@ -817,5 +817,7 @@ export const en: Catalog = {
   'pres.ink.clear.title': 'Clear all strokes on this page (C)',
   // Annotation : stylo
   'pres.ink.pen': 'Pen',
-  'pres.ink.pen.title': 'Thin, opaque stroke (H to switch)'
+  'pres.ink.pen.title': 'Thin, opaque stroke (H to switch)',
+  // Colonne d'onglets
+  'sidebar.tabs': 'Sidebar sections'
 }

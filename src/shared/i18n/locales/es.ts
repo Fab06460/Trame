@@ -817,5 +817,7 @@ export const es: Catalog = {
   'pres.ink.clear.title': 'Borrar todos los trazos de esta página (C)',
   // Annotation : stylo
   'pres.ink.pen': 'Lápiz',
-  'pres.ink.pen.title': 'Trazo fino y opaco (H para alternar)'
+  'pres.ink.pen.title': 'Trazo fino y opaco (H para alternar)',
+  // Colonne d'onglets
+  'sidebar.tabs': 'Secciones de la barra lateral'
 }

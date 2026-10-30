@@ -3,7 +3,8 @@
 export type Side = 'left' | 'right'
 
 export const LIMITS = {
-  left: { min: 220, max: 480, def: 280 },
+  /** colonne d'onglets (62 px) comprise */
+  left: { min: 280, max: 540, def: 340 },
   right: { min: 200, max: 440, def: 240 },
   /** hauteur de la bande des pages, notes non comprises */
   strip: { min: 84, max: 320, def: 150 }

@@ -54,7 +54,7 @@ describe('bande des pages', () => {
 
 describe('préférences enregistrées', () => {
   it('une valeur absente ou invalide retombe sur le défaut', () => {
-    expect(sanitizeLayout(null)).toEqual({ leftOpen: true, rightOpen: true, stripOpen: true, leftWidth: 280, rightWidth: 240, stripHeight: 150 })
-    expect(sanitizeLayout({ leftOpen: false, leftWidth: 'a', rightWidth: 5000 })).toMatchObject({ leftOpen: false, leftWidth: 280, rightWidth: LIMITS.right.max })
+    expect(sanitizeLayout(null)).toEqual({ leftOpen: true, rightOpen: true, stripOpen: true, leftWidth: LIMITS.left.def, rightWidth: 240, stripHeight: 150 })
+    expect(sanitizeLayout({ leftOpen: false, leftWidth: 'a', rightWidth: 5000 })).toMatchObject({ leftOpen: false, leftWidth: LIMITS.left.def, rightWidth: LIMITS.right.max })
   })
 })
