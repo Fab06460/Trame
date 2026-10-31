@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Canvas } from '@/components/Canvas'
+import { ColorVisionFilters } from '@/components/ColorVisionFilters'
 import { Toolbar } from '@/components/Toolbar'
 import { NotesPanel } from '@/components/NotesPanel'
 import { PageStrip } from '@/components/PageStrip'
@@ -189,6 +190,7 @@ export default function App(): React.JSX.Element {
         <div className="center">
           {overlay && !peek && <div className="dock-backdrop" data-dock="backdrop" onPointerDown={() => useLayout.getState().closeOverlay()} />}
           <Canvas />
+          <ColorVisionFilters />
           <NotesPanel />
           <PageStrip />
         </div>

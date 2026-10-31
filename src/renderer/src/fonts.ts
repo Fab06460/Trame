@@ -29,6 +29,16 @@ import '@fontsource/jetbrains-mono/latin-400.css'
 import '@fontsource/jetbrains-mono/latin-700.css'
 import '@fontsource/jetbrains-mono/latin-400-italic.css'
 import '@fontsource/jetbrains-mono/latin-700-italic.css'
+import '@fontsource/atkinson-hyperlegible/latin-400.css'
+import '@fontsource/atkinson-hyperlegible/latin-700.css'
+import '@fontsource/atkinson-hyperlegible/latin-400-italic.css'
+import '@fontsource/atkinson-hyperlegible/latin-700-italic.css'
+import '@fontsource/lexend/latin-400.css'
+import '@fontsource/lexend/latin-700.css'
+import '@fontsource/opendyslexic/latin-400.css'
+import '@fontsource/opendyslexic/latin-700.css'
+import '@fontsource/opendyslexic/latin-400-italic.css'
+import '@fontsource/opendyslexic/latin-700-italic.css'
 
 export interface FontDef {
   name: string
@@ -55,6 +65,10 @@ export const FONTS: FontDef[] = [
   { name: 'Lora', family: '"Lora", serif', group: 'serif', slug: 'lora', variants: ['400', '700', '400-italic', '700-italic'] },
   { name: 'Caveat', family: '"Caveat", cursive', group: 'handwriting', slug: 'caveat', variants: ['400', '700'] },
   { name: 'Pacifico', family: '"Pacifico", cursive', group: 'handwriting', slug: 'pacifico', variants: ['400'] },
+  // polices pensées pour la lisibilité (licence OFL) : Atkinson Hyperlegible (Braille Institute, basse vision), Lexend (fluidité de lecture), OpenDyslexic (dyslexie)
+  { name: 'Atkinson Hyperlegible', family: '"Atkinson Hyperlegible", sans-serif', group: 'readable', slug: 'atkinson-hyperlegible', variants: ['400', '700', '400-italic', '700-italic'] },
+  { name: 'Lexend', family: '"Lexend", sans-serif', group: 'readable', slug: 'lexend', variants: ['400', '700'] },
+  { name: 'OpenDyslexic', family: '"OpenDyslexic", sans-serif', group: 'readable', slug: 'opendyslexic', variants: ['400', '700', '400-italic', '700-italic'] },
   { name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', group: 'mono', slug: 'jetbrains-mono', variants: ['400', '700', '400-italic', '700-italic'] },
 ]
 

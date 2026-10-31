@@ -176,7 +176,24 @@ export interface Case {
   expectFallbacks: number
 }
 
+/** Les trois polices de lecture facilitée, en texte courant : PDF en vrai texte, rendu proche de celui de l'éditeur. */
+function readable(): TrameDocument {
+  const text = (id: string, y: number, family: string, style: string, value: string): TrameDocument['pages'][number]['elements'][number] => ({
+    id, type: 'text', x: 60, y, width: 960, height: 150, rotation: 0, opacity: 1, fill: '#1e1f24', text: value, fontSize: 40, fontFamily: family, fontStyle: style, lineHeight: 1.5, letterSpacing: 2
+  })
+  return {
+    version: 2, name: 'Lisible', width: 1080, height: 1080,
+    pages: [{ id: 'p', background: '#ffffff', elements: [
+      text('a', 60, '"Atkinson Hyperlegible", sans-serif', 'normal', 'Atkinson lisible : Il y a 1 illimité 0O'),
+      text('b', 260, '"Lexend", sans-serif', 'bold', 'Lexend gras : bibliothèque, déjà'),
+      text('c', 460, '"OpenDyslexic", sans-serif', 'normal', 'OpenDyslexic : bdpq 6 9 oui'),
+      text('d', 660, '"Atkinson Hyperlegible", sans-serif', 'italic bold', 'Atkinson gras italique')
+    ] }]
+  }
+}
+
 export const cases = (): Case[] => [
+  { name: 'polices-lisibles', doc: readable(), expectText: ['Atkinson lisible', 'Lexend gras', 'OpenDyslexic', 'Atkinson gras italique'], expectFallbacks: 0 },
   { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %
   ...TEMPLATES.map((t): Case => {
     // un modèle de publipostage se mesure rempli (première ligne d'exemple) : c'est ce qui est exporté, jamais les « {{champs}} » bruts

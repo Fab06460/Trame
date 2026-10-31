@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { useLayout } from '@/store/layout'
 
-export type SidebarTab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand' | 'photos' | 'ai'
+export type SidebarTab = 'recents' | 'templates' | 'elements' | 'layers' | 'brand' | 'photos' | 'ai' | 'a11y'
 
 /** Onglet de la barre latérale gauche (état partagé : un autre panneau peut demander d'ouvrir un onglet). */
 export const useSidebar = create<{ tab: SidebarTab; setTab: (tab: SidebarTab) => void }>((set) => ({

@@ -171,6 +171,10 @@ interface EditorState {
   removeSelected: () => void
   /** Remplace le texte de plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément figé par le modèle est ignoré et compté. */
   replaceTexts: (changes: Array<{ elementId: string; text: string }>) => { replaced: number; skipped: number }
+  /** Modifie plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément protégé par le modèle est ignoré et compté. */
+  patchElements: (changes: Array<{ elementId: string; patch: Partial<TrameElement> }>) => { changed: number; skipped: number }
+  /** Remet les textes d'une page dans l'ordre donné (les autres éléments gardent leur place : seul l'ordre des textes entre eux change). */
+  setTextOrder: (pageId: string, orderedIds: string[]) => void
   /** modèle de marque : vrai pendant la modification du modèle (les éléments protégés sont alors modifiables) */
   templateUnlocked: boolean
   setTemplateUnlocked: (unlocked: boolean) => void
@@ -507,6 +511,46 @@ export const useEditor = create<EditorState>((set, get) => {
       }))
       if (replaced > 0) set({ ...snapshot(), doc: { ...get().doc, pages }, dirty: true })
       return { replaced, skipped }
+    },
+
+    patchElements: (changes) => {
+      const enforced = enforcedNow()
+      const wanted = new Map(changes.map((c) => [c.elementId, c.patch]))
+      let changed = 0
+      let skipped = 0
+      const pages = get().doc.pages.map((p) => ({
+        ...p,
+        elements: p.elements.map((e) => {
+          const patch = wanted.get(e.id)
+          if (!patch) return e
+          const allowed = allowedPatch(e, patch, enforced)
+          if (!allowed) {
+            skipped += 1
+            return e
+          }
+          changed += 1
+          const next = { ...e, ...allowed } as TrameElement
+          // une clé à `undefined` disparaît du fichier
+          for (const k of Object.keys(allowed) as Array<keyof TrameElement>) if (next[k] === undefined) delete next[k]
+          return next
+        })
+      }))
+      if (changed > 0) set({ ...snapshot(), doc: { ...get().doc, pages }, dirty: true })
+      return { changed, skipped }
+    },
+
+    setTextOrder: (pageId, orderedIds) => {
+      const page = get().doc.pages.find((p) => p.id === pageId)
+      if (!page) return
+      const enforced = enforcedNow()
+      const slots = page.elements.map((e, i) => (e.type === 'text' && orderedIds.includes(e.id) ? i : -1)).filter((i) => i >= 0)
+      const byId = new Map(page.elements.map((e) => [e.id, e]))
+      const ordered = orderedIds.map((id) => byId.get(id)).filter((e): e is TrameElement => !!e && e.type === 'text')
+      if (ordered.length !== slots.length || (enforced && ordered.some((e) => e.protect))) return
+      const elements = [...page.elements]
+      slots.forEach((slot, k) => (elements[slot] = ordered[k]))
+      if (elements.every((e, i) => e === page.elements[i])) return
+      set({ ...snapshot(), doc: { ...get().doc, pages: get().doc.pages.map((p) => (p.id === pageId ? { ...p, elements } : p)) }, dirty: true })
     },
 
     templateUnlocked: false,

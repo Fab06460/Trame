@@ -39,6 +39,13 @@ const PATHS: Record<SidebarTab, React.JSX.Element> = {
       <path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5" />
     </>
   ),
+  a11y: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="8.2" r="1.3" />
+      <path d="M7.8 10.8c2.6.9 5.8.9 8.4 0M12 11.5V15m0 0l-2 3.2M12 15l2 3.2" />
+    </>
+  ),
   brand: <path d="M12 3.5c3.2 4 6 6.8 6 10.5a6 6 0 0 1-12 0c0-3.7 2.8-6.5 6-10.5z" />
 }
 

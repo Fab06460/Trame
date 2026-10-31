@@ -6,6 +6,8 @@ import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
+import { useColorVision } from '@/store/colorVision'
+import { colorVisionFilter } from '@/readability'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
 import { patchListText } from '@/listText'
@@ -41,6 +43,7 @@ function ImageNode({ el, ...props }: Konva.NodeConfig & { el: TrameElement }): R
 }
 
 export function Canvas(): React.JSX.Element {
+  const vision = useColorVision((s) => s.vision)
   // modèle de marque : les éléments protégés se comportent comme des éléments verrouillés tant que le modèle n'est pas en modification
   const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   // une police ajoutée ou retirée : les textes sont recréés (Konva ne remesure pas un texte dont la police vient d'arriver)
@@ -295,7 +298,7 @@ export function Canvas(): React.JSX.Element {
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
-    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined }}>
+    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
       <Stage
         ref={stageRef}
         width={size.w}
