@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { CHART_KINDS, chartData, type ChartSpec } from '@/chart'
-import { importChartCsv, updateChart } from '@/chartActions'
+import { CHART_KINDS, type ChartSpec } from '@/chart'
+import { drawChart, importChartCsv, updateChart } from '@/chartActions'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
 import type { TrameElement } from '@/types'
@@ -19,7 +19,8 @@ export function ChartPanel({ anchor }: { anchor: TrameElement }): React.JSX.Elem
     setNote('')
     updateChart(anchor, patch)
   }
-  const result = chartData(spec)
+  // dessin à blanc, seulement pour savoir ce qui ne tient pas ou n'est pas un nombre
+  const result = drawChart(spec, { x: anchor.x, y: anchor.y, width: anchor.width, height: anchor.height })
   const toggleValue = (c: number): void => {
     const on = spec.valueColumns.includes(c)
     if (on && spec.valueColumns.length === 1) return
@@ -107,6 +108,7 @@ export function ChartPanel({ anchor }: { anchor: TrameElement }): React.JSX.Elem
         </select>
       </label>
       {result.invalid > 0 && spec.kind !== 'table' && <div className="warn" role="status" data-chart-invalid>{t('chart.invalid', { count: result.invalid })}</div>}
+      {result.hiddenRows > 0 && <div className="warn" role="status" data-chart-hidden>{t('chart.hidden', { count: result.hiddenRows })}</div>}
       <button data-action="chart-redraw" onClick={redraw}>{t('chart.redraw')}</button>
       <p className="hint">{t('chart.hint')}</p>
     </div>
