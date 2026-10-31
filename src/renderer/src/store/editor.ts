@@ -9,6 +9,7 @@ import { sanitizeFrame } from '@/magicResize'
 import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/protection'
 import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeImageField, sanitizeMergeData } from '@/mailMerge'
+import { sanitizeChart } from '@/chart'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
 import { sanitizeList } from '@/listStyle'
@@ -101,6 +102,7 @@ export function parseDocument(json: string): TrameDocument {
       if (e.type === 'image') sanitizeImageStyle(e)
       sanitizeAiInfo(e)
       sanitizeImageField(e)
+      sanitizeChart(e)
       sanitizeAlt(e)
       sanitizeDecorative(e)
       if (e.locked !== true) delete e.locked
@@ -173,6 +175,10 @@ interface EditorState {
   replaceTexts: (changes: Array<{ elementId: string; text: string }>) => { replaced: number; skipped: number }
   /** Modifie plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément protégé par le modèle est ignoré et compté. */
   patchElements: (changes: Array<{ elementId: string; patch: Partial<TrameElement> }>) => { changed: number; skipped: number }
+  /** Ajoute les éléments d'un graphique ou d'un tableau (déjà groupés) en haut de la page courante et les sélectionne. */
+  insertChart: (elements: TrameElement[]) => void
+  /** Remplace les éléments du groupe de ce graphique par de nouveaux (même place dans la pile), un seul cran d'historique. */
+  replaceChart: (anchorId: string, elements: TrameElement[]) => void
   /** Remet les textes d'une page dans l'ordre donné (les autres éléments gardent leur place : seul l'ordre des textes entre eux change). */
   setTextOrder: (pageId: string, orderedIds: string[]) => void
   /** modèle de marque : vrai pendant la modification du modèle (les éléments protégés sont alors modifiables) */
@@ -537,6 +543,21 @@ export const useEditor = create<EditorState>((set, get) => {
       }))
       if (changed > 0) set({ ...snapshot(), doc: { ...get().doc, pages }, dirty: true })
       return { changed, skipped }
+    },
+
+    insertChart: (elements) => {
+      if (!elements.length) return
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: [...p.elements, ...elements] })), selectedIds: elements.map((e) => e.id), editRequest: null, dirty: true })
+    },
+
+    replaceChart: (anchorId, elements) => {
+      const page = selectPage(get())
+      const anchor = page.elements.find((e) => e.id === anchorId)
+      if (!anchor?.groupId || !elements.length || (enforcedNow() && page.elements.some((e) => e.groupId === anchor.groupId && e.protect))) return
+      const at = page.elements.findIndex((e) => e.groupId === anchor.groupId)
+      const rest = page.elements.filter((e) => e.groupId !== anchor.groupId)
+      const next = [...rest.slice(0, at), ...elements, ...rest.slice(at)]
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: next })), selectedIds: elements.map((e) => e.id), dirty: true })
     },
 
     setTextOrder: (pageId, orderedIds) => {

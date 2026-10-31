@@ -21,6 +21,7 @@ import { accessibilityIssues } from '@/accessibility'
 import { useSidebar, type SidebarTab } from '@/store/sidebar'
 import { SideIcon } from './SideIcons'
 import { imagesMissingAlt } from '@/altCheck'
+import { CHART_KINDS, insertChart } from '@/chartActions'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
@@ -199,6 +200,17 @@ export function Sidebar(): React.JSX.Element {
               {SHAPES.map((s) => (
                 <button key={s.id} className="shape" title={t(`shape.${s.id}` as MessageKey)} onClick={() => addElement({ type: 'path', path: s.path })}>
                   <svg viewBox="0 0 100 100"><path d={s.path} fill="currentColor" /></svg>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>{t('chart.section')}</h3>
+            <div className="chart-kinds">
+              {CHART_KINDS.map((k) => (
+                <button key={k} data-chart-kind={k} title={t('chart.insert', { kind: t(`chart.kind.${k}` as MessageKey) })} onClick={() => insertChart(k)}>
+                  {t(`chart.kind.${k}` as MessageKey)}
                 </button>
               ))}
             </div>

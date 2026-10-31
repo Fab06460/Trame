@@ -19,6 +19,7 @@ import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
 import { TextAiHelp } from './TextAiHelp'
+import { ChartPanel } from './ChartPanel'
 import { fieldsIn } from '@/mailMerge'
 
 const MORE_FONTS = '__more-fonts__'
@@ -105,6 +106,20 @@ export function Properties(): React.JSX.Element {
       )}
     </>
   )
+
+  // un graphique ou un tableau (groupe dont le premier élément porte sa description) : ses réglages d'abord
+  const chartAnchor = selection.find((e) => e.chart && e.groupId && selection.every((x) => x.groupId === e.groupId))
+  if (chartAnchor) {
+    return (
+      <aside className="panel">
+        <TemplateBanner />
+        <ChartPanel key={chartAnchor.id} anchor={chartAnchor} />
+        <PositionPanel />
+        {alignButtons}
+        {layerButtons}
+      </aside>
+    )
+  }
 
   if (selectedIds.length > 1) {
     return (

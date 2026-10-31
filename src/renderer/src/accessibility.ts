@@ -86,6 +86,8 @@ export function backdropOf(page: Pick<TramePage, 'background' | 'elements'>, tex
       continue
     }
     if (!covers(e, cx, cy)) continue
+    // une forme libre (étoile, secteur…) : son cadre recouvre le texte mais pas forcément son contour : on ne l'affirme pas
+    if (e.type === 'path') return { unknown: 'shape' }
     const fills = e.gradient ? [parseHex(e.gradient.from), parseHex(e.gradient.to)] : [parseHex(e.fill)]
     if (fills.some((f) => f === null)) {
       if (!e.gradient && e.fill.trim().toLowerCase() === 'transparent') continue

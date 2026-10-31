@@ -394,3 +394,9 @@ button.danger { color: #ff7b7b; }
 [data-a11y] label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 [data-a11y] select { width: 100%; }
 [data-a11y] > button, [data-a11y] > p { margin-top: 6px; }
+
+.chart-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.chart-kinds button { flex: 1 1 40%; }
+[data-chart-panel] label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+[data-chart-panel] label.choice-row { flex-direction: row; align-items: center; }
+[data-chart-panel] select, [data-chart-panel] input[type='text'] { width: 100%; }

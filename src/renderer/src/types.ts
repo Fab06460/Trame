@@ -100,6 +100,8 @@ export interface TrameElement {
   mergeFit?: boolean
   /** publipostage (images) : colonne du tableau qui donne le nom du fichier image à mettre à la place de celle du modèle */
   imageField?: string
+  /** premier élément d'un graphique ou d'un tableau : porte sa description (les autres éléments du groupe sont régénérés à partir d'elle) */
+  chart?: ChartSpec
   /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
   list?: ListKind
   // path : chemin SVG (viewBox 100×100)
@@ -152,6 +154,23 @@ export interface EmbeddedFont {
   license: string
   /** `400`, `700`, `400-italic`, `700-italic` → WOFF2 en base64 */
   variants: Record<string, string>
+}
+
+/** Graphique ou tableau lié à des données : le document ne garde que cette description, les formes qui le dessinent sont régénérées (`chart.ts`). */
+export interface ChartSpec {
+  kind: 'bar' | 'hbar' | 'line' | 'pie' | 'table'
+  title: string
+  /** données telles que lues dans le CSV (texte) : les nombres sont interprétés à l'affichage */
+  columns: string[]
+  rows: string[][]
+  /** colonne des étiquettes (catégories, noms des parts) */
+  labelColumn: number
+  /** colonnes des valeurs (une série par colonne ; un secteur n'en utilise qu'une) */
+  valueColumns: number[]
+  showValues: boolean
+  showLegend: boolean
+  palette: 'safe' | 'violet' | 'gray'
+  theme: 'light' | 'dark'
 }
 
 /** Tableau du publipostage (champs « {{colonne}} » des textes), enregistré avec le document. */

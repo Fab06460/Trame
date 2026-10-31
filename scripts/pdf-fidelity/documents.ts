@@ -1,3 +1,4 @@
+import { chartElements, defaultSpec } from '@/chart'
 import { mergeDocument } from '@/mailMerge'
 import { sheetsFromMerged } from '@/mergeSheets'
 import { TEMPLATES, instantiate } from '@/templates'
@@ -192,7 +193,17 @@ function readable(): TrameDocument {
   }
 }
 
+/** Un graphique ou un tableau d'exemple, posé sur une page de 1 080 px : formes, courbes (rectangles pivotés), secteurs (tracés) et textes. */
+function chartDoc(kind: 'bar' | 'hbar' | 'line' | 'pie' | 'table'): TrameDocument {
+  const columns = ['Matière', 'Classe A', 'Classe B']
+  const rows = [['Maths', '12', '14,5'], ['Français', '15', '11'], ['Histoire', '13', '16'], ['Sciences', '16', '15']]
+  const spec = defaultSpec(kind, columns, rows, 'Moyennes par matière')
+  const { elements } = chartElements({ ...spec, showValues: true }, { x: 90, y: 200, width: 900, height: 640 }, { locale: 'fr', groupId: 'g' })
+  return { version: 2, name: `Graphique ${kind}`, width: 1080, height: 1080, pages: [{ id: 'p', background: '#f3f4f8', elements }] }
+}
+
 export const cases = (): Case[] => [
+  ...(['bar', 'hbar', 'line', 'pie', 'table'] as const).map((k): Case => ({ name: `graphique-${k}`, doc: chartDoc(k), expectText: ['Moyennes par matière', 'Maths'], expectFallbacks: 0 })),
   { name: 'polices-lisibles', doc: readable(), expectText: ['Atkinson lisible', 'Lexend gras', 'OpenDyslexic', 'Atkinson gras italique'], expectFallbacks: 0 },
   { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %
   ...TEMPLATES.map((t): Case => {
