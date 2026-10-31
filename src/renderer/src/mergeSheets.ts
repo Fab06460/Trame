@@ -11,6 +11,8 @@ export interface SheetLayout {
   marginMm: number
   /** espace entre deux fiches, en mm */
   gapMm: number
+  /** vrai : la fiche est agrandie ou réduite pour remplir sa case (étiquettes d'une planche du commerce) ; faux : elle garde sa taille réelle, centrée, et n'est réduite que si elle ne tient pas */
+  fillCell: boolean
   /** contour fin autour de chaque fiche, pour la découpe */
   cutMarks: boolean
   /** versos (pages paires d'un modèle recto-verso) en miroir, pour qu'ils tombent derrière leur recto (retournement sur le bord long) */
@@ -58,12 +60,13 @@ export function layoutProblem(l: SheetLayout): 'grid' | 'room' | null {
  * Grille proposée pour une fiche : le plus de fiches possible tout en gardant chacune d'au moins 55 mm de large et 25 mm de haut
  * (assez pour de l'écriture lisible) ; à égalité, la plus grande.
  */
-export function suggestGrid(card: { width: number; height: number }, base: Pick<SheetLayout, 'paper' | 'landscape' | 'marginMm' | 'gapMm'>): { cols: number; rows: number } {
+export function suggestGrid(card: { width: number; height: number }, base: Pick<SheetLayout, 'paper' | 'landscape' | 'marginMm' | 'gapMm' | 'fillCell'>): { cols: number; rows: number } {
   let best = { cols: 1, rows: 1, count: 0, scale: 0 }
   for (let cols = 1; cols <= MAX_GRID.cols; cols++) {
     for (let rows = 1; rows <= MAX_GRID.rows; rows++) {
       const cell = cells({ ...base, cols, rows, cutMarks: false, mirrorBacks: false })[0]
-      const scale = Math.min(cell.width / card.width, cell.height / card.height)
+      const fit = Math.min(cell.width / card.width, cell.height / card.height)
+      const scale = base.fillCell ? fit : Math.min(1, fit)
       if (card.width * scale < 55 * PX_PER_MM || card.height * scale < 25 * PX_PER_MM) continue
       const count = cols * rows
       if (count > best.count || (count === best.count && scale > best.scale)) best = { cols, rows, count, scale }
@@ -134,7 +137,7 @@ export interface SheetsResult {
 
 /**
  * Document de planches à partir d'un document fusionné (`mergeDocument` : pour chaque ligne, les pages du modèle à la suite) : une fiche
- * par case, la fiche réduite pour tenir dans sa case (centrée), les planches dans l'ordre des lignes. Un modèle de plusieurs pages (recto,
+ * par case, la fiche à sa taille réelle (réduite si elle ne tient pas) ou, au choix, ajustée à sa case, centrée, les planches dans l'ordre des lignes. Un modèle de plusieurs pages (recto,
  * verso) donne, pour chaque groupe de lignes, une planche par page du modèle : on imprime en recto-verso.
  */
 export function sheetsFromMerged(merged: TrameDocument, perCard: number, layout: SheetLayout): SheetsResult {
@@ -159,7 +162,8 @@ export function sheetsFromMerged(merged: TrameDocument, perCard: number, layout:
           slot = layout.landscape ? (layout.rows - 1 - row) * layout.cols + col : row * layout.cols + (layout.cols - 1 - col)
         }
         const cell = grid[slot]
-        const s = Math.min(cell.width / merged.width, cell.height / merged.height)
+        const fit = Math.min(cell.width / merged.width, cell.height / merged.height)
+        const s = layout.fillCell ? fit : Math.min(1, fit)
         const w = merged.width * s
         const h = merged.height * s
         const ox = cell.x + (cell.width - w) / 2

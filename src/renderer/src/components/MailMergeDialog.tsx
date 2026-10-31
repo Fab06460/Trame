@@ -26,7 +26,7 @@ export function MailMergeDialog(): React.JSX.Element | null {
   const [filterColumn, setFilterColumn] = useState<number | null>(null)
   const [filterValue, setFilterValue] = useState('')
   const [sheet, setSheet] = useState(false)
-  const [layout, setLayout] = useState<SheetLayout>({ paper: 'a4', landscape: false, cols: 2, rows: 4, marginMm: 10, gapMm: 2, cutMarks: true, mirrorBacks: true })
+  const [layout, setLayout] = useState<SheetLayout>({ paper: 'a4', landscape: false, cols: 2, rows: 4, marginMm: 10, gapMm: 2, cutMarks: true, mirrorBacks: true, fillCell: false })
 
   const shown = data ? Math.min(row, data.rows.length - 1) : 0
   const preview = useMemo(() => (data ? mergeDocument(doc, data, [shown]).pages : []), [doc, data, shown])
@@ -251,6 +251,13 @@ export function MailMergeDialog(): React.JSX.Element | null {
                       <label>{t('mm.margin')}<input type="number" data-field="mmMargin" min={0} max={50} value={layout.marginMm} onChange={(e) => patchLayout({ marginMm: num(e.target.value, 0, 50, layout.marginMm) })} /></label>
                       <label>{t('mm.gap')}<input type="number" data-field="mmGap" min={0} max={50} value={layout.gapMm} onChange={(e) => patchLayout({ gapMm: num(e.target.value, 0, 50, layout.gapMm) })} /></label>
                     </div>
+                    <label>
+                      {t('mm.size')}
+                      <select data-field="mmSize" value={layout.fillCell ? 'fill' : 'real'} onChange={(e) => patchLayout({ fillCell: e.target.value === 'fill' }, true)}>
+                        <option value="real">{t('mm.size.real')}</option>
+                        <option value="fill">{t('mm.size.fill')}</option>
+                      </select>
+                    </label>
                     <label className="choice-row"><input type="checkbox" data-field="mmCut" checked={layout.cutMarks} onChange={(e) => patchLayout({ cutMarks: e.target.checked })} /> {t('mm.cut')}</label>
                     {perCard > 1 && <label className="choice-row"><input type="checkbox" data-field="mmMirror" checked={layout.mirrorBacks} onChange={(e) => patchLayout({ mirrorBacks: e.target.checked })} /> {t('mm.mirror')}</label>}
                     {problem === 'grid' && <div className="warn" role="status" data-mm-layout-error>{t('mm.layout.badGrid')}</div>}

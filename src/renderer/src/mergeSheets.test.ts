@@ -4,7 +4,7 @@ import { PX_PER_MM, cells, clipToCard, layoutProblem, sheetSize, sheetsFromMerge
 import type { TrameDocument, TrameElement } from '@/types'
 
 const el = (id: string, extra: Partial<TrameElement> = {}): TrameElement => ({ id, type: 'rect', x: 10, y: 10, width: 100, height: 50, rotation: 0, opacity: 1, fill: '#123456', ...extra })
-const layout = (extra: Partial<SheetLayout> = {}): SheetLayout => ({ paper: 'a4', landscape: false, cols: 2, rows: 3, marginMm: 10, gapMm: 2, cutMarks: false, mirrorBacks: false, ...extra })
+const layout = (extra: Partial<SheetLayout> = {}): SheetLayout => ({ paper: 'a4', landscape: false, cols: 2, rows: 3, marginMm: 10, gapMm: 2, cutMarks: false, mirrorBacks: false, fillCell: false, ...extra })
 const card = (pages = 1): TrameDocument => ({
   version: 2, name: 'Carte', width: 400, height: 200,
   pages: Array.from({ length: pages }, (_, p) => ({ id: `p${p}`, background: p ? '#e8f4ff' : '#fff7e6', elements: [{ ...el(`t${p}`, { type: 'text', text: p ? '{{Verso}}' : '{{Nom}}', fontSize: 40, x: 20, y: 20, width: 360, height: 48, strokeWidth: 2, stroke: '#000', shadow: { color: '#000', blur: 10, offsetX: 4, offsetY: 6, opacity: 0.5 } }) }] }))
@@ -33,7 +33,7 @@ describe('grille de la planche', () => {
     expect(layoutProblem(layout({ cols: 10, rows: 20, gapMm: 20 }))).toBe('room')
   })
   it('propose une grille où chaque fiche garde au moins 55 × 25 mm', () => {
-    const base = { paper: 'a4' as const, landscape: false, marginMm: 10, gapMm: 2 }
+    const base = { paper: 'a4' as const, landscape: false, marginMm: 10, gapMm: 2, fillCell: true }
     for (const size of [{ width: 680, height: 260 }, { width: 640, height: 420 }, { width: 794, height: 563 }, { width: 1123, height: 794 }]) {
       const g = suggestGrid(size, base)
       const cell = cells({ ...base, ...g, cutMarks: false, mirrorBacks: false })[0]
@@ -82,8 +82,18 @@ describe('planches', () => {
     expect(r.overflow).toBe(0)
     expect('mailMerge' in r.doc).toBe(false)
   })
-  it('chaque fiche est réduite pour tenir dans sa case, mesures proportionnelles comprises', () => {
-    const l = layout({ cols: 1, rows: 1, marginMm: 0, gapMm: 0 })
+  it('par défaut la fiche garde sa taille réelle, centrée, et ne rétrécit que si elle ne tient pas', () => {
+    const roomy = sheetsFromMerged(merged([0]), 1, layout({ cols: 1, rows: 1, marginMm: 0, gapMm: 0 }))
+    const [bg, text] = roomy.doc.pages[0].elements
+    expect(bg.width).toBeCloseTo(400, 3)
+    expect(bg.height).toBeCloseTo(397 * 400 / 794, 3)
+    expect(bg.x).toBeCloseTo((794 - 400) / 2, 3)
+    expect(text.fontSize).toBeCloseTo(40, 3)
+    const tight = sheetsFromMerged(merged([0]), 1, layout({ cols: 4, rows: 1, marginMm: 0, gapMm: 0 }))
+    expect(tight.doc.pages[0].elements[0].width).toBeCloseTo(794 / 4, 3)
+  })
+  it('en mode « remplir la case », la fiche est ajustée à sa case, mesures proportionnelles comprises', () => {
+    const l = layout({ cols: 1, rows: 1, marginMm: 0, gapMm: 0, fillCell: true })
     const r = sheetsFromMerged(merged([0]), 1, l)
     const [bg, text] = r.doc.pages[0].elements
     const s = 794 / 400

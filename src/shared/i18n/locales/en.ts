@@ -913,5 +913,9 @@ export const en: Catalog = {
   'mm.layout.badGrid': 'Columns and rows: 1 to 10 columns, 1 to 20 rows; margin and gap must not be negative.',
   'mm.layout.tooSmall': 'With this grid a card would be under 10 mm: use fewer columns or rows, or smaller margins.',
   'mm.layout.overflow': { one: '{count} element extends past the card (text, shape or rotated element) and would overlap its neighbours. Keep it inside the template page.', other: '{count} elements extend past the card (text, shapes or rotated elements) and would overlap their neighbours. Keep them inside the template page.' },
-  'mm.summary.sheets': { one: 'A PDF of {count} page: {rows} cards, {per} per sheet.', other: 'A PDF of {count} pages: {rows} cards, {per} per sheet.' }
+  'mm.summary.sheets': { one: 'A PDF of {count} page: {rows} cards, {per} per sheet.', other: 'A PDF of {count} pages: {rows} cards, {per} per sheet.' },
+  // Publipostage : lignes et planches
+  'mm.size': 'Card size',
+  'mm.size.real': 'Actual size (reduced only if it does not fit)',
+  'mm.size.fill': 'Fill the cell (labels on a commercial sheet)'
 }

@@ -914,7 +914,11 @@ export const fr = {
   'mm.layout.badGrid': 'Colonnes et lignes : 1 à 10 colonnes, 1 à 20 lignes ; marge et espace positifs.',
   'mm.layout.tooSmall': 'Avec cette grille, une fiche ferait moins de 10 mm : réduisez le nombre de colonnes ou de lignes, ou les marges.',
   'mm.layout.overflow': { one: '{count} élément dépasse de la fiche (texte, forme ou élément pivoté) et empiéterait sur les fiches voisines. Gardez-le dans la page du modèle.', other: '{count} éléments dépassent de la fiche (texte, forme ou élément pivoté) et empiéteraient sur les fiches voisines. Gardez-les dans la page du modèle.' },
-  'mm.summary.sheets': { one: 'Un PDF de {count} page : {rows} fiches, {per} par feuille.', other: 'Un PDF de {count} pages : {rows} fiches, {per} par feuille.' }
+  'mm.summary.sheets': { one: 'Un PDF de {count} page : {rows} fiches, {per} par feuille.', other: 'Un PDF de {count} pages : {rows} fiches, {per} par feuille.' },
+  // Publipostage : lignes et planches
+  'mm.size': 'Taille des fiches',
+  'mm.size.real': 'Taille réelle (réduite seulement si elle ne tient pas)',
+  'mm.size.fill': 'Remplir la case (étiquettes d\'une planche du commerce)'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

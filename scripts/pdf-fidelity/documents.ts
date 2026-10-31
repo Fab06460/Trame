@@ -193,7 +193,7 @@ export const cases = (): Case[] => [
   ...(['badge', 'flashcard'] as const).map((id): Case => {
     const base = instantiate(TEMPLATES.find((t) => t.id === id)!)
     const merged = mergeDocument(base, base.mailMerge!, [0, 1, 2])
-    const doc = sheetsFromMerged(merged, base.pages.length, { paper: 'a4', landscape: false, cols: 2, rows: 3, marginMm: 10, gapMm: 3, cutMarks: true, mirrorBacks: true }).doc
+    const doc = sheetsFromMerged(merged, base.pages.length, { paper: 'a4', landscape: false, cols: 2, rows: 3, marginMm: 10, gapMm: 3, cutMarks: true, mirrorBacks: true, fillCell: false }).doc
     return { name: `planche-${id}`, doc, expectFallbacks: 0, expectText: ['Ada', 'Alan', 'Grace'].filter(() => id === 'badge') }
   })
 ]

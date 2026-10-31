@@ -913,5 +913,9 @@ export const es: Catalog = {
   'mm.layout.badGrid': 'Columnas y filas: de 1 a 10 columnas, de 1 a 20 filas; margen y espacio no negativos.',
   'mm.layout.tooSmall': 'Con esta cuadrícula una ficha mediría menos de 10 mm: use menos columnas o filas, o márgenes menores.',
   'mm.layout.overflow': { one: '{count} elemento sobresale de la ficha (texto, forma o elemento girado) y invadiría las fichas vecinas. Manténgalo dentro de la página de la plantilla.', other: '{count} elementos sobresalen de la ficha (texto, formas o elementos girados) e invadirían las fichas vecinas. Manténgalos dentro de la página de la plantilla.' },
-  'mm.summary.sheets': { one: 'Un PDF de {count} página: {rows} fichas, {per} por hoja.', other: 'Un PDF de {count} páginas: {rows} fichas, {per} por hoja.' }
+  'mm.summary.sheets': { one: 'Un PDF de {count} página: {rows} fichas, {per} por hoja.', other: 'Un PDF de {count} páginas: {rows} fichas, {per} por hoja.' },
+  // Publipostage : lignes et planches
+  'mm.size': 'Tamaño de las fichas',
+  'mm.size.real': 'Tamaño real (se reduce solo si no cabe)',
+  'mm.size.fill': 'Rellenar la casilla (etiquetas de una hoja comercial)'
 }

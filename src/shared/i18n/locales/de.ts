@@ -913,5 +913,9 @@ export const de: Catalog = {
   'mm.layout.badGrid': 'Spalten und Zeilen: 1 bis 10 Spalten, 1 bis 20 Zeilen; Rand und Abstand dürfen nicht negativ sein.',
   'mm.layout.tooSmall': 'Mit diesem Raster wäre eine Karte kleiner als 10 mm: Verwenden Sie weniger Spalten oder Zeilen oder kleinere Ränder.',
   'mm.layout.overflow': { one: '{count} Element ragt über die Karte hinaus (Text, Form oder gedrehtes Element) und würde die Nachbarkarten überdecken. Belassen Sie es innerhalb der Vorlagenseite.', other: '{count} Elemente ragen über die Karte hinaus (Text, Formen oder gedrehte Elemente) und würden die Nachbarkarten überdecken. Belassen Sie sie innerhalb der Vorlagenseite.' },
-  'mm.summary.sheets': { one: 'Eine PDF-Datei mit {count} Seite: {rows} Karten, {per} pro Blatt.', other: 'Eine PDF-Datei mit {count} Seiten: {rows} Karten, {per} pro Blatt.' }
+  'mm.summary.sheets': { one: 'Eine PDF-Datei mit {count} Seite: {rows} Karten, {per} pro Blatt.', other: 'Eine PDF-Datei mit {count} Seiten: {rows} Karten, {per} pro Blatt.' },
+  // Publipostage : lignes et planches
+  'mm.size': 'Kartengröße',
+  'mm.size.real': 'Originalgröße (nur verkleinert, wenn sie nicht passt)',
+  'mm.size.fill': 'Zelle ausfüllen (Etiketten auf einem handelsüblichen Bogen)'
 }
