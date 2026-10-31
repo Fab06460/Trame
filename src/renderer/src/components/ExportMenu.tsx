@@ -10,6 +10,7 @@ import { pageToSvg } from '@/svgExport'
 import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
 import { useMailMerge } from '@/store/mailMerge'
+import { usePrintDialog } from '@/store/printDialog'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { t, useLocale, useT } from '@/i18n'
 import { useDismiss } from './useDismiss'
@@ -133,6 +134,10 @@ export function ExportMenu(): React.JSX.Element {
           <button role="menuitem" data-export="pages" onClick={() => choose(() => useExportPages.getState().setOpen(true))}>
             <strong>{t('export.multi')}</strong>
             <span>{t('export.multi.desc')}</span>
+          </button>
+          <button role="menuitem" data-export="print" onClick={() => choose(() => usePrintDialog.getState().setOpen(true))}>
+            <strong>{t('print.menu')}</strong>
+            <span>{t('print.menu.desc')}</span>
           </button>
           <button role="menuitem" data-export="merge" onClick={() => choose(() => useMailMerge.getState().setOpen(true))}>
             <strong>{t('mm.menu')}</strong>

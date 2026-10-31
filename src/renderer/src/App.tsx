@@ -13,6 +13,7 @@ import { PresentationMode } from '@/components/PresentationMode'
 import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { MailMergeDialog } from '@/components/MailMergeDialog'
+import { PrintDialog } from '@/components/PrintDialog'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
@@ -176,6 +177,7 @@ export default function App(): React.JSX.Element {
       <FontCatalogDialog />
       <ExportPagesDialog />
       <MailMergeDialog />
+      <PrintDialog />
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>

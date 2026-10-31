@@ -1,4 +1,5 @@
 import { chartElements, defaultSpec } from '@/chart'
+import { bookletDocument, nUpDocument } from '@/imposition'
 import { mergeDocument } from '@/mailMerge'
 import { sheetsFromMerged } from '@/mergeSheets'
 import { TEMPLATES, instantiate } from '@/templates'
@@ -202,7 +203,23 @@ function chartDoc(kind: 'bar' | 'hbar' | 'line' | 'pie' | 'table'): TrameDocumen
   return { version: 2, name: `Graphique ${kind}`, width: 1080, height: 1080, pages: [{ id: 'p', background: '#f3f4f8', elements }] }
 }
 
+/** Un document de 6 pages A5 (559 × 794) : titre et numéro, pour contrôler l'ordre et le placement d'un livret et d'une impression à 4 par feuille. */
+function pagesDoc(): TrameDocument {
+  const page = (n: number): TrameDocument['pages'][number] => ({
+    id: `p${n}`,
+    background: n % 2 ? '#f3f4f8' : '#ffffff',
+    elements: [
+      { id: `r${n}`, type: 'rect', x: 40, y: 40, width: 479, height: 120, rotation: 0, opacity: 1, fill: '#0072b2' },
+      { id: `t${n}`, type: 'text', x: 60, y: 70, width: 440, height: 60, rotation: 0, opacity: 1, fill: '#ffffff', text: `Page ${n + 1}`, fontSize: 48, fontFamily: '"Inter", sans-serif', fontStyle: 'bold' },
+      { id: `b${n}`, type: 'text', x: 40, y: 220, width: 479, height: 120, rotation: 0, opacity: 1, fill: '#1e1f24', text: `Texte courant de la page ${n + 1}, pour vérifier la netteté.`, fontSize: 28, fontFamily: '"Inter", sans-serif', fontStyle: 'normal' }
+    ]
+  })
+  return { version: 2, name: 'Six pages', width: 559, height: 794, pages: Array.from({ length: 6 }, (_, i) => page(i)) }
+}
+
 export const cases = (): Case[] => [
+  { name: 'livret', doc: bookletDocument(pagesDoc(), { paper: 'a4', foldLine: true }).doc, expectText: ['Page 1', 'Page 2', 'Page 6'], expectFallbacks: 0 },
+  { name: '4-par-feuille', doc: nUpDocument(pagesDoc(), { paper: 'a4', landscape: false, cols: 2, rows: 2, marginMm: 10, gapMm: 4, border: true }).doc, expectText: ['Page 1', 'Page 4'], expectFallbacks: 0 },
   ...(['bar', 'hbar', 'line', 'pie', 'table'] as const).map((k): Case => ({ name: `graphique-${k}`, doc: chartDoc(k), expectText: ['Moyennes par matière', 'Maths'], expectFallbacks: 0 })),
   { name: 'polices-lisibles', doc: readable(), expectText: ['Atkinson lisible', 'Lexend gras', 'OpenDyslexic', 'Atkinson gras italique'], expectFallbacks: 0 },
   { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %

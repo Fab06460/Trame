@@ -1037,7 +1037,30 @@ export const fr = {
   'chart.truncated': 'Le tableau a été limité à 60 lignes et 12 colonnes.',
   'chart.noNumbers': 'Ce fichier ne contient aucune colonne de nombres : le graphique serait vide.',
   'chart.empty': 'Ce fichier ne contient aucune ligne.',
-  'chart.insert': 'Insérer : {kind}'
+  'chart.insert': 'Insérer : {kind}',
+  // Impression pratique
+  'print.menu': 'Livret et impression groupée',
+  'print.menu.desc': 'Un PDF prêt à imprimer : livret recto-verso à plier, ou plusieurs pages par feuille',
+  'print.title': 'Livret et impression groupée',
+  'print.mode': 'Mise en page',
+  'print.mode.booklet': 'Livret (feuilles recto-verso pliées en deux et agrafées)',
+  'print.mode.nup': 'Plusieurs pages par feuille (polycopiés, planches-contact)',
+  'print.paper': 'Papier',
+  'print.perSheet': 'Pages par feuille',
+  'print.perSheet.n': { one: '{count} page', other: '{count} pages' },
+  'print.margin': 'Marge (mm)',
+  'print.gap': 'Espace (mm)',
+  'print.border': 'Contour fin autour de chaque page',
+  'print.fold': 'Trait fin de pli au centre',
+  'print.summary.booklet': { one: '{pages} page → {sheets} feuilles recto-verso ({sides} faces), {blanks} blanche(s) ajoutée(s) en fin de livret.', other: '{pages} pages → {sheets} feuilles recto-verso ({sides} faces), {blanks} blanche(s) ajoutée(s) en fin de livret.' },
+  'print.summary.nup': { one: '{pages} page → {sheets} feuille(s) imprimée(s).', other: '{pages} pages → {sheets} feuille(s) imprimée(s).' },
+  'print.how.booklet': 'Imprimez ce PDF en recto-verso avec retournement sur le bord COURT (« reliure bord court »), sans mise à l\'échelle. Pliez ensuite toutes les feuilles ensemble en deux et agrafez au pli.',
+  'print.how.nup': 'Imprimez ce PDF à 100 % (« taille réelle »), une face par feuille.',
+  'print.ratio': 'Le format des pages (ex. 16:9) ne correspond pas à l\'emplacement : elles seront réduites et centrées, avec des marges blanches. Pour un livret A5, mettez le document au format A5 (menu « Page »).',
+  'print.pagesMultiple': 'Un livret a un nombre de pages multiple de 4 : des pages blanches sont ajoutées à la fin (quatrième de couverture comprise : placez-y votre dernière page si besoin).',
+  'print.export': 'Exporter le PDF',
+  'print.file.booklet': '{name}-livret',
+  'print.file.nup': '{name}-{n}-par-feuille'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr
