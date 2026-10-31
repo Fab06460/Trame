@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { distinctValues, fieldsUsed, mergeDocument, parseRowRange, rowFileNames, selectRows, unknownFields } from '@/mailMerge'
+import { fitToTemplate } from '@/mergeFit'
+import { chooseImageFolder, ensureImages, imageResolver, imageValues, missingImageValues, useMergeImages } from '@/mergeImageStore'
+import { distinctValues, fieldsUsed, imageFieldsUsed, mergeDocument, parseRowRange, rowFileNames, selectRows, unknownFields } from '@/mailMerge'
+import { SHEET_PRESETS, applyPreset, freeLayout, presetById } from '@/sheetPresets'
 import { MAX_GRID, layoutProblem, sheetsFromMerged, suggestGrid, type SheetLayout } from '@/mergeSheets'
 import { exportMerge, pickMergeData } from '@/mailMergeActions'
 import { useEditor } from '@/store/editor'
@@ -27,9 +30,19 @@ export function MailMergeDialog(): React.JSX.Element | null {
   const [filterValue, setFilterValue] = useState('')
   const [sheet, setSheet] = useState(false)
   const [layout, setLayout] = useState<SheetLayout>({ paper: 'a4', landscape: false, cols: 2, rows: 4, marginMm: 10, gapMm: 2, cutMarks: true, mirrorBacks: true, fillCell: false })
+  const settings = data?.settings
 
   const shown = data ? Math.min(row, data.rows.length - 1) : 0
-  const preview = useMemo(() => (data ? mergeDocument(doc, data, [shown]).pages : []), [doc, data, shown])
+  const imageFields = useMemo(() => imageFieldsUsed(doc), [doc])
+  const imagesTick = useMergeImages((s) => s.tick)
+  const imagesFolder = useMergeImages((s) => s.folder)
+  const imageCount = useMergeImages((s) => s.files.length)
+  const resolver = useMemo(() => (imageFields.length ? imageResolver() : undefined), [imageFields, imagesTick]) // eslint-disable-line react-hooks/exhaustive-deps
+  const preview = useMemo(() => (data ? mergeDocument(doc, data, [shown], fitToTemplate, resolver).pages : []), [doc, data, shown, resolver])
+  // les images de la ligne montrée sont chargées à la demande (le résultat réaffiche l'aperçu)
+  useEffect(() => {
+    if (data && imageFields.length && imagesFolder) void ensureImages(imageValues(data.columns, data.rows, [shown], imageFields))
+  }, [data, imageFields, imagesFolder, shown])
   const unknown = useMemo(() => (data ? unknownFields(doc, data.columns) : []), [doc, data])
   const used = useMemo(() => fieldsUsed(doc), [doc])
   const only = useMemo(() => {
@@ -47,8 +60,11 @@ export function MailMergeDialog(): React.JSX.Element | null {
   const sheetPreview = useMemo(() => {
     if (!data || !sheet || mode !== 'single' || problem || selected.length === 0) return null
     const perSheet = layout.cols * layout.rows
-    return sheetsFromMerged(mergeDocument(doc, data, selected.slice(0, perSheet)), perCard, layout)
-  }, [doc, data, sheet, mode, problem, selected, layout, perCard])
+    return sheetsFromMerged(mergeDocument(doc, data, selected.slice(0, perSheet), fitToTemplate, resolver), perCard, layout)
+  }, [doc, data, sheet, mode, problem, selected, layout, perCard, resolver])
+  useEffect(() => {
+    if (data && imageFields.length && imagesFolder && sheet) void ensureImages(imageValues(data.columns, data.rows, selected.slice(0, layout.cols * layout.rows), imageFields))
+  }, [data, imageFields, imagesFolder, sheet, selected, layout.cols, layout.rows])
 
   const busyNow = progress !== null
   // Échap ferme la fenêtre même quand le focus n'est plus dans elle (un bouton disparu après un clic le fait perdre)
@@ -61,9 +77,20 @@ export function MailMergeDialog(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, busyNow])
 
+  // choix mémorisés avec le document (dernier export) : retrouvés à l'ouverture du fichier
+  useEffect(() => {
+    if (!settings) return
+    setMode(settings.mode)
+    setNameColumn(settings.nameColumn)
+    setSheet(settings.sheet)
+    const { preset: id, ...rest } = settings.layout
+    const preset = presetById(id)
+    setLayout(preset ? { ...applyPreset(preset, { ...rest, fillCell: rest.fillCell }), fillCell: rest.fillCell } : rest)
+  }, [settings])
+
   // une autre fiche (autre modèle, autre format) : la grille proposée suit sa taille
   useEffect(() => {
-    setLayout((l) => ({ ...l, ...suggestGrid({ width: doc.width, height: doc.height }, l) }))
+    setLayout((l) => (l.fixed ? l : { ...l, ...suggestGrid({ width: doc.width, height: doc.height }, l) }))
   }, [doc.width, doc.height])
 
   if (!open) return null
@@ -79,9 +106,11 @@ export function MailMergeDialog(): React.JSX.Element | null {
       if (res.error === 'empty') setMessage(t('mm.empty'))
       return
     }
-    useEditor.getState().setMergeData(res.data)
+    // un tableau mis à jour garde les choix d'export (la colonne des noms de fichiers doit encore exister)
+    const keep = data?.settings && { ...data.settings, nameColumn: data.settings.nameColumn !== null && data.settings.nameColumn < res.data.columns.length ? data.settings.nameColumn : null }
+    useEditor.getState().setMergeData(keep ? { ...res.data, settings: keep } : res.data)
     setRow(0)
-    setNameColumn(0)
+    setNameColumn(keep ? keep.nameColumn : 0)
     setWhich('all')
     setFilterColumn(null)
     setFilterValue('')
@@ -100,6 +129,9 @@ export function MailMergeDialog(): React.JSX.Element | null {
     setMessage('')
     setProgress({ done: 0, total: selected.length })
     try {
+      const { fixed: _fixed, preset, offsetXMm, offsetYMm, ...grid } = layout
+      void _fixed
+      useEditor.getState().setMergeSettings({ mode, nameColumn, sheet, layout: { ...grid, offsetXMm: offsetXMm ?? 0, offsetYMm: offsetYMm ?? 0, ...(preset ? { preset } : {}) } })
       const res = await exportMerge({ mode, rows: selected, layout: sheet && mode === 'single' ? layout : null, nameColumn, onProgress: (done, all) => setProgress({ done, total: all }) })
       if (res.saved) close()
     } catch (err) {
@@ -111,8 +143,10 @@ export function MailMergeDialog(): React.JSX.Element | null {
 
   const patchLayout = (patch: Partial<SheetLayout>, regrid = false): void => {
     setLayout((l) => {
-      const next = { ...l, ...patch }
-      return regrid ? { ...next, ...suggestGrid({ width: doc.width, height: doc.height }, next) } : next
+      // modifier la grille à la main quitte le gabarit du commerce (le réglage fin du décalage et le choix de taille le gardent)
+      const keeps = Object.keys(patch).every((k) => ['offsetXMm', 'offsetYMm', 'cutMarks', 'mirrorBacks', 'fillCell'].includes(k))
+      const next = { ...(keeps ? l : freeLayout(l)), ...patch }
+      return regrid && !next.fixed ? { ...next, ...suggestGrid({ width: doc.width, height: doc.height }, next) } : next
     })
   }
   const num = (v: string, min: number, max: number, fallback: number): number => (Number.isFinite(Number(v)) && v !== '' ? Math.min(max, Math.max(min, Math.round(Number(v) * 10) / 10)) : fallback)
@@ -153,6 +187,22 @@ export function MailMergeDialog(): React.JSX.Element | null {
             </fieldset>
             {used.length === 0 && <div className="warn" role="status" data-mm-none>{t('mm.noneUsed')}</div>}
             {unknown.length > 0 && <div className="warn" role="status" data-mm-unknown>{t('mm.unknown', { fields: unknown.join(', ') })}</div>}
+
+            {imageFields.length > 0 && (
+              <fieldset className="pages-choice" disabled={busy} data-mm-images>
+                <legend>{t('mm.images')}</legend>
+                <span className="hint">{t('mm.images.fields', { fields: imageFields.join(', ') })}</span>
+                <div className="row wrap">
+                  <button data-action="mm-images" onClick={() => void chooseImageFolder()}>{t('mm.images.choose')}</button>
+                  {imagesFolder && <span data-mm-images-folder>{t('mm.images.folder', { name: imagesFolder, count: imageCount })}</span>}
+                </div>
+                {!imagesFolder && <div className="warn" role="status" data-mm-images-none>{t('mm.images.none')}</div>}
+                {imagesFolder && data && missingImageValues(data, [shown], imageFields).length > 0 && (
+                  <div className="warn" role="status" data-mm-images-missing>{t('mm.images.rowMissing', { names: missingImageValues(data, [shown], imageFields).join(', ') })}</div>
+                )}
+                <span className="hint">{t('mm.images.hint')}</span>
+              </fieldset>
+            )}
 
             <fieldset className="pages-choice">
               <legend>{t('mm.preview')}</legend>
@@ -229,6 +279,29 @@ export function MailMergeDialog(): React.JSX.Element | null {
                 <label className="choice-row"><input type="radio" name="mm-layout" data-mm-layout="sheet" checked={sheet} onChange={() => { setSheet(true); patchLayout({}, true) }} /> {t('mm.layout.sheet')}</label>
                 {sheet && (
                   <div className="mm-sheet">
+                    <label>
+                      {t('mm.preset')}
+                      <select
+                        data-field="mmPreset"
+                        value={layout.preset ?? ''}
+                        onChange={(e) => {
+                          const preset = presetById(e.target.value)
+                          setLayout((l) => (preset ? applyPreset(preset, l) : freeLayout(l)))
+                        }}
+                      >
+                        <option value="">{t('mm.preset.free')}</option>
+                        {(['a4', 'letter'] as const).map((paper) => (
+                          <optgroup key={paper} label={paper === 'a4' ? 'A4' : t('mm.paper.letter')}>
+                            {SHEET_PRESETS.filter((p) => p.paper === paper).map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {t('mm.preset.option', { name: p.key ? t(p.key) : p.name, count: p.cols * p.rows, size: `${Math.round(p.grid.cellWMm * 10) / 10} × ${Math.round(p.grid.cellHMm * 10) / 10}` })}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </label>
+                    {layout.fixed && <p className="hint" data-mm-preset-hint>{t('mm.preset.hint')}</p>}
                     <div className="row wrap">
                       <label>
                         {t('mm.paper')}
@@ -248,8 +321,8 @@ export function MailMergeDialog(): React.JSX.Element | null {
                     <div className="mm-grid">
                       <label>{t('mm.cols')}<input type="number" data-field="mmCols" min={1} max={MAX_GRID.cols} value={layout.cols} onChange={(e) => patchLayout({ cols: num(e.target.value, 1, MAX_GRID.cols, layout.cols) })} /></label>
                       <label>{t('mm.rowsGrid')}<input type="number" data-field="mmRows" min={1} max={MAX_GRID.rows} value={layout.rows} onChange={(e) => patchLayout({ rows: num(e.target.value, 1, MAX_GRID.rows, layout.rows) })} /></label>
-                      <label>{t('mm.margin')}<input type="number" data-field="mmMargin" min={0} max={50} value={layout.marginMm} onChange={(e) => patchLayout({ marginMm: num(e.target.value, 0, 50, layout.marginMm) })} /></label>
-                      <label>{t('mm.gap')}<input type="number" data-field="mmGap" min={0} max={50} value={layout.gapMm} onChange={(e) => patchLayout({ gapMm: num(e.target.value, 0, 50, layout.gapMm) })} /></label>
+                      <label>{t('mm.margin')}<input type="number" data-field="mmMargin" disabled={!!layout.fixed} min={0} max={50} value={layout.marginMm} onChange={(e) => patchLayout({ marginMm: num(e.target.value, 0, 50, layout.marginMm) })} /></label>
+                      <label>{t('mm.gap')}<input type="number" data-field="mmGap" disabled={!!layout.fixed} min={0} max={50} value={layout.gapMm} onChange={(e) => patchLayout({ gapMm: num(e.target.value, 0, 50, layout.gapMm) })} /></label>
                     </div>
                     <label>
                       {t('mm.size')}
@@ -258,6 +331,10 @@ export function MailMergeDialog(): React.JSX.Element | null {
                         <option value="fill">{t('mm.size.fill')}</option>
                       </select>
                     </label>
+                    <div className="mm-grid">
+                      <label>{t('mm.offsetX')}<input type="number" data-field="mmOffsetX" min={-20} max={20} step={0.1} value={layout.offsetXMm ?? 0} onChange={(e) => patchLayout({ offsetXMm: num(e.target.value, -20, 20, layout.offsetXMm ?? 0) })} /></label>
+                      <label>{t('mm.offsetY')}<input type="number" data-field="mmOffsetY" min={-20} max={20} step={0.1} value={layout.offsetYMm ?? 0} onChange={(e) => patchLayout({ offsetYMm: num(e.target.value, -20, 20, layout.offsetYMm ?? 0) })} /></label>
+                    </div>
                     <label className="choice-row"><input type="checkbox" data-field="mmCut" checked={layout.cutMarks} onChange={(e) => patchLayout({ cutMarks: e.target.checked })} /> {t('mm.cut')}</label>
                     {perCard > 1 && <label className="choice-row"><input type="checkbox" data-field="mmMirror" checked={layout.mirrorBacks} onChange={(e) => patchLayout({ mirrorBacks: e.target.checked })} /> {t('mm.mirror')}</label>}
                     {problem === 'grid' && <div className="warn" role="status" data-mm-layout-error>{t('mm.layout.badGrid')}</div>}

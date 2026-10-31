@@ -927,5 +927,33 @@ export const de: Catalog = {
   'html.help': 'Pfeiltasten: Seite wechseln · F: Vollbild',
   'html.noscript': 'Diese Präsentation benötigt JavaScript zur Anzeige.',
   // Présentation web
-  'export.html': 'Web-Präsentation (.html)'
+  'export.html': 'Web-Präsentation (.html)',
+  // Publipostage : planches du commerce
+  'mm.preset': 'Handelsüblicher Etikettenbogen',
+  'mm.preset.free': 'Freies Raster (manuell eingestellt)',
+  'mm.preset.option': '{name}: {count} pro Bogen ({size} mm)',
+  'mm.preset.card85': 'Visitenkarten',
+  'mm.preset.a6': 'A6-Karten',
+  'mm.preset.a7': 'A7-Karten',
+  'mm.preset.hint': 'Formate nach den Herstellerangaben: zuerst auf Normalpapier testen und gegen das Licht auf den echten Bogen legen. Der Versatz gleicht den Drucker aus.',
+  'mm.offsetX': 'Horizontaler Versatz (mm)',
+  'mm.offsetY': 'Vertikaler Versatz (mm)',
+  // Publipostage : textes qui s'ajustent
+  'prop.mergeFit': 'Verkleinern, wenn der Text zu lang ist',
+  'prop.mergeFit.hint': 'Serienbrief: Ein längerer Name als erwartet wird verkleinert (bis zur Hälfte), statt umzubrechen.',
+  // Publipostage : images
+  'main.mergeImages.title': 'Bilderordner wählen',
+  'main.mergeImages.button': 'Diesen Ordner wählen',
+  'mm.images.missing': { one: 'Ein Bild wurde nicht gefunden: das Bild der Vorlage wurde beibehalten.', other: '{count} Bilder wurden nicht gefunden: das Bild der Vorlage wurde beibehalten.' },
+  'mm.images': 'Bilder',
+  'mm.images.fields': 'Bildspalten: {fields}',
+  'mm.images.choose': 'Bilderordner wählen …',
+  'mm.images.folder': { one: 'Ordner „{name}“: {count} Bild', other: 'Ordner „{name}“: {count} Bilder' },
+  'mm.images.none': 'Wählen Sie den Ordner mit den Bildern: ohne ihn bleibt das Bild der Vorlage erhalten.',
+  'mm.images.rowMissing': 'Bild für diese Zeile nicht gefunden: {names}',
+  'mm.images.hint': 'Die Spalte enthält den Dateinamen (z. B. ada.jpg; die Endung darf fehlen). Formate: PNG, JPG, WebP. Der Ordner wird nicht im Dokument gespeichert.',
+  'img.field': 'Mit Spalte füllen (Serienbrief)',
+  'img.field.none': 'Keine (feste Grafik)',
+  'img.field.hint': 'Der Serienbrief setzt das Bild, dessen Name in dieser Spalte steht, zugeschnitten auf denselben Platz. Wählen Sie zuerst eine Tabelle (Exportieren → Serienbrief).',
+  'img.field.missing': '{name} (Spalte fehlt in der Tabelle)'
 }

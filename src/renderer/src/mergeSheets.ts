@@ -1,6 +1,14 @@
 import { nanoid } from 'nanoid'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
+/** Cases de taille fixe d'une planche du commerce, en mm. */
+export interface FixedGrid {
+  cellWMm: number
+  cellHMm: number
+  gapXMm: number
+  gapYMm: number
+}
+
 /** Planche : plusieurs fiches par feuille (étiquettes, badges, cartes), découpées ensuite. */
 export interface SheetLayout {
   paper: 'a4' | 'letter'
@@ -11,6 +19,13 @@ export interface SheetLayout {
   marginMm: number
   /** espace entre deux fiches, en mm */
   gapMm: number
+  /** planche du commerce : cases de taille fixe, grille centrée sur la feuille (les marges et l'espace de `marginMm` / `gapMm` ne servent plus) */
+  fixed?: FixedGrid
+  /** identifiant du gabarit choisi (voir `sheetPresets.ts`), pour l'afficher ; absent = grille libre */
+  preset?: string
+  /** réglage fin : décalage de toute la grille, en mm (compense l'imprimante) */
+  offsetXMm?: number
+  offsetYMm?: number
   /** vrai : la fiche est agrandie ou réduite pour remplir sa case (étiquettes d'une planche du commerce) ; faux : elle garde sa taille réelle, centrée, et n'est réduite que si elle ne tient pas */
   fillCell: boolean
   /** contour fin autour de chaque fiche, pour la découpe */
@@ -40,18 +55,37 @@ interface Cell {
 /** Cases de la grille, ligne par ligne, de gauche à droite. */
 export function cells(l: SheetLayout): Cell[] {
   const { width, height } = sheetSize(l)
+  const dx = (l.offsetXMm ?? 0) * PX_PER_MM
+  const dy = (l.offsetYMm ?? 0) * PX_PER_MM
+  if (l.fixed) {
+    const w = l.fixed.cellWMm * PX_PER_MM
+    const h = l.fixed.cellHMm * PX_PER_MM
+    const gx = l.fixed.gapXMm * PX_PER_MM
+    const gy = l.fixed.gapYMm * PX_PER_MM
+    const left = (width - (l.cols * w + (l.cols - 1) * gx)) / 2 + dx
+    const top = (height - (l.rows * h + (l.rows - 1) * gy)) / 2 + dy
+    const out: Cell[] = []
+    for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.cols; c++) out.push({ x: left + c * (w + gx), y: top + r * (h + gy), width: w, height: h })
+    return out
+  }
   const margin = l.marginMm * PX_PER_MM
   const gap = l.gapMm * PX_PER_MM
   const w = (width - 2 * margin - gap * (l.cols - 1)) / l.cols
   const h = (height - 2 * margin - gap * (l.rows - 1)) / l.rows
   const out: Cell[] = []
-  for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.cols; c++) out.push({ x: margin + c * (w + gap), y: margin + r * (h + gap), width: w, height: h })
+  for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.cols; c++) out.push({ x: margin + dx + c * (w + gap), y: margin + dy + r * (h + gap), width: w, height: h })
   return out
 }
 
 /** Valide la grille : la fiche doit garder une taille lisible (au moins 10 mm de large et de haut). */
 export function layoutProblem(l: SheetLayout): 'grid' | 'room' | null {
-  if (![l.cols, l.rows, l.marginMm, l.gapMm].every(Number.isFinite) || l.cols < 1 || l.rows < 1 || l.cols > MAX_GRID.cols || l.rows > MAX_GRID.rows || l.marginMm < 0 || l.gapMm < 0) return 'grid'
+  if (![l.cols, l.rows, l.marginMm, l.gapMm].every(Number.isFinite) || l.cols < 1 || l.rows < 1 || l.cols > MAX_GRID.cols || l.rows > MAX_GRID.rows || l.marginMm < 0 || l.gapMm < 0 || !Number.isFinite(l.offsetXMm ?? 0) || !Number.isFinite(l.offsetYMm ?? 0)) return 'grid'
+  if (l.fixed) {
+    const { width, height } = sheetSize(l)
+    const f = l.fixed
+    const fits = l.cols * f.cellWMm + (l.cols - 1) * f.gapXMm <= width / PX_PER_MM + 0.01 && l.rows * f.cellHMm + (l.rows - 1) * f.gapYMm <= height / PX_PER_MM + 0.01
+    return fits ? null : 'room'
+  }
   const c = cells(l)[0]
   return c.width < 10 * PX_PER_MM || c.height < 10 * PX_PER_MM ? 'room' : null
 }

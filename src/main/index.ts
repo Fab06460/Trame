@@ -9,6 +9,7 @@ import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_F
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
 import { safeExportName } from './exportFolder'
+import { MAX_MERGE_IMAGE_BYTES, MAX_MERGE_IMAGE_FILES, isMergeImageFile, mergeImageMime } from '../shared/mergeImages'
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
@@ -896,6 +897,42 @@ ipcMain.handle('export:folder-write', async (_e, dir: unknown, name: unknown, da
   if (!dataUrl.startsWith('data:') || comma < 0) return false
   await writeFile(join(dir, safe), Buffer.from(dataUrl.slice(comma + 1), 'base64'))
   return true
+})
+
+// Images d'un publipostage : le renderer ne choisit jamais le dossier ; il en demande un (boîte système) puis lit, par leur nom,
+// des fichiers images de CE dossier seulement (noms pris dans sa liste, jamais un chemin fourni par le renderer).
+let mergeImageDir: string | null = null
+let mergeImageFiles = new Set<string>()
+
+ipcMain.handle('mergeimages:pick', async (e) => {
+  let dir: string
+  if (TEST_EXPORT_DIR) {
+    // mode test : le sous-dossier « images » du dossier de test, sans boîte de dialogue
+    dir = join(TEST_EXPORT_DIR, 'images')
+    if (!(await stat(dir).then((s) => s.isDirectory(), () => false))) return null
+  } else {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const res = await dialog.showOpenDialog(win!, { title: tm('main.mergeImages.title'), properties: ['openDirectory'], buttonLabel: tm('main.mergeImages.button') })
+    if (res.canceled || !res.filePaths[0]) return null
+    dir = res.filePaths[0]
+  }
+  const names = (await readdir(dir, { withFileTypes: true }).catch(() => [])).filter((d) => d.isFile() && isMergeImageFile(d.name)).map((d) => d.name).slice(0, MAX_MERGE_IMAGE_FILES)
+  mergeImageDir = dir
+  mergeImageFiles = new Set(names)
+  return { name: basename(dir), files: names }
+})
+
+ipcMain.handle('mergeimages:read', async (_e, names: unknown) => {
+  const out: Record<string, string | null> = {}
+  if (!mergeImageDir || !Array.isArray(names)) return out
+  for (const n of names.slice(0, 40)) {
+    if (typeof n !== 'string' || !mergeImageFiles.has(n)) continue
+    const mime = mergeImageMime(n)
+    const path = join(mergeImageDir, n)
+    const size = await stat(path).then((s) => s.size, () => -1)
+    out[n] = mime && size > 0 && size <= MAX_MERGE_IMAGE_BYTES ? `data:${mime};base64,${(await readFile(path)).toString('base64')}` : null
+  }
+  return out
 })
 
 app.on('before-quit', () => closeGuard.onBeforeQuit())

@@ -927,5 +927,33 @@ export const en: Catalog = {
   'html.help': 'Arrows: change page · F: full screen',
   'html.noscript': 'This presentation needs JavaScript to display.',
   // Présentation web
-  'export.html': 'Web presentation (.html)'
+  'export.html': 'Web presentation (.html)',
+  // Publipostage : planches du commerce
+  'mm.preset': 'Commercial label sheet',
+  'mm.preset.free': 'Free grid (set by hand)',
+  'mm.preset.option': '{name}: {count} per sheet ({size} mm)',
+  'mm.preset.card85': 'Business cards',
+  'mm.preset.a6': 'A6 cards',
+  'mm.preset.a7': 'A7 cards',
+  'mm.preset.hint': 'Formats follow the manufacturers\' data sheets: try on plain paper first, held over the real sheet against the light. The offset compensates for the printer.',
+  'mm.offsetX': 'Horizontal offset (mm)',
+  'mm.offsetY': 'Vertical offset (mm)',
+  // Publipostage : textes qui s'ajustent
+  'prop.mergeFit': 'Shrink if the text is too long',
+  'prop.mergeFit.hint': 'Mail merge: a longer-than-expected name shrinks (down to half size) instead of wrapping.',
+  // Publipostage : images
+  'main.mergeImages.title': 'Choose the images folder',
+  'main.mergeImages.button': 'Choose this folder',
+  'mm.images.missing': { one: 'One image was not found: the template image was kept.', other: '{count} images were not found: the template image was kept.' },
+  'mm.images': 'Images',
+  'mm.images.fields': 'Image columns: {fields}',
+  'mm.images.choose': 'Choose the images folder…',
+  'mm.images.folder': { one: 'Folder “{name}”: {count} image', other: 'Folder “{name}”: {count} images' },
+  'mm.images.none': 'Choose the folder that holds the images: without it, the template image is kept.',
+  'mm.images.rowMissing': 'Image not found for this row: {names}',
+  'mm.images.hint': 'The column holds the file name (e.g. ada.jpg; the extension may be missing). Formats: PNG, JPG, WebP. The folder is not saved in the document.',
+  'img.field': 'Fill with the column (mail merge)',
+  'img.field.none': 'None (fixed image)',
+  'img.field.hint': 'Mail merge puts the image whose name is in this column, cropped to fill the same space. Choose a table first (Export → Mail merge).',
+  'img.field.missing': '{name} (column missing from the table)'
 }

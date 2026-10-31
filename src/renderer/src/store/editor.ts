@@ -8,7 +8,7 @@ import { registerEmbeddedFonts } from '@/fonts'
 import { sanitizeFrame } from '@/magicResize'
 import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/protection'
 import { sanitizeFonts } from '@/fontEmbed'
-import { sanitizeMergeData } from '@/mailMerge'
+import { sanitizeImageField, sanitizeMergeData } from '@/mailMerge'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
 import { sanitizeList } from '@/listStyle'
@@ -17,7 +17,7 @@ import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
-import type { Guide, MergeData, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
+import type { Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
 import { sanitizeDecorative } from '@/altCheck'
@@ -100,6 +100,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeList(e)
       if (e.type === 'image') sanitizeImageStyle(e)
       sanitizeAiInfo(e)
+      sanitizeImageField(e)
       sanitizeAlt(e)
       sanitizeDecorative(e)
       if (e.locked !== true) delete e.locked
@@ -198,6 +199,8 @@ interface EditorState {
   /** Transition de présentation du document (réglage : pas d'historique, mais le document est marqué modifié). */
   /** Données du publipostage du document (null : les retire). Un pas d'historique. */
   setMergeData: (data: MergeData | null) => void
+  /** Derniers choix d'export du publipostage, gardés avec le document (pas d'historique ; le document est marqué modifié seulement si quelque chose change). */
+  setMergeSettings: (settings: MergeSettings) => void
   setTransition: (transition: PageTransition) => void
   /** Transition d'une page (`null` : revient à celle du document). */
   setPageTransition: (pageId: string, transition: PageTransition | null) => void
@@ -686,6 +689,13 @@ export const useEditor = create<EditorState>((set, get) => {
         const { mailMerge: _old, ...rest } = s.doc
         void _old
         return { ...snapshot(), doc: data ? { ...rest, mailMerge: data } : rest, dirty: true }
+      }),
+
+    setMergeSettings: (settings) =>
+      set((s) => {
+        const data = s.doc.mailMerge
+        if (!data || JSON.stringify(data.settings) === JSON.stringify(settings)) return {}
+        return { doc: { ...s.doc, mailMerge: { ...data, settings } }, dirty: true }
       }),
 
     setTransition: (transition) =>

@@ -928,7 +928,35 @@ export const fr = {
   'html.help': 'Flèches : changer de page · F : plein écran',
   'html.noscript': 'Cette présentation a besoin de JavaScript pour s\'afficher.',
   // Présentation web
-  'export.html': 'Présentation web (.html)'
+  'export.html': 'Présentation web (.html)',
+  // Publipostage : planches du commerce
+  'mm.preset': 'Planche du commerce',
+  'mm.preset.free': 'Grille libre (réglée à la main)',
+  'mm.preset.option': '{name} : {count} par feuille ({size} mm)',
+  'mm.preset.card85': 'Cartes de visite',
+  'mm.preset.a6': 'Cartes A6',
+  'mm.preset.a7': 'Cartes A7',
+  'mm.preset.hint': 'Formats d\'après les fiches des fabricants : essayez d\'abord sur une feuille ordinaire, superposée à la vraie planche à contre-jour. Le décalage compense l\'imprimante.',
+  'mm.offsetX': 'Décalage horizontal (mm)',
+  'mm.offsetY': 'Décalage vertical (mm)',
+  // Publipostage : textes qui s'ajustent
+  'prop.mergeFit': 'Réduire si le texte est trop long',
+  'prop.mergeFit.hint': 'Publipostage : un nom plus long que prévu rétrécit (jusqu\'à moitié) au lieu de passer à la ligne.',
+  // Publipostage : images
+  'main.mergeImages.title': 'Choisir le dossier des images',
+  'main.mergeImages.button': 'Choisir ce dossier',
+  'mm.images.missing': { one: 'Une image est introuvable : celle du modèle a été gardée.', other: '{count} images sont introuvables : celle du modèle a été gardée.' },
+  'mm.images': 'Images',
+  'mm.images.fields': 'Colonnes d\'images : {fields}',
+  'mm.images.choose': 'Choisir le dossier des images…',
+  'mm.images.folder': { one: 'Dossier « {name} » : {count} image', other: 'Dossier « {name} » : {count} images' },
+  'mm.images.none': 'Choisissez le dossier qui contient les images : sans lui, l\'image du modèle est gardée.',
+  'mm.images.rowMissing': 'Image introuvable pour cette ligne : {names}',
+  'mm.images.hint': 'La colonne contient le nom du fichier (ex. : ada.jpg ; l\'extension peut manquer). Formats : PNG, JPG, WebP. Le dossier n\'est pas enregistré dans le document.',
+  'img.field': 'Remplir avec la colonne (publipostage)',
+  'img.field.none': 'Aucune (image fixe)',
+  'img.field.hint': 'Le publipostage met l\'image dont le nom est dans cette colonne, recadrée pour remplir la même place. Choisissez d\'abord un tableau (Exporter → Publipostage).',
+  'img.field.missing': '{name} (colonne absente du tableau)'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

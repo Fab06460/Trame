@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import { fileSafeName } from '@/docName'
 import { t } from '@/i18n'
-import type { MergeData, TrameDocument, TrameElement } from '@/types'
+import type { MergeData, MergeSettings, TrameDocument, TrameElement } from '@/types'
 
 export type { MergeData }
 
@@ -104,6 +104,36 @@ export function toMergeData(table: string[][]): MergeImport | null {
   return { data: { columns, rows }, truncated: head.length > MAX_MERGE_COLUMNS || filled.length > MAX_MERGE_ROWS }
 }
 
+const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback)
+const bounded = (v: unknown, min: number, max: number, fallback: number, integer = false): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, integer ? Math.round(v) : Math.round(v * 10) / 10)) : fallback)
+
+/** Choix mémorisés lus dans un fichier : valeurs hors bornes ramenées aux bornes, le reste remplacé par la valeur par défaut ; illisibles = absents. */
+export function cleanSettings(raw: unknown, columnCount: number): MergeSettings | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  const l = (r.layout && typeof r.layout === 'object' ? r.layout : {}) as Record<string, unknown>
+  const nameColumn = typeof r.nameColumn === 'number' && Number.isInteger(r.nameColumn) && r.nameColumn >= 0 && r.nameColumn < columnCount ? r.nameColumn : null
+  return {
+    mode: r.mode === 'folder' ? 'folder' : 'single',
+    nameColumn,
+    sheet: bool(r.sheet, false),
+    layout: {
+      paper: l.paper === 'letter' ? 'letter' : 'a4',
+      landscape: bool(l.landscape, false),
+      cols: bounded(l.cols, 1, 10, 2, true),
+      rows: bounded(l.rows, 1, 20, 4, true),
+      marginMm: bounded(l.marginMm, 0, 50, 10),
+      gapMm: bounded(l.gapMm, 0, 50, 2),
+      cutMarks: bool(l.cutMarks, true),
+      mirrorBacks: bool(l.mirrorBacks, true),
+      fillCell: bool(l.fillCell, false),
+      offsetXMm: bounded(l.offsetXMm, -20, 20, 0),
+      offsetYMm: bounded(l.offsetYMm, -20, 20, 0),
+      ...(typeof l.preset === 'string' && /^[\w-]{1,40}$/.test(l.preset) ? { preset: l.preset } : {})
+    }
+  }
+}
+
 /** Lecture lors de l'ouverture d'un fichier : données invalides ou vides → retirées. */
 export function sanitizeMergeData(doc: { mailMerge?: unknown }): void {
   const raw = doc.mailMerge as Partial<MergeData> | undefined
@@ -116,8 +146,9 @@ export function sanitizeMergeData(doc: { mailMerge?: unknown }): void {
     .filter((r): r is unknown[] => Array.isArray(r))
     .slice(0, MAX_MERGE_ROWS)
     .map((r) => columns.map((_, i) => (typeof r[i] === 'string' ? cleanCell(r[i] as string) : '')))
+  const settings = cleanSettings(raw.settings, columns.length)
   if (columns.length === 0 || rows.length === 0) delete doc.mailMerge
-  else doc.mailMerge = { columns, rows }
+  else doc.mailMerge = { columns, rows, ...(settings ? { settings } : {}) }
 }
 
 const FIELD = /\{\{\s*([^{}]+?)\s*\}\}/g
@@ -139,14 +170,30 @@ export function fillText(text: string, columns: string[], row: string[]): string
   })
 }
 
-/** Champs utilisés dans les textes du document, dans l'ordre d'apparition. */
-export function fieldsUsed(doc: Pick<TrameDocument, 'pages'>): string[] {
+/** Colonnes qui donnent une image (champ « Remplir avec la colonne » d'une image), dans l'ordre d'apparition. */
+export function imageFieldsUsed(doc: Pick<TrameDocument, 'pages'>): string[] {
   const out: string[] = []
-  for (const p of doc.pages) for (const e of p.elements) if (e.type === 'text' && e.text) for (const f of fieldsIn(e.text)) if (!out.some((o) => key(o) === key(f))) out.push(f)
+  for (const p of doc.pages) for (const e of p.elements) if (e.type === 'image' && e.imageField && !out.some((o) => key(o) === key(e.imageField!))) out.push(e.imageField)
   return out
 }
 
-/** Champs utilisés dans les textes qui n'ont pas de colonne correspondante. */
+/** Champs utilisés dans le document (textes « {{champ}} » puis colonnes d'images), dans l'ordre d'apparition. */
+export function fieldsUsed(doc: Pick<TrameDocument, 'pages'>): string[] {
+  const out: string[] = []
+  for (const p of doc.pages) for (const e of p.elements) if (e.type === 'text' && e.text) for (const f of fieldsIn(e.text)) if (!out.some((o) => key(o) === key(f))) out.push(f)
+  for (const f of imageFieldsUsed(doc)) if (!out.some((o) => key(o) === key(f))) out.push(f)
+  return out
+}
+
+/** Lecture d'un fichier : `imageField` ne vaut que pour une image et doit être un nom de colonne raisonnable. */
+export function sanitizeImageField(e: { type?: unknown; imageField?: unknown }): void {
+  const v = e.imageField
+  if (e.type !== 'image' || typeof v !== 'string' || !v.trim()) delete e.imageField
+  else e.imageField = v.replace(/[{}]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || undefined
+  if (e.imageField === undefined) delete e.imageField
+}
+
+/** Champs utilisés (textes ou images) qui n'ont pas de colonne correspondante. */
 export const unknownFields = (doc: Pick<TrameDocument, 'pages'>, columns: string[]): string[] => fieldsUsed(doc).filter((f) => !columns.some((c) => key(c) === key(f)))
 
 /** Colonnes dont aucun texte ne se sert. */
@@ -155,9 +202,23 @@ export const unusedColumns = (doc: Pick<TrameDocument, 'pages'>, columns: string
   return columns.filter((c) => !used.some((f) => key(f) === key(c)))
 }
 
-const fillElement = (e: TrameElement, columns: string[], row: string[]): TrameElement => {
+/** Image à mettre à la place de celle du modèle pour la valeur d'une cellule (nom de fichier) : les champs à remplacer, ou null si introuvable (l'image du modèle reste). */
+export type ImageResolver = (template: TrameElement, value: string) => Partial<TrameElement> | null
+
+/** Ajuste un texte rempli : `template` est le texte du modèle, `filled` le même texte rempli ; rend l'élément à garder. */
+export type FitText = (template: TrameElement, filled: TrameElement) => TrameElement
+
+const fillElement = (e: TrameElement, columns: string[], row: string[], fit?: FitText, images?: ImageResolver): TrameElement => {
   const copy: TrameElement = { ...e, id: nanoid(8) }
-  if (e.type === 'text' && e.text) copy.text = fillText(e.text, columns, row)
+  if (e.type === 'image' && e.imageField) {
+    const at = columns.findIndex((c) => key(c) === key(e.imageField!))
+    const patch = at < 0 ? null : images?.(e, row[at] ?? '')
+    return patch ? { ...copy, ...patch } : copy
+  }
+  if (e.type === 'text' && e.text) {
+    copy.text = fillText(e.text, columns, row)
+    if (fit && e.mergeFit && copy.text !== e.text) return fit(e, copy)
+  }
   return copy
 }
 
@@ -165,7 +226,7 @@ const fillElement = (e: TrameElement, columns: string[], row: string[]): TrameEl
  * Document fusionné : les pages du modèle, remplies avec chacune des lignes choisies (ligne 1 : toutes les pages, puis ligne 2…).
  * Le document d'origine n'est pas modifié ; les données du publipostage ne suivent pas dans l'exportation.
  */
-export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: number[]): TrameDocument {
+export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: number[], fit?: FitText, images?: ImageResolver): TrameDocument {
   const { mailMerge: _mm, ...rest } = doc
   void _mm
   const groupIds = new Map<string, string>()
@@ -176,7 +237,7 @@ export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: n
       ...p,
       id: nanoid(8),
       elements: p.elements.map((e) => {
-        const copy = fillElement(e, data.columns, row)
+        const copy = fillElement(e, data.columns, row, fit, images)
         if (e.groupId) {
           if (!groupIds.has(e.groupId)) groupIds.set(e.groupId, nanoid(8))
           copy.groupId = groupIds.get(e.groupId)

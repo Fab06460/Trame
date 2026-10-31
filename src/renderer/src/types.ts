@@ -96,6 +96,10 @@ export interface TrameElement {
   strike?: boolean
   /** affichage en majuscules ; le texte saisi reste tel quel */
   uppercase?: boolean
+  /** publipostage : le texte rétrécit quand la valeur d'un champ est plus longue que prévu (il ne prend pas plus de lignes que dans le modèle) */
+  mergeFit?: boolean
+  /** publipostage (images) : colonne du tableau qui donne le nom du fichier image à mettre à la place de celle du modèle */
+  imageField?: string
   /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
   list?: ListKind
   // path : chemin SVG (viewBox 100×100)
@@ -154,6 +158,32 @@ export interface EmbeddedFont {
 export interface MergeData {
   columns: string[]
   rows: string[][]
+  /** derniers choix d'export, retrouvés à la réouverture (absents tant que rien n'a été exporté) */
+  settings?: MergeSettings
+}
+
+/** Choix de la fenêtre « Publipostage » mémorisés avec le document (les lignes choisies et le filtre ne le sont pas : ils dépendent du tableau). */
+export interface MergeSettings {
+  mode: 'single' | 'folder'
+  /** colonne qui nomme les fichiers d'un export par ligne (null : numéro de ligne) */
+  nameColumn: number | null
+  /** plusieurs fiches par feuille */
+  sheet: boolean
+  layout: {
+    paper: 'a4' | 'letter'
+    landscape: boolean
+    cols: number
+    rows: number
+    marginMm: number
+    gapMm: number
+    cutMarks: boolean
+    mirrorBacks: boolean
+    fillCell: boolean
+    offsetXMm: number
+    offsetYMm: number
+    /** gabarit du commerce (voir `sheetPresets.ts`) ; absent = grille libre */
+    preset?: string
+  }
 }
 
 export interface TrameDocument {

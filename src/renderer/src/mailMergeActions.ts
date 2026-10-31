@@ -1,7 +1,9 @@
 import { fileSafeName } from '@/docName'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPdf } from '@/pdfExport'
-import { decodeCsv, mergeDocument, parseCsv, rowFileNames, toMergeData, type MergeData } from '@/mailMerge'
+import { fitToTemplate } from '@/mergeFit'
+import { decodeCsv, imageFieldsUsed, mergeDocument, parseCsv, rowFileNames, toMergeData, type MergeData } from '@/mailMerge'
+import { ensureImages, imageResolver, imageValues, releaseImages } from '@/mergeImageStore'
 import { sheetsFromMerged, type SheetLayout } from '@/mergeSheets'
 import { useEditor } from '@/store/editor'
 import { t } from '@/i18n'
@@ -44,6 +46,13 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
   const rows = o.rows
   if (!data || rows.length === 0) return { saved: null, files: 0 }
   const base = fileSafeName(doc.name)
+  const imageFields = imageFieldsUsed(doc)
+  const missing = new Set<string>()
+  const resolver = imageFields.length ? imageResolver(missing) : undefined
+  // les images introuvables gardent celle du modèle : on prévient après l'enregistrement
+  const warnImages = async (): Promise<void> => {
+    if (missing.size) await window.trame.showInfo(t('mm.images.missing', { count: missing.size }), [...missing].slice(0, 15).join(', ') + (missing.size > 15 ? '…' : ''))
+  }
   const warn = async (fallbacks: Parameters<typeof describeFallbacks>[0]): Promise<void> => {
     const warning = describeFallbacks(fallbacks, doc.pages.length)
     if (warning) await window.trame.showInfo(warning.message, warning.detail)
@@ -51,11 +60,15 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
 
   if (o.mode === 'single') {
     o.onProgress?.(0, 1)
-    const merged = mergeDocument(doc, data, rows)
+    if (resolver) await ensureImages(imageValues(data.columns, data.rows, rows, imageFields))
+    const merged = mergeDocument(doc, data, rows, fitToTemplate, resolver)
     const { dataUrl, fallbacks } = await exportPdf(o.layout ? sheetsFromMerged(merged, doc.pages.length, o.layout).doc : merged)
     o.onProgress?.(1, 1)
     const saved = await window.trame.saveExport(dataUrl, `${base}.pdf`)
-    if (saved) await warn(fallbacks)
+    if (saved) {
+      await warn(fallbacks)
+      await warnImages()
+    }
     return { saved, files: saved ? 1 : 0 }
   }
 
@@ -66,11 +79,15 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
   let firstFallbacks: Parameters<typeof describeFallbacks>[0] = []
   for (const [i, r] of rows.entries()) {
     o.onProgress?.(i, rows.length)
-    const { dataUrl, fallbacks } = await exportPdf(mergeDocument(doc, data, [r]))
+    const values = imageValues(data.columns, data.rows, [r], imageFields)
+    if (resolver) await ensureImages(values)
+    const { dataUrl, fallbacks } = await exportPdf(mergeDocument(doc, data, [r], fitToTemplate, resolver))
+    if (resolver) releaseImages(values)
     if (i === 0) firstFallbacks = fallbacks
     if (!(await window.trame.writeExportFile(picked.dir, names[i], dataUrl))) throw new Error(t('xp.writeFailed', { name: names[i] }))
   }
   o.onProgress?.(rows.length, rows.length)
   await warn(firstFallbacks)
+  await warnImages()
   return { saved: picked.dir, files: rows.length }
 }

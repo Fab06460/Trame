@@ -26,6 +26,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
   const filters = activeFilters(el)
   const inset = cropInsets(el)
   const crop = currentCrop(el)
+  const columns = useEditor((s) => s.doc.mailMerge?.columns) ?? []
 
   // texte alternatif : saisi à la main ou proposé par un modèle qui voit l'image ; enregistré à la sortie du champ (un seul pas d'historique)
   const [altDraft, setAltDraft] = useState(el.alt ?? '')
@@ -96,6 +97,18 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
 
   return (
     <>
+      {(columns.length > 0 || el.imageField) && (
+        <label title={t('img.field.hint')}>
+          {t('img.field')}
+          <select data-field="imageField" value={el.imageField ?? ''} onChange={(e) => updateElement(el.id, { imageField: e.target.value || undefined })}>
+            <option value="">{t('img.field.none')}</option>
+            {columns.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            {el.imageField && !columns.some((c) => c.toLowerCase() === el.imageField!.toLowerCase()) && <option value={el.imageField}>{t('img.field.missing', { name: el.imageField })}</option>}
+          </select>
+        </label>
+      )}
       <button data-action="replace-image" title={t('img.replace.title')} onClick={() => void replaceImage()}>
         {t('img.replace')}
       </button>

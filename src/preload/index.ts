@@ -51,6 +51,9 @@ const api = {
   pickCsv: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('csv:pick'),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
+  /** Publipostage : choix du dossier des images (null si annulé), puis lecture de fichiers de ce dossier par leur nom (data URL, ou null si illisible). */
+  pickMergeImageFolder: (): Promise<{ name: string; files: string[] } | null> => ipcRenderer.invoke('mergeimages:pick'),
+  readMergeImages: (names: string[]): Promise<Record<string, string | null>> => ipcRenderer.invoke('mergeimages:read', names),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
   /** Export vers un dossier : choix du dossier (null si annulé ; `existing` : fichiers qui seraient remplacés), puis écriture fichier par fichier. */

@@ -227,7 +227,7 @@ export const TEMPLATES: Template[] = [
           icon('star', { x: 521, y: 88, ...sq(80) }, '#b8893b'),
           text(100, 190, 923, L('tpl.certificate.title'), 96, '#1e1f24', { align: 'center', fontFamily: SERIF, letterSpacing: 8 }),
           text(100, 318, 923, L('tpl.certificate.to'), 34, '#6b6b80', { align: 'center', fontStyle: 'normal' }),
-          text(100, 378, 923, `${F('first')} ${F('last')}`, 84, '#b8893b', { align: 'center', fontFamily: SERIF, fontStyle: 'italic', height: 110 }),
+          text(100, 378, 923, `${F('first')} ${F('last')}`, 84, '#b8893b', { mergeFit: true, align: 'center', fontFamily: SERIF, fontStyle: 'italic', height: 110 }),
           text(160, 510, 803, F('reason'), 36, '#3a3b45', { align: 'center', fontStyle: 'normal', height: 90 }),
           shape('rect', { x: 180, y: 660, width: 300, height: 2 }, '#1e1f24'),
           text(180, 672, 300, L('tpl.certificate.date'), 26, '#6b6b80', { align: 'center', fontStyle: 'normal' }),
@@ -257,10 +257,10 @@ export const TEMPLATES: Template[] = [
           shape('rect', { x: 0, y: 0, width: 640, height: 150 }, '#e63946'),
           text(0, 22, 640, L('tpl.badge.hello'), 72, '#ffffff', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal', letterSpacing: 4 }),
           text(0, 100, 640, L('tpl.badge.myname'), 34, '#ffffff', { align: 'center', fontStyle: 'normal' }),
-          text(30, 180, 580, F('first'), 92, '#1e1f24', { align: 'center', height: 112 }),
-          text(30, 295, 580, F('last'), 44, '#6b6b80', { align: 'center', fontStyle: 'normal', height: 54 }),
+          text(30, 180, 580, F('first'), 92, '#1e1f24', { mergeFit: true, align: 'center', height: 112 }),
+          text(30, 295, 580, F('last'), 44, '#6b6b80', { mergeFit: true, align: 'center', fontStyle: 'normal', height: 54 }),
           shape('rect', { x: 220, y: 358, width: 200, height: 50 }, '#1e1f24', { cornerRadius: 25 }),
-          text(220, 367, 200, F('class'), 30, '#ffffff', { align: 'center', height: 36 })
+          text(220, 367, 200, F('class'), 30, '#ffffff', { mergeFit: true, align: 'center', height: 36 })
         ]
       }
     ]
@@ -283,8 +283,8 @@ export const TEMPLATES: Template[] = [
         background: '#ffffff',
         elements: [
           shape('rect', { x: 0, y: 0, width: 24, height: 260 }, '#2a9d8f'),
-          text(60, 38, 590, `${F('last')} ${F('first')}`, 64, '#1e1f24', { height: 78 }),
-          text(60, 126, 590, L('tpl.label.class', { field: F('class') }), 40, '#2a9d8f', { height: 48 }),
+          text(60, 38, 590, `${F('last')} ${F('first')}`, 64, '#1e1f24', { mergeFit: true, height: 78 }),
+          text(60, 126, 590, L('tpl.label.class', { field: F('class') }), 40, '#2a9d8f', { mergeFit: true, height: 48 }),
           shape('rect', { x: 60, y: 196, width: 560, height: 2 }, '#cfd2d8'),
           text(60, 210, 560, L('tpl.label.subject'), 28, '#6b6b80', { fontStyle: 'normal', height: 34 })
         ]
@@ -311,7 +311,7 @@ export const TEMPLATES: Template[] = [
           shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#c9822b'),
           shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#fff7e6'),
           text(60, 56, 400, L('tpl.flashcard.front'), 28, '#c9822b', { fontStyle: 'normal', height: 34 }),
-          text(60, 230, 674, F('word'), 84, '#1e1f24', { align: 'center', fontFamily: SERIF, height: 102 })
+          text(60, 230, 674, F('word'), 84, '#1e1f24', { mergeFit: true, align: 'center', fontFamily: SERIF, height: 102 })
         ]
       },
       {
@@ -320,7 +320,7 @@ export const TEMPLATES: Template[] = [
           shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#2f6fb3'),
           shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#e8f4ff'),
           text(60, 56, 400, L('tpl.flashcard.back'), 28, '#2f6fb3', { fontStyle: 'normal', height: 34 }),
-          text(60, 230, 674, F('translation'), 84, '#1e1f24', { align: 'center', fontFamily: SERIF, height: 102 })
+          text(60, 230, 674, F('translation'), 84, '#1e1f24', { mergeFit: true, align: 'center', fontFamily: SERIF, height: 102 })
         ]
       }
     ]

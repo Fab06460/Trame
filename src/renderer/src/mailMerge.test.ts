@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TrameDocument, TrameElement } from '@/types'
-import { decodeCsv, detectDelimiter, fieldsIn, fieldsUsed, fillText, mergeDocument, parseCsv, rowFileNames, sanitizeMergeData, toMergeData, unknownFields, unusedColumns, MAX_MERGE_ROWS } from './mailMerge'
+import { cleanSettings, decodeCsv, imageFieldsUsed, sanitizeImageField, detectDelimiter, fieldsIn, fieldsUsed, fillText, mergeDocument, parseCsv, rowFileNames, sanitizeMergeData, toMergeData, unknownFields, unusedColumns, MAX_MERGE_ROWS } from './mailMerge'
 
 const text = (id: string, t: string, extra: Partial<TrameElement> = {}): TrameElement => ({ id, type: 'text', x: 0, y: 0, width: 100, height: 30, rotation: 0, opacity: 1, fill: '#000', text: t, ...extra })
 const doc = (): TrameDocument => ({
@@ -139,5 +139,72 @@ describe('choix des lignes', () => {
     expect(selectRows(d, null, { column: 1, value: '6A' })).toEqual([1, 2])
     expect(selectRows(d, [0, 2, 9], { column: 1, value: '6A' })).toEqual([2])
     expect(selectRows(d, [3, 1], null)).toEqual([3, 1])
+  })
+})
+
+describe('choix mémorisés avec le document', () => {
+  const ok = { mode: 'single', nameColumn: 1, sheet: true, layout: { paper: 'letter', landscape: false, cols: 3, rows: 10, marginMm: 5, gapMm: 1, cutMarks: false, mirrorBacks: true, fillCell: true, offsetXMm: 1.5, offsetYMm: -0.5, preset: 'letter-5160' } }
+  it('des choix valides sont conservés tels quels', () => {
+    expect(cleanSettings(ok, 3)).toEqual(ok)
+  })
+  it('valeurs hors bornes ramenées aux bornes, types faux remplacés par les valeurs par défaut', () => {
+    const s = cleanSettings({ mode: 'x', nameColumn: 9, sheet: 'oui', layout: { paper: 'a3', cols: 99, rows: -4, marginMm: 'a', offsetXMm: 500, preset: '<script>' } }, 3)!
+    expect(s.mode).toBe('single')
+    expect(s.nameColumn).toBeNull()
+    expect(s.sheet).toBe(false)
+    expect(s.layout).toMatchObject({ paper: 'a4', cols: 10, rows: 1, marginMm: 10, offsetXMm: 20, cutMarks: true })
+    expect(s.layout.preset).toBeUndefined()
+  })
+  it('illisibles : absents', () => {
+    expect(cleanSettings(undefined, 2)).toBeUndefined()
+    expect(cleanSettings('x', 2)).toBeUndefined()
+  })
+  it('lus avec le tableau, et retirés avec lui', () => {
+    const doc: { mailMerge?: unknown } = { mailMerge: { columns: ['a', 'b'], rows: [['1', '2']], settings: ok } }
+    sanitizeMergeData(doc)
+    expect((doc.mailMerge as { settings?: unknown }).settings).toEqual({ ...ok, nameColumn: 1 })
+    const empty: { mailMerge?: unknown } = { mailMerge: { columns: ['a'], rows: [], settings: ok } }
+    sanitizeMergeData(empty)
+    expect(empty.mailMerge).toBeUndefined()
+  })
+})
+
+describe('champs image', () => {
+  const img = (extra: Partial<TrameElement> = {}): TrameElement => ({ id: 'i', type: 'image', x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1, fill: '#000', src: 'data:image/png;base64,AAAA', imageField: 'Photo', ...extra })
+  const doc = { version: 2, name: 'd', width: 400, height: 300, pages: [{ id: 'p', background: '#fff', elements: [img()] }] } as unknown as TrameDocument
+  const data = { columns: ['Nom', 'photo'], rows: [['Ada', 'ada.jpg'], ['Alan', 'inconnue.jpg']] }
+  it('la colonne est trouvée sans tenir compte de la casse, et l\'image remplacée', () => {
+    const asked: string[] = []
+    const out = mergeDocument(doc, data, [0], undefined, (_t, value) => {
+      asked.push(value)
+      return { src: 'data:image/jpeg;base64,BBBB' }
+    })
+    expect(asked).toEqual(['ada.jpg'])
+    expect(out.pages[0].elements[0].src).toBe('data:image/jpeg;base64,BBBB')
+    expect(out.pages[0].elements[0].imageField).toBe('Photo')
+  })
+  it('image introuvable (le remplaçant rend null) : celle du modèle reste', () => {
+    const out = mergeDocument(doc, data, [1], undefined, () => null)
+    expect(out.pages[0].elements[0].src).toBe('data:image/png;base64,AAAA')
+  })
+  it('sans remplaçant, rien ne change', () => {
+    expect(mergeDocument(doc, data, [0]).pages[0].elements[0].src).toBe('data:image/png;base64,AAAA')
+  })
+  it('les colonnes d\'images comptent comme utilisées, et une colonne absente est signalée', () => {
+    expect(imageFieldsUsed(doc)).toEqual(['Photo'])
+    expect(fieldsUsed(doc)).toEqual(['Photo'])
+    expect(unusedColumns(doc, data.columns)).toEqual(['Nom'])
+    expect(unknownFields(doc, ['Nom'])).toEqual(['Photo'])
+  })
+  it('lecture : champ gardé pour une image, nettoyé, retiré ailleurs', () => {
+    const ok: { type: string; imageField?: unknown } = { type: 'image', imageField: '  {Photo}  élève ' }
+    sanitizeImageField(ok)
+    expect(ok.imageField).toBe('Photo élève')
+    const text: { type: string; imageField?: unknown } = { type: 'text', imageField: 'x' }
+    sanitizeImageField(text)
+    expect('imageField' in text).toBe(false)
+    const bad: { type: string; imageField?: unknown } = { type: 'image', imageField: 42 }
+    sanitizeImageField(bad)
+    expect('imageField' in bad).toBe(false)
   })
 })

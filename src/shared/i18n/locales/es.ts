@@ -927,5 +927,33 @@ export const es: Catalog = {
   'html.help': 'Flechas: cambiar de página · F: pantalla completa',
   'html.noscript': 'Esta presentación necesita JavaScript para mostrarse.',
   // Présentation web
-  'export.html': 'Presentación web (.html)'
+  'export.html': 'Presentación web (.html)',
+  // Publipostage : planches du commerce
+  'mm.preset': 'Hoja comercial de etiquetas',
+  'mm.preset.free': 'Cuadrícula libre (ajustada a mano)',
+  'mm.preset.option': '{name}: {count} por hoja ({size} mm)',
+  'mm.preset.card85': 'Tarjetas de visita',
+  'mm.preset.a6': 'Tarjetas A6',
+  'mm.preset.a7': 'Tarjetas A7',
+  'mm.preset.hint': 'Formatos según las fichas de los fabricantes: pruebe primero en papel normal, superpuesto a la hoja real a contraluz. El desplazamiento compensa la impresora.',
+  'mm.offsetX': 'Desplazamiento horizontal (mm)',
+  'mm.offsetY': 'Desplazamiento vertical (mm)',
+  // Publipostage : textes qui s'ajustent
+  'prop.mergeFit': 'Reducir si el texto es demasiado largo',
+  'prop.mergeFit.hint': 'Combinar correspondencia: un nombre más largo de lo previsto se reduce (hasta la mitad) en vez de pasar a otra línea.',
+  // Publipostage : images
+  'main.mergeImages.title': 'Elegir la carpeta de imágenes',
+  'main.mergeImages.button': 'Elegir esta carpeta',
+  'mm.images.missing': { one: 'No se encontró una imagen: se mantuvo la de la plantilla.', other: 'No se encontraron {count} imágenes: se mantuvo la de la plantilla.' },
+  'mm.images': 'Imágenes',
+  'mm.images.fields': 'Columnas de imágenes: {fields}',
+  'mm.images.choose': 'Elegir la carpeta de imágenes…',
+  'mm.images.folder': { one: 'Carpeta «{name}»: {count} imagen', other: 'Carpeta «{name}»: {count} imágenes' },
+  'mm.images.none': 'Elija la carpeta con las imágenes: sin ella se mantiene la imagen de la plantilla.',
+  'mm.images.rowMissing': 'Imagen no encontrada para esta fila: {names}',
+  'mm.images.hint': 'La columna contiene el nombre del archivo (p. ej. ada.jpg; puede faltar la extensión). Formatos: PNG, JPG, WebP. La carpeta no se guarda en el documento.',
+  'img.field': 'Rellenar con la columna (combinar correspondencia)',
+  'img.field.none': 'Ninguna (imagen fija)',
+  'img.field.hint': 'La combinación coloca la imagen cuyo nombre está en esta columna, recortada para ocupar el mismo espacio. Elija primero una tabla (Exportar → Combinar correspondencia).',
+  'img.field.missing': '{name} (columna ausente de la tabla)'
 }

@@ -39,5 +39,5 @@ export function sanitizeTextStyle(element: object): void {
   }
   num('letterSpacing', LETTER_SPACING.min, LETTER_SPACING.max)
   num('lineHeight', LINE_HEIGHT.min, LINE_HEIGHT.max)
-  for (const k of ['underline', 'strike', 'uppercase'] as const) if (e[k] !== true) delete e[k]
+  for (const k of ['underline', 'strike', 'uppercase', 'mergeFit'] as const) if (e[k] !== true) delete e[k]
 }
