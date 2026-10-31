@@ -1917,6 +1917,17 @@ try {
   const svgText = await svgOf('Sans titre-page-3.svg')
   check('un texte devient un vrai <text> (« Votre texte »)', (await validSvg(svgText)) === true && />Votre texte<\/text>/.test(svgText), svgText.slice(0, 200))
   check('la police du texte est incorporée (@font-face, WOFF en base64)', svgText.includes('@font-face') && svgText.includes("font-family:'Inter'") && svgText.includes('data:font/woff;base64,'))
+  // présentation web : un seul fichier HTML autonome
+  await rm(join(zipDir, 'Sans titre.html'), { force: true })
+  await exportVia('html')
+  for (let i = 0; i < 60 && !readdirSync(zipDir).includes('Sans titre.html'); i++) await sleep(250)
+  const htmlPres = readdirSync(zipDir).includes('Sans titre.html') ? await readFile(join(zipDir, 'Sans titre.html'), 'utf-8') : ''
+  const htmlInfo = await run(`(() => { const d = new DOMParser().parseFromString(${JSON.stringify(htmlPres)}, 'text/html'); const ids = [...d.querySelectorAll('[id]')].map((e) => e.id); return JSON.stringify({ slides: d.querySelectorAll('section.slide').length, dup: ids.length - new Set(ids).size, lang: d.documentElement.lang }) })()`)
+  check('menu Exporter → Présentation web : un fichier HTML, une section par page', htmlPres.startsWith('<!doctype html>') && JSON.parse(htmlInfo || '{}').slides === 3, htmlInfo)
+  check('la présentation web est autonome : police incorporée une seule fois, texte réel, aucune connexion permise', htmlPres.includes('data:font/woff') && (htmlPres.match(/@font-face/g) ?? []).length === 1 && />Votre texte<\/text>/.test(htmlPres) && htmlPres.includes("default-src 'none'") && !/<script[^>]+src=|<link /.test(htmlPres))
+  check('identifiants uniques, langue du document', JSON.parse(htmlInfo || '{}').dup === 0 && JSON.parse(htmlInfo || '{}').lang === 'fr', htmlInfo)
+  await rm(join(zipDir, 'Sans titre.html'), { force: true })
+
   await clickSel('header.toolbar button[title^="Annuler"]')
   await sleep(250)
 
@@ -2595,7 +2606,7 @@ try {
   check('le menu est fermé au départ', (await nBrand('[role="menu"]')) === 0)
   await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
   await sleep(250)
-  check('le menu propose PDF, PowerPoint, PNG, JPG, SVG, plusieurs pages et le publipostage', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,png,jpg,svg,pages,merge')
+  check('le menu propose PDF, PowerPoint, la présentation web, PNG, JPG, SVG, plusieurs pages et le publipostage', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,html,png,jpg,svg,pages,merge')
   // aucune légende ne dépasse du menu (la barre d'outils est en « nowrap » : les menus doivent rétablir le retour à la ligne)
   const popupOverflow = () => run(`(() => { const p = document.querySelector('.export-popup'); if (!p) return 'menu absent'; const pr = p.getBoundingClientRect(); const bad = [...p.querySelectorAll('button, strong, span')].filter((e) => { const r = e.getBoundingClientRect(); return r.right > pr.right + 0.5 || r.left < pr.left - 0.5 || e.scrollWidth > e.clientWidth + 1 }).map((e) => e.textContent.slice(0, 40)); return bad.length ? bad.join(' | ') : '' })()`)
   check('menu Exporter : aucune légende ne dépasse du conteneur', (await popupOverflow()) === '', await popupOverflow())

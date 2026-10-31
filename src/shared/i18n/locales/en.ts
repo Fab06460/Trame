@@ -917,5 +917,15 @@ export const en: Catalog = {
   // Publipostage : lignes et planches
   'mm.size': 'Card size',
   'mm.size.real': 'Actual size (reduced only if it does not fit)',
-  'mm.size.fill': 'Fill the cell (labels on a commercial sheet)'
+  'mm.size.fill': 'Fill the cell (labels on a commercial sheet)',
+  // Présentation web
+  'export.html.desc': 'Presentation in a single file, to open in a browser without Trame or a connection',
+  'html.page': 'Page {page} of {total}',
+  'html.previous': 'Previous page',
+  'html.next': 'Next page',
+  'html.fullscreen': 'Full screen (F)',
+  'html.help': 'Arrows: change page · F: full screen',
+  'html.noscript': 'This presentation needs JavaScript to display.',
+  // Présentation web
+  'export.html': 'Web presentation (.html)'
 }

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { fileSafeName } from '@/docName'
 import { renderPage } from '@/exportPages'
 import { pageFileName } from '@/pageExport'
+import { documentToHtml } from '@/htmlExport'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPptx } from '@/pptxExport'
@@ -10,7 +11,7 @@ import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
 import { useMailMerge } from '@/store/mailMerge'
 import { usePdfIssues } from '@/store/pdfIssues'
-import { t, useT } from '@/i18n'
+import { t, useLocale, useT } from '@/i18n'
 import { useDismiss } from './useDismiss'
 
 async function exportImage(type: 'image/png' | 'image/jpeg'): Promise<void> {
@@ -31,6 +32,23 @@ async function exportSvg(): Promise<void> {
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   await window.trame.saveExport(`data:image/svg+xml;base64,${btoa(bin)}`, doc.pages.length > 1 ? pageFileName(fileSafeName(doc.name), pageNo, doc.pages.length, 'svg') : `${fileSafeName(doc.name)}.svg`)
+}
+
+async function exportHtmlFile(): Promise<void> {
+  const { doc } = useEditor.getState()
+  const html = await documentToHtml(doc, {
+    lang: useLocale.getState().locale,
+    page: t('html.page', { page: '{page}', total: '{total}' }),
+    previous: t('html.previous'),
+    next: t('html.next'),
+    fullscreen: t('html.fullscreen'),
+    help: t('html.help'),
+    noScript: t('html.noscript')
+  })
+  const bytes = new TextEncoder().encode(html)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  await window.trame.saveExport(`data:text/html;base64,${btoa(bin)}`, `${fileSafeName(doc.name)}.html`)
 }
 
 async function exportPdfFile(): Promise<void> {
@@ -94,6 +112,10 @@ export function ExportMenu(): React.JSX.Element {
           <button role="menuitem" data-export="pptx" onClick={() => choose(exportPptxFile)}>
             <strong>PowerPoint (.pptx)</strong>
             <span>{t('export.pptx.desc')}</span>
+          </button>
+          <button role="menuitem" data-export="html" onClick={() => choose(exportHtmlFile)}>
+            <strong>{t('export.html')}</strong>
+            <span>{t('export.html.desc')}</span>
           </button>
           <div className="export-sep" role="separator" />
           <button role="menuitem" data-export="png" onClick={() => choose(() => exportImage('image/png'))}>

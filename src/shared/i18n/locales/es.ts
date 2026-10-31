@@ -917,5 +917,15 @@ export const es: Catalog = {
   // Publipostage : lignes et planches
   'mm.size': 'Tamaño de las fichas',
   'mm.size.real': 'Tamaño real (se reduce solo si no cabe)',
-  'mm.size.fill': 'Rellenar la casilla (etiquetas de una hoja comercial)'
+  'mm.size.fill': 'Rellenar la casilla (etiquetas de una hoja comercial)',
+  // Présentation web
+  'export.html.desc': 'Presentación en un solo archivo, para abrir en un navegador sin Trame ni conexión',
+  'html.page': 'Página {page} de {total}',
+  'html.previous': 'Página anterior',
+  'html.next': 'Página siguiente',
+  'html.fullscreen': 'Pantalla completa (F)',
+  'html.help': 'Flechas: cambiar de página · F: pantalla completa',
+  'html.noscript': 'Esta presentación necesita JavaScript para mostrarse.',
+  // Présentation web
+  'export.html': 'Presentación web (.html)'
 }

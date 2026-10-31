@@ -918,7 +918,17 @@ export const fr = {
   // Publipostage : lignes et planches
   'mm.size': 'Taille des fiches',
   'mm.size.real': 'Taille réelle (réduite seulement si elle ne tient pas)',
-  'mm.size.fill': 'Remplir la case (étiquettes d\'une planche du commerce)'
+  'mm.size.fill': 'Remplir la case (étiquettes d\'une planche du commerce)',
+  // Présentation web
+  'export.html.desc': 'Présentation en un seul fichier, à ouvrir dans un navigateur sans Trame ni connexion',
+  'html.page': 'Page {page} sur {total}',
+  'html.previous': 'Page précédente',
+  'html.next': 'Page suivante',
+  'html.fullscreen': 'Plein écran (F)',
+  'html.help': 'Flèches : changer de page · F : plein écran',
+  'html.noscript': 'Cette présentation a besoin de JavaScript pour s\'afficher.',
+  // Présentation web
+  'export.html': 'Présentation web (.html)'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

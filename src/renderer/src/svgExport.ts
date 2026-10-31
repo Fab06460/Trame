@@ -22,10 +22,10 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
   return btoa(bin)
 }
 
-/** `@font-face` des variantes réellement utilisées par les textes de la page (les autres polices restent celles du système). */
-async function fontFaces(page: TramePage): Promise<string> {
+/** `@font-face` des variantes réellement utilisées par les textes des pages données (les autres polices restent celles du système). */
+export async function fontFaces(pages: TramePage[]): Promise<string> {
   const seen = new Map<string, string>()
-  for (const el of page.elements) {
+  for (const el of pages.flatMap((p) => p.elements)) {
     if (el.hidden || el.type !== 'text' || !displayText(el).trim()) continue
     const d = diagnoseFont(el.fontFamily, el.fontStyle)
     if (!d.ok) continue
@@ -96,7 +96,7 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
     body.push(`<g transform="${transform}"${opacity}${filter}>${parts.join('')}</g>`)
   }
 
-  const fonts = options.embedFonts === false ? '' : await fontFaces(page)
+  const fonts = options.embedFonts === false ? '' : await fontFaces([page])
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<svg xmlns="http://www.w3.org/2000/svg" width="${n(doc.width)}" height="${n(doc.height)}" viewBox="0 0 ${n(doc.width)} ${n(doc.height)}">` +

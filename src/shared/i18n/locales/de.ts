@@ -917,5 +917,15 @@ export const de: Catalog = {
   // Publipostage : lignes et planches
   'mm.size': 'Kartengröße',
   'mm.size.real': 'Originalgröße (nur verkleinert, wenn sie nicht passt)',
-  'mm.size.fill': 'Zelle ausfüllen (Etiketten auf einem handelsüblichen Bogen)'
+  'mm.size.fill': 'Zelle ausfüllen (Etiketten auf einem handelsüblichen Bogen)',
+  // Présentation web
+  'export.html.desc': 'Präsentation in einer einzigen Datei, im Browser ohne Trame und ohne Verbindung zu öffnen',
+  'html.page': 'Seite {page} von {total}',
+  'html.previous': 'Vorherige Seite',
+  'html.next': 'Nächste Seite',
+  'html.fullscreen': 'Vollbild (F)',
+  'html.help': 'Pfeiltasten: Seite wechseln · F: Vollbild',
+  'html.noscript': 'Diese Präsentation benötigt JavaScript zur Anzeige.',
+  // Présentation web
+  'export.html': 'Web-Präsentation (.html)'
 }
