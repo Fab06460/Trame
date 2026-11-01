@@ -1060,7 +1060,29 @@ export const fr = {
   'print.pagesMultiple': 'Un livret a un nombre de pages multiple de 4 : des pages blanches sont ajoutées à la fin (quatrième de couverture comprise : placez-y votre dernière page si besoin).',
   'print.export': 'Exporter le PDF',
   'print.file.booklet': '{name}-livret',
-  'print.file.nup': '{name}-{n}-par-feuille'
+  'print.file.nup': '{name}-{n}-par-feuille',
+  // Historique des versions
+  'common.ok': 'OK',
+  'versions.menu': 'Historique des versions…',
+  'versions.menu.title': 'Revenir à une version précédente du fichier, ou en garder une sous un nom',
+  'versions.title': 'Historique des versions',
+  'versions.how': 'Une version est gardée à chaque enregistrement, ainsi que l\'état du fichier juste avant d\'être remplacé. Les versions restent sur cet ordinateur, dans les données de l\'application.',
+  'versions.label': 'Nom de la version',
+  'versions.label.placeholder': 'Nom (facultatif), ex. « Rendu au prof »',
+  'versions.snapshot': 'Garder cette version',
+  'versions.empty': 'Aucune version pour l\'instant : elles apparaissent à l\'enregistrement.',
+  'versions.unsaved': 'Ce document n\'est pas encore enregistré : l\'historique est celui d\'un fichier. Enregistrez-le d\'abord.',
+  'versions.saveFirst': 'Enregistrer le document',
+  'versions.pages': { one: '{count} page', other: '{count} pages' },
+  'versions.auto': 'automatique',
+  'versions.missing': 'Cette version n\'est plus lisible.',
+  'versions.preview.first': 'Première page de la version',
+  'versions.rename': 'Nommer…',
+  'versions.delete': 'Supprimer',
+  'versions.delete.confirm': 'Supprimer cette version de l\'historique ?',
+  'versions.copy': 'Ouvrir comme copie',
+  'versions.restore': 'Revenir à cette version',
+  'versions.copyName': '{name} (version du {date})'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

@@ -1059,5 +1059,27 @@ export const en: Catalog = {
   'print.pagesMultiple': 'A booklet has a multiple of 4 pages: blank pages are added at the end (back cover included: put your last page there if needed).',
   'print.export': 'Export the PDF',
   'print.file.booklet': '{name}-booklet',
-  'print.file.nup': '{name}-{n}-per-sheet'
+  'print.file.nup': '{name}-{n}-per-sheet',
+  // Historique des versions
+  'common.ok': 'OK',
+  'versions.menu': 'Version history…',
+  'versions.menu.title': 'Go back to an earlier version of the file, or keep one under a name',
+  'versions.title': 'Version history',
+  'versions.how': 'A version is kept every time you save, along with the file as it was just before being replaced. Versions stay on this computer, in the application data.',
+  'versions.label': 'Version name',
+  'versions.label.placeholder': 'Name (optional), e.g. “Handed in”',
+  'versions.snapshot': 'Keep this version',
+  'versions.empty': 'No versions yet: they appear when you save.',
+  'versions.unsaved': 'This document has not been saved yet: history belongs to a file. Save it first.',
+  'versions.saveFirst': 'Save the document',
+  'versions.pages': { one: '{count} page', other: '{count} pages' },
+  'versions.auto': 'automatic',
+  'versions.missing': 'This version can no longer be read.',
+  'versions.preview.first': 'First page of the version',
+  'versions.rename': 'Name…',
+  'versions.delete': 'Delete',
+  'versions.delete.confirm': 'Delete this version from the history?',
+  'versions.copy': 'Open as a copy',
+  'versions.restore': 'Go back to this version',
+  'versions.copyName': '{name} (version of {date})'
 }

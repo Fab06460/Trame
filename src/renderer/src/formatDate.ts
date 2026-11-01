@@ -12,3 +12,8 @@ export function formatRelative(ms: number, now: number = Date.now()): string {
   if (abs < 7 * 86400) return rtf.format(Math.round(seconds / 86400), 'day')
   return new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+/** Date et heure complètes, dans la langue de l'interface (ex. « 3 nov. 2026, 14:05 »). */
+export function formatDateTime(ms: number): string {
+  return new Date(ms).toLocaleString(useLocale.getState().locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}

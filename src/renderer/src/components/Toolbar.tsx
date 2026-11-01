@@ -13,6 +13,7 @@ import { ExportMenu } from './ExportMenu'
 import { ImportMenu } from './ImportMenu'
 import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
+import { useVersions } from '@/store/versions'
 
 export function Toolbar(): React.JSX.Element {
   const t = useT()
@@ -76,7 +77,8 @@ export function Toolbar(): React.JSX.Element {
               { key: 'open', label: t('toolbar.open.dots'), hint: shortcut('⌘O'), onSelect: openProject },
               { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
-              { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) }
+              { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
+              { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) }
             ]}
           />
           {save}
@@ -85,6 +87,7 @@ export function Toolbar(): React.JSX.Element {
       <span className="sep" />
       <button disabled={!canUndo} onClick={undo} title={t('toolbar.undo.title')}>↩︎</button>
       <button disabled={!canRedo} onClick={redo} title={t('toolbar.redo.title')}>↪︎</button>
+      <button data-action="versions-open" onClick={() => useVersions.getState().setOpen(true)} title={t('versions.menu.title')} aria-label={t('versions.title')}>🕘︎</button>
       <button onClick={() => useFind.getState().show()} title={t('toolbar.find.title')} aria-label={t('toolbar.find.label')}>🔍︎</button>
       <span className="sep" />
       {tier < 1 ? (

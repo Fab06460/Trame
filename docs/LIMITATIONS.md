@@ -17,6 +17,7 @@
 ## Risques de perte de données
 
 - **Pas d'enregistrement automatique** ni de récupération après un plantage de l'appli ou de la machine.
+- **Historique des versions** : lié au **chemin** du fichier (déplacer ou renommer le fichier, ou « Enregistrer sous », repart d'un historique vide ; l'ancien reste dans les données de l'application). Garde au plus 30 versions automatiques, 60 nommées et 400 Mo ; les images en base64 ne se compressent presque pas, un document lourd remplit vite sa part. Les versions ne quittent pas l'ordinateur (elles ne sont pas dans le fichier `.trame` envoyé à quelqu'un).
 - Les confirmations (Nouveau, Ouvrir, appliquer un modèle, fermer la fenêtre) reposent sur l'indicateur `dirty`, qui passe à `true` à toute modification, **y compris un annuler qui ramène le document à son état enregistré** : une confirmation peut donc être demandée alors que rien n'a réellement changé.
 - La validation à l'ouverture (`parseDocument`) vérifie la **structure** (version, dimensions, pages, type et coordonnées des éléments), pas la cohérence du contenu : un `src` d'image invalide, une couleur incorrecte ou un `path` SVG illisible sont acceptés.
 - Le champ `name` du document n'est pas modifiable dans l'interface (il sert de nom par défaut à « Enregistrer sous » et aux exports et reste « Sans titre » ou le nom du modèle).

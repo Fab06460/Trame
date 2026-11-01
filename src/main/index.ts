@@ -8,6 +8,7 @@ import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
+import { addIfNew, addVersion, deleteVersion, labelVersion, listVersions, readVersion } from './versionStore'
 import { safeExportName } from './exportFolder'
 import { MAX_MERGE_IMAGE_BYTES, MAX_MERGE_IMAGE_FILES, isMergeImageFile, mergeImageMime } from '../shared/mergeImages'
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
@@ -149,13 +150,40 @@ ipcMain.handle('project:save', async (e, json: string, currentPath?: string, nam
       if (res.canceled || !res.filePath) return null
       path = res.filePath
     }
+    // l'historique ne doit jamais empêcher d'enregistrer : état d'avant l'écrasement, puis nouvelle version
+    await readFile(path, 'utf-8').then((before) => addIfNew(app.getPath('userData'), path!, before), () => null).catch(() => null)
     await writeFile(path, json, 'utf-8')
+    await addVersion(app.getPath('userData'), path, json).catch(() => null)
     await noteRecent(path)
     return path
   } catch (err) {
     dialog.showErrorBox(tm('main.saveFailed'), err instanceof Error ? err.message : String(err))
     return null
   }
+})
+
+// Historique des versions d'un fichier (voir versionStore.ts) ; le chemin ne sert qu'à retrouver le dossier d'historique.
+const asPath = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 && v.length < 4096 ? v : null)
+ipcMain.handle('versions:list', async (_e, path: unknown) => {
+  const p = asPath(path)
+  return p ? listVersions(app.getPath('userData'), p) : []
+})
+ipcMain.handle('versions:read', async (_e, path: unknown, id: unknown) => {
+  const p = asPath(path)
+  return p && typeof id === 'string' ? readVersion(app.getPath('userData'), p, id) : null
+})
+ipcMain.handle('versions:snapshot', async (_e, path: unknown, json: unknown, label: unknown) => {
+  const p = asPath(path)
+  if (!p || typeof json !== 'string') return null
+  return addVersion(app.getPath('userData'), p, json, { manual: true, label: typeof label === 'string' ? label : undefined }).catch(() => null)
+})
+ipcMain.handle('versions:label', async (_e, path: unknown, id: unknown, label: unknown) => {
+  const p = asPath(path)
+  return p && typeof id === 'string' && typeof label === 'string' ? labelVersion(app.getPath('userData'), p, id, label) : false
+})
+ipcMain.handle('versions:delete', async (_e, path: unknown, id: unknown) => {
+  const p = asPath(path)
+  return p && typeof id === 'string' ? deleteVersion(app.getPath('userData'), p, id) : false
 })
 
 ipcMain.handle('project:open', async (e) => {

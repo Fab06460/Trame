@@ -1059,5 +1059,27 @@ export const es: Catalog = {
   'print.pagesMultiple': 'Un folleto tiene un número de páginas múltiplo de 4: se añaden páginas en blanco al final (contraportada incluida: ponga ahí su última página si lo necesita).',
   'print.export': 'Exportar el PDF',
   'print.file.booklet': '{name}-folleto',
-  'print.file.nup': '{name}-{n}-por-hoja'
+  'print.file.nup': '{name}-{n}-por-hoja',
+  // Historique des versions
+  'common.ok': 'OK',
+  'versions.menu': 'Historial de versiones…',
+  'versions.menu.title': 'Volver a una versión anterior del archivo, o guardar una con nombre',
+  'versions.title': 'Historial de versiones',
+  'versions.how': 'Se guarda una versión en cada guardado, y también el estado del archivo justo antes de reemplazarlo. Las versiones permanecen en este ordenador, en los datos de la aplicación.',
+  'versions.label': 'Nombre de la versión',
+  'versions.label.placeholder': 'Nombre (opcional), p. ej. «Entregado»',
+  'versions.snapshot': 'Guardar esta versión',
+  'versions.empty': 'Aún no hay versiones: aparecen al guardar.',
+  'versions.unsaved': 'Este documento aún no está guardado: el historial pertenece a un archivo. Guárdelo primero.',
+  'versions.saveFirst': 'Guardar el documento',
+  'versions.pages': { one: '{count} página', other: '{count} páginas' },
+  'versions.auto': 'automática',
+  'versions.missing': 'Esta versión ya no se puede leer.',
+  'versions.preview.first': 'Primera página de la versión',
+  'versions.rename': 'Nombrar…',
+  'versions.delete': 'Eliminar',
+  'versions.delete.confirm': '¿Eliminar esta versión del historial?',
+  'versions.copy': 'Abrir como copia',
+  'versions.restore': 'Volver a esta versión',
+  'versions.copyName': '{name} (versión del {date})'
 }

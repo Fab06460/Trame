@@ -223,6 +223,8 @@ interface EditorState {
   undo: () => void
   redo: () => void
   loadDocument: (doc: TrameDocument, path?: string) => void
+  /** Remplace tout le contenu du document (retour à une version, fusion…) en un cran d'historique : on peut annuler. Le fichier associé est conservé. */
+  replaceDocument: (doc: TrameDocument) => void
   /** À appeler juste après loadDocument quand le document vient d'un modèle (loadDocument remet l'origine à zéro). */
   setTemplateOrigin: (origin: TemplateOrigin | null) => void
   newDocument: () => void
@@ -864,6 +866,12 @@ export const useEditor = create<EditorState>((set, get) => {
       void registerEmbeddedFonts(doc.fonts)
       set({ templateUnlocked: false })
       set({ doc, pageId: doc.pages[0].id, filePath: path, selectedIds: [], past: [], future: [], dirty: false, templateOrigin: null })
+    },
+
+    replaceDocument: (doc) => {
+      void registerEmbeddedFonts(doc.fonts)
+      const pageId = doc.pages.some((p) => p.id === get().pageId) ? get().pageId : doc.pages[0].id
+      set({ ...snapshot(), doc, pageId, selectedIds: [], dirty: true })
     },
 
     newDocument: () => {

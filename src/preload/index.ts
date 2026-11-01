@@ -11,6 +11,16 @@ export interface RecentProject {
   modified: number | null
 }
 
+export interface VersionInfo {
+  id: string
+  at: number
+  label?: string
+  manual: boolean
+  pages: number
+  name: string
+  bytes: number
+}
+
 export interface UserTemplateMeta {
   id: string
   name: string
@@ -32,6 +42,13 @@ const api = {
   /** Sans `path`, ouvre « Enregistrer sous » (proposant `name`). Retourne le chemin, ou null si annulé/échec. */
   saveProject: (json: string, path?: string, name?: string): Promise<string | null> =>
     ipcRenderer.invoke('project:save', json, path, name),
+  /** Historique des versions d'un fichier enregistré (instantanés gardés à chaque enregistrement et à la demande). */
+  listVersions: (path: string): Promise<VersionInfo[]> => ipcRenderer.invoke('versions:list', path),
+  readVersion: (path: string, id: string): Promise<string | null> => ipcRenderer.invoke('versions:read', path, id),
+  /** Garde l'état donné comme version nommée (`label` vide : version simple) ; null en cas d'échec. */
+  snapshotVersion: (path: string, json: string, label: string): Promise<VersionInfo | null> => ipcRenderer.invoke('versions:snapshot', path, json, label),
+  labelVersion: (path: string, id: string, label: string): Promise<boolean> => ipcRenderer.invoke('versions:label', path, id, label),
+  deleteVersion: (path: string, id: string): Promise<boolean> => ipcRenderer.invoke('versions:delete', path, id),
   openProject: (): Promise<{ path: string; json: string } | null> =>
     ipcRenderer.invoke('project:open'),
   pickPdf: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pdf:pick'),

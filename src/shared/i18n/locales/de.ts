@@ -1059,5 +1059,27 @@ export const de: Catalog = {
   'print.pagesMultiple': 'Eine Broschüre hat ein Vielfaches von 4 Seiten: Am Ende werden Leerseiten ergänzt (einschließlich Rückseite: Setzen Sie bei Bedarf Ihre letzte Seite dorthin).',
   'print.export': 'PDF exportieren',
   'print.file.booklet': '{name}-broschuere',
-  'print.file.nup': '{name}-{n}-pro-blatt'
+  'print.file.nup': '{name}-{n}-pro-blatt',
+  // Historique des versions
+  'common.ok': 'OK',
+  'versions.menu': 'Versionsverlauf…',
+  'versions.menu.title': 'Zu einer früheren Version der Datei zurückkehren oder eine unter einem Namen behalten',
+  'versions.title': 'Versionsverlauf',
+  'versions.how': 'Bei jedem Speichern wird eine Version gesichert, ebenso der Stand der Datei unmittelbar vor dem Überschreiben. Die Versionen bleiben auf diesem Computer in den Anwendungsdaten.',
+  'versions.label': 'Name der Version',
+  'versions.label.placeholder': 'Name (optional), z. B. „Abgegeben“',
+  'versions.snapshot': 'Diese Version behalten',
+  'versions.empty': 'Noch keine Versionen: Sie erscheinen beim Speichern.',
+  'versions.unsaved': 'Dieses Dokument ist noch nicht gespeichert: Der Verlauf gehört zu einer Datei. Speichern Sie es zuerst.',
+  'versions.saveFirst': 'Dokument speichern',
+  'versions.pages': { one: '{count} Seite', other: '{count} Seiten' },
+  'versions.auto': 'automatisch',
+  'versions.missing': 'Diese Version ist nicht mehr lesbar.',
+  'versions.preview.first': 'Erste Seite der Version',
+  'versions.rename': 'Benennen…',
+  'versions.delete': 'Löschen',
+  'versions.delete.confirm': 'Diese Version aus dem Verlauf löschen?',
+  'versions.copy': 'Als Kopie öffnen',
+  'versions.restore': 'Zu dieser Version zurückkehren',
+  'versions.copyName': '{name} (Version vom {date})'
 }
