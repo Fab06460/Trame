@@ -411,3 +411,24 @@ button.danger { color: #ff7b7b; }
 /* Reprise après interruption */
 .recovery-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .recovery-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Relecture : épingles sur la page et onglet */
+.comment-pins { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.comment-pin { position: absolute; transform: translate(-50%, -100%); min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px 12px 12px 2px; border: 2px solid #fff; background: #f59e0b; color: #1b1b1b; font: 700 12px/20px system-ui, sans-serif; cursor: grab; pointer-events: auto; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.comment-pin.active { background: #7c5cff; color: #fff; outline: 2px solid #fff; }
+.comment-pin.resolved { background: #8a8f98; color: #fff; opacity: 0.75; }
+.comment-pin.draft { pointer-events: none; background: transparent; color: #f59e0b; border-style: dashed; border-color: #f59e0b; }
+.review-panel { display: flex; flex-direction: column; gap: 10px; }
+.review-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.review-item { border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.review-item.active { border-color: #7c5cff; }
+.review-item.resolved { opacity: 0.7; }
+.review-head { display: flex; gap: 8px; align-items: flex-start; text-align: left; border: 0; background: transparent; padding: 0; color: inherit; }
+.review-n { flex: none; min-width: 22px; height: 22px; border-radius: 11px; background: #f59e0b; color: #1b1b1b; font: 700 12px/22px system-ui, sans-serif; text-align: center; }
+.review-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-reply { margin-left: 12px; padding-left: 8px; border-left: 2px solid var(--border); }
+.review-reply .link { float: right; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.review-composer { display: flex; flex-direction: column; gap: 6px; }
+.review-composer textarea, .review-item textarea { width: 100%; box-sizing: border-box; }
+.review-actions button { font-size: 12px; padding: 2px 8px; }
+.review-panel .field-row { display: flex; flex-direction: column; gap: 4px; }

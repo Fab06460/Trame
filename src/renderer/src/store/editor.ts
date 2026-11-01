@@ -10,6 +10,7 @@ import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/
 import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeImageField, sanitizeMergeData } from '@/mailMerge'
 import { sanitizeChart } from '@/chart'
+import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
 import { sanitizeList } from '@/listStyle'
@@ -85,6 +86,7 @@ export function parseDocument(json: string): TrameDocument {
       else delete page.guides
     }
     sanitizeNotes(page)
+    sanitizeComments(page, doc.width, doc.height)
     {
       const t = cleanPageTransition(page.transition)
       if (t) page.transition = t
@@ -225,6 +227,8 @@ interface EditorState {
   loadDocument: (doc: TrameDocument, path?: string) => void
   /** Remplace tout le contenu du document (retour à une version, fusion…) en un cran d'historique : on peut annuler. Le fichier associé est conservé. */
   replaceDocument: (doc: TrameDocument) => void
+  /** Modification du document entier en un cran d'historique (commentaires de relecture, fusion…). Rien si `f` rend le même document. */
+  editDocument: (f: (doc: TrameDocument) => TrameDocument) => void
   /** À appeler juste après loadDocument quand le document vient d'un modèle (loadDocument remet l'origine à zéro). */
   setTemplateOrigin: (origin: TemplateOrigin | null) => void
   newDocument: () => void
@@ -390,7 +394,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (i < 0) return
       const src = doc.pages[i]
       const copy: TramePage = {
-        ...src,
+        ...withoutComments(src),
         id: nanoid(8),
         elements: src.elements.map((e) => ({ ...e, id: nanoid(8) }))
       }
@@ -872,6 +876,12 @@ export const useEditor = create<EditorState>((set, get) => {
       void registerEmbeddedFonts(doc.fonts)
       const pageId = doc.pages.some((p) => p.id === get().pageId) ? get().pageId : doc.pages[0].id
       set({ ...snapshot(), doc, pageId, selectedIds: [], dirty: true })
+    },
+
+    editDocument: (f) => {
+      const next = f(get().doc)
+      if (next === get().doc) return
+      set({ ...snapshot(), doc: next, dirty: true })
     },
 
     newDocument: () => {

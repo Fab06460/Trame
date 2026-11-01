@@ -128,6 +128,8 @@ export function adaptPage(page: TramePage, from: { width: number; height: number
   return {
     ...page,
     guides: page.guides?.map((g) => ({ ...g, position: g.orientation === 'v' ? ox + (g.position - frame.x) * s : oy + (g.position - frame.y) * s })),
+    // les épingles de relecture suivent la composition comme les repères
+    ...(page.comments ? { comments: page.comments.map((c) => ({ ...c, x: Math.min(to.width, Math.max(0, ox + (c.x - frame.x) * s)), y: Math.min(to.height, Math.max(0, oy + (c.y - frame.y) * s)) })) } : {}),
     elements: page.elements.map((e) => moved.get(e.id) ?? e)
   }
 }

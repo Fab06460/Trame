@@ -133,9 +133,35 @@ export interface Guide {
   position: number
 }
 
+/** Réponse à un commentaire de relecture. */
+export interface ReviewReply {
+  id: string
+  author: string
+  /** date en ms */
+  at: number
+  text: string
+}
+
+/** Commentaire de relecture épinglé sur une page (jamais dessiné dans les exports). */
+export interface ReviewComment {
+  id: string
+  /** position de l'épingle, en pixels de design de la page */
+  x: number
+  y: number
+  author: string
+  /** date en ms */
+  at: number
+  text: string
+  /** traité (absent = à traiter) */
+  resolved?: true
+  replies?: ReviewReply[]
+}
+
 export interface TramePage {
   id: string
   background: string
+  /** commentaires de relecture de la page (absents = aucun) ; jamais dessinés dans les exports */
+  comments?: ReviewComment[]
   /** repères de la page (absents = aucun) ; jamais dessinés dans les exports */
   guides?: Guide[]
   /** notes de l'orateur (absentes = aucune) ; jamais dessinées dans les exports image / PDF */

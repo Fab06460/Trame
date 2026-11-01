@@ -15,6 +15,11 @@ Un fichier `.trame` est du **JSON UTF-8** : la sérialisation directe de `TrameD
       "id": "aB3xK9_q",
       "background": "#ffffff",
       "notes": "…",         // optionnel : notes de l'orateur de la page (texte, 20 000 caractères au plus)
+      "comments": [          // optionnel : commentaires de relecture (jamais dessinés dans les exports)
+        { "id": "c1", "x": 540, "y": 300, "author": "Mme Martin", "at": 1793559000000, "text": "Citez votre source",
+          "resolved": true,   // optionnel : traité
+          "replies": [{ "id": "r1", "author": "Léo", "at": 1793559900000, "text": "Corrigé" }] }   // optionnel
+      ],
       "guides": [            // optionnel : repères d'alignement de la page
         { "orientation": "v", "position": 540 },   // v = ligne verticale à x = 540
         { "orientation": "h", "position": 100 }    // h = ligne horizontale à y = 100

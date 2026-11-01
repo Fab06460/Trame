@@ -17,6 +17,8 @@ import { UserTemplates } from './UserTemplates'
 import { LanguageSelect } from './LanguageSelect'
 import { AiPanel } from './AiPanel'
 import { AccessibilityPanel } from './AccessibilityPanel'
+import { ReviewPanel } from './ReviewPanel'
+import { openCount } from '@/review'
 import { accessibilityIssues } from '@/accessibility'
 import { useSidebar, type SidebarTab } from '@/store/sidebar'
 import { SideIcon } from './SideIcons'
@@ -28,7 +30,7 @@ import { CHART_KINDS, insertChart } from '@/chartActions'
 const TAB_GROUPS: Array<Array<{ id: SidebarTab; label: MessageKey }>> = [
   [{ id: 'recents', label: 'sidebar.recents' }, { id: 'templates', label: 'sidebar.templates' }],
   [{ id: 'elements', label: 'sidebar.elements' }, { id: 'photos', label: 'sidebar.photos' }, { id: 'ai', label: 'ai.tab' }],
-  [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }, { id: 'a11y', label: 'a11y.tab' }]
+  [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }, { id: 'a11y', label: 'a11y.tab' }, { id: 'review', label: 'review.tab' }]
 ]
 const TAB_ORDER = TAB_GROUPS.flat().map((x) => x.id)
 
@@ -49,6 +51,7 @@ export function Sidebar(): React.JSX.Element {
   const filePath = useEditor((s) => s.filePath)
   const missingAlt = useEditor((s) => imagesMissingAlt(s.doc).length)
   const a11yIssues = useEditor((s) => accessibilityIssues(s.doc).length)
+  const openComments = useEditor((s) => openCount(s.doc))
 
   const refreshRecents = useCallback((): void => {
     window.trame.listRecents().then(setRecents, () => setRecents([]))
@@ -105,12 +108,13 @@ export function Sidebar(): React.JSX.Element {
                 tabIndex={tab === x.id ? 0 : -1}
                 className={`side-tab${tab === x.id ? ' active' : ''}`}
                 data-tab={x.id}
-                title={x.id === 'ai' && missingAlt > 0 ? `${t(x.label)} · ${t('altAudit.missing', { count: missingAlt })}` : x.id === 'a11y' && a11yIssues > 0 ? `${t(x.label)} · ${t('a11y.summary', { count: a11yIssues })}` : t(x.label)}
+                title={x.id === 'ai' && missingAlt > 0 ? `${t(x.label)} · ${t('altAudit.missing', { count: missingAlt })}` : x.id === 'a11y' && a11yIssues > 0 ? `${t(x.label)} · ${t('a11y.summary', { count: a11yIssues })}` : x.id === 'review' && openComments > 0 ? `${t(x.label)} · ${t('review.summary.open', { count: openComments })}` : t(x.label)}
                 onClick={() => setTab(x.id)}
               >
                 <SideIcon tab={x.id} />
                 {x.id === 'ai' && missingAlt > 0 && <span className="side-dot" data-side-alert="ai" aria-hidden="true" />}
                 {x.id === 'a11y' && a11yIssues > 0 && <span className="side-dot" data-side-alert="a11y" aria-hidden="true" />}
+                {x.id === 'review' && openComments > 0 && <span className="side-dot" data-side-alert="review" aria-hidden="true" />}
                 <span className="side-label">{t(x.label)}</span>
               </button>
             ))}
@@ -129,6 +133,7 @@ export function Sidebar(): React.JSX.Element {
       {tab === 'ai' && <AiPanel />}
 
       {tab === 'a11y' && <AccessibilityPanel />}
+      {tab === 'review' && <ReviewPanel />}
 
       {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}
 

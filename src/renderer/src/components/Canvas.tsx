@@ -18,6 +18,8 @@ import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import { ZoomControls } from './ZoomControls'
+import { CommentPins } from './CommentPins'
+import { useReview } from '@/store/review'
 import type { TrameElement } from '@/types'
 
 const PADDING = 48
@@ -94,6 +96,7 @@ export function Canvas(): React.JSX.Element {
   const firstPageId = doc.pages[0].id
   useEffect(() => useView.getState().fitToScreen(), [firstPageId])
 
+  const adding = useReview((s) => s.adding)
   const [spaceDown, setSpaceDown] = useState(false)
   const [panning, setPanning] = useState(false)
 
@@ -257,6 +260,12 @@ export function Canvas(): React.JSX.Element {
       e.evt.preventDefault()
       return startPan(e.evt.clientX, e.evt.clientY)
     }
+    if (useReview.getState().adding) {
+      // mode « ajouter un commentaire » : le clic pose l'épingle (sur la page ou à côté, ramenée dans la page)
+      const p = toDesign()
+      useReview.getState().setDraft({ pageId: page.id, x: Math.min(doc.width, Math.max(0, p.x)), y: Math.min(doc.height, Math.max(0, p.y)) })
+      return
+    }
     if (e.target !== e.target.getStage() && e.target.name() !== 'bg') return
     const additive = e.evt.shiftKey
     if (!additive) select([])
@@ -298,7 +307,7 @@ export function Canvas(): React.JSX.Element {
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
-    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
+    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : adding ? 'crosshair' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
       <Stage
         ref={stageRef}
         width={size.w}
@@ -460,6 +469,7 @@ export function Canvas(): React.JSX.Element {
         </Layer>
       </Stage>
 
+      <CommentPins offX={offX} offY={offY} scale={scale} />
       <Rulers />
       <ViewOptions />
       <ZoomControls />
