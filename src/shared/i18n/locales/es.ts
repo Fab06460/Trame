@@ -1081,5 +1081,15 @@ export const es: Catalog = {
   'versions.delete.confirm': '¿Eliminar esta versión del historial?',
   'versions.copy': 'Abrir como copia',
   'versions.restore': 'Volver a esta versión',
-  'versions.copyName': '{name} (versión del {date})'
+  'versions.copyName': '{name} (versión del {date})',
+  // Récupération après interruption
+  'recovery.title': '¿Retomar su trabajo?',
+  'recovery.body': { one: 'Trame se cerró antes de que este documento se guardara. Se conservó una copia de seguridad:', other: 'Trame se cerró antes de que estos documentos se guardaran. Se conservaron copias de seguridad:' },
+  'recovery.neverSaved': 'nunca guardado',
+  'recovery.resume': 'Retomar',
+  'recovery.discard': 'Eliminar',
+  'recovery.later': 'Más tarde',
+  'recovery.hint': 'Al retomar se abre la copia como documento modificado: no se escribe nada en el archivo original hasta que guarde (el historial de versiones conserva su estado actual).',
+  'recovery.failed': 'No se pudo retomar el documento',
+  'recovery.unreadable': 'La copia de seguridad es ilegible o ha desaparecido.'
 }

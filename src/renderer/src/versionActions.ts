@@ -1,8 +1,5 @@
-import { embedFonts } from '@/fontEmbed'
-import { extraFonts } from '@/fonts'
-import { pruneSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
-import { confirmUnsaved, saveProject } from '@/fileActions'
+import { confirmUnsaved, documentJson, saveProject } from '@/fileActions'
 import { t } from '@/i18n'
 import { parseDocument, useEditor } from '@/store/editor'
 import { formatDateTime } from '@/formatDate'
@@ -28,7 +25,7 @@ export async function saveNamedVersion(label: string): Promise<boolean> {
     path = useEditor.getState().filePath
     if (!path) return false
   }
-  const json = JSON.stringify(embedFonts(pruneSources(doc), extraFonts()))
+  const json = documentJson(doc)
   return (await window.trame.snapshotVersion(path, json, label)) !== null
 }
 

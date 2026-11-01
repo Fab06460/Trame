@@ -8,6 +8,7 @@ import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
+import { clearRecovery, listRecoverable, readRecovery, writeRecovery } from './recoveryStore'
 import { addIfNew, addVersion, deleteVersion, labelVersion, listVersions, readVersion } from './versionStore'
 import { safeExportName } from './exportFolder'
 import { MAX_MERGE_IMAGE_BYTES, MAX_MERGE_IMAGE_FILES, isMergeImageFile, mergeImageMime } from '../shared/mergeImages'
@@ -114,13 +115,22 @@ function createWindow(): void {
     if (fullscreenGuard.onLeave()) win.webContents.send('window:left-fullscreen')
   })
   win.on('enter-full-screen', () => fullscreenGuard.onEnter())
-  win.webContents.on('did-start-loading', () => fileInbox.onRendererGone())
+  win.webContents.on('did-start-loading', () => {
+    fileInbox.onRendererGone()
+    // rechargement voulu de la page : le travail non enregistré est perdu comme avant, sa copie n'a plus d'objet. Après un plantage de la page, on la garde pour la proposer.
+    if (!rendererCrashed) void clearRecovery(app.getPath('userData'), SESSION_ID).catch(() => {})
+  })
+  win.webContents.on('render-process-gone', (_e, details) => {
+    if (details.reason !== 'clean-exit') rendererCrashed = true
+  })
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
   win.on('closed', () => {
     mainWindow = null
     fileInbox.onRendererGone()
     closeGuard.onClosed()
+    // fermeture normale (enregistré, ignoré ou rien à enregistrer) : la copie de secours n'a plus d'objet
+    void clearRecovery(app.getPath('userData'), SESSION_ID).catch(() => {})
   })
   // Fermeture avec des modifications : le renderer décide (enregistrer / ignorer / annuler) puis confirme.
   win.on('close', (e) => {
@@ -185,6 +195,23 @@ ipcMain.handle('versions:delete', async (_e, path: unknown, id: unknown) => {
   const p = asPath(path)
   return p && typeof id === 'string' ? deleteVersion(app.getPath('userData'), p, id) : false
 })
+
+// Copie de secours (voir recoveryStore.ts) : une par lancement de l'application, effacée à toute fermeture normale.
+const SESSION_ID = randomUUID()
+let rendererCrashed = false
+ipcMain.handle('recovery:write', async (_e, json: unknown, path: unknown, name: unknown) => {
+  if (typeof json !== 'string') return false
+  return writeRecovery(app.getPath('userData'), SESSION_ID, json, { path: asPath(path) ?? undefined, name: typeof name === 'string' ? name : '' }).catch(() => false)
+})
+ipcMain.handle('recovery:clear', () => clearRecovery(app.getPath('userData'), SESSION_ID).catch(() => {}))
+ipcMain.handle('recovery:list', () => {
+  // après un plantage de la page, la copie de cette session est elle aussi proposée (la page rechargée n'a plus rien en mémoire)
+  const own = rendererCrashed ? '' : SESSION_ID
+  rendererCrashed = false
+  return listRecoverable(app.getPath('userData'), own).catch(() => [])
+})
+ipcMain.handle('recovery:read', (_e, id: unknown) => (typeof id === 'string' ? readRecovery(app.getPath('userData'), id) : null))
+ipcMain.handle('recovery:discard', (_e, id: unknown) => (typeof id === 'string' ? clearRecovery(app.getPath('userData'), id).catch(() => {}) : undefined))
 
 ipcMain.handle('project:open', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)!

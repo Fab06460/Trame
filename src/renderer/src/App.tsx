@@ -15,6 +15,8 @@ import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
+import { RecoveryDialog } from '@/components/RecoveryDialog'
+import { checkRecovery, startAutosave } from '@/recoveryActions'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
 import { useView } from '@/store/view'
@@ -141,6 +143,12 @@ export default function App(): React.JSX.Element {
     return stop
   }, [])
 
+  // Copie de secours du travail en cours, et reprise d'une session interrompue
+  useEffect(() => {
+    void checkRecovery()
+    return startAutosave()
+  }, [])
+
   // Fermeture de fenêtre avec des modifications : proposer d'enregistrer
   useEffect(
     () =>
@@ -180,6 +188,7 @@ export default function App(): React.JSX.Element {
       <MailMergeDialog />
       <PrintDialog />
       <VersionsDialog />
+      <RecoveryDialog />
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>

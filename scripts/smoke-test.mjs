@@ -1616,6 +1616,23 @@ try {
   await sleep(300)
   check('versions : le retour en arrière s\'annule (4 pages)', (await nPages()) === 4, String(await nPages()))
 
+  // reprise après interruption : une copie laissée par une autre session est proposée au lancement
+  const recoveryDir = join(tmp, 'data', 'recovery')
+  const crashed = '99999999-9999-4999-8999-999999999999'
+  await mkdir(recoveryDir, { recursive: true })
+  const crashedDoc = JSON.parse(await run(`(async () => { const l = await window.trame.listVersions(${JSON.stringify(versionsFile)}); return window.trame.readVersion(${JSON.stringify(versionsFile)}, l[0].id) })()`))
+  await writeFile(join(recoveryDir, `${crashed}.trame`), JSON.stringify({ ...crashedDoc, name: 'Travail interrompu' }))
+  await writeFile(join(recoveryDir, `${crashed}.json`), JSON.stringify({ name: 'Travail interrompu', at: Date.now() }))
+  await reloadApp()
+  check('reprise : le lancement propose la copie de secours d\'une session interrompue', await waitFor(async () => (await nBrand('[data-recovery-item]')) === 1))
+  await clickSel('[data-action="recovery-resume"]')
+  check('reprise : « Reprendre » ouvre la copie comme document modifié et retire la copie', await waitFor(async () => (await run(`document.title`)).startsWith('Travail interrompu •')) && (await nBrand('[data-recovery]')) === 0 && !(await readdir(recoveryDir)).some((f) => f.startsWith(crashed)), await run(`document.title`))
+  // copie de secours automatique : une modification non enregistrée est copiée, l'enregistrement efface la copie
+  await clickSel('.add-page')
+  check('copie de secours : une modification non enregistrée est copiée au bout de quelques secondes', await waitFor(async () => (await readdir(recoveryDir).catch(() => [])).some((f) => f.endsWith('.trame')), 15000))
+  await click('header.toolbar button', 'Enregistrer')
+  check('copie de secours : l\'enregistrement efface la copie', await waitFor(async () => (await readdir(recoveryDir).catch(() => [])).length === 0, 8000), String(await readdir(recoveryDir).catch(() => [])))
+
   // publipostage : CSV (point-virgule, Windows-1252) → champs {{colonne}} → aperçu → PDF unique et un PDF par ligne
   await writeFile(join(exportsDir, 'pick-import.csv'), Buffer.from('Nom;Classe\r\n\xc9lodie;6A\r\nZo\xe9 / Ben;6B\r\n', 'latin1'))
   await reloadApp()

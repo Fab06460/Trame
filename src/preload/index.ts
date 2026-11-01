@@ -21,6 +21,14 @@ export interface VersionInfo {
   bytes: number
 }
 
+export interface RecoveryInfo {
+  id: string
+  path?: string
+  name: string
+  at: number
+  bytes: number
+}
+
 export interface UserTemplateMeta {
   id: string
   name: string
@@ -49,6 +57,12 @@ const api = {
   snapshotVersion: (path: string, json: string, label: string): Promise<VersionInfo | null> => ipcRenderer.invoke('versions:snapshot', path, json, label),
   labelVersion: (path: string, id: string, label: string): Promise<boolean> => ipcRenderer.invoke('versions:label', path, id, label),
   deleteVersion: (path: string, id: string): Promise<boolean> => ipcRenderer.invoke('versions:delete', path, id),
+  /** Copie de secours du document en cours (écrite régulièrement, effacée à la fermeture normale) et reprise après interruption. */
+  writeRecovery: (json: string, path: string | undefined, name: string): Promise<boolean> => ipcRenderer.invoke('recovery:write', json, path, name),
+  clearRecovery: (): Promise<void> => ipcRenderer.invoke('recovery:clear'),
+  listRecoverable: (): Promise<RecoveryInfo[]> => ipcRenderer.invoke('recovery:list'),
+  readRecovery: (id: string): Promise<string | null> => ipcRenderer.invoke('recovery:read', id),
+  discardRecovery: (id: string): Promise<void> => ipcRenderer.invoke('recovery:discard', id),
   openProject: (): Promise<{ path: string; json: string } | null> =>
     ipcRenderer.invoke('project:open'),
   pickPdf: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pdf:pick'),

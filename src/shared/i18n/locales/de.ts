@@ -1081,5 +1081,15 @@ export const de: Catalog = {
   'versions.delete.confirm': 'Diese Version aus dem Verlauf löschen?',
   'versions.copy': 'Als Kopie öffnen',
   'versions.restore': 'Zu dieser Version zurückkehren',
-  'versions.copyName': '{name} (Version vom {date})'
+  'versions.copyName': '{name} (Version vom {date})',
+  // Récupération après interruption
+  'recovery.title': 'Arbeit fortsetzen?',
+  'recovery.body': { one: 'Trame wurde beendet, bevor dieses Dokument gespeichert war. Eine Sicherungskopie wurde behalten:', other: 'Trame wurde beendet, bevor diese Dokumente gespeichert waren. Sicherungskopien wurden behalten:' },
+  'recovery.neverSaved': 'nie gespeichert',
+  'recovery.resume': 'Fortsetzen',
+  'recovery.discard': 'Löschen',
+  'recovery.later': 'Später',
+  'recovery.hint': 'Beim Fortsetzen wird die Kopie als geändertes Dokument geöffnet: Die Originaldatei wird erst beim Speichern überschrieben (der Versionsverlauf behält ihren aktuellen Stand).',
+  'recovery.failed': 'Dokument konnte nicht fortgesetzt werden',
+  'recovery.unreadable': 'Die Sicherungskopie ist nicht lesbar oder verschwunden.'
 }

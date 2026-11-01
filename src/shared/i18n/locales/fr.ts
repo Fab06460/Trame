@@ -1082,7 +1082,17 @@ export const fr = {
   'versions.delete.confirm': 'Supprimer cette version de l\'historique ?',
   'versions.copy': 'Ouvrir comme copie',
   'versions.restore': 'Revenir à cette version',
-  'versions.copyName': '{name} (version du {date})'
+  'versions.copyName': '{name} (version du {date})',
+  // Récupération après interruption
+  'recovery.title': 'Reprendre votre travail ?',
+  'recovery.body': { one: 'Trame s\'est arrêté avant que ce document soit enregistré. Une copie de secours a été gardée :', other: 'Trame s\'est arrêté avant que ces documents soient enregistrés. Des copies de secours ont été gardées :' },
+  'recovery.neverSaved': 'jamais enregistré',
+  'recovery.resume': 'Reprendre',
+  'recovery.discard': 'Supprimer',
+  'recovery.later': 'Plus tard',
+  'recovery.hint': 'Reprendre ouvre la copie comme document modifié : rien n\'est écrit sur le fichier d\'origine tant que vous n\'enregistrez pas (l\'historique des versions garde son état actuel).',
+  'recovery.failed': 'Impossible de reprendre le document',
+  'recovery.unreadable': 'La copie de secours est illisible ou a disparu.'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

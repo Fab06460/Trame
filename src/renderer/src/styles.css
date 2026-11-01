@@ -407,3 +407,7 @@ button.danger { color: #ff7b7b; }
 .version-row { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .version-row.on { border-color: var(--accent, #7c5cff); background: color-mix(in srgb, var(--accent, #7c5cff) 18%, transparent); }
 .versions-preview { flex: none; width: 250px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+/* Reprise après interruption */
+.recovery-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.recovery-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

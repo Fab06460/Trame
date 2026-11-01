@@ -1081,5 +1081,15 @@ export const en: Catalog = {
   'versions.delete.confirm': 'Delete this version from the history?',
   'versions.copy': 'Open as a copy',
   'versions.restore': 'Go back to this version',
-  'versions.copyName': '{name} (version of {date})'
+  'versions.copyName': '{name} (version of {date})',
+  // Récupération après interruption
+  'recovery.title': 'Pick up where you left off?',
+  'recovery.body': { one: 'Trame stopped before this document was saved. A backup copy was kept:', other: 'Trame stopped before these documents were saved. Backup copies were kept:' },
+  'recovery.neverSaved': 'never saved',
+  'recovery.resume': 'Resume',
+  'recovery.discard': 'Delete',
+  'recovery.later': 'Later',
+  'recovery.hint': 'Resuming opens the copy as a modified document: nothing is written to the original file until you save (the version history keeps its current state).',
+  'recovery.failed': 'Could not resume the document',
+  'recovery.unreadable': 'The backup copy is unreadable or has disappeared.'
 }

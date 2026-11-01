@@ -4,14 +4,20 @@ import { extraFonts } from '@/fonts'
 import { pruneSources } from '@/pdfSources'
 import { t } from '@/i18n'
 import { parseDocument, useEditor } from '@/store/editor'
+import type { TrameDocument } from '@/types'
 
 /** Ce que l'utilisateur s'apprête à faire (le processus principal traduit la question, voir `unsaved.action.*`). */
 export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'
 
+/** Contenu du fichier `.trame` : polices utilisées incorporées, sources PDF inutilisées retirées. */
+export function documentJson(doc: TrameDocument): string {
+  return JSON.stringify(embedFonts(pruneSources(doc), extraFonts()))
+}
+
 /** Enregistre le document. `saveAs` force le choix d'un nouvel emplacement. Retourne false si annulé ou en échec. */
 export async function saveProject(saveAs = false): Promise<boolean> {
   const { doc, filePath, markSaved } = useEditor.getState()
-  const path = await window.trame.saveProject(JSON.stringify(embedFonts(pruneSources(doc), extraFonts())), saveAs ? undefined : filePath, fileSafeName(doc.name))
+  const path = await window.trame.saveProject(documentJson(doc), saveAs ? undefined : filePath, fileSafeName(doc.name))
   if (!path) return false
   markSaved(path)
   return true
