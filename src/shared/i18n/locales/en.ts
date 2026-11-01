@@ -1221,5 +1221,8 @@ export const en: Catalog = {
   'qr.contrast': 'The QR code may not be readable: use modules clearly darker than the background.',
   'qr.skewed': 'The QR code is stretched.',
   'qr.square': 'Make square',
-  'qr.hint': 'The QR code is a background plus a vector drawing: sharp at any size and in every export (PDF, PowerPoint, SVG, web page). Keep it square, at least 2 cm wide once printed, and try it with a phone before printing many copies. Its content is saved in the file.'
+  'qr.hint': 'The QR code is a background plus a vector drawing: sharp at any size and in every export (PDF, PowerPoint, SVG, web page). Keep it square, at least 2 cm wide once printed, and try it with a phone before printing many copies. Its content is saved in the file.',
+  // QR code et publipostage
+  'qr.mergeHint': 'A different QR code on each card: write {example} in the content (one link per student, for example), then use the mail merge with a CSV table.',
+  'qr.fields': 'Mail merge fields: each row of the table gives its own QR code. An empty cell removes the QR code from that card.'
 }

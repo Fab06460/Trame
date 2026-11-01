@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 import { fileSafeName } from '@/docName'
 import { t } from '@/i18n'
+import { qrElements, qrKept } from '@/qr'
 import type { MergeData, MergeSettings, TrameDocument, TrameElement } from '@/types'
 
 export type { MergeData }
@@ -177,10 +178,15 @@ export function imageFieldsUsed(doc: Pick<TrameDocument, 'pages'>): string[] {
   return out
 }
 
-/** Champs utilisés dans le document (textes « {{champ}} » puis colonnes d'images), dans l'ordre d'apparition. */
+/** Champs utilisés dans le document (textes et QR codes « {{champ}} » puis colonnes d'images), dans l'ordre d'apparition. */
 export function fieldsUsed(doc: Pick<TrameDocument, 'pages'>): string[] {
   const out: string[] = []
-  for (const p of doc.pages) for (const e of p.elements) if (e.type === 'text' && e.text) for (const f of fieldsIn(e.text)) if (!out.some((o) => key(o) === key(f))) out.push(f)
+  for (const p of doc.pages) {
+    for (const e of p.elements) {
+      const text = e.type === 'text' ? e.text : e.qr?.text
+      if (text) for (const f of fieldsIn(text)) if (!out.some((o) => key(o) === key(f))) out.push(f)
+    }
+  }
   for (const f of imageFieldsUsed(doc)) if (!out.some((o) => key(o) === key(f))) out.push(f)
   return out
 }
@@ -223,6 +229,32 @@ const fillElement = (e: TrameElement, columns: string[], row: string[], fit?: Fi
 }
 
 /**
+ * Les QR codes dont le contenu porte des champs, remplis avec la ligne : chacun est redessiné (fond et modules, mêmes cadre, rotation et
+ * rang dans la pile). Une cellule vide, ou un contenu qui ne tient pas dans un QR code, supprime le QR code de cette fiche : mieux vaut
+ * rien qu'un code qui mène ailleurs.
+ */
+function fillQrCodes(elements: TrameElement[], columns: string[], row: string[]): TrameElement[] {
+  const anchors = elements.filter((e) => e.qr && e.groupId && fieldsIn(e.qr.text).length > 0)
+  if (anchors.length === 0) return elements
+  const drawn = new Map<string, TrameElement[]>()
+  for (const a of anchors) {
+    const res = qrElements({ ...a.qr!, text: fillText(a.qr!.text, columns, row) }, { x: a.x, y: a.y, width: a.width, height: a.height }, { groupId: a.groupId, rotation: a.rotation, keep: qrKept(a) })
+    drawn.set(a.groupId!, res?.elements ?? [])
+  }
+  const out: TrameElement[] = []
+  const placed = new Set<string>()
+  for (const e of elements) {
+    const g = e.groupId
+    if (!g || !drawn.has(g)) out.push(e)
+    else if (!placed.has(g)) {
+      placed.add(g)
+      out.push(...drawn.get(g)!)
+    }
+  }
+  return out
+}
+
+/**
  * Document fusionné : les pages du modèle, remplies avec chacune des lignes choisies (ligne 1 : toutes les pages, puis ligne 2…).
  * Le document d'origine n'est pas modifié ; les données du publipostage ne suivent pas dans l'exportation.
  */
@@ -236,14 +268,18 @@ export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: n
     return doc.pages.map((p) => ({
       ...p,
       id: nanoid(8),
-      elements: p.elements.map((e) => {
-        const copy = fillElement(e, data.columns, row, fit, images)
-        if (e.groupId) {
-          if (!groupIds.has(e.groupId)) groupIds.set(e.groupId, nanoid(8))
-          copy.groupId = groupIds.get(e.groupId)
-        }
-        return copy
-      })
+      elements: fillQrCodes(
+        p.elements.map((e) => {
+          const copy = fillElement(e, data.columns, row, fit, images)
+          if (e.groupId) {
+            if (!groupIds.has(e.groupId)) groupIds.set(e.groupId, nanoid(8))
+            copy.groupId = groupIds.get(e.groupId)
+          }
+          return copy
+        }),
+        data.columns,
+        row
+      )
     }))
   })
   return { ...rest, pages }

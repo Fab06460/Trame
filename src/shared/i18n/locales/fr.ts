@@ -1222,7 +1222,10 @@ export const fr = {
   'qr.contrast': 'Le QR code risque de ne pas être lu : prenez des modules nettement plus sombres que le fond.',
   'qr.skewed': 'Le QR code est déformé.',
   'qr.square': 'Rendre carré',
-  'qr.hint': 'Le QR code est un fond et un dessin vectoriel : net à toute taille et dans tous les exports (PDF, PowerPoint, SVG, page web). Gardez-le carré, à 2 cm de côté au moins une fois imprimé, et essayez-le avec un téléphone avant de l\'imprimer en nombre. Son contenu est enregistré dans le fichier.'
+  'qr.hint': 'Le QR code est un fond et un dessin vectoriel : net à toute taille et dans tous les exports (PDF, PowerPoint, SVG, page web). Gardez-le carré, à 2 cm de côté au moins une fois imprimé, et essayez-le avec un téléphone avant de l\'imprimer en nombre. Son contenu est enregistré dans le fichier.',
+  // QR code et publipostage
+  'qr.mergeHint': 'Un QR code différent par fiche : écrivez {example} dans le contenu (un lien par élève, par exemple), puis utilisez le publipostage avec un tableau CSV.',
+  'qr.fields': 'Champs de publipostage : chaque ligne du tableau donne son QR code. Une cellule vide supprime le QR code de la fiche.'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

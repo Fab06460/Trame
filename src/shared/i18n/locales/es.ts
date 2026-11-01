@@ -1221,5 +1221,8 @@ export const es: Catalog = {
   'qr.contrast': 'Puede que el código QR no se lea: use módulos claramente más oscuros que el fondo.',
   'qr.skewed': 'El código QR está deformado.',
   'qr.square': 'Hacer cuadrado',
-  'qr.hint': 'El código QR es un fondo con un dibujo vectorial: nítido a cualquier tamaño y en todas las exportaciones (PDF, PowerPoint, SVG, página web). Manténgalo cuadrado, de al menos 2 cm impreso, y pruébelo con un teléfono antes de imprimir muchas copias. Su contenido se guarda en el archivo.'
+  'qr.hint': 'El código QR es un fondo con un dibujo vectorial: nítido a cualquier tamaño y en todas las exportaciones (PDF, PowerPoint, SVG, página web). Manténgalo cuadrado, de al menos 2 cm impreso, y pruébelo con un teléfono antes de imprimir muchas copias. Su contenido se guarda en el archivo.',
+  // QR code et publipostage
+  'qr.mergeHint': 'Un código QR distinto en cada ficha: escriba {example} en el contenido (un enlace por alumno, por ejemplo) y use la combinación de correspondencia con una tabla CSV.',
+  'qr.fields': 'Campos de combinación: cada fila de la tabla da su propio código QR. Una celda vacía quita el código QR de esa ficha.'
 }

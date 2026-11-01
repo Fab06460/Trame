@@ -72,21 +72,34 @@ export interface QrResult {
   modules: number
 }
 
+/** Réglages de l'élément d'origine qui se gardent quand on redessine le QR code (opacité, verrou, masquage, protection d'un modèle). */
+export const QR_KEPT = ['opacity', 'locked', 'hidden', 'protect'] as const
+export const qrKept = (e: TrameElement): Partial<TrameElement> => Object.fromEntries(QR_KEPT.filter((k) => e[k] !== undefined).map((k) => [k, e[k]]))
+
 /**
  * Éléments qui dessinent un QR code dans un carré de côté `min(largeur, hauteur)` au coin de `box` : un rectangle de fond (avec la marge)
- * et un chemin pour les modules, donc rendus tels quels par l'éditeur et tous les exports, en vectoriel. Retourne null si le contenu est
- * vide ou trop long (l'appelant garde alors le QR code qu'il avait).
+ * et un chemin pour les modules, donc rendus tels quels par l'éditeur et tous les exports, en vectoriel. `rotation` (degrés, autour du coin
+ * haut-gauche comme partout dans Trame) pivote l'ensemble ; `keep` s'applique aux deux éléments. Retourne null si le contenu est vide ou
+ * trop long (l'appelant garde alors le QR code qu'il avait).
  */
-export function qrElements(spec: QrSpec, box: { x: number; y: number; width: number; height: number }, options: { groupId?: string } = {}): QrResult | null {
+export function qrElements(
+  spec: QrSpec,
+  box: { x: number; y: number; width: number; height: number },
+  options: { groupId?: string; rotation?: number; keep?: Partial<TrameElement> } = {}
+): QrResult | null {
   const matrix = qrMatrix(spec.text, spec.ecc)
   if (!matrix) return null
   const groupId = options.groupId ?? nanoid(8)
+  const rotation = options.rotation ?? 0
   const n = matrix.length
   const side = Math.max(1, Math.min(box.width, box.height))
   const margin = (side * QR_QUIET) / (n + 2 * QR_QUIET)
-  const base = { rotation: 0, opacity: 1, groupId }
+  // les modules sont décalés de la marge dans le repère du fond : après rotation, ce décalage tourne avec lui
+  const r = (rotation * Math.PI) / 180
+  const at = { x: box.x + margin * (Math.cos(r) - Math.sin(r)), y: box.y + margin * (Math.sin(r) + Math.cos(r)) }
+  const base = { rotation, opacity: 1, groupId, ...options.keep }
   const anchor: TrameElement = { ...base, id: nanoid(8), type: 'rect', x: box.x, y: box.y, width: side, height: side, fill: spec.light, name: 'qr', qr: spec }
-  const modules: TrameElement = { ...base, id: nanoid(8), type: 'path', x: box.x + margin, y: box.y + margin, width: side - 2 * margin, height: side - 2 * margin, fill: spec.dark, path: qrPath(matrix) }
+  const modules: TrameElement = { ...base, id: nanoid(8), type: 'path', x: at.x, y: at.y, width: side - 2 * margin, height: side - 2 * margin, fill: spec.dark, path: qrPath(matrix) }
   return { elements: [anchor, modules], modules: n }
 }
 

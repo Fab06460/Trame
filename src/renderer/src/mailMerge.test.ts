@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_QR, qrElements, qrMatrix, qrPath } from '@/qr'
 import type { TrameDocument, TrameElement } from '@/types'
 import { cleanSettings, decodeCsv, imageFieldsUsed, sanitizeImageField, detectDelimiter, fieldsIn, fieldsUsed, fillText, mergeDocument, parseCsv, rowFileNames, sanitizeMergeData, toMergeData, unknownFields, unusedColumns, MAX_MERGE_ROWS } from './mailMerge'
 
@@ -206,5 +207,61 @@ describe('champs image', () => {
     const bad: { type: string; imageField?: unknown } = { type: 'image', imageField: 42 }
     sanitizeImageField(bad)
     expect('imageField' in bad).toBe(false)
+  })
+})
+
+describe('QR codes', () => {
+  const links = { columns: ['Prénom', 'Lien'], rows: [['Ana', 'https://example.com/ana'], ['Bob', 'https://example.com/bob'], ['Cléo', '']] }
+  /** un QR code (fond + modules) pris entre deux textes, pour vérifier aussi le rang dans la pile */
+  const qrDoc = (content = '{{lien}}', over: { rotation?: number; opacity?: number } = {}): TrameDocument => {
+    const res = qrElements({ ...DEFAULT_QR, text: content }, { x: 100, y: 50, width: 300, height: 300 }, { groupId: 'g', rotation: over.rotation, keep: over.opacity === undefined ? {} : { opacity: over.opacity } })!
+    return { version: 2, name: 'd', width: 1000, height: 1000, pages: [{ id: 'p', background: '#fff', elements: [text('before', 'Avant'), ...res.elements, text('after', 'Après')] }] }
+  }
+  const qrOf = (d: TrameDocument, page: number): TrameElement[] => d.pages[page].elements.filter((e) => e.qr || e.type === 'path')
+
+  it('les champs d\'un QR code comptent parmi les champs du document', () => {
+    expect(fieldsUsed(qrDoc())).toEqual(['lien'])
+    expect(unknownFields(qrDoc(), ['Prénom'])).toEqual(['lien'])
+    expect(unknownFields(qrDoc(), ['Prénom', 'Lien'])).toEqual([])
+    expect(unusedColumns(qrDoc(), ['Prénom', 'Lien'])).toEqual(['Prénom'])
+  })
+
+  it('chaque ligne donne son QR code : le contenu rempli (casse du champ indifférente), le dessin des modules refait', () => {
+    const merged = mergeDocument(qrDoc(), links, [0, 1])
+    const [a, b] = [qrOf(merged, 0), qrOf(merged, 1)]
+    expect(a[0].qr!.text).toBe('https://example.com/ana')
+    expect(b[0].qr!.text).toBe('https://example.com/bob')
+    expect(a[1].path).not.toBe(b[1].path)
+    expect(a[1].path).toBe(qrPath(qrMatrix('https://example.com/ana', 'M')!))
+  })
+
+  it('remplit aussi un champ au milieu d\'un texte', () => {
+    expect(qrOf(mergeDocument(qrDoc('{{Lien}}?eleve={{Prénom}}'), links, [1]), 0)[0].qr!.text).toBe('https://example.com/bob?eleve=Bob')
+  })
+
+  it('garde le cadre, le rang dans la pile, la rotation et l\'opacité', () => {
+    const els = mergeDocument(qrDoc('{{lien}}', { rotation: 30, opacity: 0.5 }), links, [0]).pages[0].elements
+    expect(els.map((e) => e.text ?? (e.qr ? 'QR' : 'modules'))).toEqual(['Avant', 'QR', 'modules', 'Après'])
+    expect(els[1]).toMatchObject({ x: 100, y: 50, width: 300, height: 300, rotation: 30, opacity: 0.5 })
+    expect(els[2]).toMatchObject({ rotation: 30, opacity: 0.5 })
+    expect(els[1].groupId).toBe(els[2].groupId)
+    expect(els[1].groupId).not.toBe('g')
+  })
+
+  it('une cellule vide retire le QR code de la fiche (mieux vaut rien qu\'un code qui mène ailleurs)', () => {
+    expect(mergeDocument(qrDoc(), links, [2]).pages[0].elements.map((e) => e.text)).toEqual(['Avant', 'Après'])
+  })
+
+  it('un contenu sans champ n\'est pas redessiné ; un champ inconnu reste tel quel dans le QR code', () => {
+    const fixed = qrDoc('https://example.com')
+    expect(qrOf(mergeDocument(fixed, links, [0]), 0)[1].path).toBe(qrOf(fixed, 0)[1].path)
+    expect(qrOf(mergeDocument(qrDoc('{{inconnu}}'), links, [0]), 0)[0].qr!.text).toBe('{{inconnu}}')
+  })
+
+  it('les QR codes de deux fiches ne partagent ni élément ni groupe', () => {
+    const merged = mergeDocument(qrDoc(), links, [0, 1])
+    const ids = merged.pages.flatMap((p) => p.elements.map((e) => e.id))
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(qrOf(merged, 0)[0].groupId).not.toBe(qrOf(merged, 1)[0].groupId)
   })
 })

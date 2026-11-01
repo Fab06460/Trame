@@ -83,6 +83,15 @@ describe('qrElements', () => {
     expect(modules.width).toBeCloseTo(modules.height)
   })
 
+  it('pivote l\'ensemble autour du coin du fond : le décalage des modules tourne avec lui', () => {
+    const [anchor, modules] = qrElements(spec(), { x: 100, y: 100, width: 300, height: 300 }, { rotation: 90, keep: { opacity: 0.5, locked: true } })!.elements
+    const margin = modules.width ? (300 - modules.width) / 2 : 0
+    expect([anchor.rotation, modules.rotation]).toEqual([90, 90])
+    expect(modules.x).toBeCloseTo(100 - margin) // (marge, marge) tourné de 90° = (−marge, marge)
+    expect(modules.y).toBeCloseTo(100 + margin)
+    expect([anchor.opacity, modules.opacity, anchor.locked, modules.locked]).toEqual([0.5, 0.5, true, true])
+  })
+
   it('garde le groupe demandé et retourne null pour un contenu vide ou trop long', () => {
     expect(qrElements(spec(), { x: 0, y: 0, width: 100, height: 100 }, { groupId: 'g1' })!.elements.every((e) => e.groupId === 'g1')).toBe(true)
     expect(qrElements(spec({ text: '' }), { x: 0, y: 0, width: 100, height: 100 })).toBeNull()

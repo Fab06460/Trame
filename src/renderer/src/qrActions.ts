@@ -1,4 +1,4 @@
-import { DEFAULT_QR, qrElements, type QrResult, type QrSpec } from '@/qr'
+import { DEFAULT_QR, qrElements, qrKept, type QrResult, type QrSpec } from '@/qr'
 import { useEditor } from '@/store/editor'
 import { t } from '@/i18n'
 import type { TrameElement } from '@/types'
@@ -14,7 +14,7 @@ export function insertQr(): void {
 /** Redessine le QR code de ce fond avec des réglages modifiés, dans le même cadre. Retourne null (rien ne change) si le contenu est vide ou trop long. */
 export function updateQr(anchor: TrameElement, patch: Partial<QrSpec>): QrResult | null {
   if (!anchor.qr) return null
-  const res = qrElements({ ...anchor.qr, ...patch }, { x: anchor.x, y: anchor.y, width: anchor.width, height: anchor.height })
+  const res = qrElements({ ...anchor.qr, ...patch }, { x: anchor.x, y: anchor.y, width: anchor.width, height: anchor.height }, { rotation: anchor.rotation, keep: qrKept(anchor) })
   if (res) useEditor.getState().replaceChart(anchor.id, res.elements)
   return res
 }

@@ -1221,5 +1221,8 @@ export const de: Catalog = {
   'qr.contrast': 'Der QR-Code wird möglicherweise nicht erkannt: Wählen Sie deutlich dunklere Module als den Hintergrund.',
   'qr.skewed': 'Der QR-Code ist verzerrt.',
   'qr.square': 'Quadratisch machen',
-  'qr.hint': 'Der QR-Code besteht aus einem Hintergrund und einer Vektorzeichnung: scharf in jeder Größe und in allen Exporten (PDF, PowerPoint, SVG, Webseite). Halten Sie ihn quadratisch, gedruckt mindestens 2 cm breit, und testen Sie ihn mit einem Smartphone, bevor Sie viele Exemplare drucken. Sein Inhalt wird in der Datei gespeichert.'
+  'qr.hint': 'Der QR-Code besteht aus einem Hintergrund und einer Vektorzeichnung: scharf in jeder Größe und in allen Exporten (PDF, PowerPoint, SVG, Webseite). Halten Sie ihn quadratisch, gedruckt mindestens 2 cm breit, und testen Sie ihn mit einem Smartphone, bevor Sie viele Exemplare drucken. Sein Inhalt wird in der Datei gespeichert.',
+  // QR code et publipostage
+  'qr.mergeHint': 'Ein anderer QR-Code pro Karte: Schreiben Sie {example} in den Inhalt (zum Beispiel einen Link pro Schüler) und nutzen Sie dann den Serienbrief mit einer CSV-Tabelle.',
+  'qr.fields': 'Serienbrief-Felder: Jede Zeile der Tabelle ergibt ihren eigenen QR-Code. Eine leere Zelle entfernt den QR-Code von dieser Karte.'
 }
