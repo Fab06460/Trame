@@ -1,4 +1,7 @@
 # Construit Trame sur chaque système (Windows, Linux, macOS) avec les tests. Les installeurs sont joints à l'exécution (onglet « Artifacts »).
+# Sur une étiquette `v*` (ex. v0.2.0), Windows et Linux sont en plus PUBLIÉS dans une version « brouillon » GitHub (installeurs et fichiers
+# latest*.yml lus par la mise à jour automatique). macOS n'est jamais publié d'ici : la version signée et notarisée se construit sur le Mac
+# (`npm run release:mac`) et se joint à la même version brouillon à la main. Voir docs/RELEASING.md.
 # Les builds Windows et Linux se font sur leur propre système : c'est le plus fiable (icônes et ressources de l'exécutable, paquets deb).
 name: build
 
@@ -6,6 +9,9 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   test:
@@ -27,11 +33,13 @@ jobs:
       matrix:
         include:
           - os: windows-latest
+            publish: true
             script: dist:win
             artifacts: |
               dist/*.exe
               dist/*.zip
           - os: ubuntu-latest
+            publish: true
             script: dist:linux
             artifacts: |
               dist/*.AppImage
@@ -49,10 +57,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run ${{ matrix.script }}
+      - name: Vérifier que l'étiquette correspond à la version de package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+      - run: npm run ${{ matrix.script }} -- --publish ${{ (startsWith(github.ref, 'refs/tags/v') && matrix.publish) && 'always' || 'never' }}
         env:
           # aucune signature dans cette chaîne : voir docs/PACKAGING.md
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: trame-${{ matrix.os }}

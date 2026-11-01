@@ -440,3 +440,9 @@ button.danger { color: #ff7b7b; }
 .compare-group .choice-row.on { background: color-mix(in srgb, var(--accent, #7c5cff) 14%, transparent); border-radius: 6px; }
 .compare-preview { flex: none; width: 200px; display: flex; flex-direction: column; gap: 8px; }
 .compare-preview figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+/* Mises à jour */
+.sidebar-version { margin-top: auto; background: transparent; border: 0; color: var(--muted); font-size: 12px; text-align: left; padding: 6px 0 0; cursor: pointer; }
+.sidebar-version:hover { color: inherit; text-decoration: underline; }
+.sidebar-version + .sidebar-footer { margin-top: 0; }
+.update-banner { position: fixed; left: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 10px; background: var(--panel, #24252b); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }

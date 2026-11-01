@@ -1,5 +1,6 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen, shell } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { homedir, tmpdir } from 'os'
@@ -8,6 +9,9 @@ import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
 import { createCloseGuard } from './closeGuard'
+import { autoUpdater } from 'electron-updater'
+import { createUpdater, testUpdateEngine, type UpdateEngine } from './updater'
+import { parseRepository, parseUpdateSettings, releasesUrl } from '../shared/update'
 import { clearRecovery, listRecoverable, readRecovery, writeRecovery } from './recoveryStore'
 import { addIfNew, addVersion, deleteVersion, labelVersion, listVersions, readVersion } from './versionStore'
 import { safeExportName } from './exportFolder'
@@ -1093,10 +1097,49 @@ else if (process.platform !== 'darwin') {
   })
 }
 
+// Mises à jour automatiques (voir updater.ts) : GitHub Releases du dépôt indiqué par le champ `repository` de package.json.
+const updateSettingsFile = (): string => join(app.getPath('userData'), 'update-settings.json')
+const updateRepo = (): { owner: string; repo: string } | null => {
+  try {
+    return parseRepository(JSON.parse(readFileSync(join(app.getAppPath(), 'package.json'), 'utf-8')).repository)
+  } catch {
+    return null
+  }
+}
+let updater: ReturnType<typeof createUpdater> | null = null
+const getUpdater = (): ReturnType<typeof createUpdater> => {
+  updater ??= createUpdater({
+    engine: TEST_EXPORT_DIR ? testUpdateEngine(TEST_EXPORT_DIR) : (autoUpdater as unknown as UpdateEngine),
+    current: app.getVersion(),
+    disabled: TEST_EXPORT_DIR ? null : !app.isPackaged ? 'dev' : updateRepo() ? null : 'unconfigured',
+    // Linux : seule l'AppImage sait se remplacer elle-même ; une archive ou un paquet se met à jour à la main
+    manual: !TEST_EXPORT_DIR && process.platform === 'linux' && !process.env.APPIMAGE,
+    // tests de bout en bout : jamais de vérification automatique (le bandeau gênerait les autres scénarios)
+    loadSettings: async () => (TEST_EXPORT_DIR ? { auto: false } : parseUpdateSettings(await readFile(updateSettingsFile(), 'utf-8').catch(() => ''))),
+    saveSettings: (s) => writeFile(updateSettingsFile(), JSON.stringify(s), 'utf-8'),
+    emit: (s) => mainWindow?.webContents.send('update:state', s),
+    // l'interface a déjà proposé d'enregistrer : la fermeture pour installer ne doit pas reposer la question
+    beforeInstall: () => closeGuard.setDirty(false)
+  })
+  return updater
+}
+ipcMain.handle('update:get', () => getUpdater().state())
+ipcMain.handle('update:check', () => getUpdater().check())
+ipcMain.handle('update:download', () => getUpdater().download())
+ipcMain.handle('update:install', () => getUpdater().install())
+ipcMain.handle('update:set-auto', (_e, auto: unknown) => getUpdater().setAuto(auto === true))
+ipcMain.handle('update:open-page', async () => {
+  const r = updateRepo()
+  if (r) await shell.openExternal(releasesUrl(r.owner, r.repo))
+  return !!r
+})
+
 app.whenReady().then(() => {
   if (!gotLock) return
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   createWindow()
+  // vérification au lancement, après le démarrage (pas avant que la fenêtre soit prête)
+  setTimeout(() => void getUpdater().init(), TEST_EXPORT_DIR ? 500 : 8000)
   // projet donné en argument au lancement (Windows, Linux)
   if (process.platform !== 'darwin') {
     const files = projectFilesFromArgv(process.argv.slice(app.isPackaged ? 1 : 2))

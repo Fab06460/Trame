@@ -15,6 +15,7 @@ import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
 import { useVersions } from '@/store/versions'
 import { compareWithFile } from '@/compareActions'
+import { useUpdate } from '@/store/update'
 
 export function Toolbar(): React.JSX.Element {
   const t = useT()
@@ -80,7 +81,8 @@ export function Toolbar(): React.JSX.Element {
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
               { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
               { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) },
-              { key: 'compare', label: t('compare.menu'), onSelect: compareWithFile }
+              { key: 'compare', label: t('compare.menu'), onSelect: compareWithFile },
+              { key: 'update', label: t('update.open'), onSelect: () => useUpdate.getState().setOpen(true) }
             ]}
           />
           {save}

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { UpdateState } from '../shared/update'
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, EditKind, WriteAction } from '../shared/ai'
 
@@ -156,6 +157,18 @@ const api = {
     const listener = (): void => cb()
     ipcRenderer.on('app:before-close', listener)
     return () => ipcRenderer.removeListener('app:before-close', listener)
+  },
+  /** Mises à jour automatiques (voir `src/main/updater.ts`) : état courant, vérifier, télécharger, installer (redémarre l'application). */
+  getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke('update:get'),
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('update:check'),
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  setAutoUpdate: (auto: boolean): Promise<void> => ipcRenderer.invoke('update:set-auto', auto),
+  openUpdatePage: (): Promise<boolean> => ipcRenderer.invoke('update:open-page'),
+  onUpdateState: (cb: (state: UpdateState) => void): (() => void) => {
+    const listener = (_e: unknown, state: UpdateState): void => cb(state)
+    ipcRenderer.on('update:state', listener)
+    return () => ipcRenderer.removeListener('update:state', listener)
   },
   /** Plein écran (mode présentation). */
   setFullScreen: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:fullscreen', on),

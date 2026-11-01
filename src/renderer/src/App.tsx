@@ -18,6 +18,9 @@ import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
 import { RecoveryDialog } from '@/components/RecoveryDialog'
 import { CompareDialog } from '@/components/CompareDialog'
+import { UpdateBanner } from '@/components/UpdateBanner'
+import { UpdateDialog } from '@/components/UpdateDialog'
+import { startUpdateWatch } from '@/updateActions'
 import { checkRecovery, startAutosave } from '@/recoveryActions'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
@@ -151,7 +154,12 @@ export default function App(): React.JSX.Element {
   // Copie de secours du travail en cours, et reprise d'une session interrompue
   useEffect(() => {
     void checkRecovery()
-    return startAutosave()
+    const stopUpdates = startUpdateWatch()
+    const stopAutosave = startAutosave()
+    return () => {
+      stopUpdates()
+      stopAutosave()
+    }
   }, [])
 
   // Fermeture de fenêtre avec des modifications : proposer d'enregistrer
@@ -195,6 +203,8 @@ export default function App(): React.JSX.Element {
       <VersionsDialog />
       <RecoveryDialog />
       <CompareDialog />
+      <UpdateDialog />
+      <UpdateBanner />
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>

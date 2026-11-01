@@ -1708,6 +1708,22 @@ try {
   await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
   check('comparaison : tout s\'annule en un seul cran', await waitFor(async () => !(await run(`document.querySelector('[data-review-list]')?.innerText ?? ''`)).includes('À reformuler')))
 
+  // mises à jour (moteur simulé en mode test : aucune requête réseau) : vérifier, télécharger, installer
+  await reloadApp()
+  await sleep(500)
+  await clickSel('[data-action="update-open"]')
+  check('mises à jour : la fenêtre affiche la version installée et le mode test', await waitFor(async () => (await nBrand('[data-update-dialog]')) === 1) && (await run(`document.querySelector('[data-update-version]').innerText`)).includes('0.1.0'))
+  check('mises à jour : le réglage « rechercher au lancement » est proposé (décoché en mode test)', (await run(`document.querySelector('[data-field="updateAuto"]')?.checked`)) === false)
+  await clickSel('[data-action="update-check"]')
+  check('mises à jour : « Rechercher maintenant » trouve la version 9.9.9', await waitFor(async () => (await run(`document.querySelector('[data-update-status]')?.innerText ?? ''`)).includes('9.9.9')))
+  await clickSel('[data-action="update-close"]')
+  check('mises à jour : fermée, la fenêtre laisse un bandeau « disponible » non bloquant', await waitFor(async () => (await nBrand('[data-update-banner="available"]')) === 1))
+  await clickSel('[data-update-banner="available"] [data-action="update-download"]')
+  check('mises à jour : le téléchargement aboutit (« prête à installer »)', await waitFor(async () => (await nBrand('[data-update-banner="ready"]')) === 1))
+  await clickSel('[data-update-banner="ready"] [data-action="update-install"]')
+  check('mises à jour : « Redémarrer et installer » lance l\'installation (document non modifié : aucune question)', await waitFor(async () => (await readdir(exportsDir)).includes('update-installed.txt')))
+  await rm(join(exportsDir, 'update-installed.txt'), { force: true })
+
   // publipostage : CSV (point-virgule, Windows-1252) → champs {{colonne}} → aperçu → PDF unique et un PDF par ligne
   await writeFile(join(exportsDir, 'pick-import.csv'), Buffer.from('Nom;Classe\r\n\xc9lodie;6A\r\nZo\xe9 / Ben;6B\r\n', 'latin1'))
   await reloadApp()
