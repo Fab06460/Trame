@@ -24,6 +24,7 @@ import { useSidebar, type SidebarTab } from '@/store/sidebar'
 import { SideIcon } from './SideIcons'
 import { imagesMissingAlt } from '@/altCheck'
 import { CHART_KINDS, insertChart } from '@/chartActions'
+import { insertQr } from '@/qrActions'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
@@ -219,6 +220,11 @@ export function Sidebar(): React.JSX.Element {
                 </button>
               ))}
             </div>
+          </section>
+
+          <section>
+            <h3>{t('qr.section')}</h3>
+            <button data-action="qr-insert" title={t('qr.insert.title')} onClick={insertQr}>{t('qr.insert')}</button>
           </section>
         </>
       )}

@@ -1202,7 +1202,27 @@ export const fr = {
   'update.banner.available': 'Trame {version} est disponible.',
   'update.banner.downloading': 'Téléchargement de Trame {version} : {percent} %',
   'update.banner.ready': 'Trame {version} est prête à être installée.',
-  'update.banner.error': 'La mise à jour n\'a pas abouti.'
+  'update.banner.error': 'La mise à jour n\'a pas abouti.',
+  // QR code
+  'qr.section': 'QR code',
+  'qr.insert': 'Insérer un QR code',
+  'qr.insert.title': 'Insérer un QR code (adresse web ou texte)',
+  'qr.sample': 'https://example.com',
+  'qr.panel': 'QR code',
+  'qr.text': 'Contenu (adresse web ou texte)',
+  'qr.level': 'Correction d\'erreurs',
+  'qr.level.L': 'Faible (7 %)',
+  'qr.level.M': 'Moyenne (15 %)',
+  'qr.level.Q': 'Élevée (25 %)',
+  'qr.level.H': 'Maximale (30 %)',
+  'qr.dark': 'Modules',
+  'qr.light': 'Fond',
+  'qr.empty': 'Saisissez une adresse web ou un texte.',
+  'qr.tooLong': 'Ce contenu est trop long pour un QR code : raccourcissez-le (ou choisissez une correction d\'erreurs plus faible).',
+  'qr.contrast': 'Le QR code risque de ne pas être lu : prenez des modules nettement plus sombres que le fond.',
+  'qr.skewed': 'Le QR code est déformé.',
+  'qr.square': 'Rendre carré',
+  'qr.hint': 'Le QR code est un fond et un dessin vectoriel : net à toute taille et dans tous les exports (PDF, PowerPoint, SVG, page web). Gardez-le carré, à 2 cm de côté au moins une fois imprimé, et essayez-le avec un téléphone avant de l\'imprimer en nombre. Son contenu est enregistré dans le fichier.'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

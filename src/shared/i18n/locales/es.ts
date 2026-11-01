@@ -1201,5 +1201,25 @@ export const es: Catalog = {
   'update.banner.available': 'Trame {version} está disponible.',
   'update.banner.downloading': 'Descargando Trame {version}: {percent} %',
   'update.banner.ready': 'Trame {version} está lista para instalar.',
-  'update.banner.error': 'La actualización no se completó.'
+  'update.banner.error': 'La actualización no se completó.',
+  // QR code
+  'qr.section': 'Código QR',
+  'qr.insert': 'Insertar un código QR',
+  'qr.insert.title': 'Insertar un código QR (dirección web o texto)',
+  'qr.sample': 'https://example.com',
+  'qr.panel': 'Código QR',
+  'qr.text': 'Contenido (dirección web o texto)',
+  'qr.level': 'Corrección de errores',
+  'qr.level.L': 'Baja (7 %)',
+  'qr.level.M': 'Media (15 %)',
+  'qr.level.Q': 'Alta (25 %)',
+  'qr.level.H': 'Máxima (30 %)',
+  'qr.dark': 'Módulos',
+  'qr.light': 'Fondo',
+  'qr.empty': 'Escriba una dirección web o un texto.',
+  'qr.tooLong': 'Este contenido es demasiado largo para un código QR: acórtelo (o elija una corrección de errores más baja).',
+  'qr.contrast': 'Puede que el código QR no se lea: use módulos claramente más oscuros que el fondo.',
+  'qr.skewed': 'El código QR está deformado.',
+  'qr.square': 'Hacer cuadrado',
+  'qr.hint': 'El código QR es un fondo con un dibujo vectorial: nítido a cualquier tamaño y en todas las exportaciones (PDF, PowerPoint, SVG, página web). Manténgalo cuadrado, de al menos 2 cm impreso, y pruébelo con un teléfono antes de imprimir muchas copias. Su contenido se guarda en el archivo.'
 }

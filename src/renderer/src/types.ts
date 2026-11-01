@@ -102,6 +102,8 @@ export interface TrameElement {
   imageField?: string
   /** premier élément d'un graphique ou d'un tableau : porte sa description (les autres éléments du groupe sont régénérés à partir d'elle) */
   chart?: ChartSpec
+  /** premier élément (le fond) d'un QR code : porte son contenu, le dessin des modules (le chemin qui suit) est régénéré à partir de lui */
+  qr?: QrSpec
   /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
   list?: ListKind
   // path : chemin SVG (viewBox 100×100)
@@ -197,6 +199,18 @@ export interface ChartSpec {
   showLegend: boolean
   palette: 'safe' | 'violet' | 'gray'
   theme: 'light' | 'dark'
+}
+
+/** QR code lié à son contenu : le document ne garde que cette description, le fond et le chemin des modules sont régénérés (`qr.ts`). */
+export interface QrSpec {
+  /** adresse web ou texte encodé (UTF-8) */
+  text: string
+  /** correction d'erreurs : L 7 %, M 15 %, Q 25 %, H 30 % de modules abîmés ou cachés tolérés */
+  ecc: 'L' | 'M' | 'Q' | 'H'
+  /** couleur des modules (sombre) */
+  dark: string
+  /** couleur du fond et de la marge (claire) */
+  light: string
 }
 
 /** Tableau du publipostage (champs « {{colonne}} » des textes), enregistré avec le document. */

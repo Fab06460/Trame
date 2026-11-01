@@ -20,6 +20,7 @@ import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
 import { TextAiHelp } from './TextAiHelp'
 import { ChartPanel } from './ChartPanel'
+import { QrPanel } from './QrPanel'
 import { fieldsIn } from '@/mailMerge'
 
 const MORE_FONTS = '__more-fonts__'
@@ -106,6 +107,20 @@ export function Properties(): React.JSX.Element {
       )}
     </>
   )
+
+  // un QR code (groupe dont le premier élément porte son contenu) : ses réglages d'abord
+  const qrAnchor = selection.find((e) => e.qr && e.groupId && selection.every((x) => x.groupId === e.groupId))
+  if (qrAnchor) {
+    return (
+      <aside className="panel">
+        <TemplateBanner />
+        <QrPanel key={qrAnchor.id} anchor={qrAnchor} />
+        <PositionPanel />
+        {alignButtons}
+        {layerButtons}
+      </aside>
+    )
+  }
 
   // un graphique ou un tableau (groupe dont le premier élément porte sa description) : ses réglages d'abord
   const chartAnchor = selection.find((e) => e.chart && e.groupId && selection.every((x) => x.groupId === e.groupId))

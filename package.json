@@ -167,7 +167,8 @@
     "electron-updater": "^6.8.11",
     "jszip": "^3.10.2",
     "pdfjs-dist": "^6.4.299",
-    "pptxgenjs": "^4.0.1"
+    "pptxgenjs": "^4.0.1",
+    "qrcode-generator": "^2.0.4"
   },
   "desktopName": "trame.desktop"
 }

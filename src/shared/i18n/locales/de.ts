@@ -1201,5 +1201,25 @@ export const de: Catalog = {
   'update.banner.available': 'Trame {version} ist verfügbar.',
   'update.banner.downloading': 'Trame {version} wird heruntergeladen: {percent} %',
   'update.banner.ready': 'Trame {version} ist installationsbereit.',
-  'update.banner.error': 'Das Update ist fehlgeschlagen.'
+  'update.banner.error': 'Das Update ist fehlgeschlagen.',
+  // QR code
+  'qr.section': 'QR-Code',
+  'qr.insert': 'QR-Code einfügen',
+  'qr.insert.title': 'QR-Code einfügen (Webadresse oder Text)',
+  'qr.sample': 'https://example.com',
+  'qr.panel': 'QR-Code',
+  'qr.text': 'Inhalt (Webadresse oder Text)',
+  'qr.level': 'Fehlerkorrektur',
+  'qr.level.L': 'Niedrig (7 %)',
+  'qr.level.M': 'Mittel (15 %)',
+  'qr.level.Q': 'Hoch (25 %)',
+  'qr.level.H': 'Höchste (30 %)',
+  'qr.dark': 'Module',
+  'qr.light': 'Hintergrund',
+  'qr.empty': 'Geben Sie eine Webadresse oder einen Text ein.',
+  'qr.tooLong': 'Dieser Inhalt ist für einen QR-Code zu lang: kürzen Sie ihn (oder wählen Sie eine niedrigere Fehlerkorrektur).',
+  'qr.contrast': 'Der QR-Code wird möglicherweise nicht erkannt: Wählen Sie deutlich dunklere Module als den Hintergrund.',
+  'qr.skewed': 'Der QR-Code ist verzerrt.',
+  'qr.square': 'Quadratisch machen',
+  'qr.hint': 'Der QR-Code besteht aus einem Hintergrund und einer Vektorzeichnung: scharf in jeder Größe und in allen Exporten (PDF, PowerPoint, SVG, Webseite). Halten Sie ihn quadratisch, gedruckt mindestens 2 cm breit, und testen Sie ihn mit einem Smartphone, bevor Sie viele Exemplare drucken. Sein Inhalt wird in der Datei gespeichert.'
 }

@@ -111,6 +111,10 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | C5 | Kit de marque local : couleurs, logos, polices (plusieurs kits) | M | **Fait pour un kit** (voir `docs/ARCHITECTURE.md`). | E11, E12 |
 | C6 | Modèles de marque : éléments verrouillés / modifiables | M | **Fait** : éléments figés ou à remplir, modification du modèle, remplacement d'image. Aide à la cohérence, pas une sécurité. | E5, C5 |
 | C7 | Graphiques (barres, courbes, secteurs) et tableaux à partir de données collées ou CSV | L | Nouveau type d'élément : 4 rendus à écrire. | — |
+| C8 | QR codes (adresse web ou texte, correction d'erreurs, couleurs) | S | **Fait** : groupe fond + tracé vectoriel, voir `docs/ARCHITECTURE.md`. Reste : champ de publipostage dans le contenu (un QR code par ligne du tableau), PowerPoint en vrai tracé. | C7 |
+| C9 | Flouter ou pixelliser une zone d'une image (visages d'élèves, données personnelles) | S–M | Prévu, à la manière des outils d'enseignants (Digiblur). Version manuelle d'abord (rectangle ou pinceau) ; détection automatique des visages = modèle embarqué, plus tard. | E9 |
+| C10 | Bulles de BD et modèles de planches, cartes mémo recto-verso (publipostage) | S | Surtout du contenu (une forme « bulle » existe déjà). | C2 |
+| C11 | Nuage de mots à partir d'un texte ou d'une liste | M | Calcul de placement, hors-ligne, éléments ordinaires modifiables. | — |
 
 ### Phase 3 — Documents (export, outils PDF, signature, présentation)
 

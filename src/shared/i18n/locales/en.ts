@@ -1201,5 +1201,25 @@ export const en: Catalog = {
   'update.banner.available': 'Trame {version} is available.',
   'update.banner.downloading': 'Downloading Trame {version}: {percent}%',
   'update.banner.ready': 'Trame {version} is ready to install.',
-  'update.banner.error': 'The update did not complete.'
+  'update.banner.error': 'The update did not complete.',
+  // QR code
+  'qr.section': 'QR code',
+  'qr.insert': 'Insert a QR code',
+  'qr.insert.title': 'Insert a QR code (web address or text)',
+  'qr.sample': 'https://example.com',
+  'qr.panel': 'QR code',
+  'qr.text': 'Content (web address or text)',
+  'qr.level': 'Error correction',
+  'qr.level.L': 'Low (7%)',
+  'qr.level.M': 'Medium (15%)',
+  'qr.level.Q': 'High (25%)',
+  'qr.level.H': 'Highest (30%)',
+  'qr.dark': 'Modules',
+  'qr.light': 'Background',
+  'qr.empty': 'Enter a web address or some text.',
+  'qr.tooLong': 'This content is too long for a QR code: shorten it (or pick a lower error correction).',
+  'qr.contrast': 'The QR code may not be readable: use modules clearly darker than the background.',
+  'qr.skewed': 'The QR code is stretched.',
+  'qr.square': 'Make square',
+  'qr.hint': 'The QR code is a background plus a vector drawing: sharp at any size and in every export (PDF, PowerPoint, SVG, web page). Keep it square, at least 2 cm wide once printed, and try it with a phone before printing many copies. Its content is saved in the file.'
 }

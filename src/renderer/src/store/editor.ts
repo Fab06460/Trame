@@ -10,6 +10,7 @@ import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/
 import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeImageField, sanitizeMergeData } from '@/mailMerge'
 import { sanitizeChart } from '@/chart'
+import { sanitizeQr } from '@/qr'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
@@ -105,6 +106,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeAiInfo(e)
       sanitizeImageField(e)
       sanitizeChart(e)
+      sanitizeQr(e)
       sanitizeAlt(e)
       sanitizeDecorative(e)
       if (e.locked !== true) delete e.locked
