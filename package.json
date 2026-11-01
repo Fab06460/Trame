@@ -58,9 +58,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER/trame.git"
+    "url": "https://github.com/Fab06460/Trame.git"
   },
-  "homepage": "https://github.com/OWNER/trame",
+  "homepage": "https://github.com/Fab06460/Trame",
   "build": {
     "appId": "app.trame.editor",
     "productName": "Trame",
