@@ -3,3 +3,12 @@ out
 dist
 .DS_Store
 scripts/pdf-fidelity/.build
+
+# Secrets : certificats, clés, jetons (ne jamais les commiter)
+*.p12
+*.pfx
+*.p8
+*.pem
+*.key
+.env
+.env.*
