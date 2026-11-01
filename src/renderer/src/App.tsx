@@ -14,6 +14,7 @@ import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { PrintDialog } from '@/components/PrintDialog'
+import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
 import { RecoveryDialog } from '@/components/RecoveryDialog'
 import { CompareDialog } from '@/components/CompareDialog'
@@ -54,10 +55,13 @@ export default function App(): React.JSX.Element {
         return
       }
       // raccourcis fichier : actifs même pendant la saisie de texte
-      if ((e.metaKey || e.ctrlKey) && ['s', 'o', 'n'].includes(k)) {
+      if ((e.metaKey || e.ctrlKey) && ['s', 'o', 'n', 'p'].includes(k)) {
         e.preventDefault()
         if (k === 's') void saveProject(e.shiftKey)
         else if (k === 'o') void openProject()
+        else if (k === 'p') {
+          if (!usePresentation.getState().active) usePrintDialog.getState().setOpen(true)
+        }
         else void newProject()
         return
       }

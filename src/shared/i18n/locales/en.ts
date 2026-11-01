@@ -1038,9 +1038,9 @@ export const en: Catalog = {
   'chart.empty': 'This file has no rows.',
   'chart.insert': 'Insert: {kind}',
   // Impression pratique
-  'print.menu': 'Booklet and multi-page printing',
-  'print.menu.desc': 'A print-ready PDF: a double-sided booklet to fold, or several pages per sheet',
-  'print.title': 'Booklet and multi-page printing',
+  'print.menu': 'Print…',
+  'print.menu.desc': 'Straight to a printer, as a double-sided booklet or several pages per sheet, or as a print-ready PDF',
+  'print.title': 'Print',
   'print.mode': 'Layout',
   'print.mode.booklet': 'Booklet (double-sided sheets folded in half and stapled)',
   'print.mode.nup': 'Several pages per sheet (handouts, contact sheets)',
@@ -1057,7 +1057,7 @@ export const en: Catalog = {
   'print.how.nup': 'Print this PDF at 100% (“actual size”), one side per sheet.',
   'print.ratio': 'The page format (e.g. 16:9) does not match its slot: pages will be shrunk and centred with white margins. For an A5 booklet, set the document to A5 (the “Page” menu).',
   'print.pagesMultiple': 'A booklet has a multiple of 4 pages: blank pages are added at the end (back cover included: put your last page there if needed).',
-  'print.export': 'Export the PDF',
+  'print.export': 'Export as PDF',
   'print.file.booklet': '{name}-booklet',
   'print.file.nup': '{name}-{n}-per-sheet',
   // Historique des versions
@@ -1162,5 +1162,13 @@ export const en: Catalog = {
   'compare.type.image': 'image',
   'compare.type.path': 'shape',
   'compare.apply': { one: 'Bring in the selection ({count})', other: 'Bring in the selection ({count})' },
-  'versions.compare': 'Compare with the current document'
+  'versions.compare': 'Compare with the current document',
+  // Impression directe
+  'print.mode.sheet': 'One page per sheet (the document as is, fitted to the paper)',
+  'print.summary.sheet': { one: '{pages} page → {sheets} sheet.', other: '{pages} pages → {sheets} sheets.' },
+  'print.how.sheet': 'A page too large for the sheet is shrunk to fit, never enlarged. A printer cannot print to the very edge of the sheet: keep a small margin if your document needs one.',
+  'print.print': 'Print…',
+  'print.printing': 'Preparing…',
+  'print.failed': 'Printing failed: {reason}',
+  'print.duplex.hint': 'In the print dialog, choose double-sided printing flipping on the SHORT edge if it is not already selected.'
 }

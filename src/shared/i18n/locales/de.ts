@@ -1038,9 +1038,9 @@ export const de: Catalog = {
   'chart.empty': 'Diese Datei enthält keine Zeilen.',
   'chart.insert': 'Einfügen: {kind}',
   // Impression pratique
-  'print.menu': 'Broschüre und Mehrfachdruck',
-  'print.menu.desc': 'Ein druckfertiges PDF: gefaltete Broschüre im Duplexdruck oder mehrere Seiten pro Blatt',
-  'print.title': 'Broschüre und Mehrfachdruck',
+  'print.menu': 'Drucken…',
+  'print.menu.desc': 'Direkt auf einem Drucker, als doppelseitige Broschüre oder mehrere Seiten pro Blatt, oder als druckfertiges PDF',
+  'print.title': 'Drucken',
   'print.mode': 'Anordnung',
   'print.mode.booklet': 'Broschüre (doppelseitige Blätter, in der Mitte gefaltet und geheftet)',
   'print.mode.nup': 'Mehrere Seiten pro Blatt (Handouts, Kontaktbögen)',
@@ -1057,7 +1057,7 @@ export const de: Catalog = {
   'print.how.nup': 'Drucken Sie dieses PDF mit 100 % („tatsächliche Größe“), eine Seite pro Blatt.',
   'print.ratio': 'Das Seitenformat (z. B. 16:9) passt nicht zum Platz: Die Seiten werden verkleinert und zentriert, mit weißen Rändern. Für eine A5-Broschüre stellen Sie das Dokument auf A5 (Menü „Seite“).',
   'print.pagesMultiple': 'Eine Broschüre hat ein Vielfaches von 4 Seiten: Am Ende werden Leerseiten ergänzt (einschließlich Rückseite: Setzen Sie bei Bedarf Ihre letzte Seite dorthin).',
-  'print.export': 'PDF exportieren',
+  'print.export': 'Als PDF exportieren',
   'print.file.booklet': '{name}-broschuere',
   'print.file.nup': '{name}-{n}-pro-blatt',
   // Historique des versions
@@ -1162,5 +1162,13 @@ export const de: Catalog = {
   'compare.type.image': 'Bild',
   'compare.type.path': 'Form',
   'compare.apply': { one: 'Auswahl übernehmen ({count})', other: 'Auswahl übernehmen ({count})' },
-  'versions.compare': 'Mit aktuellem Dokument vergleichen'
+  'versions.compare': 'Mit aktuellem Dokument vergleichen',
+  // Impression directe
+  'print.mode.sheet': 'Eine Seite pro Blatt (das Dokument unverändert, ans Papier angepasst)',
+  'print.summary.sheet': { one: '{pages} Seite → {sheets} Blatt.', other: '{pages} Seiten → {sheets} Blätter.' },
+  'print.how.sheet': 'Eine für das Blatt zu große Seite wird verkleinert, nie vergrößert. Ein Drucker druckt nicht bis zum Blattrand: Lassen Sie einen kleinen Rand, wenn Ihr Dokument ihn braucht.',
+  'print.print': 'Drucken…',
+  'print.printing': 'Wird vorbereitet…',
+  'print.failed': 'Der Druck ist fehlgeschlagen: {reason}',
+  'print.duplex.hint': 'Wählen Sie im Druckdialog den Duplexdruck mit Wenden über die KURZE Kante, falls er nicht schon gewählt ist.'
 }

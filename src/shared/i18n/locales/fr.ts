@@ -1039,9 +1039,9 @@ export const fr = {
   'chart.empty': 'Ce fichier ne contient aucune ligne.',
   'chart.insert': 'Insérer : {kind}',
   // Impression pratique
-  'print.menu': 'Livret et impression groupée',
-  'print.menu.desc': 'Un PDF prêt à imprimer : livret recto-verso à plier, ou plusieurs pages par feuille',
-  'print.title': 'Livret et impression groupée',
+  'print.menu': 'Imprimer…',
+  'print.menu.desc': 'Directement sur une imprimante, en livret recto-verso ou plusieurs pages par feuille, ou en PDF prêt à imprimer',
+  'print.title': 'Imprimer',
   'print.mode': 'Mise en page',
   'print.mode.booklet': 'Livret (feuilles recto-verso pliées en deux et agrafées)',
   'print.mode.nup': 'Plusieurs pages par feuille (polycopiés, planches-contact)',
@@ -1163,7 +1163,15 @@ export const fr = {
   'compare.type.image': 'image',
   'compare.type.path': 'forme',
   'compare.apply': { one: 'Reprendre la sélection ({count})', other: 'Reprendre la sélection ({count})' },
-  'versions.compare': 'Comparer avec le document actuel'
+  'versions.compare': 'Comparer avec le document actuel',
+  // Impression directe
+  'print.mode.sheet': 'Une page par feuille (le document tel quel, ajusté au papier)',
+  'print.summary.sheet': { one: '{pages} page → {sheets} feuille.', other: '{pages} pages → {sheets} feuilles.' },
+  'print.how.sheet': 'Une page trop grande pour la feuille est réduite pour y tenir, jamais agrandie. Une imprimante ne couvre pas les bords de la feuille : gardez une petite marge si votre document en a besoin.',
+  'print.print': 'Imprimer…',
+  'print.printing': 'Préparation…',
+  'print.failed': 'L\'impression a échoué : {reason}',
+  'print.duplex.hint': 'Dans la boîte d\'impression, choisissez le recto-verso avec retournement sur le bord COURT si elle ne l\'a pas déjà sélectionné.'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

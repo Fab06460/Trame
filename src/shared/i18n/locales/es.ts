@@ -1038,9 +1038,9 @@ export const es: Catalog = {
   'chart.empty': 'Este archivo no contiene filas.',
   'chart.insert': 'Insertar: {kind}',
   // Impression pratique
-  'print.menu': 'Folleto e impresión múltiple',
-  'print.menu.desc': 'Un PDF listo para imprimir: folleto a doble cara para plegar, o varias páginas por hoja',
-  'print.title': 'Folleto e impresión múltiple',
+  'print.menu': 'Imprimir…',
+  'print.menu.desc': 'Directamente en una impresora, como folleto a doble cara o varias páginas por hoja, o como PDF listo para imprimir',
+  'print.title': 'Imprimir',
   'print.mode': 'Disposición',
   'print.mode.booklet': 'Folleto (hojas a doble cara dobladas por la mitad y grapadas)',
   'print.mode.nup': 'Varias páginas por hoja (apuntes, hojas de contactos)',
@@ -1057,7 +1057,7 @@ export const es: Catalog = {
   'print.how.nup': 'Imprima este PDF al 100 % («tamaño real»), una cara por hoja.',
   'print.ratio': 'El formato de las páginas (p. ej. 16:9) no coincide con su hueco: se reducirán y centrarán con márgenes blancos. Para un folleto A5, ponga el documento en A5 (menú «Página»).',
   'print.pagesMultiple': 'Un folleto tiene un número de páginas múltiplo de 4: se añaden páginas en blanco al final (contraportada incluida: ponga ahí su última página si lo necesita).',
-  'print.export': 'Exportar el PDF',
+  'print.export': 'Exportar como PDF',
   'print.file.booklet': '{name}-folleto',
   'print.file.nup': '{name}-{n}-por-hoja',
   // Historique des versions
@@ -1162,5 +1162,13 @@ export const es: Catalog = {
   'compare.type.image': 'imagen',
   'compare.type.path': 'forma',
   'compare.apply': { one: 'Traer la selección ({count})', other: 'Traer la selección ({count})' },
-  'versions.compare': 'Comparar con el documento actual'
+  'versions.compare': 'Comparar con el documento actual',
+  // Impression directe
+  'print.mode.sheet': 'Una página por hoja (el documento tal cual, ajustado al papel)',
+  'print.summary.sheet': { one: '{pages} página → {sheets} hoja.', other: '{pages} páginas → {sheets} hojas.' },
+  'print.how.sheet': 'Una página demasiado grande para la hoja se reduce, nunca se amplía. Una impresora no imprime hasta el borde de la hoja: deje un pequeño margen si su documento lo necesita.',
+  'print.print': 'Imprimir…',
+  'print.printing': 'Preparando…',
+  'print.failed': 'La impresión ha fallado: {reason}',
+  'print.duplex.hint': 'En el cuadro de impresión, elija la impresión a doble cara girando por el borde CORTO si no está ya seleccionada.'
 }

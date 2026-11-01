@@ -87,6 +87,9 @@ const api = {
   /** Publipostage : choix du dossier des images (null si annulé), puis lecture de fichiers de ce dossier par leur nom (data URL, ou null si illisible). */
   pickMergeImageFolder: (): Promise<{ name: string; files: string[] } | null> => ipcRenderer.invoke('mergeimages:pick'),
   readMergeImages: (names: string[]): Promise<Record<string, string | null>> => ipcRenderer.invoke('mergeimages:read', names),
+  /** Impression directe d'une page HTML préparée (une section par feuille de `widthPx` × `heightPx`) ; ouvre la boîte d'impression du système. */
+  printHtml: (html: string, widthPx: number, heightPx: number, duplex: 'simplex' | 'shortEdge' | 'longEdge'): Promise<{ status: 'printed' } | { status: 'cancelled' } | { status: 'failed'; reason: string }> =>
+    ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
   /** Export vers un dossier : choix du dossier (null si annulé ; `existing` : fichiers qui seraient remplacés), puis écriture fichier par fichier. */

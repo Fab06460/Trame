@@ -1,8 +1,8 @@
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen } from 'electron'
 import { join } from 'path'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { basename, dirname } from 'path'
 import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
@@ -11,6 +11,7 @@ import { createCloseGuard } from './closeGuard'
 import { clearRecovery, listRecoverable, readRecovery, writeRecovery } from './recoveryStore'
 import { addIfNew, addVersion, deleteVersion, labelVersion, listVersions, readVersion } from './versionStore'
 import { safeExportName } from './exportFolder'
+import { isDuplex, sheetGeometry } from '../shared/printSheet'
 import { MAX_MERGE_IMAGE_BYTES, MAX_MERGE_IMAGE_FILES, isMergeImageFile, mergeImageMime } from '../shared/mergeImages'
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
@@ -924,6 +925,41 @@ ipcMain.handle('image:pick', async () => {
   return `data:${mime};base64,${buf.toString('base64')}`
 })
 
+
+// Impression directe : la page HTML préparée par le renderer (une section par feuille) est imprimée par une fenêtre cachée, sans passer par un PDF enregistré.
+type PrintResult = { status: 'printed' } | { status: 'cancelled' } | { status: 'failed'; reason: string }
+ipcMain.handle('print:html', async (_e, html: unknown, widthPx: unknown, heightPx: unknown, duplexMode: unknown): Promise<PrintResult> => {
+  const geo = sheetGeometry(widthPx, heightPx)
+  if (typeof html !== 'string' || html.length === 0 || html.length > 600_000_000 || !geo) return { status: 'failed', reason: 'invalid' }
+  const duplex = isDuplex(duplexMode) ? duplexMode : 'simplex'
+  const dir = await mkdtemp(join(tmpdir(), 'trame-print-'))
+  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } })
+  try {
+    // la page ne reçoit que ses propres données : aucune navigation, aucune fenêtre
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    win.webContents.on('will-navigate', (ev) => ev.preventDefault())
+    const file = join(dir, 'print.html')
+    await writeFile(file, html, 'utf-8')
+    await win.loadFile(file)
+    await win.webContents.executeJavaScript('document.fonts.ready.then(() => true)')
+    if (TEST_EXPORT_DIR) {
+      // tests de bout en bout : pas de boîte d'impression ; le PDF que le système imprimerait est écrit dans le dossier de test
+      await writeFile(join(TEST_EXPORT_DIR, 'print-test.pdf'), await win.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true }))
+      return { status: 'printed' }
+    }
+    return await new Promise<PrintResult>((resolve) => {
+      win.webContents.print(
+        { silent: false, printBackground: true, margins: { marginType: 'none' }, landscape: geo.landscape, pageSize: geo.portraitMicrons, duplexMode: duplex },
+        (success, reason) => resolve(success ? { status: 'printed' } : /cancel/i.test(reason) ? { status: 'cancelled' } : { status: 'failed', reason })
+      )
+    })
+  } catch (err) {
+    return { status: 'failed', reason: err instanceof Error ? err.message : String(err) }
+  } finally {
+    win.destroy()
+    await rm(dir, { recursive: true, force: true }).catch(() => {})
+  }
+})
 
 ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   if (TEST_EXPORT_DIR) {
