@@ -213,6 +213,26 @@ ipcMain.handle('recovery:list', () => {
 ipcMain.handle('recovery:read', (_e, id: unknown) => (typeof id === 'string' ? readRecovery(app.getPath('userData'), id) : null))
 ipcMain.handle('recovery:discard', (_e, id: unknown) => (typeof id === 'string' ? clearRecovery(app.getPath('userData'), id).catch(() => {}) : undefined))
 
+// Choix d'un autre fichier .trame à comparer : lu sans être ajouté aux projets récents ni devenir le document courant.
+ipcMain.handle('project:pick-other', async (e) => {
+  let path: string
+  if (TEST_EXPORT_DIR) {
+    // tests de bout en bout : le fichier pick-other.trame du dossier de test tient lieu de choix (aucun dialogue natif)
+    path = join(TEST_EXPORT_DIR, 'pick-other.trame')
+  } else {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [projectFilter()] })
+    if (res.canceled || !res.filePaths[0]) return null
+    path = res.filePaths[0]
+  }
+  try {
+    return { path, json: await readFile(path, 'utf-8') }
+  } catch (err) {
+    dialog.showErrorBox(tm('file.openFailed'), err instanceof Error ? err.message : String(err))
+    return null
+  }
+})
+
 ipcMain.handle('project:open', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)!
   const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [projectFilter()] })

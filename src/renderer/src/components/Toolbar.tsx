@@ -14,6 +14,7 @@ import { ImportMenu } from './ImportMenu'
 import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
 import { useVersions } from '@/store/versions'
+import { compareWithFile } from '@/compareActions'
 
 export function Toolbar(): React.JSX.Element {
   const t = useT()
@@ -78,7 +79,8 @@ export function Toolbar(): React.JSX.Element {
               { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
               { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
-              { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) }
+              { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) },
+              { key: 'compare', label: t('compare.menu'), onSelect: compareWithFile }
             ]}
           />
           {save}

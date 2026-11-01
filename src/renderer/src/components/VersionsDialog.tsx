@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { VersionInfo } from '../../../preload'
 import { useEditor } from '@/store/editor'
 import { useVersions } from '@/store/versions'
+import { useCompare } from '@/store/compare'
+import { compareWithFile } from '@/compareActions'
 import { formatDateTime } from '@/formatDate'
 import { openVersionAsCopy, readVersionDocument, restoreVersion, saveNamedVersion } from '@/versionActions'
 import { useT } from '@/i18n'
@@ -119,6 +121,7 @@ export function VersionsDialog(): React.JSX.Element | null {
             <p data-versions-unsaved>{t('versions.unsaved')}</p>
             <div className="row end">
               <button data-action="versions-close" onClick={close}>{t('common.close')}</button>
+              <button data-action="versions-compare-file" onClick={() => (close(), void compareWithFile())}>{t('compare.menu')}</button>
               <button className="primary" data-action="versions-save-first" onClick={() => void guard(async () => void (await saveNamedVersion('')))}>{t('versions.saveFirst')}</button>
             </div>
           </>
@@ -181,8 +184,10 @@ export function VersionsDialog(): React.JSX.Element | null {
             )}
             <div className="row end wrap">
               <button data-action="versions-close" onClick={close} disabled={busy}>{t('common.close')}</button>
+              <button data-action="versions-compare-file" disabled={busy} onClick={() => (close(), void compareWithFile())}>{t('compare.menu')}</button>
               <button data-action="versions-rename" disabled={busy || !current} onClick={() => current && (setRenaming(current.id), setRenameText(current.label ?? ''))}>{t('versions.rename')}</button>
               <button data-action="versions-delete" disabled={busy || !current} onClick={() => void remove()}>{t('versions.delete')}</button>
+              <button data-action="versions-compare" disabled={busy || !doc} onClick={() => doc && current && (useCompare.getState().start({ doc, label: current.label ?? formatDateTime(current.at) }), close())}>{t('versions.compare')}</button>
               <button data-action="versions-copy" disabled={busy || !doc} onClick={() => void asCopy()}>{t('versions.copy')}</button>
               <button className="primary" data-action="versions-restore" disabled={busy || !doc} onClick={restore}>{t('versions.restore')}</button>
             </div>

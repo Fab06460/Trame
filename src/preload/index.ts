@@ -63,6 +63,8 @@ const api = {
   listRecoverable: (): Promise<RecoveryInfo[]> => ipcRenderer.invoke('recovery:list'),
   readRecovery: (id: string): Promise<string | null> => ipcRenderer.invoke('recovery:read', id),
   discardRecovery: (id: string): Promise<void> => ipcRenderer.invoke('recovery:discard', id),
+  /** Choix d'un autre fichier .trame à comparer (non ajouté aux récents). */
+  pickOtherProject: (): Promise<{ path: string; json: string } | null> => ipcRenderer.invoke('project:pick-other'),
   openProject: (): Promise<{ path: string; json: string } | null> =>
     ipcRenderer.invoke('project:open'),
   pickPdf: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pdf:pick'),

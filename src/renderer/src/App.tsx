@@ -16,6 +16,7 @@ import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
 import { RecoveryDialog } from '@/components/RecoveryDialog'
+import { CompareDialog } from '@/components/CompareDialog'
 import { checkRecovery, startAutosave } from '@/recoveryActions'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
@@ -189,6 +190,7 @@ export default function App(): React.JSX.Element {
       <PrintDialog />
       <VersionsDialog />
       <RecoveryDialog />
+      <CompareDialog />
       <FindPanel />
       <PresentationMode />
       <main className="workspace" data-compact={compact || undefined}>

@@ -1666,6 +1666,29 @@ try {
   await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
   check('relecture : la suppression s\'annule', await waitFor(async () => (await nBrand('[data-comment-pin]')) === 1))
 
+  // comparaison : une copie corrigée (fond changé, texte ajouté, commentaire de l'enseignant) dont on reprend une partie
+  const mineNow = JSON.parse(await readFile(reviewFile, 'utf-8'))
+  const theirs = JSON.parse(JSON.stringify(mineNow))
+  theirs.pages[0].background = '#112233'
+  theirs.pages[0].elements.push({ id: 'cmp-new', type: 'text', x: 10, y: 10, width: 300, height: 60, rotation: 0, opacity: 1, fill: '#000000', text: 'Ajout de la copie corrigée', fontSize: 32 })
+  theirs.pages[0].comments = [...(theirs.pages[0].comments ?? []), { id: 'cmp-c1', x: 50, y: 50, author: 'Prof', at: Date.now(), text: 'À reformuler' }]
+  await writeFile(join(exportsDir, 'pick-other.trame'), JSON.stringify(theirs))
+  await clickSel('[data-action="versions-open"]')
+  await waitFor(async () => (await nBrand('[data-action="versions-compare-file"]')) === 1)
+  await clickSel('[data-action="versions-compare-file"]')
+  check('comparaison : la fenêtre liste les différences (fond, élément ajouté) sans rien cocher', await waitFor(async () => (await nBrand('[data-compare] [data-change]')) === 2) && (await nBrand('[data-compare] [data-change]:checked')) === 0)
+  check('comparaison : le commentaire de l\'autre copie est proposé', (await nBrand('[data-field="compareComments"]')) === 1)
+  await run(`document.querySelector('[data-change^="pb:"]').click()`)
+  await sleep(200)
+  await clickSel('[data-action="compare-apply"]')
+  check('comparaison : « Reprendre » ferme la fenêtre', await waitFor(async () => (await nBrand('[data-compare]')) === 0))
+  await click('header.toolbar button', 'Enregistrer')
+  check('comparaison : le fond coché est repris, l\'élément non coché ne l\'est pas', await waitFor(async () => { const d = JSON.parse(await readFile(reviewFile, 'utf-8')); return d.pages[0].background === '#112233' && !d.pages[0].elements.some((e) => e.id === 'cmp-new') }))
+  await clickSel('.sidebar .tabs button[data-tab="review"]')
+  check('comparaison : le commentaire du prof est arrivé dans la relecture', await waitFor(async () => (await run(`document.querySelector('[data-review-list]')?.innerText ?? ''`)).includes('À reformuler')))
+  await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
+  check('comparaison : tout s\'annule en un seul cran', await waitFor(async () => !(await run(`document.querySelector('[data-review-list]')?.innerText ?? ''`)).includes('À reformuler')))
+
   // publipostage : CSV (point-virgule, Windows-1252) → champs {{colonne}} → aperçu → PDF unique et un PDF par ligne
   await writeFile(join(exportsDir, 'pick-import.csv'), Buffer.from('Nom;Classe\r\n\xc9lodie;6A\r\nZo\xe9 / Ben;6B\r\n', 'latin1'))
   await reloadApp()
