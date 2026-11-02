@@ -121,6 +121,8 @@ describe('createUpdater', () => {
     s.u.install()
     expect(s.beforeInstall).toHaveBeenCalledTimes(1)
     expect(s.engine.installs).toBe(1)
+    // installeur silencieux (sans redemander par utilisateur / par machine), puis relance de l'application
+    expect(s.engine.quitAndInstall).toHaveBeenCalledWith(true, true)
   })
 
   it('une erreur de la vérification automatique reste silencieuse, celle d\'une vérification demandée est montrée', async () => {

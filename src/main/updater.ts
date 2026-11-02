@@ -7,7 +7,7 @@ export interface UpdateEngine {
   on: (event: string, listener: (...args: any[]) => void) => unknown
   checkForUpdates: () => Promise<unknown>
   downloadUpdate: () => Promise<unknown>
-  quitAndInstall: () => void
+  quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void
   autoDownload: boolean
   autoInstallOnAppQuit: boolean
 }
@@ -108,7 +108,8 @@ export function createUpdater(deps: UpdaterDeps): {
     install: () => {
       if (st.phase !== 'ready') return
       deps.beforeInstall()
-      e.quitAndInstall()
+      // Windows : installeur silencieux (il reprend l'installation en place, par utilisateur ou par machine, sans rien redemander) puis relance
+      e.quitAndInstall(true, true)
     },
     setAuto: async (auto) => {
       settings = { ...settings, auto }

@@ -78,15 +78,19 @@ async function loadHidden(): Promise<string[]> {
 
 const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(templateIndexFile(), JSON.stringify(list), 'utf-8')
 
-// Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
-// sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
 // Linux sous Wayland : la boîte d'impression système (GTK) s'attache à une fenêtre que Wayland refuse d'exporter (« exported surface had an
-// invalid role ») et l'application plante. Tant que ce défaut d'Electron dure, on passe par XWayland ; l'utilisateur peut imposer son choix
-// avec --ozone-platform.
-if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland' && !process.argv.some((a) => a.startsWith('--ozone-platform'))) {
-  app.commandLine.appendSwitch('ozone-platform', 'x11')
+// invalid role ») et l'application plante. Tant que ce défaut d'Electron dure, on passe par XWayland. Chromium choisit sa plateforme
+// graphique avant d'exécuter le moindre JavaScript : `appendSwitch` arrive trop tard (le processus GPU plante), il faut donc se relancer
+// une fois avec le drapeau en ligne de commande. L'utilisateur peut imposer son choix avec --ozone-platform (alors on ne relance pas).
+const relaunchForX11 = process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland' && !process.argv.some((a) => a.startsWith('--ozone-platform'))
+if (relaunchForX11) {
+  // dans un AppImage, process.execPath est dans un montage temporaire : c'est le fichier AppImage qu'il faut relancer
+  app.relaunch({ execPath: process.env.APPIMAGE || process.execPath, args: [...process.argv.slice(1), '--ozone-platform=x11'] })
+  app.exit(0)
 }
 
+// Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
+// sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
 const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
 
 const FORCED_LANG = process.env.TRAME_LANG
@@ -1091,7 +1095,7 @@ ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 registerAiHandlers()
 
 // Windows et Linux : une seule instance (un double-clic sur un .trame ouvre le projet dans la fenêtre existante). macOS le fait déjà seul.
-const gotLock = process.platform === 'darwin' || app.requestSingleInstanceLock()
+const gotLock = process.platform === 'darwin' || relaunchForX11 || app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 else if (process.platform !== 'darwin') {
   app.on('second-instance', (_e, argv) => {
