@@ -1302,5 +1302,25 @@ export const es: Catalog = {
   'tpl.flashcard-qa.front': 'Pregunta',
   'tpl.flashcard-qa.back': 'Respuesta',
   'tpl.field.question': 'Pregunta',
-  'tpl.field.answer': 'Respuesta'
+  'tpl.field.answer': 'Respuesta',
+  // Nuage de mots
+  'cloud.section': 'Nube de palabras',
+  'cloud.open': 'Crear una nube de palabras…',
+  'cloud.open.title': 'A partir de un texto o de una lista de palabras',
+  'cloud.title': 'Nube de palabras',
+  'cloud.hint': 'Pega un texto (se ignoran las palabras comunes), una lista con una palabra por línea o una lista con pesos («palabra; 5»). Cada palabra se convierte en un texto editable de la página.',
+  'cloud.placeholder': 'Pega aquí tu texto o tu lista…',
+  'cloud.mode.text': 'Leído como texto.',
+  'cloud.mode.list': 'Leído como lista (una línea = un término).',
+  'cloud.mode.weighted': 'Leído como lista con pesos.',
+  'cloud.count': '{n} palabras mostradas de {total}.',
+  'cloud.preview': 'Vista previa de la nube de palabras',
+  'cloud.max': 'Número de palabras',
+  'cloud.vertical': 'Algunas palabras en vertical',
+  'cloud.font': 'Fuente',
+  'cloud.shuffle': 'Otra disposición',
+  'cloud.shuffle.title': 'Coloca las palabras de otra manera',
+  'cloud.exclude': 'Palabras que excluir',
+  'cloud.exclude.placeholder': 'separadas por comas',
+  'cloud.insert': 'Insertar'
 }

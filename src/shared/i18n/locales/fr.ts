@@ -1303,7 +1303,27 @@ export const fr = {
   'tpl.flashcard-qa.front': 'Question',
   'tpl.flashcard-qa.back': 'Réponse',
   'tpl.field.question': 'Question',
-  'tpl.field.answer': 'Réponse'
+  'tpl.field.answer': 'Réponse',
+  // Nuage de mots
+  'cloud.section': 'Nuage de mots',
+  'cloud.open': 'Créer un nuage de mots…',
+  'cloud.open.title': 'À partir d\'un texte ou d\'une liste de mots',
+  'cloud.title': 'Nuage de mots',
+  'cloud.hint': 'Collez un texte (les mots courants sont ignorés), une liste d\'un mot par ligne, ou une liste avec poids (« mot ; 5 »). Chaque mot devient un texte modifiable de la page.',
+  'cloud.placeholder': 'Collez ici votre texte ou votre liste…',
+  'cloud.mode.text': 'Lu comme un texte.',
+  'cloud.mode.list': 'Lu comme une liste (une ligne = un terme).',
+  'cloud.mode.weighted': 'Lu comme une liste avec poids.',
+  'cloud.count': '{n} mots affichés sur {total}.',
+  'cloud.preview': 'Aperçu du nuage de mots',
+  'cloud.max': 'Nombre de mots',
+  'cloud.vertical': 'Quelques mots à la verticale',
+  'cloud.font': 'Police',
+  'cloud.shuffle': 'Autre disposition',
+  'cloud.shuffle.title': 'Place les mots autrement',
+  'cloud.exclude': 'Mots à exclure',
+  'cloud.exclude.placeholder': 'séparés par des virgules',
+  'cloud.insert': 'Insérer'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

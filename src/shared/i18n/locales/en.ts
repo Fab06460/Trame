@@ -1302,5 +1302,25 @@ export const en: Catalog = {
   'tpl.flashcard-qa.front': 'Question',
   'tpl.flashcard-qa.back': 'Answer',
   'tpl.field.question': 'Question',
-  'tpl.field.answer': 'Answer'
+  'tpl.field.answer': 'Answer',
+  // Nuage de mots
+  'cloud.section': 'Word cloud',
+  'cloud.open': 'Create a word cloud…',
+  'cloud.open.title': 'From a text or a list of words',
+  'cloud.title': 'Word cloud',
+  'cloud.hint': 'Paste a text (common words are ignored), a list with one word per line, or a weighted list (“word; 5”). Each word becomes an editable text on the page.',
+  'cloud.placeholder': 'Paste your text or list here…',
+  'cloud.mode.text': 'Read as a text.',
+  'cloud.mode.list': 'Read as a list (one line = one term).',
+  'cloud.mode.weighted': 'Read as a weighted list.',
+  'cloud.count': '{n} words shown out of {total}.',
+  'cloud.preview': 'Word cloud preview',
+  'cloud.max': 'Number of words',
+  'cloud.vertical': 'Some words vertical',
+  'cloud.font': 'Font',
+  'cloud.shuffle': 'Another layout',
+  'cloud.shuffle.title': 'Places the words differently',
+  'cloud.exclude': 'Words to exclude',
+  'cloud.exclude.placeholder': 'separated by commas',
+  'cloud.insert': 'Insert'
 }

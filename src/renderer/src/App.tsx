@@ -14,6 +14,7 @@ import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { PdfToolsDialog } from '@/components/PdfToolsDialog'
+import { WordCloudDialog } from '@/components/WordCloudDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
@@ -202,6 +203,7 @@ export default function App(): React.JSX.Element {
       <MailMergeDialog />
       <PrintDialog />
       <PdfToolsDialog />
+      <WordCloudDialog />
       <VersionsDialog />
       <RecoveryDialog />
       <CompareDialog />

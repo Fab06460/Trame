@@ -114,7 +114,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | C8 | QR codes (adresse web ou texte, correction d'erreurs, couleurs) | S | **Fait** : groupe fond + tracé vectoriel, voir `docs/ARCHITECTURE.md`. **Publipostage fait** : `{{colonne}}` dans le contenu donne un QR code par ligne. Reste : PowerPoint en vrai tracé. | C7 |
 | C9 | Flouter ou pixelliser une zone d'une image (visages d'élèves, données personnelles) | S–M | ✅ **Fait** (zones rectangle ou ellipse tracées à la souris, pixellisation ou flou, remplacement irréversible de l'image). Reste : pinceau libre, détection automatique des visages (modèle embarqué), saisie au clavier des zones. | E9 |
 | C10 | Bulles de BD et modèles de planches, cartes mémo recto-verso (publipostage) | S | ✅ **Fait** : six bulles (parole et pensée à queue gauche/droite, cri, récitatif), trois modèles de planches (bande de 3 cases, planches de 4 et 6 cases), carte question / réponse (la carte de vocabulaire existait). Reste : bulle dont la queue se règle à la souris, planches avec cases de formes libres, cases qui reçoivent une image par glisser-déposer. | C2 |
-| C11 | Nuage de mots à partir d'un texte ou d'une liste | M | Calcul de placement, hors-ligne, éléments ordinaires modifiables. | — |
+| C11 | Nuage de mots à partir d'un texte ou d'une liste | M | ✅ **Fait** (texte, liste, liste pondérée ; placement en spirale sans chevauchement ; un texte ordinaire par mot). Reste : forme du nuage (cœur, silhouette), nuage lié à ses données pour le régénérer après coup, nuage collaboratif en direct (réseau : écarté). | — |
 
 ### Phase 3 — Documents (export, outils PDF, signature, présentation)
 

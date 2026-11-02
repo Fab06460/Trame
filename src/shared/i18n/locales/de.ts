@@ -1302,5 +1302,25 @@ export const de: Catalog = {
   'tpl.flashcard-qa.front': 'Frage',
   'tpl.flashcard-qa.back': 'Antwort',
   'tpl.field.question': 'Frage',
-  'tpl.field.answer': 'Antwort'
+  'tpl.field.answer': 'Antwort',
+  // Nuage de mots
+  'cloud.section': 'Wortwolke',
+  'cloud.open': 'Wortwolke erstellen …',
+  'cloud.open.title': 'Aus einem Text oder einer Wortliste',
+  'cloud.title': 'Wortwolke',
+  'cloud.hint': 'Fügen Sie einen Text ein (häufige Wörter werden ignoriert), eine Liste mit einem Wort pro Zeile oder eine gewichtete Liste („Wort; 5“). Jedes Wort wird zu einem bearbeitbaren Text auf der Seite.',
+  'cloud.placeholder': 'Fügen Sie hier Ihren Text oder Ihre Liste ein …',
+  'cloud.mode.text': 'Als Text gelesen.',
+  'cloud.mode.list': 'Als Liste gelesen (eine Zeile = ein Begriff).',
+  'cloud.mode.weighted': 'Als gewichtete Liste gelesen.',
+  'cloud.count': '{n} von {total} Wörtern angezeigt.',
+  'cloud.preview': 'Vorschau der Wortwolke',
+  'cloud.max': 'Anzahl der Wörter',
+  'cloud.vertical': 'Einige Wörter senkrecht',
+  'cloud.font': 'Schriftart',
+  'cloud.shuffle': 'Andere Anordnung',
+  'cloud.shuffle.title': 'Ordnet die Wörter anders an',
+  'cloud.exclude': 'Auszuschließende Wörter',
+  'cloud.exclude.placeholder': 'durch Kommas getrennt',
+  'cloud.insert': 'Einfügen'
 }

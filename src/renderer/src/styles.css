@@ -461,3 +461,5 @@ button.danger { color: #ff7b7b; }
 .pdft-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pdft-actions { display: flex; gap: 2px; justify-content: space-between; }
 .pdft-actions button { padding: 2px 5px; font-size: 12px; }
+.cloud-preview { display: block; max-width: 100%; align-self: center; border: 1px solid var(--border); border-radius: 6px; }
+.modal.cloud-dialog { width: min(640px, calc(100vw - 32px)); }

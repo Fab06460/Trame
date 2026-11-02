@@ -4,6 +4,7 @@ import { useEditor } from '@/store/editor'
 import { BUBBLES } from '@/bubbles'
 import { insertBubble } from '@/bubbleActions'
 import { SHAPES } from '@/shapes'
+import { useWordCloud } from '@/store/wordCloud'
 import { TEMPLATES, previewPage, templateCategory, templateName } from '@/templates'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
@@ -222,6 +223,11 @@ export function Sidebar(): React.JSX.Element {
                 </button>
               ))}
             </div>
+          </section>
+
+          <section>
+            <h3>{t('cloud.section')}</h3>
+            <button data-action="cloud-open" title={t('cloud.open.title')} onClick={() => useWordCloud.getState().setOpen(true)}>{t('cloud.open')}</button>
           </section>
 
           <section>
