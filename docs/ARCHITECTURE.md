@@ -497,6 +497,14 @@ Même principe que les graphiques : **pas de nouveau type d'élément**. `qr.ts`
 - **Lecture d'un fichier** : `sanitizeQr` retire la description si le contenu est vide ou dépasse 1 000 caractères, remet les valeurs par défaut pour un niveau ou une couleur invalide ; les deux éléments restent.
 - Vérifié : tests unitaires (grille, repères de position, octets UTF-8, tracé relu rectangle par rectangle, marge, carré, contraste, lecture), **décodage réel** de 16 QR codes (4 contenus × 4 niveaux, accents, emoji, 400 caractères) rastérisés depuis le tracé avec un lecteur indépendant (jsQR, hors dépôt), smoke (insertion, contenu, niveaux, contraste, PDF vectoriel), `npm run fidelity` (cas `qr-code`, 0,00 % de pixels différents) ; QR codes de publipostage (adresses accentuées, rotations 0°, 25°, 90°, 180°, 270°) rastérisés puis décodés avec le même lecteur indépendant : 10 sur 10.
 
+### Outils PDF (fusionner, réordonner, extraire, pivoter, scinder)
+
+Fenêtre **indépendante du document ouvert** (menu Fichier, ou « Importer » en fenêtre étroite) : elle ne lit ni n'écrit le document Trame.
+- `pdfTools.ts` (pur, testé sous Node) : `buildPdf(sources, pages)` copie les pages demandées avec `pdf-lib` (`copyPages` : texte et dessin restent vectoriels, une même page peut revenir plusieurs fois) et ajoute la rotation voulue à celle de la page ; `parsePageRanges` (« 1-3, 5, 8- »), `splitGroups` / `partName` (scission), `moveItem`, `turn`. Un PDF illisible ou protégé par mot de passe lève `unreadable` / `encrypted`, traduits en message.
+- `pdfThumb.ts` : miniature JPEG par pdf.js (la rotation propre à la page est déjà dans le `viewport`) ; la fenêtre les calcule une à une, après l'ajout, pour rester utilisable. La rotation ajoutée se montre en CSS.
+- `PdfToolsDialog.tsx` : cartes (glisser-déposer, flèches pour le clavier, pivoter, retirer), « Garder les pages… », enregistrement par `saveExport`, scission par `pickExportFolder` + `writeExportFile` (le dossier est demandé AVANT l'assemblage ; confirmation si des fichiers existent). Le renderer ne choisit jamais un chemin : le choix de fichier passe par `pickPdf`, l'écriture par les dialogues du processus principal.
+- Limites : 400 pages au plus à la fois ; signets, champs de formulaire, étiquettes de page et métadonnées d'origine ne sont pas conservés ; pas de compression.
+
 ### Flou et pixellisation de zones d'une image
 
 Pour masquer un visage, un nom ou une plaque, l'effet doit être **irréversible** : un réglage posé sur l'image d'origine (comme les filtres de couleur) laisserait les pixels masqués dans le fichier, le PDF importé, la page web… On **remplace donc l'image**.

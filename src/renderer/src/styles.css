@@ -448,3 +448,16 @@ button.danger { color: #ff7b7b; }
 .update-banner { position: fixed; left: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 10px; background: var(--panel, #24252b); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
 
 .redact-canvas { display: block; max-width: 100%; align-self: center; border-radius: 6px; cursor: crosshair; touch-action: none; background: repeating-conic-gradient(#3a3b42 0% 25%, #2c2d33 0% 50%) 50% / 16px 16px; }
+.modal.pdft { width: min(920px, calc(100vw - 32px)); }
+.pdft-source { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
+.pdft-source button { padding: 0 6px; }
+.pdft-range { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pdft-range input { width: 110px; }
+.pdft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; max-height: 44vh; overflow: auto; padding: 2px; }
+.pdft-card { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--border); border-radius: 8px; cursor: grab; }
+.pdft-card.dragging { opacity: 0.45; }
+.pdft-thumb { height: 140px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: repeating-conic-gradient(#3a3b42 0% 25%, #2c2d33 0% 50%) 50% / 12px 12px; border-radius: 4px; }
+.pdft-thumb img { max-width: 100%; max-height: 100%; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.pdft-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdft-actions { display: flex; gap: 2px; justify-content: space-between; }
+.pdft-actions button { padding: 2px 5px; font-size: 12px; }

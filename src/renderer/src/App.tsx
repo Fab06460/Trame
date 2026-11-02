@@ -13,6 +13,7 @@ import { PresentationMode } from '@/components/PresentationMode'
 import { usePresentation } from '@/store/presentation'
 import { ExportPagesDialog } from '@/components/ExportPagesDialog'
 import { MailMergeDialog } from '@/components/MailMergeDialog'
+import { PdfToolsDialog } from '@/components/PdfToolsDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
@@ -200,6 +201,7 @@ export default function App(): React.JSX.Element {
       <ExportPagesDialog />
       <MailMergeDialog />
       <PrintDialog />
+      <PdfToolsDialog />
       <VersionsDialog />
       <RecoveryDialog />
       <CompareDialog />

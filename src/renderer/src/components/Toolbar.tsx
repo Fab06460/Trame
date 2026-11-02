@@ -13,6 +13,7 @@ import { ExportMenu } from './ExportMenu'
 import { ImportMenu } from './ImportMenu'
 import { useFind } from '@/store/find'
 import { usePresentation } from '@/store/presentation'
+import { usePdfTools } from '@/store/pdfTools'
 import { useVersions } from '@/store/versions'
 import { compareWithFile } from '@/compareActions'
 import { useUpdate } from '@/store/update'
@@ -79,6 +80,7 @@ export function Toolbar(): React.JSX.Element {
               { key: 'open', label: t('toolbar.open.dots'), hint: shortcut('⌘O'), onSelect: openProject },
               { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
+              { key: 'pdf-tools', label: t('pdft.menu'), onSelect: () => usePdfTools.getState().setOpen(true) },
               { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
               { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) },
               { key: 'compare', label: t('compare.menu'), onSelect: compareWithFile },
