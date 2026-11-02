@@ -13,7 +13,7 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readdir } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
@@ -122,8 +122,10 @@ console.log('\n2/3 Vérifications…\n')
 const dist = join(root, 'dist')
 const app = join(dist, 'mac-arm64/Trame.app')
 const files = await readdir(dist)
-const dmg = files.find((f) => f.endsWith('.dmg'))
-const zip = files.find((f) => f.endsWith('-mac.zip'))
+// seulement les fichiers de la version en cours : dist/ garde les anciennes versions, qu'il ne faut ni vérifier ni annoncer
+const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf-8'))
+const dmg = files.find((f) => f.endsWith('.dmg') && f.includes(`-${version}-`))
+const zip = files.find((f) => f.endsWith('-mac.zip') && f.includes(`-${version}-`))
 
 let failed = 0
 const check = async (label, cmd, args, expect) => {
