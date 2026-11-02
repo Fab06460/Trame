@@ -497,6 +497,14 @@ Même principe que les graphiques : **pas de nouveau type d'élément**. `qr.ts`
 - **Lecture d'un fichier** : `sanitizeQr` retire la description si le contenu est vide ou dépasse 1 000 caractères, remet les valeurs par défaut pour un niveau ou une couleur invalide ; les deux éléments restent.
 - Vérifié : tests unitaires (grille, repères de position, octets UTF-8, tracé relu rectangle par rectangle, marge, carré, contraste, lecture), **décodage réel** de 16 QR codes (4 contenus × 4 niveaux, accents, emoji, 400 caractères) rastérisés depuis le tracé avec un lecteur indépendant (jsQR, hors dépôt), smoke (insertion, contenu, niveaux, contraste, PDF vectoriel), `npm run fidelity` (cas `qr-code`, 0,00 % de pixels différents) ; QR codes de publipostage (adresses accentuées, rotations 0°, 25°, 90°, 180°, 270°) rastérisés puis décodés avec le même lecteur indépendant : 10 sur 10.
 
+### Bulles de BD et modèles de planches
+
+Aucun nouveau type d'élément : une bulle est un **groupe de deux éléments ordinaires** (un `path` puis un `text`), comme un QR code ou un graphique, donc rendu tel quel par l'éditeur et par tous les exports (PDF vectoriel, SVG, page web, PPTX).
+- `bubbles.ts` (pur, testé) : les tracés (viewBox 100 × 100) sont **calculés**, pas écrits à la main : ellipse de parole (arc en courbes de Bézier, queue de la base de l'ellipse vers sa pointe), nuage de pensée (onze vagues en courbes quadratiques + deux petites bulles = trois sous-chemins), étoile de cri (32 sommets alternés), cartouche. Les versions « queue à droite » sont la **symétrie gauche-droite** exacte des « queue à gauche » (`mirror`). `bubbleDrafts` donne le chemin (fond clair, contour sombre proportionnel à la largeur) puis le texte (police Caveat, centré dans la zone libre de la bulle) ; `bubbleElements` y ajoute des identifiants et un `groupId`.
+- `bubbleActions.ts` : `insertBubble` pose la bulle au centre de la page (un tiers de la largeur, la moitié pour un récitatif) via `insertChart`. Boutons dans Éléments → « Bulles de BD » (`data-bubble`).
+- Modèles `comic-strip` (1123 × 794), `comic-4`, `comic-6` (794 × 1123) : catégorie « Bande dessinée » ; des cases (rectangles à contour épais) et quelques bulles d'exemple, groupées (le lien de groupe survit à l'instanciation). `flashcard-qa` : carte recto-verso à deux champs (`question`, `answer`) de la catégorie Publipostage.
+- Limites : la queue ne se règle pas à la souris (choisir la variante gauche ou droite, ou pivoter la bulle de 180° sans pivoter le texte) ; le texte ne s'adapte pas tout seul à la bulle (réduire ou agrandir la bulle, ou la taille du texte).
+
 ### Outils PDF (fusionner, réordonner, extraire, pivoter, scinder)
 
 Fenêtre **indépendante du document ouvert** (menu Fichier, ou « Importer » en fenêtre étroite) : elle ne lit ni n'écrit le document Trame.

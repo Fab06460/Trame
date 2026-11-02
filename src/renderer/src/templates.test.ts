@@ -74,6 +74,37 @@ describe('formes', () => {
   })
 })
 
+describe('modèles de bande dessinée', () => {
+  const comics = TEMPLATES.filter((t) => t.category === 'comic')
+  it('une bande et deux planches, au format A4', () => {
+    expect(comics.map((t) => t.id)).toEqual(['comic-strip', 'comic-4', 'comic-6'])
+    expect(comics.map((t) => [t.width, t.height])).toEqual([[1123, 794], [794, 1123], [794, 1123]])
+  })
+  it('chaque case est dans la page, aucune ne chevauche une autre', () => {
+    for (const t of comics) {
+      const panels = t.pages[0].elements.filter((e) => e.type === 'rect' && e.strokeWidth === 6)
+      expect(panels.length, t.id).toBe(t.id === 'comic-strip' ? 3 : t.id === 'comic-4' ? 4 : 7)
+      for (const p of panels) {
+        expect(p.x, t.id).toBeGreaterThanOrEqual(0)
+        expect(p.y, t.id).toBeGreaterThanOrEqual(0)
+        expect(p.x + p.width, t.id).toBeLessThanOrEqual(t.width)
+        expect(p.y + p.height, t.id).toBeLessThanOrEqual(t.height)
+      }
+      for (const [i, a] of panels.entries()) for (const b of panels.slice(i + 1)) expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y, t.id).toBe(true)
+    }
+  })
+  it('les bulles d\'exemple tiennent dans une case et gardent leur groupe à l\'instanciation', () => {
+    for (const t of comics) {
+      const doc = instantiate(t)
+      const els = doc.pages[0].elements
+      const groups = new Map<string, number>()
+      for (const e of els) if (e.groupId) groups.set(e.groupId, (groups.get(e.groupId) ?? 0) + 1)
+      expect(groups.size, t.id).toBeGreaterThanOrEqual(3)
+      for (const n of groups.values()) expect(n, t.id).toBe(2)
+    }
+  })
+})
+
 describe('cloneWithNewIds', () => {
   const doc = instantiate(TEMPLATES.find((t) => t.pages.length > 1)!)
   // deux éléments du même groupe, pour vérifier que la copie conserve le lien entre eux
@@ -110,7 +141,7 @@ describe('cloneWithNewIds', () => {
 describe('modèles de publipostage', () => {
   const merge = TEMPLATES.filter((t) => t.merge)
   it('il y en a et ils forment leur propre catégorie', () => {
-    expect(merge.map((t) => t.id)).toEqual(['certificate', 'badge', 'label', 'flashcard'])
+    expect(merge.map((t) => t.id)).toEqual(['certificate', 'badge', 'label', 'flashcard', 'flashcard-qa'])
     expect(merge.every((t) => t.category === 'mailmerge')).toBe(true)
   })
   it.each(['fr', 'en', 'de', 'es'])('en %s : chaque champ des textes a une colonne et chaque ligne a toutes ses valeurs', (lang) => {
@@ -136,7 +167,7 @@ describe('modèles de publipostage', () => {
     for (const t of merge) {
       const texts = previewPage(t.pages[0], t).elements.map((e) => e.text ?? '').join(' ')
       expect(texts, t.id).not.toContain('{{')
-      expect(texts, t.id).toContain(t.id === 'flashcard' ? 'le chat' : 'Ada')
+      expect(texts, t.id).toContain(t.id === 'flashcard' ? 'le chat' : t.id === 'flashcard-qa' ? '7 \u00d7 8 ?' : 'Ada')
     }
   })
   it('les autres modèles n\'ont pas de tableau', () => {

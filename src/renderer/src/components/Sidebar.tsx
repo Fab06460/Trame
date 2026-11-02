@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RecentProject } from '../../../preload'
 import { useEditor } from '@/store/editor'
+import { BUBBLES } from '@/bubbles'
+import { insertBubble } from '@/bubbleActions'
 import { SHAPES } from '@/shapes'
 import { TEMPLATES, previewPage, templateCategory, templateName } from '@/templates'
 import { useT } from '@/i18n'
@@ -206,6 +208,17 @@ export function Sidebar(): React.JSX.Element {
               {SHAPES.map((s) => (
                 <button key={s.id} className="shape" title={t(`shape.${s.id}` as MessageKey)} onClick={() => addElement({ type: 'path', path: s.path })}>
                   <svg viewBox="0 0 100 100"><path d={s.path} fill="currentColor" /></svg>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>{t('bubble.section')}</h3>
+            <div className="grid shapes">
+              {BUBBLES.map((b) => (
+                <button key={b.id} className="shape" data-bubble={b.id} title={t(`bubble.kind.${b.id}` as MessageKey)} onClick={() => insertBubble(b.id)}>
+                  <svg viewBox="0 0 100 100"><path d={b.path} fill="currentColor" /></svg>
                 </button>
               ))}
             </div>

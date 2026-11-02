@@ -1280,7 +1280,30 @@ export const fr = {
   'pdft.tooMany': 'Trop de pages : {max} au plus.',
   'pdft.failed': 'L\'opération a échoué : {reason}',
   'pdft.fileMerged': 'Fusion.pdf',
-  'pdft.fileEdited': '{name}-modifié.pdf'
+  'pdft.fileEdited': '{name}-modifié.pdf',
+  // Bulles de BD, modèles de planches et carte question / réponse
+  'bubble.section': 'Bulles de BD',
+  'bubble.kind.speech-l': 'Parole (queue à gauche)',
+  'bubble.kind.speech-r': 'Parole (queue à droite)',
+  'bubble.kind.thought-l': 'Pensée (bulles à gauche)',
+  'bubble.kind.thought-r': 'Pensée (bulles à droite)',
+  'bubble.kind.shout': 'Cri',
+  'bubble.kind.caption': 'Récitatif',
+  'bubble.sample': 'Bonjour !',
+  'tpl.cat.comic': 'Bande dessinée',
+  'tpl.comic-strip.name': 'Bande de 3 cases',
+  'tpl.comic-4.name': 'Planche de 4 cases',
+  'tpl.comic-6.name': 'Planche de 6 cases',
+  'tpl.comic.title': 'Titre de la BD',
+  'tpl.comic.hello': 'Bonjour !',
+  'tpl.comic.thought': 'Hmm…',
+  'tpl.comic.caption': 'Le lendemain…',
+  'tpl.comic.shout': 'Boum !',
+  'tpl.flashcard-qa.name': 'Carte question / réponse',
+  'tpl.flashcard-qa.front': 'Question',
+  'tpl.flashcard-qa.back': 'Réponse',
+  'tpl.field.question': 'Question',
+  'tpl.field.answer': 'Réponse'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

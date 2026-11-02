@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid'
+import { bubbleDrafts, type BubbleId } from '@/bubbles'
 import { t } from '@/i18n'
 import { SHAPES } from '@/shapes'
 import type { MessageKey, Params } from '@shared/i18n'
@@ -11,8 +12,8 @@ interface TemplatePage {
   elements: Draft[]
 }
 
-export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'certificate' | 'badge' | 'label' | 'flashcard'
-export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'mailmerge'
+export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'certificate' | 'badge' | 'label' | 'flashcard' | 'flashcard-qa' | 'comic-strip' | 'comic-4' | 'comic-6'
+export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'mailmerge' | 'comic'
 
 /** Tableau d'exemple d'un modèle de publipostage : noms des champs (clés `tpl.field.<id>`) et lignes fictives. */
 interface MergeSample {
@@ -75,6 +76,12 @@ const text = (
 })
 
 const sq = (n: number) => ({ width: n, height: n })
+
+/** Case de bande dessinée : fond clair, contour épais. */
+const panel = (g: Geo): Draft => shape('rect', g, '#ffffff', { stroke: '#1e1f24', strokeWidth: 6 })
+/** Bulle d'exemple posée dans une case (le groupe réunit la bulle et son texte). */
+const bubble = (id: BubbleId, g: { x: number; y: number; width: number }, key: MessageKey, group: string): Draft[] => bubbleDrafts(id, g, L(key), group)
+const comicTitle = (): Draft => text(40, 24, 700, L('tpl.comic.title'), 46, '#1e1f24', { fontFamily: DISPLAY, fontStyle: 'normal', height: 56 })
 
 export const TEMPLATES: Template[] = [
   {
@@ -321,6 +328,109 @@ export const TEMPLATES: Template[] = [
           shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#e8f4ff'),
           text(60, 56, 400, L('tpl.flashcard.back'), 28, '#2f6fb3', { fontStyle: 'normal', height: 34 }),
           text(60, 230, 674, F('translation'), 84, '#1e1f24', { mergeFit: true, align: 'center', fontFamily: SERIF, height: 102 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'comic-strip',
+    category: 'comic',
+    width: 1123,
+    height: 794,
+    pages: [
+      {
+        background: '#fffdf5',
+        elements: [
+          comicTitle(),
+          panel({ x: 40, y: 100, width: 331, height: 640 }),
+          panel({ x: 395, y: 100, width: 331, height: 640 }),
+          panel({ x: 750, y: 100, width: 333, height: 640 }),
+          ...bubble('speech-l', { x: 62, y: 130, width: 250 }, 'tpl.comic.hello', 'comic-strip-1'),
+          ...bubble('caption', { x: 415, y: 118, width: 291 }, 'tpl.comic.caption', 'comic-strip-2'),
+          ...bubble('shout', { x: 780, y: 160, width: 270 }, 'tpl.comic.shout', 'comic-strip-3')
+        ]
+      }
+    ]
+  },
+  {
+    id: 'comic-4',
+    category: 'comic',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#fffdf5',
+        elements: [
+          comicTitle(),
+          panel({ x: 40, y: 100, width: 345, height: 479 }),
+          panel({ x: 409, y: 100, width: 345, height: 479 }),
+          panel({ x: 40, y: 603, width: 345, height: 479 }),
+          panel({ x: 409, y: 603, width: 345, height: 479 }),
+          ...bubble('speech-l', { x: 62, y: 124, width: 240 }, 'tpl.comic.hello', 'comic-4-1'),
+          ...bubble('caption', { x: 427, y: 118, width: 309 }, 'tpl.comic.caption', 'comic-4-2'),
+          ...bubble('thought-r', { x: 100, y: 640, width: 240 }, 'tpl.comic.thought', 'comic-4-3'),
+          ...bubble('shout', { x: 450, y: 660, width: 270 }, 'tpl.comic.shout', 'comic-4-4')
+        ]
+      }
+    ]
+  },
+  {
+    id: 'comic-6',
+    category: 'comic',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#fffdf5',
+        elements: [
+          comicTitle(),
+          panel({ x: 40, y: 100, width: 230, height: 311 }),
+          panel({ x: 294, y: 100, width: 460, height: 311 }),
+          panel({ x: 40, y: 435, width: 460, height: 311 }),
+          panel({ x: 524, y: 435, width: 230, height: 311 }),
+          panel({ x: 40, y: 770, width: 222, height: 312 }),
+          panel({ x: 286, y: 770, width: 222, height: 312 }),
+          panel({ x: 532, y: 770, width: 222, height: 312 }),
+          ...bubble('speech-l', { x: 330, y: 114, width: 220 }, 'tpl.comic.hello', 'comic-6-1'),
+          ...bubble('caption', { x: 58, y: 450, width: 424 }, 'tpl.comic.caption', 'comic-6-2'),
+          ...bubble('thought-l', { x: 300, y: 790, width: 190 }, 'tpl.comic.thought', 'comic-6-3'),
+          ...bubble('shout', { x: 545, y: 800, width: 196 }, 'tpl.comic.shout', 'comic-6-4')
+        ]
+      }
+    ]
+  },
+  {
+    id: 'flashcard-qa',
+    category: 'mailmerge',
+    width: 794,
+    height: 563,
+    merge: {
+      fields: ['question', 'answer'],
+      rows: [
+        ['7 \u00d7 8 ?', '56'],
+        ['12 + 15 ?', '27'],
+        ['9 \u00d7 6 ?', '54']
+      ]
+    },
+    pages: [
+      {
+        background: '#f3eefc',
+        elements: [
+          shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#7a4fd1'),
+          shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#f3eefc'),
+          text(60, 56, 400, L('tpl.flashcard-qa.front'), 28, '#7a4fd1', { fontStyle: 'normal', height: 34 }),
+          text(590, 40, 150, '?', 130, '#d9cdf3', { align: 'right', fontFamily: SERIF, height: 156 }),
+          text(60, 215, 674, F('question'), 76, '#1e1f24', { mergeFit: true, align: 'center', fontFamily: SERIF, height: 92 })
+        ]
+      },
+      {
+        background: '#e6f6ee',
+        elements: [
+          shape('rect', { x: 24, y: 24, width: 746, height: 515 }, '#2f9e6f'),
+          shape('rect', { x: 29, y: 29, width: 736, height: 505 }, '#e6f6ee'),
+          text(60, 56, 400, L('tpl.flashcard-qa.back'), 28, '#2f9e6f', { fontStyle: 'normal', height: 34 }),
+          icon('check', { x: 660, y: 56, ...sq(80) }, '#bfe6d3'),
+          text(60, 215, 674, F('answer'), 96, '#1e1f24', { mergeFit: true, align: 'center', fontFamily: SERIF, height: 116 })
         ]
       }
     ]

@@ -408,15 +408,15 @@ try {
 
   await click('.sidebar .tabs button', 'Modèles')
   await sleep(300)
-  check('10 modèles intégrés affichés au départ', (await count('.builtin-template')) === 10, await builtinIds())
+  check('14 modèles intégrés affichés au départ', (await count('.builtin-template')) === 14, await builtinIds())
 
   // masquer un modèle intégré, puis le restaurer
   await clickSel('.builtin-template[data-template-id="quote"] .card-remove')
-  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 9 && !(await builtinIds()).includes('quote')))
+  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 13 && !(await builtinIds()).includes('quote')))
   check('une confirmation est demandée avant de masquer', (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes('Masquer le modèle'))
   check('le modèle masqué est mémorisé côté système', (await run('window.trame.listHiddenTemplates()')).join() === 'quote')
   check('le lien « Restaurer les modèles masqués (1) » apparaît', (await click('.sidebar button.link', 'Restaurer les modèles masqués (1)')) === true)
-  check('restaurer remet les 10 modèles', await waitFor(async () => (await count('.builtin-template')) === 10 && (await run('window.trame.listHiddenTemplates()')).length === 0))
+  check('restaurer remet les 14 modèles', await waitFor(async () => (await count('.builtin-template')) === 14 && (await run('window.trame.listHiddenTemplates()')).length === 0))
 
   // renommer un modèle intégré : crée la version personnalisée, l'original disparaît de sa catégorie
   await clickSel('.builtin-template[data-template-id="promo"] .card-rename')
@@ -424,7 +424,7 @@ try {
   await typeInto('.builtin-template[data-template-id="promo"] .card-rename-input', 'Promo été')
   await pressEnter('.builtin-template[data-template-id="promo"] .card-rename-input')
   check('renommer un modèle intégré crée « votre version » (basedOn) sous le nouveau nom', await waitFor(async () => (await run('window.trame.listUserTemplates()')).some((t) => t.name === 'Promo été' && t.basedOn === 'promo')))
-  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 9))
+  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 13))
   check('la version personnalisée porte l’étiquette « personnalisé »', (await run(`document.querySelector('.user-template .badge')?.textContent`)) === 'personnalisé')
 
   // renommer un modèle personnel
@@ -436,7 +436,7 @@ try {
 
   // rétablir l'original = supprimer la version personnalisée
   await clickSel('.user-template .card-remove')
-  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 10))
+  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 14))
   check("la confirmation parle de rétablir l'original", (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes("Rétablir le modèle d'origine"))
 
   // modifier le contenu : appliquer, retoucher, enregistrer en REMPLAÇANT
@@ -1920,6 +1920,41 @@ try {
   check('QR code et publipostage : le dessin des modules diffère d\'une page à l\'autre', pageStreams[0].length > 100 && pageStreams[0] !== pageStreams[1])
   await escape()
   await sleep(200)
+
+  // bulles de BD (groupe bulle + texte) et modèles de planches
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(300)
+  const bubLayersBefore = await layerCount()
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  check('bulles de BD : six modèles de bulle proposés', (await run(`document.querySelectorAll('[data-bubble]').length`)) === 6)
+  await clickSel('[data-bubble="shout"]')
+  await sleep(600)
+  check('bulle de BD : un cri insère deux éléments (la bulle et son texte)', (await layerCount()) === bubLayersBefore + 2)
+  png = await exportPng()
+  const shoutPx = pngPixel(png, 540, 610)
+  check('bulle de BD : la bulle de cri est jaune au centre', shoutPx[0] > 230 && shoutPx[1] > 200 && shoutPx[2] < 140, JSON.stringify(shoutPx))
+  // le document porte une bulle non enregistrée : on repart d'un document neuf pour ouvrir un modèle sans question
+  await reloadApp()
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="templates"]')
+  await sleep(300)
+  await clickSel('.builtin-template[data-template-id="comic-4"] .card-open')
+  check('modèle « Planche de 4 cases » : le document s\'ouvre', await waitFor(async () => (await run('document.title')).startsWith('Planche de 4 cases')))
+  await sleep(700)
+  // les assistants d'export de ce test cherchent « Sans titre » : on rend ce nom au document
+  await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+  await cdp('Input.insertText', { text: 'Sans titre' })
+  await run(`document.querySelector('.doc-name').blur()`)
+  await sleep(300)
+  png = await exportPng()
+  if (process.env.SMOKE_KEEP2) await writeFile(process.env.SMOKE_KEEP2, png) // inspection visuelle
+  check('planche de 4 cases : format A4 portrait (794 × 1123)', png.readUInt32BE(16) === 794 && png.readUInt32BE(20) === 1123, `${png.readUInt32BE(16)}×${png.readUInt32BE(20)}`)
+  const gutter = pngPixel(png, 397, 300)
+  const insidePanel = pngPixel(png, 300, 520)
+  const outline = pngPixel(png, 40, 300)
+  check('planche de 4 cases : papier crème entre les cases, case blanche, contour sombre', gutter[0] > 250 && gutter[2] < 250 && insidePanel.every((v) => v > 250) && outline.every((v) => v < 90), JSON.stringify([gutter, insidePanel, outline]))
+  check('planche de 4 cases : un titre, 4 cases et 4 bulles (de 2 éléments)', (await layerCount()) === 13)
 
   // modèles de publipostage : un modèle arrive avec son tableau d'exemple, le publipostage est utilisable tout de suite
   await reloadApp()
