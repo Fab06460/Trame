@@ -126,11 +126,12 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | D4 | Signature : visuelle (dessinée ou importée) ; numérique certifiée en option | M | La signature numérique avec certificat est un chantier à part (L). | — |
 | D5 | Mode présentation plein écran, transitions, notes de l'orateur | L | **Fait en partie** : plein écran, navigation, écran noir, lecture automatique en boucle, transitions (fondu, glissement, recouvrement, zoom, aucune), notes de l'orateur (panneau d'édition, touche N en présentation, export/import PPTX). Écran de l'orateur fait (seconde fenêtre synchronisée : page suivante, notes, chronomètre). Transition par page faite (réglage du document + de chaque page, export / import PPTX). Pointeur laser fait. Annotation à l'écran faite (stylo, surligneur, cinq couleurs, par page, non enregistrée). | — |
 
-### Phase 4 — Compléments (correction orthographique)
+### Phase 4 — Compléments (correction orthographique, interface)
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
 | H3 | Correction orthographique | S | Correcteur du système sur macOS (hors-ligne) : à vérifier au moment du développement ; ailleurs les dictionnaires doivent être embarqués. | — |
+| U1 | Déplacer « Trame X.Y.Z · Mises à jour » et le choix de la langue hors du panneau de gauche | S | Aujourd'hui ils sont en bas du contenu du panneau et défilent avec lui : emplacement ni logique ni esthétique. À repenser (pied de panneau fixe, menu ou fenêtre « À propos / Réglages », barre d'état…) avec la question de place pour les futurs réglages ; à décider avec l'utilisateur avant de coder. Touche `Sidebar.tsx`, `LanguageSelect`, `UpdateDialog` et leurs captures dans le smoke test. | — |
 
 ### Phase 5 — Vidéo (hors périmètre à court terme)
 
