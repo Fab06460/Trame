@@ -6,6 +6,7 @@ import { downscaleImage } from '@/photoImport'
 import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
+import { RedactDialog } from './RedactDialog'
 import { useLocale, useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
 import { AI_PROVIDERS, MAX_ALT, TRANSLATE_LANGUAGES, providerInfo } from '@shared/ai'
@@ -27,6 +28,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
   const inset = cropInsets(el)
   const crop = currentCrop(el)
   const columns = useEditor((s) => s.doc.mailMerge?.columns) ?? []
+  const [redacting, setRedacting] = useState(false)
 
   // texte alternatif : saisi à la main ou proposé par un modèle qui voit l'image ; enregistré à la sortie du champ (un seul pas d'historique)
   const [altDraft, setAltDraft] = useState(el.alt ?? '')
@@ -112,6 +114,10 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       <button data-action="replace-image" title={t('img.replace.title')} onClick={() => void replaceImage()}>
         {t('img.replace')}
       </button>
+      <button data-action="redact-open" title={t('redact.open.title')} onClick={() => setRedacting(true)}>
+        {t('redact.open')}
+      </button>
+      {redacting && <RedactDialog el={el} onClose={() => setRedacting(false)} />}
       <div className="row">
         <button data-flip="x" aria-pressed={!!el.flipX} className={el.flipX ? 'active' : ''} title={t('img.flipX')} onClick={() => updateElement(el.id, { flipX: el.flipX ? undefined : true })}>
           ⇋

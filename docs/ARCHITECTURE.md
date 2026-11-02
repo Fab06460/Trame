@@ -497,6 +497,15 @@ Même principe que les graphiques : **pas de nouveau type d'élément**. `qr.ts`
 - **Lecture d'un fichier** : `sanitizeQr` retire la description si le contenu est vide ou dépasse 1 000 caractères, remet les valeurs par défaut pour un niveau ou une couleur invalide ; les deux éléments restent.
 - Vérifié : tests unitaires (grille, repères de position, octets UTF-8, tracé relu rectangle par rectangle, marge, carré, contraste, lecture), **décodage réel** de 16 QR codes (4 contenus × 4 niveaux, accents, emoji, 400 caractères) rastérisés depuis le tracé avec un lecteur indépendant (jsQR, hors dépôt), smoke (insertion, contenu, niveaux, contraste, PDF vectoriel), `npm run fidelity` (cas `qr-code`, 0,00 % de pixels différents) ; QR codes de publipostage (adresses accentuées, rotations 0°, 25°, 90°, 180°, 270°) rastérisés puis décodés avec le même lecteur indépendant : 10 sur 10.
 
+### Flou et pixellisation de zones d'une image
+
+Pour masquer un visage, un nom ou une plaque, l'effet doit être **irréversible** : un réglage posé sur l'image d'origine (comme les filtres de couleur) laisserait les pixels masqués dans le fichier, le PDF importé, la page web… On **remplace donc l'image**.
+- `redact.ts` (pur, testé) : zones en **fractions** de l'image d'origine (valables à toute définition), `applyZone(s)` sur un tampon RGBA. Pixellisation = couleur moyenne par case (≈ 16 cases sur le petit côté de la zone à l'intensité 1, 3 à l'intensité 10) ; flou = trois passes de moyenne glissante (≈ gaussien) dont les bords se prolongent à l'intérieur de la zone, donc **rien ne vient de l'extérieur**. Ellipse = ellipse inscrite, les pixels des coins restent ceux de l'image.
+- `redactImage.ts` : charge l'image d'origine (non recadrée, non retournée), applique les zones, ré-encode (JPEG 92 % si la source en était un, sinon PNG ; réduite à 4 096 px de grand côté au plus).
+- `RedactDialog.tsx` : aperçu 640 × 400 recalculé à chaque geste, tracé à la souris (événements de pointeur), réglages communs à toutes les zones. « Appliquer » = `updateElement(id, { src, pdfSource: undefined })` : **un seul pas d'historique** ; `pdfSource` est retiré, sinon l'export PDF remettrait en vectoriel le PDF d'origine, non masqué.
+- Le recadrage, le miroir, les filtres et la boîte de l'élément ne changent pas (même proportions).
+- Limites assumées : les **versions enregistrées** et la **reprise après interruption** gardent l'image d'origine (la boîte le dit) ; un flou léger peut être atténué par traitement d'image, la pixellisation est plus sûre (conseillée dans la boîte).
+
 ### Impression pratique (livret et pages par feuille)
 
 `imposition.ts` (pur, testé) fabrique un document de « feuilles » (pages à la taille du papier, les pages d'origine réduites dessus) que l'export PDF ordinaire écrit : texte vectoriel, polices incorporées, aucun nouveau rendu. Le placement réutilise `sheetsFromMerged` (planches du publipostage) avec une page par « fiche ».

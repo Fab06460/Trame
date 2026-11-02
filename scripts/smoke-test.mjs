@@ -927,6 +927,30 @@ try {
   const undone = pngPixel(png, ...L)
   check('annuler rétablit le filtre', Math.abs(undone[0] - undone[2]) < 6)
 
+  // flou de zone : la zone tracée est réellement pixellisée dans l'image (irréversible), le reste est intact, un seul pas d'historique
+  const redactCount = (sel) => run(`document.querySelectorAll(${JSON.stringify(sel)}).length`)
+  const PURPLE_X = 530 // juste à gauche de la frontière rouge / bleu (x = 540), au milieu de la zone qu'on va masquer
+  // le test précédent finit en annulant « Réinitialiser » : le filtre noir et blanc est revenu, on repart de l'image en couleurs
+  await clickSel('.panel [data-action="filters-reset"]')
+  await sleep(500)
+  const redactBefore = pngPixel(await exportPng(), PURPLE_X, 560)
+  check("flou de zone : avant, le point est rouge (le bouton existe dans le panneau de l'image)", isRed(redactBefore) && (await redactCount('.panel [data-action="redact-open"]')) === 1)
+  await clickSel('.panel [data-action="redact-open"]')
+  await sleep(700)
+  check("flou de zone : la boîte s'ouvre, « Appliquer » est inactif tant qu'aucune zone n'est tracée", (await redactCount('[data-redact-dialog]')) === 1 && (await run(`document.querySelector('[data-action="redact-apply"]').disabled`)) === true)
+  const rc = await run(`(() => { const r = document.querySelector('[data-redact-canvas]').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height } })()`)
+  await drag([rc.l + rc.w * 0.35, rc.t + rc.h * 0.2], [rc.l + rc.w * 0.65, rc.t + rc.h * 0.8])
+  check("flou de zone : le tracé crée une zone, « Appliquer » devient actif", (await run(`document.querySelector('[data-redact-count]').innerText`)).includes('1') && (await run(`document.querySelector('[data-action="redact-apply"]').disabled`)) === false)
+  await clickSel('[data-action="redact-apply"]')
+  await sleep(1200)
+  png = await exportPng()
+  const masked = pngPixel(png, PURPLE_X, 560)
+  check("flou de zone : la boîte se ferme, la zone est pixellisée (le point n'est plus ni rouge ni bleu)", (await redactCount('[data-redact-dialog]')) === 0 && !isRed(masked) && !isBlue(masked), JSON.stringify(masked))
+  check("flou de zone : hors de la zone, l'image est intacte", isRed(pngPixel(png, ...L)) && isBlue(pngPixel(png, ...R)))
+  await clickSel('header.toolbar button[title^="Annuler"]')
+  await sleep(500)
+  check("flou de zone : un seul « Annuler » rend l'image d'origine", isRed(pngPixel(await exportPng(), PURPLE_X, 560)))
+
   // nom du document : champ de la barre d'outils → nom des exports (caractères interdits remplacés) ; annuler le rétablit
   check('le nom par défaut est « Sans titre »', (await run(`document.querySelector('.doc-name').value`)) === 'Sans titre')
   await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)

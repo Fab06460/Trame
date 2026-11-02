@@ -1224,5 +1224,25 @@ export const en: Catalog = {
   'qr.hint': 'The QR code is a background plus a vector drawing: sharp at any size and in every export (PDF, PowerPoint, SVG, web page). Keep it square, at least 2 cm wide once printed, and try it with a phone before printing many copies. Its content is saved in the file.',
   // QR code et publipostage
   'qr.mergeHint': 'A different QR code on each card: write {example} in the content (one link per student, for example), then use the mail merge with a CSV table.',
-  'qr.fields': 'Mail merge fields: each row of the table gives its own QR code. An empty cell removes the QR code from that card.'
+  'qr.fields': 'Mail merge fields: each row of the table gives its own QR code. An empty cell removes the QR code from that card.',
+  // Flou et pixellisation de zones d'une image
+  'redact.open': 'Blur an area…',
+  'redact.open.title': 'Blur or pixelate parts of the image (faces, names, plates…)',
+  'redact.title': 'Blur or pixelate areas',
+  'redact.hint': 'Drag a rectangle with the mouse over each area to hide. The whole image is shown, without cropping or mirroring.',
+  'redact.mode': 'Effect',
+  'redact.mode.pixelate': 'Pixelate',
+  'redact.mode.blur': 'Blur',
+  'redact.shape': 'Shape of the areas',
+  'redact.shape.rect': 'Rectangle',
+  'redact.shape.ellipse': 'Ellipse',
+  'redact.level': 'Strength',
+  'redact.count': 'Areas drawn: {n}',
+  'redact.none': 'No area drawn.',
+  'redact.removeLast': 'Remove the last one',
+  'redact.clear': 'Remove all',
+  'redact.warn': '“Apply” replaces the image: what is hidden can no longer be recovered. For sensitive data, prefer pixelation, which is safer than a light blur. Earlier saved versions of the document (history, recovery) keep the original image.',
+  'redact.apply': 'Apply',
+  'redact.applying': 'Applying…',
+  'redact.error': 'Could not change the image: {reason}'
 }

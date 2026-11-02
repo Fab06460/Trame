@@ -1224,5 +1224,25 @@ export const es: Catalog = {
   'qr.hint': 'El código QR es un fondo con un dibujo vectorial: nítido a cualquier tamaño y en todas las exportaciones (PDF, PowerPoint, SVG, página web). Manténgalo cuadrado, de al menos 2 cm impreso, y pruébelo con un teléfono antes de imprimir muchas copias. Su contenido se guarda en el archivo.',
   // QR code et publipostage
   'qr.mergeHint': 'Un código QR distinto en cada ficha: escriba {example} en el contenido (un enlace por alumno, por ejemplo) y use la combinación de correspondencia con una tabla CSV.',
-  'qr.fields': 'Campos de combinación: cada fila de la tabla da su propio código QR. Una celda vacía quita el código QR de esa ficha.'
+  'qr.fields': 'Campos de combinación: cada fila de la tabla da su propio código QR. Una celda vacía quita el código QR de esa ficha.',
+  // Flou et pixellisation de zones d'une image
+  'redact.open': 'Difuminar una zona…',
+  'redact.open.title': 'Difumina o pixela partes de la imagen (caras, nombres, matrículas…)',
+  'redact.title': 'Difuminar o pixelar zonas',
+  'redact.hint': 'Trace con el ratón un rectángulo sobre cada zona que quieras ocultar. Se muestra la imagen entera, sin recorte ni espejo.',
+  'redact.mode': 'Efecto',
+  'redact.mode.pixelate': 'Pixelado',
+  'redact.mode.blur': 'Desenfoque',
+  'redact.shape': 'Forma de las zonas',
+  'redact.shape.rect': 'Rectángulo',
+  'redact.shape.ellipse': 'Elipse',
+  'redact.level': 'Intensidad',
+  'redact.count': 'Zonas trazadas: {n}',
+  'redact.none': 'Ninguna zona trazada.',
+  'redact.removeLast': 'Quitar la última',
+  'redact.clear': 'Quitar todas',
+  'redact.warn': '«Aplicar» sustituye la imagen: lo que se oculta ya no se puede recuperar. Para datos sensibles, es preferible el pixelado, más seguro que un desenfoque leve. Las versiones del documento guardadas antes (historial, recuperación) conservan la imagen original.',
+  'redact.apply': 'Aplicar',
+  'redact.applying': 'Aplicando…',
+  'redact.error': 'No se pudo modificar la imagen: {reason}'
 }

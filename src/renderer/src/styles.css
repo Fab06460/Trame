@@ -446,3 +446,5 @@ button.danger { color: #ff7b7b; }
 .sidebar-version:hover { color: inherit; text-decoration: underline; }
 .sidebar-version + .sidebar-footer { margin-top: 0; }
 .update-banner { position: fixed; left: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 10px; background: var(--panel, #24252b); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
+
+.redact-canvas { display: block; max-width: 100%; align-self: center; border-radius: 6px; cursor: crosshair; touch-action: none; background: repeating-conic-gradient(#3a3b42 0% 25%, #2c2d33 0% 50%) 50% / 16px 16px; }

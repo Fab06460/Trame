@@ -1225,7 +1225,27 @@ export const fr = {
   'qr.hint': 'Le QR code est un fond et un dessin vectoriel : net à toute taille et dans tous les exports (PDF, PowerPoint, SVG, page web). Gardez-le carré, à 2 cm de côté au moins une fois imprimé, et essayez-le avec un téléphone avant de l\'imprimer en nombre. Son contenu est enregistré dans le fichier.',
   // QR code et publipostage
   'qr.mergeHint': 'Un QR code différent par fiche : écrivez {example} dans le contenu (un lien par élève, par exemple), puis utilisez le publipostage avec un tableau CSV.',
-  'qr.fields': 'Champs de publipostage : chaque ligne du tableau donne son QR code. Une cellule vide supprime le QR code de la fiche.'
+  'qr.fields': 'Champs de publipostage : chaque ligne du tableau donne son QR code. Une cellule vide supprime le QR code de la fiche.',
+  // Flou et pixellisation de zones d'une image
+  'redact.open': 'Flouter une zone…',
+  'redact.open.title': 'Floute ou pixellise des parties de l\'image (visages, noms, plaques…)',
+  'redact.title': 'Flouter ou pixelliser des zones',
+  'redact.hint': 'Tracez avec la souris un rectangle sur chaque zone à masquer. L\'image entière est affichée, sans recadrage ni miroir.',
+  'redact.mode': 'Effet',
+  'redact.mode.pixelate': 'Pixellisation',
+  'redact.mode.blur': 'Flou',
+  'redact.shape': 'Forme des zones',
+  'redact.shape.rect': 'Rectangle',
+  'redact.shape.ellipse': 'Ellipse',
+  'redact.level': 'Intensité',
+  'redact.count': 'Zones tracées : {n}',
+  'redact.none': 'Aucune zone tracée.',
+  'redact.removeLast': 'Retirer la dernière',
+  'redact.clear': 'Tout retirer',
+  'redact.warn': '« Appliquer » remplace l\'image : ce qui est masqué ne pourra plus être retrouvé. Pour des données sensibles, préférez la pixellisation, plus sûre qu\'un flou léger. Les versions du document enregistrées auparavant (historique, récupération) gardent l\'image d\'origine.',
+  'redact.apply': 'Appliquer',
+  'redact.applying': 'Application…',
+  'redact.error': 'Impossible de modifier l\'image : {reason}'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

@@ -1224,5 +1224,25 @@ export const de: Catalog = {
   'qr.hint': 'Der QR-Code besteht aus einem Hintergrund und einer Vektorzeichnung: scharf in jeder Größe und in allen Exporten (PDF, PowerPoint, SVG, Webseite). Halten Sie ihn quadratisch, gedruckt mindestens 2 cm breit, und testen Sie ihn mit einem Smartphone, bevor Sie viele Exemplare drucken. Sein Inhalt wird in der Datei gespeichert.',
   // QR code et publipostage
   'qr.mergeHint': 'Ein anderer QR-Code pro Karte: Schreiben Sie {example} in den Inhalt (zum Beispiel einen Link pro Schüler) und nutzen Sie dann den Serienbrief mit einer CSV-Tabelle.',
-  'qr.fields': 'Serienbrief-Felder: Jede Zeile der Tabelle ergibt ihren eigenen QR-Code. Eine leere Zelle entfernt den QR-Code von dieser Karte.'
+  'qr.fields': 'Serienbrief-Felder: Jede Zeile der Tabelle ergibt ihren eigenen QR-Code. Eine leere Zelle entfernt den QR-Code von dieser Karte.',
+  // Flou et pixellisation de zones d'une image
+  'redact.open': 'Bereich unkenntlich machen …',
+  'redact.open.title': 'Teile des Bildes weichzeichnen oder verpixeln (Gesichter, Namen, Kennzeichen …)',
+  'redact.title': 'Bereiche weichzeichnen oder verpixeln',
+  'redact.hint': 'Ziehen Sie mit der Maus ein Rechteck über jeden zu verbergenden Bereich. Das ganze Bild wird angezeigt, ohne Zuschnitt und Spiegelung.',
+  'redact.mode': 'Effekt',
+  'redact.mode.pixelate': 'Verpixeln',
+  'redact.mode.blur': 'Weichzeichnen',
+  'redact.shape': 'Form der Bereiche',
+  'redact.shape.rect': 'Rechteck',
+  'redact.shape.ellipse': 'Ellipse',
+  'redact.level': 'Stärke',
+  'redact.count': 'Gezeichnete Bereiche: {n}',
+  'redact.none': 'Noch kein Bereich gezeichnet.',
+  'redact.removeLast': 'Letzten entfernen',
+  'redact.clear': 'Alle entfernen',
+  'redact.warn': 'Mit „Anwenden“ wird das Bild ersetzt: Was verborgen ist, lässt sich nicht wiederherstellen. Bei sensiblen Daten ist Verpixeln sicherer als ein leichtes Weichzeichnen. Früher gespeicherte Versionen des Dokuments (Verlauf, Wiederherstellung) behalten das Originalbild.',
+  'redact.apply': 'Anwenden',
+  'redact.applying': 'Wird angewendet …',
+  'redact.error': 'Das Bild konnte nicht geändert werden: {reason}'
 }
