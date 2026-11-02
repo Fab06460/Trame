@@ -4,7 +4,7 @@ import { AI_PROVIDERS, checkCredentials, type AiProviderId, type AiStatus } from
 
 /** Chiffrement fourni par le système (Keychain, DPAPI, trousseau) : injecté pour pouvoir tester sans lui. */
 export interface SecretBox {
-  available(): boolean
+  available(): boolean | Promise<boolean>
   encrypt(text: string): Buffer
   decrypt(data: Buffer): string
 }
@@ -23,7 +23,7 @@ export function createCredentialStore(file: string, box: SecretBox) {
   async function load(): Promise<void> {
     if (loaded) return
     loaded = true
-    if (!box.available()) return
+    if (!(await box.available())) return
     let raw: unknown
     try {
       raw = JSON.parse(await readFile(file, 'utf-8'))
@@ -46,7 +46,7 @@ export function createCredentialStore(file: string, box: SecretBox) {
   }
 
   async function persist(): Promise<void> {
-    if (!box.available()) return
+    if (!(await box.available())) return
     const out: Record<string, Record<string, string>> = {}
     for (const p of AI_PROVIDERS) {
       const values = memory[p.id]
@@ -61,7 +61,7 @@ export function createCredentialStore(file: string, box: SecretBox) {
     async status(): Promise<AiStatus> {
       await load()
       return {
-        persistent: box.available(),
+        persistent: await box.available(),
         providers: AI_PROVIDERS.map((p) => ({
           id: p.id,
           configured: !!memory[p.id],
