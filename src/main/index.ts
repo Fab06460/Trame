@@ -80,6 +80,13 @@ const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(tem
 
 // Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
 // sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
+// Linux sous Wayland : la boîte d'impression système (GTK) s'attache à une fenêtre que Wayland refuse d'exporter (« exported surface had an
+// invalid role ») et l'application plante. Tant que ce défaut d'Electron dure, on passe par XWayland ; l'utilisateur peut imposer son choix
+// avec --ozone-platform.
+if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland' && !process.argv.some((a) => a.startsWith('--ozone-platform'))) {
+  app.commandLine.appendSwitch('ozone-platform', 'x11')
+}
+
 const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
 
 const FORCED_LANG = process.env.TRAME_LANG

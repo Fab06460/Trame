@@ -12,7 +12,7 @@
 
 ## Plateformes
 
-- Développé et utilisé uniquement sur **macOS**. Windows et Linux : **adaptés mais non testés sur une vraie machine** — raccourcis affichés `Ctrl+…` hors macOS, marge de la barre d'outils et barre de menus Electron selon la plateforme, ouverture d'un `.trame` par argument de ligne de commande avec instance unique, identifiants d'IA non écrits sur disque si Linux n'a pas de trousseau (voir [PACKAGING.md](PACKAGING.md)). Le smoke test et l'empreinte de fidélité PDF ne tournent que sous macOS ; le rendu des polices et des PDF sous Windows/Linux n'est pas vérifié.
+- Développé et utilisé uniquement sur **macOS**. Windows et Linux : **adaptés mais non testés sur une vraie machine** — raccourcis affichés `Ctrl+…` hors macOS, marge de la barre d'outils et barre de menus Electron selon la plateforme, ouverture d'un `.trame` par argument de ligne de commande avec instance unique, identifiants d'IA non écrits sur disque si Linux n'a pas de trousseau (voir [PACKAGING.md](PACKAGING.md)). **Linux (Ubuntu 26.04, essayé par l'utilisateur)** : l'AppImage demande `libfuse2` ; la boîte d'impression plantait l'application sous Wayland (« exported surface had an invalid role »), d'où le lancement via XWayland (`ozone-platform=x11`) ; correctif à confirmer sur la machine. Le smoke test et l'empreinte de fidélité PDF ne tournent que sous macOS ; le rendu des polices et des PDF sous Windows/Linux n'est pas vérifié.
 
 ## Risques de perte de données
 
