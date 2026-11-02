@@ -79,7 +79,7 @@ export function PrintDialog(): React.JSX.Element | null {
     setMessage('')
     try {
       const res = await printImposed(imposed, mode === 'booklet' ? 'shortEdge' : 'simplex')
-      if (res.status === 'printed') close()
+      if (res.status === 'printed' || res.status === 'opened') close()
       else if (res.status === 'failed') setMessage(translate('print.failed', { reason: res.reason }))
     } catch (err) {
       setMessage(translate('print.failed', { reason: err instanceof Error ? err.message : String(err) }))

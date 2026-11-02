@@ -78,17 +78,6 @@ async function loadHidden(): Promise<string[]> {
 
 const saveTemplateIndex = (list: TemplateMeta[]): Promise<void> => writeFile(templateIndexFile(), JSON.stringify(list), 'utf-8')
 
-// Linux sous Wayland : la boîte d'impression système (GTK) s'attache à une fenêtre que Wayland refuse d'exporter (« exported surface had an
-// invalid role ») et l'application plante. Tant que ce défaut d'Electron dure, on passe par XWayland. Chromium choisit sa plateforme
-// graphique avant d'exécuter le moindre JavaScript : `appendSwitch` arrive trop tard (le processus GPU plante), il faut donc se relancer
-// une fois avec le drapeau en ligne de commande. L'utilisateur peut imposer son choix avec --ozone-platform (alors on ne relance pas).
-const relaunchForX11 = process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland' && !process.argv.some((a) => a.startsWith('--ozone-platform'))
-if (relaunchForX11) {
-  // dans un AppImage, process.execPath est dans un montage temporaire : c'est le fichier AppImage qu'il faut relancer
-  app.relaunch({ execPath: process.env.APPIMAGE || process.execPath, args: [...process.argv.slice(1), '--ozone-platform=x11'] })
-  app.exit(0)
-}
-
 // Réservé aux tests de bout en bout (scripts/smoke-test.mjs) : si cette variable d'environnement est définie, les exports
 // sont écrits directement dans ce dossier, sans boîte de dialogue (impossible à piloter depuis un test).
 const TEST_EXPORT_DIR = process.env.TRAME_TEST_EXPORT_DIR
@@ -942,7 +931,8 @@ ipcMain.handle('image:pick', async () => {
 
 
 // Impression directe : la page HTML préparée par le renderer (une section par feuille) est imprimée par une fenêtre cachée, sans passer par un PDF enregistré.
-type PrintResult = { status: 'printed' } | { status: 'cancelled' } | { status: 'failed'; reason: string }
+/** `opened` : le PDF a été ouvert dans le lecteur du système, d'où l'on imprime (Linux sous Wayland, voir `print:html`). */
+type PrintResult = { status: 'printed' } | { status: 'opened' } | { status: 'cancelled' } | { status: 'failed'; reason: string }
 ipcMain.handle('print:html', async (_e, html: unknown, widthPx: unknown, heightPx: unknown, duplexMode: unknown): Promise<PrintResult> => {
   const geo = sheetGeometry(widthPx, heightPx)
   if (typeof html !== 'string' || html.length === 0 || html.length > 600_000_000 || !geo) return { status: 'failed', reason: 'invalid' }
@@ -961,6 +951,15 @@ ipcMain.handle('print:html', async (_e, html: unknown, widthPx: unknown, heightP
       // tests de bout en bout : pas de boîte d'impression ; le PDF que le système imprimerait est écrit dans le dossier de test
       await writeFile(join(TEST_EXPORT_DIR, 'print-test.pdf'), await win.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true }))
       return { status: 'printed' }
+    }
+    // Linux sous Wayland : la boîte d'impression système (GTK) s'attache à une fenêtre cachée que Wayland refuse d'exporter (« exported surface
+    // had an invalid role ») et l'application plante. On produit alors le PDF et on l'ouvre dans le lecteur du système (réglages
+    // d'imprimante, recto-verso compris). Avec --ozone-platform=x11 (XWayland), la boîte d'impression directe fonctionne.
+    if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland' && app.commandLine.getSwitchValue('ozone-platform') !== 'x11') {
+      const pdf = join(tmpdir(), `trame-impression-${Date.now()}.pdf`)
+      await writeFile(pdf, await win.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true }))
+      const failure = await shell.openPath(pdf)
+      return failure ? { status: 'failed', reason: failure } : { status: 'opened' }
     }
     return await new Promise<PrintResult>((resolve) => {
       win.webContents.print(
@@ -1095,7 +1094,7 @@ ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 registerAiHandlers()
 
 // Windows et Linux : une seule instance (un double-clic sur un .trame ouvre le projet dans la fenêtre existante). macOS le fait déjà seul.
-const gotLock = process.platform === 'darwin' || relaunchForX11 || app.requestSingleInstanceLock()
+const gotLock = process.platform === 'darwin' || app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 else if (process.platform !== 'darwin') {
   app.on('second-instance', (_e, argv) => {
