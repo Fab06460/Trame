@@ -20,6 +20,7 @@ import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
+import { flipPatches, isFlipExempt, type FlipAxis } from '@/flip'
 import type { Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
@@ -157,6 +158,8 @@ interface EditorState {
   ungroupSelected: () => void
   align: (mode: AlignMode) => void
   distribute: (axis: 'h' | 'v') => void
+  /** Retourne la sélection comme un miroir (voir `flip.ts`) ; une seule étape d'historique. */
+  flipSelected: (axis: FlipAxis) => void
   setPage: (id: string) => void
   addPage: () => void
   duplicatePage: (id: string) => void
@@ -377,6 +380,18 @@ export const useEditor = create<EditorState>((set, get) => {
     distribute: (axis) => {
       const els = movable()
       if (els.length >= 3) moveBy(distributeDeltas(els, axis))
+    },
+
+    flipSelected: (axis) => {
+      const all = selectPage(get()).elements
+      const els = movable().filter((e) => !isFlipExempt(e, all))
+      if (!els.length) return
+      const patches = flipPatches(els, axis)
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)) })),
+        dirty: true
+      })
     },
 
     setPage: (id) => set({ pageId: id, selectedIds: [] }),

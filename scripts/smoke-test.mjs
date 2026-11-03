@@ -2027,6 +2027,27 @@ try {
   await exportPdfText()
   check('icônes : le PDF les dessine en vectoriel (aucune image)', !lastPdfRaw.includes('/Subtype /Image'))
 
+  // retourner une forme : le miroir vertical d'un triangle (pointe en haut) le met pointe en bas, sans changer sa place
+  await reloadApp()
+  await sleep(500)
+  await click('.sidebar .tabs button', 'Éléments')
+  await sleep(300)
+  await clickSel('.sidebar .shape[title="Triangle"]') // 240 × 240 en (420, 420), pointe en haut
+  await sleep(400)
+  png = await exportPng()
+  const solid = (pn, x, y) => pngPixel(pn, x, y).some((v) => v < 200)
+  check('retourner : avant, la base du triangle est large et la pointe étroite', solid(png, 450, 630) && !solid(png, 450, 470))
+  await clickSel('.panel [data-action="flip-v"]')
+  await sleep(400)
+  png = await exportPng()
+  if (process.env.SMOKE_KEEP3) await writeFile(process.env.SMOKE_KEEP3, png) // inspection visuelle
+  check('retourner : verticalement, la pointe passe en bas (l\'angle bas-gauche se vide, l\'angle haut-gauche se remplit)', !solid(png, 450, 630) && solid(png, 450, 470))
+  check('retourner : le triangle reste en place', (await field('x')) === 420 && (await field('y')) === 420)
+  await clickSel('.panel [data-action="flip-h"]')
+  await clickSel('.panel [data-action="flip-h"]')
+  await sleep(300)
+  check('retourner : deux fois horizontalement, le dessin (retourné verticalement) est inchangé', solid(await exportPng(), 450, 470) && !solid(png, 450, 630))
+
   // style d'après une image : palette de l'image choisie, recoloriage d'un rectangle violet, une seule étape d'historique
   await reloadApp()
   await sleep(500)

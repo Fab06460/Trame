@@ -48,6 +48,7 @@
 - Modèles de marque verrouillés : éléments figés ou à remplir, remplacement d'image en gardant la place
 - Magic Resize : changer le format de la page en adaptant le contenu (composition conservée et centrée, décors gardés sur leurs bords)
 - Nom du document modifiable (nom des exports et du fichier)
+- **Retourner** (panneau des propriétés, « Retourner ↔︎ / ↕︎ ») : miroir d'une forme, d'une icône, d'une image ou de toute une sélection, autour du milieu de la sélection ; le texte change de place mais reste lisible
 - Images : recadrage, miroirs, filtres (luminosité, contraste, saturation, noir et blanc, sépia, flou)
 - Ombres portées et lueurs (l'ombre est une image sous un élément resté vectoriel dans le PDF)
 - Dégradés linéaires et radiaux (formes, rectangles, ellipses), vectoriels dans le PDF

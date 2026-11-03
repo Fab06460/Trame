@@ -1,3 +1,4 @@
+import { isFlipExempt } from '@/flip'
 import { TransitionPanel } from './TransitionPanel'
 import { useEditor, selectPage } from '@/store/editor'
 import { allFonts, SYSTEM_FONT } from '@/fonts'
@@ -36,7 +37,7 @@ export function Properties(): React.JSX.Element {
   const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   const selection = page.elements.filter((e) => selectedIds.includes(e.id))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
-  const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, groupSelected, ungroupSelected } =
+  const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, flipSelected, groupSelected, ungroupSelected } =
     useEditor.getState()
 
   if (!el || !selectedIds.length) {
@@ -88,6 +89,8 @@ export function Properties(): React.JSX.Element {
     </>
   )
 
+  const flippable = selection.some((e) => !isFlipExempt(e, page.elements))
+
   const alignButtons = (
     <>
       <h3>{selectedIds.length === 1 ? t('prop.align.page') : t('prop.align.selection')}</h3>
@@ -105,6 +108,10 @@ export function Properties(): React.JSX.Element {
           <button onClick={() => distribute('v')}>{t('prop.distribute.v')}</button>
         </div>
       )}
+      <div className="row">
+        <button data-action="flip-h" disabled={!flippable} title={t('prop.flip.h.title')} onClick={() => flipSelected('h')}>{t('prop.flip.h')}</button>
+        <button data-action="flip-v" disabled={!flippable} title={t('prop.flip.v.title')} onClick={() => flipSelected('v')}>{t('prop.flip.v')}</button>
+      </div>
     </>
   )
 
