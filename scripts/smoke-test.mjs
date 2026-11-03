@@ -1986,6 +1986,47 @@ try {
   await sleep(500)
   check('dépôt d\'un fichier qui n\'est pas une image : ignoré', (await layerCount()) === dropBefore + 2)
 
+  // bibliothèque d'icônes : recherche (français et anglais), catégories, insertion d'un tracé ordinaire
+  await reloadApp()
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="icons"]')
+  check('icônes : l\'onglet affiche la bibliothèque (plus de 1 000 icônes, chargées à la demande)', await waitFor(async () => (await run(`Number(document.querySelector('[data-icon-count]')?.getAttribute('data-icon-count') ?? 0)`)) > 1000))
+  const iconSearch = async (q) => {
+    await run(`(() => { const i = document.querySelector('[data-field="iconQuery"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(q)}); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await sleep(250)
+    return run(`[...document.querySelectorAll('[data-icon]')].map(b => b.getAttribute('data-icon'))`)
+  }
+  check('icônes : « maison » trouve la maison (recherche en français)', (await iconSearch('maison')).includes('house'))
+  check('icônes : « heart » trouve le cœur en premier (recherche en anglais)', (await iconSearch('heart'))[0] === 'heart')
+  check('icônes : une saisie sans résultat le dit', (await iconSearch('zzzqqq')).length === 0 && (await run(`document.querySelector('[data-icon-count]').textContent`)).includes('Aucune'))
+  const iconsBefore = await layerCount()
+  await clickSel('.sidebar .tabs button[data-tab="icons"]')
+  await sleep(300)
+  await iconSearch('heart')
+  await clickSel('[data-icon-weight="fill"]')
+  await clickSel('[data-icon="heart"]')
+  await sleep(500)
+  const iconsAfter = await layerCount()
+  check('icônes : un clic insère un calque, sélectionné, carré, au centre de la page', iconsAfter === iconsBefore + 1 && (await field('width')) === 216 && (await field('height')) === 216 && (await field('x')) === 432 && (await field('y')) === 432, `${await field('width')} × ${await field('height')} en ${await field('x')}, ${await field('y')}`)
+  png = await exportPng()
+  if (process.env.SMOKE_KEEP3) await writeFile(process.env.SMOKE_KEEP3, png) // inspection visuelle
+  check('icônes : le cœur plein est dessiné dans l\'export image (centre sombre, coin de la page blanc)', pngPixel(png, 540, 540).every((v) => v < 80) && pngPixel(png, 440, 440).every((v) => v > 240))
+  await clickSel('.sidebar .tabs button[data-tab="icons"]')
+  await sleep(300)
+  await iconSearch('heart')
+  await clickSel('[data-icon-weight="regular"]')
+  await clickSel('[data-icon="heart"]')
+  await sleep(500)
+  await setField('x', 100)
+  await setField('y', 100)
+  await sleep(400)
+  png = await exportPng()
+  let darkOnRow = 0
+  for (let x = 100; x < 316; x++) if (pngPixel(png, x, 208).every((v) => v < 120)) darkOnRow++
+  check('icônes : en contour, le cœur est creux (trait sombre sur la ligne médiane, centre blanc)', pngPixel(png, 208, 208).every((v) => v > 240) && darkOnRow > 4, `${darkOnRow} px sombres`)
+  await exportPdfText()
+  check('icônes : le PDF les dessine en vectoriel (aucune image)', !lastPdfRaw.includes('/Subtype /Image'))
+
   // le document porte une bulle non enregistrée : on repart d'un document neuf pour ouvrir un modèle sans question
   await reloadApp()
   await sleep(500)

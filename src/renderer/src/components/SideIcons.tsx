@@ -20,6 +20,13 @@ const PATHS: Record<SidebarTab, React.JSX.Element> = {
       <rect x="12" y="12" width="8.5" height="8.5" rx="1.5" />
     </>
   ),
+  icons: (
+    <>
+      <path d="M8 4.5l1.3 2.9 3.2.3-2.4 2.1.7 3.1L8 11.3 5.2 12.9l.7-3.1L3.5 7.7l3.2-.3z" />
+      <circle cx="17" cy="7.5" r="3.5" />
+      <path d="M4 20.5l4-6.5 4 6.5zM14.5 14.5h6v6h-6z" />
+    </>
+  ),
   photos: (
     <>
       <rect x="3.5" y="4.5" width="17" height="15" rx="2" />

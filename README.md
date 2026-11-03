@@ -6,7 +6,7 @@
 
 ## Fonctionnalités
 
-- Éléments : texte, rectangle, ellipse, 12 formes vectorielles, images locales
+- Éléments : texte, rectangle, ellipse, 12 formes vectorielles, **1 400 icônes embarquées** (onglet Icônes), images locales
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application, **déposer des images** (Finder, explorateur) directement sur la page : elles se centrent là où vous les lâchez
 - Import de ses propres polices (TTF, OTF, WOFF, WOFF2), licence d'intégration contrôlée, embarquées dans les documents
 - Catalogue de polices en ligne (~1 900 polices libres, installées sur demande, embarquées dans les documents)

@@ -14,6 +14,7 @@ import { TemplateCard } from './TemplateCard'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
 import { PhotosPanel } from './PhotosPanel'
+import { IconsPanel } from './IconsPanel'
 import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
@@ -33,7 +34,7 @@ import { insertQr } from '@/qrActions'
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
 const TAB_GROUPS: Array<Array<{ id: SidebarTab; label: MessageKey }>> = [
   [{ id: 'recents', label: 'sidebar.recents' }, { id: 'templates', label: 'sidebar.templates' }],
-  [{ id: 'elements', label: 'sidebar.elements' }, { id: 'photos', label: 'sidebar.photos' }, { id: 'ai', label: 'ai.tab' }],
+  [{ id: 'elements', label: 'sidebar.elements' }, { id: 'icons', label: 'sidebar.icons' }, { id: 'photos', label: 'sidebar.photos' }, { id: 'ai', label: 'ai.tab' }],
   [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }, { id: 'a11y', label: 'a11y.tab' }, { id: 'review', label: 'review.tab' }]
 ]
 const TAB_ORDER = TAB_GROUPS.flat().map((x) => x.id)
@@ -136,6 +137,8 @@ export function Sidebar(): React.JSX.Element {
       {tab === 'brand' && <BrandPanel />}
 
       {tab === 'photos' && <PhotosPanel />}
+
+      {tab === 'icons' && <IconsPanel />}
 
       {tab === 'ai' && <AiPanel />}
 

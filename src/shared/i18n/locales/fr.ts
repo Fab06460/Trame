@@ -1327,7 +1327,39 @@ export const fr = {
   // Réglages (langue, version, mises à jour)
   'settings.label': 'Réglages',
   'settings.title': 'Langue, version et mises à jour',
-  'settings.updateAvailable': 'une mise à jour est proposée'
+  'settings.updateAvailable': 'une mise à jour est proposée',
+  // Bibliothèque d'icônes
+  'sidebar.icons': 'Icônes',
+  'icons.title': 'Icônes',
+  'icons.search.placeholder': 'Rechercher (maison, flèche, calendrier…)',
+  'icons.category': 'Catégorie',
+  'icons.category.all': 'Toutes',
+  'icons.weight': 'Style',
+  'icons.weight.regular': 'Contour',
+  'icons.weight.fill': 'Plein',
+  'icons.loading': 'Chargement des icônes…',
+  'icons.err': 'Impossible de charger les icônes.',
+  'icons.none': 'Aucune icône ne correspond.',
+  'icons.more': 'Afficher plus',
+  'icons.credit': 'Icônes Phosphor (licence MIT). Un clic en place une au centre de la page ; elle se recolore, s’étire et reçoit un contour comme toute forme.',
+  'icons.count': { one: '{count} icône', other: '{count} icônes' },
+  'icons.cat.arrows': 'Flèches',
+  'icons.cat.commerce': 'Commerce',
+  'icons.cat.communication': 'Communication',
+  'icons.cat.design': 'Design',
+  'icons.cat.editor': 'Édition',
+  'icons.cat.finance': 'Finance',
+  'icons.cat.games': 'Jeux',
+  'icons.cat.health': 'Santé et bien-être',
+  'icons.cat.travel': 'Cartes et voyage',
+  'icons.cat.media': 'Médias',
+  'icons.cat.nature': 'Nature',
+  'icons.cat.objects': 'Objets',
+  'icons.cat.office': 'Bureau',
+  'icons.cat.people': 'Personnes',
+  'icons.cat.system': 'Système',
+  'icons.cat.tech': 'Technologie',
+  'icons.cat.weather': 'Météo'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

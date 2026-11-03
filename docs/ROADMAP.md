@@ -104,7 +104,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| C1 | Bibliothèque d'icônes et d'illustrations embarquée, avec recherche | M | Choisir un jeu à licence ouverte (MIT/ISC/CC0) ; coût en taille de l'application ; chemins SVG → type d'élément `path` existant (formes pleines seulement : il faudra le contour, E1). | E1 |
+| C1 | Bibliothèque d'icônes et d'illustrations embarquée, avec recherche | M | **Icônes faites** : 1 434 icônes Phosphor (MIT), contour ou plein, onglet Icônes avec recherche en français/anglais et catégories (voir `docs/ARCHITECTURE.md`). **Illustrations** (dessins en couleurs) : non. | E1 |
 | C2 | Davantage de modèles (CV, flyers, logos, cartes de visite, bannières, affiches) + packs de modèles importables/exportables | M | Contenu à produire ; format de pack = fichier. | — |
 | C3 | Bibliothèque de médias locale (dossier surveillé, étiquettes, recherche) | M |  | E7 |
 | C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | Algorithme (quantification de couleurs), sans IA. | E11 |
