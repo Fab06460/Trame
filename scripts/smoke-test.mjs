@@ -2047,6 +2047,63 @@ try {
   await sleep(300)
   check('retourner : deux fois horizontalement, le dessin (retourné verticalement) est inchangé', solid(await exportPng(), 450, 470) && !solid(png, 450, 630))
 
+  // sélection : ⌘-clic (cliquer à travers), Tab, tout sélectionner du même type, entrer dans un groupe
+  await reloadApp()
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440)
+  await sleep(400)
+  await setField('x', 380) // décalé de 10 px : permet de savoir lequel des deux est sélectionné
+  await click('header.toolbar button', 'Rectangle') // le second, au-dessus, en (390, 440)
+  await sleep(500)
+  let selWrap = await measure()
+  for (let i = 0; i < 20; i++) { await sleep(150); const again = await measure(); const same = JSON.stringify(again) === JSON.stringify(selWrap); selWrap = again; if (same) break }
+  const selFit = Math.max(0.01, Math.min((selWrap.w - 96) / 1080, (selWrap.h - 96) / 1080))
+  const selX = selWrap.l + (selWrap.w - 1080 * selFit) / 2 + 540 * selFit
+  const selY = selWrap.t + (selWrap.h - 1080 * selFit) / 2 + 540 * selFit
+  const cmdClick = async () => {
+    await mouse('mousePressed', selX, selY, 4)
+    await mouse('mouseReleased', selX, selY, 4)
+    await sleep(300)
+  }
+  check('sélection : le second rectangle (au-dessus) est sélectionné à son insertion', (await field('x')) === 390)
+  await cmdClick()
+  check('⌘-clic : le rectangle du dessous est sélectionné', (await field('x')) === 380, String(await field('x')))
+  await cmdClick()
+  check('⌘-clic encore : on revient à celui du dessus', (await field('x')) === 390, String(await field('x')))
+  const tab = async (shift = false) => {
+    await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', modifiers: shift ? 8 : 0 })
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', modifiers: shift ? 8 : 0 })
+    await sleep(250)
+  }
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await sleep(200)
+  await tab()
+  check('Tab sans sélection : le premier élément (celui du dessous)', (await field('x')) === 380, String(await field('x')))
+  await tab()
+  check('Tab : l\'élément suivant', (await field('x')) === 390, String(await field('x')))
+  await tab(true)
+  check('Maj + Tab : l\'élément précédent', (await field('x')) === 380, String(await field('x')))
+  await tab()
+  await tab()
+  check('Tab après le dernier élément : la sélection est vidée et le focus repart dans l\'interface (un bouton)', !Number.isFinite(await field('x')) && (await run('document.activeElement.tagName')) === 'BUTTON')
+  await tab()
+  check('Tab ensuite : on reprend au premier', (await field('x')) === 380, String(await field('x')))
+  await clickSel('.panel [data-action="select-same"]')
+  await sleep(300)
+  check('« Sélectionner tout le même type » : les deux rectangles sont sélectionnés', (await run(`document.querySelector('.panel h3')?.textContent ?? ''`)).includes('2'), await run(`document.querySelector('.panel h3')?.textContent ?? ''`))
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'g', code: 'KeyG', modifiers: 4 })
+  await sleep(300)
+  await mouse('mousePressed', selX, selY)
+  await mouse('mouseReleased', selX, selY)
+  await sleep(200)
+  const groupText = await run(`document.querySelector('.panel h3')?.textContent ?? ''`)
+  check('groupe : un clic sélectionne les deux rectangles', groupText.includes('2'), groupText)
+  await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: selX, y: selY, button: 'left', buttons: 1, clickCount: 2 })
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: selX, y: selY, button: 'left', buttons: 0, clickCount: 2 })
+  await sleep(300)
+  const insideText = await run(`document.querySelector('.panel h3')?.textContent ?? ''`)
+  check('groupe : un double-clic entre dans le groupe (un seul élément sélectionné)', !insideText.includes('2') && (await field('width')) === 300, `${insideText} / ${await field('width')}`)
+
   // style d'après une image : palette de l'image choisie, recoloriage d'un rectangle violet, une seule étape d'historique
   await reloadApp()
   await sleep(500)

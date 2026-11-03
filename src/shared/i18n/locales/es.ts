@@ -226,6 +226,8 @@ export const es: Catalog = {
   'prop.flip.v': 'Voltear ↕︎',
   'prop.flip.h.title': 'Espejo izquierda ↔ derecha (el texto sigue legible, solo cambia de sitio)',
   'prop.flip.v.title': 'Espejo arriba ↔ abajo (el texto sigue legible, solo cambia de sitio)',
+  'prop.selectSame': 'Seleccionar todo del mismo tipo ({count})',
+  'prop.selectSame.title': 'Selecciona todos los elementos de la página del mismo tipo que la selección',
   'prop.group': 'Agrupar',
   'prop.ungroup': 'Desagrupar',
   'prop.type.rect': 'Rectángulo',

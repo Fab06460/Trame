@@ -227,6 +227,8 @@ export const fr = {
   'prop.flip.v': 'Retourner ↕︎',
   'prop.flip.h.title': 'Miroir gauche ↔ droite (le texte reste lisible, il change seulement de place)',
   'prop.flip.v.title': 'Miroir haut ↔ bas (le texte reste lisible, il change seulement de place)',
+  'prop.selectSame': 'Sélectionner tout le même type ({count})',
+  'prop.selectSame.title': 'Sélectionne tous les éléments de la page du même type que la sélection',
   'prop.group': 'Grouper',
   'prop.ungroup': 'Dissocier',
   'prop.type.rect': 'Rectangle',

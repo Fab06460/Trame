@@ -21,6 +21,7 @@ import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/text
 import { ZoomControls } from './ZoomControls'
 import { CommentPins } from './CommentPins'
 import { useReview } from '@/store/review'
+import { hitStack, throughTarget } from '@/selection'
 import type { TrameElement } from '@/types'
 
 const PADDING = 48
@@ -55,7 +56,7 @@ export function Canvas(): React.JSX.Element {
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const pdfIssues = usePdfIssues((s) => s.issues)
-  const { select, toggleSelect, updateElement, beginChange, setPositions, cloneSelectedInPlace } = useEditor.getState()
+  const { select, selectExact, toggleSelect, updateElement, beginChange, setPositions, cloneSelectedInPlace } = useEditor.getState()
   const settings = useView((v) => v.settings)
   const [snapLines, setSnapLines] = useState<SnapLine[]>([])
 
@@ -67,6 +68,8 @@ export function Canvas(): React.JSX.Element {
   const [lasso, setLasso] = useState<Box | null>(null)
   const lassoStart = useRef<{ x: number; y: number; additive: boolean } | null>(null)
   const dragStart = useRef<Record<string, { x: number; y: number }>>({})
+  /** sélection d'avant un ⌘-clic (null pour un clic ordinaire) : le clic cherche l'élément situé en dessous */
+  const throughFrom = useRef<string[] | null>(null)
   /** copies des éléments déplacés, à leur position de départ : sert à calculer la boîte englobante pour l'aimantation */
   const dragEls = useRef<TrameElement[]>([])
   // Konva émet transformstart/transformend une fois par nœud : un seul cran d'historique par geste.
@@ -200,10 +203,22 @@ export function Canvas(): React.JSX.Element {
     draggable: editing !== el.id && !spaceDown && !positionLocked(el, enforced),
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
+      throughFrom.current = e.evt.metaKey || e.evt.ctrlKey ? selectedIds : null
       if (e.evt.shiftKey) toggleSelect(el.id)
+      else if (selectedIds.length === 1 && el.groupId && page.elements.find((x) => x.id === selectedIds[0])?.groupId === el.groupId) selectExact([el.id]) // dans un groupe : un membre à la fois
       else if (!selectedIds.includes(el.id)) select([el.id])
     },
+    // ⌘-clic : l'élément en dessous de celui qui est sélectionné, parmi ceux superposés sous le pointeur
+    onClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const from = throughFrom.current
+      throughFrom.current = null
+      if (!from || e.evt.shiftKey || e.evt.button !== 0) return
+      const target = throughTarget(hitStack(page.elements, toDesign()), from)
+      if (target) select([target])
+    },
     onTap: () => select([el.id]),
+    // double-clic sur un membre de groupe : on entre dans le groupe (ce membre seul est sélectionné) ; un texte s'ouvre en saisie, voir plus bas
+    onDblClick: () => el.groupId && selectExact([el.id]),
     onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => {
       // Alt + glisser : on laisse une copie derrière (un seul cran d'historique pour la copie et le déplacement)
       if (e.evt.altKey) cloneSelectedInPlace()

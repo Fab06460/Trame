@@ -21,6 +21,7 @@ import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
 import { flipPatches, isFlipExempt, type FlipAxis } from '@/flip'
+import { sameTypeIds, tabTarget } from '@/selection'
 import type { Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
@@ -151,6 +152,12 @@ interface EditorState {
   select: (ids: string[]) => void
   toggleSelect: (id: string) => void
   selectAll: () => void
+  /** Sélectionne exactement ces éléments, sans étendre aux groupes : un membre seul = on est « dans » le groupe. */
+  selectExact: (ids: string[]) => void
+  /** Tout ce qui est du même type que l'élément (rien pour un graphique ou un QR code). */
+  selectSameType: (id: string) => void
+  /** Tab / Maj + Tab : sélection suivante ou précédente. Retourne false quand on sort de la liste (la sélection est alors vidée). */
+  selectNext: (dir: 1 | -1) => boolean
   /** Déplace plusieurs éléments à des positions absolues, sans point d'historique. */
   setPositions: (positions: Record<string, { x: number; y: number }>) => void
   nudgeSelected: (dx: number, dy: number) => void
@@ -321,6 +328,20 @@ export const useEditor = create<EditorState>((set, get) => {
       const cur = get().selectedIds
       const members = expand([id])
       set({ selectedIds: cur.includes(id) ? cur.filter((x) => !members.includes(x)) : [...new Set([...cur, ...members])] })
+    },
+
+    selectExact: (ids) => set({ selectedIds: ids }),
+
+    selectSameType: (id) => {
+      const els = selectPage(get()).elements
+      const ref = els.find((e) => e.id === id)
+      if (ref) set({ selectedIds: expand(sameTypeIds(els, ref)) })
+    },
+
+    selectNext: (dir) => {
+      const ids = tabTarget(selectPage(get()).elements, get().selectedIds, dir)
+      set({ selectedIds: ids ?? [] })
+      return ids !== null
     },
 
     selectAll: () => set({ selectedIds: selectPage(get()).elements.filter((e) => !e.hidden).map((e) => e.id) }),

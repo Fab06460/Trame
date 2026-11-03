@@ -95,7 +95,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | **Fait** (Alt = dupliquer, Maj = axe, ⌘ = suspendre l'aimantation). | — |
 | E16 | Retourner horizontalement / verticalement | M | **Fait** : images (drapeaux `flipX`/`flipY`), formes, icônes et sélections entières, par un seul jeu de boutons « Retourner » (propriétés, sous l'alignement). Le texte change de place sans être retourné (volontaire : un texte en miroir est illisible). | — |
 | E17 | Nom du document modifiable (barre de titre, noms d'export) | S | **Fait** : champ dans la barre d'outils (`docName.ts`, `DocName.tsx`) ; nom des exports et de « Enregistrer sous » ; annulable. | — |
-| E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | | E5 |
+| E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | **Fait** (voir `docs/ARCHITECTURE.md`, « Sélection au clavier et à la souris »). | E5 |
 | E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | | E6 |
 | E20 | Recherche / remplacement de texte dans le document | S | **Fait** (panneau de recherche : `FindPanel.tsx`, `store/find.ts`, `textSearch.ts`). | — |
 | E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | **Listes à puces et numérotées faites** (retrait des lignes suivantes, PDF en vrai texte). Reste : colonnes. | E4 |

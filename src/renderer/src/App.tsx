@@ -103,6 +103,9 @@ export default function App(): React.JSX.Element {
       } else if (mod && e.key.toLowerCase() === 'l') {
         e.preventDefault()
         s.toggleLockSelected()
+      } else if (e.key === 'Tab' && !mod && !e.altKey && (t === document.body || !!t.closest('.canvas-wrap')) && !usePresentation.getState().active) {
+        // Tab / Maj + Tab : élément suivant / précédent ; aux deux bouts on laisse le focus repartir dans l'interface
+        if (s.selectNext(e.shiftKey ? -1 : 1)) e.preventDefault()
       } else if (mod && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         s.selectAll()

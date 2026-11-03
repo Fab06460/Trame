@@ -226,6 +226,8 @@ export const de: Catalog = {
   'prop.flip.v': 'Spiegeln ↕︎',
   'prop.flip.h.title': 'Links ↔ rechts spiegeln (Text bleibt lesbar, er wechselt nur den Platz)',
   'prop.flip.v.title': 'Oben ↔ unten spiegeln (Text bleibt lesbar, er wechselt nur den Platz)',
+  'prop.selectSame': 'Alle vom gleichen Typ auswählen ({count})',
+  'prop.selectSame.title': 'Alle Elemente der Seite vom gleichen Typ wie die Auswahl auswählen',
   'prop.group': 'Gruppieren',
   'prop.ungroup': 'Gruppierung aufheben',
   'prop.type.rect': 'Rechteck',

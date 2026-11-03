@@ -226,6 +226,8 @@ export const en: Catalog = {
   'prop.flip.v': 'Flip ↕︎',
   'prop.flip.h.title': 'Mirror left ↔ right (text stays readable, it only changes place)',
   'prop.flip.v.title': 'Mirror top ↔ bottom (text stays readable, it only changes place)',
+  'prop.selectSame': 'Select all of the same type ({count})',
+  'prop.selectSame.title': 'Select every element on the page of the same type as the selection',
   'prop.group': 'Group',
   'prop.ungroup': 'Ungroup',
   'prop.type.rect': 'Rectangle',

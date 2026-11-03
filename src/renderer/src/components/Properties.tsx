@@ -1,4 +1,5 @@
 import { isFlipExempt } from '@/flip'
+import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
 import { useEditor, selectPage } from '@/store/editor'
 import { allFonts, SYSTEM_FONT } from '@/fonts'
@@ -37,7 +38,7 @@ export function Properties(): React.JSX.Element {
   const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   const selection = page.elements.filter((e) => selectedIds.includes(e.id))
   const grouped = page.elements.some((e) => selectedIds.includes(e.id) && e.groupId)
-  const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, flipSelected, groupSelected, ungroupSelected } =
+  const { updateElement, setBackground, moveLayer, duplicateSelected, removeSelected, toggleLockSelected, beginChange, align, distribute, flipSelected, selectSameType, groupSelected, ungroupSelected } =
     useEditor.getState()
 
   if (!el || !selectedIds.length) {
@@ -70,6 +71,9 @@ export function Properties(): React.JSX.Element {
   }
   const protectedSel = enforced && selection.some((e) => e.protect)
 
+  // tout ce qui est du même type que la sélection (si elle est d'un seul type)
+  const sameType = selection.length && selection.every((e) => e.type === selection[0].type) ? sameTypeIds(page.elements, selection[0]) : []
+
   const layerButtons = (
     <>
       <h3>{t('prop.layers')}</h3>
@@ -86,6 +90,11 @@ export function Properties(): React.JSX.Element {
         <button disabled={protectedSel} onClick={duplicateSelected}>{t('prop.duplicate')}</button>
         <button className="danger" disabled={protectedSel} onClick={removeSelected}>{t('prop.delete')}</button>
       </div>
+      {sameType.length > selectedIds.length && (
+        <button data-action="select-same" title={t('prop.selectSame.title')} onClick={() => selectSameType(selection[0].id)}>
+          {t('prop.selectSame', { count: sameType.length })}
+        </button>
+      )}
     </>
   )
 
