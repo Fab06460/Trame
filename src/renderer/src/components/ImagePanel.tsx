@@ -6,6 +6,7 @@ import { downscaleImage } from '@/photoImport'
 import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
+import { mmToPx, printSetupOf } from '@/printSetup'
 import { useStyleMatch } from '@/store/styleMatch'
 import { RedactDialog } from './RedactDialog'
 import { useLocale, useT } from '@/i18n'
@@ -98,6 +99,34 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
     updateElement(el.id, { src: small, crop: coverCrop(el.width, el.height, size.w, size.h), credit: undefined, pdfSource: undefined, filters: undefined, flipX: undefined, flipY: undefined })
   }
 
+  // arrière-plan : l'image couvre toute la page (et le fond perdu), passe sous tout le reste et se verrouille ; un seul pas d'historique.
+  // C'est un élément ordinaire (aucun nouveau type) : le déverrouiller (⌘L) ou le supprimer le rend à l'usage normal.
+  const useAsBackground = async (): Promise<void> => {
+    if (!el.src) return
+    const size = await new Promise<{ w: number; h: number } | null>((resolve) => {
+      const i = new window.Image()
+      i.onload = () => resolve({ w: i.naturalWidth, h: i.naturalHeight })
+      i.onerror = () => resolve(null)
+      i.src = el.src!
+    })
+    if (!size) return
+    const { pageId } = useEditor.getState()
+    useEditor.getState().editDocument((d) => {
+      const b = mmToPx(printSetupOf(d).bleedMm)
+      const box = { x: -b, y: -b, width: d.width + 2 * b, height: d.height + 2 * b }
+      return {
+        ...d,
+        pages: d.pages.map((p) => {
+          if (p.id !== pageId) return p
+          const target = p.elements.find((e) => e.id === el.id)
+          if (!target) return p
+          const placed: TrameElement = { ...target, ...box, rotation: 0, crop: coverCrop(box.width, box.height, size.w, size.h), flipX: undefined, flipY: undefined, locked: true, name: t('img.background.name') }
+          return { ...p, elements: [placed, ...p.elements.filter((e) => e.id !== el.id)] }
+        })
+      }
+    })
+  }
+
   return (
     <>
       {(columns.length > 0 || el.imageField) && (
@@ -114,6 +143,9 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       )}
       <button data-action="replace-image" title={t('img.replace.title')} onClick={() => void replaceImage()}>
         {t('img.replace')}
+      </button>
+      <button data-action="image-background" title={t('img.background.title')} disabled={!el.src} onClick={() => void useAsBackground()}>
+        {t('img.background')}
       </button>
       <button data-action="redact-open" title={t('redact.open.title')} onClick={() => setRedacting(true)}>
         {t('redact.open')}

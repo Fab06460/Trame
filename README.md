@@ -49,6 +49,8 @@
 - Magic Resize : changer le format de la page en adaptant le contenu (composition conservée et centrée, décors gardés sur leurs bords)
 - Nom du document modifiable (nom des exports et du fichier)
 - **Retourner** (panneau des propriétés, « Retourner ↔︎ / ↕︎ ») : miroir d'une forme, d'une icône, d'une image ou de toute une sélection, autour du milieu de la sélection ; le texte change de place mais reste lisible
+- **Impression professionnelle** (page, sans sélection) : **fond perdu** (0–10 mm), **marge de sécurité** (repère vert dans l'éditeur, avec alerte sur les textes qui en sortent) et **traits de coupe**. « Exporter en PDF » agrandit alors chaque page du fond perdu (le fond et ce qui déborde y sont dessinés), ajoute les traits et renseigne TrimBox / BleedBox ; l'impression directe et les exports image ne changent pas
+- **Arrière-plan image** : « Utiliser comme arrière-plan » sur une image la fait couvrir la page (et le fond perdu), la place sous tout le reste et la verrouille
 - Images : recadrage, miroirs, filtres (luminosité, contraste, saturation, noir et blanc, sépia, flou)
 - Ombres portées et lueurs (l'ombre est une image sous un élément resté vectoriel dans le PDF)
 - Dégradés linéaires et radiaux (formes, rectangles, ellipses), vectoriels dans le PDF

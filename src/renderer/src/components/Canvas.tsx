@@ -22,6 +22,7 @@ import { ZoomControls } from './ZoomControls'
 import { CommentPins } from './CommentPins'
 import { useReview } from '@/store/review'
 import { hitStack, throughTarget } from '@/selection'
+import { mmToPx, printSetupOf, safeBox } from '@/printSetup'
 import type { TrameElement } from '@/types'
 
 const PADDING = 48
@@ -194,6 +195,10 @@ export function Canvas(): React.JSX.Element {
     tr.nodes(nodes)
   }, [selectedIds, page.elements, editing, page.id])
 
+  const printSetup = printSetupOf(doc)
+  const bleedPx = mmToPx(printSetup.bleedMm)
+  const safe = safeBox(doc, printSetup)
+
   const commonProps = (el: TrameElement): Konva.NodeConfig => ({
     id: el.id,
     x: el.x,
@@ -362,8 +367,10 @@ export function Canvas(): React.JSX.Element {
         <Layer>
           <Group x={offX} y={offY} scaleX={scale} scaleY={scale}>
             <Rect
-              width={doc.width}
-              height={doc.height}
+              x={-bleedPx}
+              y={-bleedPx}
+              width={doc.width + 2 * bleedPx}
+              height={doc.height + 2 * bleedPx}
               fill={page.background}
               shadowColor="#000"
               shadowBlur={24}
@@ -376,10 +383,10 @@ export function Canvas(): React.JSX.Element {
             y={offY}
             scaleX={scale}
             scaleY={scale}
-            clipX={0}
-            clipY={0}
-            clipWidth={doc.width}
-            clipHeight={doc.height}
+            clipX={-bleedPx}
+            clipY={-bleedPx}
+            clipWidth={doc.width + 2 * bleedPx}
+            clipHeight={doc.height + 2 * bleedPx}
           >
             {page.elements.filter((el) => !el.hidden).map((el) => {
               const p = commonProps(el)
@@ -447,6 +454,13 @@ export function Canvas(): React.JSX.Element {
               )
             })}
           </Group>
+          {/* fond perdu (trait du bord fini) et marge de sécurité : repères d'édition, absents de tous les exports */}
+          {(bleedPx > 0 || safe) && (
+            <Group x={offX} y={offY} scaleX={scale} scaleY={scale} listening={false}>
+              {bleedPx > 0 && <Rect width={doc.width} height={doc.height} stroke="#e5484d" strokeWidth={1 / scale} dash={[6 / scale, 4 / scale]} />}
+              {safe && settings.guides && <Rect x={safe.x} y={safe.y} width={safe.width} height={safe.height} stroke="#16a34a" strokeWidth={1 / scale} dash={[6 / scale, 4 / scale]} />}
+            </Group>
+          )}
           {/* pastille « ce texte sera exporté en image dans le PDF » : indication d'édition, absente de tous les exports */}
           {page.elements
             .filter((el) => pdfIssues[el.id])

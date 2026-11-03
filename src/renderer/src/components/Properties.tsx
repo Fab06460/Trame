@@ -12,6 +12,7 @@ import { NumberField } from './NumberField'
 import { ImagePanel } from './ImagePanel'
 import { useBrand } from '@/store/brand'
 import { PageSize } from './PageSize'
+import { PrintSetupPanel } from './PrintSetupPanel'
 import { ProtectionControls, TemplateBanner } from './TemplatePanel'
 import { contentLocked, isEnforced } from '@/protection'
 import { LETTER_SPACING, LINE_HEIGHT } from '@/textStyle'
@@ -47,6 +48,7 @@ export function Properties(): React.JSX.Element {
         <TemplateBanner />
         <h3>{t('prop.page')}</h3>
         <PageSize />
+        <PrintSetupPanel />
         <label>
           {t('prop.background')}
           <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />

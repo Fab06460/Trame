@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { mkdtemp, rm, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readFile, readdir, writeFile, copyFile } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -2103,6 +2103,44 @@ try {
   await sleep(300)
   const insideText = await run(`document.querySelector('.panel h3')?.textContent ?? ''`)
   check('groupe : un double-clic entre dans le groupe (un seul élément sélectionné)', !insideText.includes('2') && (await field('width')) === 300, `${insideText} / ${await field('width')}`)
+
+  // impression professionnelle : fond perdu et traits de coupe dans le PDF, marge de sécurité, image en arrière-plan
+  await reloadApp()
+  await sleep(500)
+  check('impression : la page propose fond perdu, marge de sécurité et traits de coupe', (await run(`document.querySelector('[data-print-setup]') ? 1 : 0`)) === 1)
+  await click('header.toolbar button', 'Texte')
+  await sleep(400)
+  await setField('x', 5)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check('impression : sans marge de sécurité, aucun texte n\'est signalé', (await run(`document.querySelector('[data-action="select-outside-safe"]') ? 1 : 0`)) === 0)
+  await setField('safeMm', 5)
+  await sleep(300)
+  check('impression : un texte à 5 px du bord sort d\'une marge de 5 mm (signalé)', (await run(`document.querySelector('[data-action="select-outside-safe"]') ? 1 : 0`)) === 1)
+  await clickSel('[data-action="select-outside-safe"]')
+  await sleep(300)
+  check('impression : « le sélectionner » sélectionne ce texte', (await field('x')) === 5, String(await field('x')))
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  await setField('bleedMm', 3)
+  await clickSel('[data-field="cropMarks"]')
+  await sleep(300)
+  const printPdf = await exportPdfText() // les dictionnaires de pages sont dans des flux compressés
+  if (process.env.SMOKE_KEEP_PDF) await copyFile(join(exportsDir, 'Sans titre.pdf'), process.env.SMOKE_KEEP_PDF) // inspection visuelle
+  check('impression : le PDF a un cadre de fin (TrimBox) et un cadre de fond perdu (BleedBox)', printPdf.includes('/TrimBox') && printPdf.includes('/BleedBox'))
+  check('impression : la page du PDF est agrandie du fond perdu et des traits (855,35 pt au lieu de 810)', /\/MediaBox \[\s*0\s+0\s+855\.35/.test(printPdf), (/\/MediaBox[^\]]*\]/.exec(printPdf) ?? [''])[0])
+  await reloadApp()
+  await sleep(500)
+  await setField('bleedMm', 3)
+  await sleep(300)
+  await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(800, 400)) // gauche rouge, droite bleue
+  await click('header.toolbar button', 'Image')
+  await sleep(700)
+  await clickSel('.panel [data-action="image-background"]')
+  await sleep(700)
+  check('arrière-plan : l\'image couvre la page et son fond perdu (X = −11,34, largeur 1 102,68)', Math.abs((await field('x')) + 11.34) < 0.02 && Math.abs((await field('width')) - 1102.68) < 0.02, `${await field('x')} / ${await field('width')}`)
+  png = await exportPng()
+  check('arrière-plan : le coin de la page est rempli par l\'image (rouge)', pngPixel(png, 5, 5)[0] > 180 && pngPixel(png, 5, 5)[1] < 80)
 
   // style d'après une image : palette de l'image choisie, recoloriage d'un rectangle violet, une seule étape d'historique
   await reloadApp()

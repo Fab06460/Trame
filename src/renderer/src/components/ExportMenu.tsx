@@ -54,7 +54,7 @@ async function exportHtmlFile(): Promise<void> {
 
 async function exportPdfFile(): Promise<void> {
   const { doc } = useEditor.getState()
-  const { dataUrl, fallbacks } = await exportPdf(doc)
+  const { dataUrl, fallbacks } = await exportPdf(doc, { printMarks: true })
   const saved = await window.trame.saveExport(dataUrl, `${fileSafeName(doc.name)}.pdf`)
   // On prévient APRÈS l'enregistrement (rien n'est perdu) des textes qui n'ont pas pu être écrits en vrai texte
   const warning = saved ? describeFallbacks(fallbacks, doc.pages.length) : null

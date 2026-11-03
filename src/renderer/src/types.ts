@@ -253,6 +253,8 @@ export interface TrameDocument {
   pages: TramePage[]
   /** cadre (dans la page) où vit la composition d'origine après un ou plusieurs Magic Resize : absent = toute la page. Permet de revenir à un format sans rétrécir le contenu. */
   layoutFrame?: { x: number; y: number; width: number; height: number }
+  /** impression professionnelle : fond perdu, marge de sécurité, traits de coupe (absent = aucun ; voir `printSetup.ts`) */
+  print?: { bleedMm: number; safeMm: number; marks: boolean }
   /** polices ajoutées en ligne utilisées par le document, embarquées pour qu'il s'affiche et s'exporte partout (base64 WOFF2 par variante) */
   fonts?: Record<string, EmbeddedFont>
   /** transition entre pages en présentation (absente = fondu) */

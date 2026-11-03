@@ -16,6 +16,7 @@ import { checkText, type TextIssue } from '@/pdfTextCheck'
 import type { PdfFallback } from '@/pdfFallbacks'
 import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
 import { boundsOf } from '@/geometry'
+import { NO_PRINT_SETUP, cropMarkSegments, pdfPageLayout, printSetupOf } from '@/printSetup'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
 import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
@@ -42,20 +43,40 @@ export interface PdfExportResult {
   fallbacks: PdfFallback[]
 }
 
-export async function exportPdf(doc: TrameDocument): Promise<PdfExportResult> {
+export interface PdfExportOptions {
+  /** applique le fond perdu et les traits de coupe du document (`print`) : réservé au PDF « pour l'imprimeur », pas à l'impression ni aux planches */
+  printMarks?: boolean
+}
+
+export async function exportPdf(doc: TrameDocument, options: PdfExportOptions = {}): Promise<PdfExportResult> {
   const pdf = await PDFDocument.create()
   pdf.registerFontkit(fontkit)
   pdf.setTitle(doc.name)
   pdf.setCreator('Trame')
   const w = doc.width * PT_PER_PX
   const h = doc.height * PT_PER_PX
+  const setup = options.printMarks ? printSetupOf(doc) : NO_PRINT_SETUP
+  const layout = pdfPageLayout(w, h, setup)
   const ctx = new ExportContext(pdf, h, doc.sources)
   for (const [pageIndex, page] of doc.pages.entries()) {
-    const p = pdf.addPage([w, h])
+    const p = pdf.addPage([layout.width, layout.height])
     ctx.page = pageIndex + 1
     const bg = parseColor(page.background)
-    p.drawRectangle({ x: 0, y: 0, width: w, height: h, color: rgb(bg.r, bg.g, bg.b) })
+    const m = layout.margin
+    const b = layout.bleed
+    if (m > 0) {
+      p.setTrimBox(m, m, w, h)
+      p.setBleedBox(m - b, m - b, w + 2 * b, h + 2 * b)
+    }
+    // le fond couvre le fond perdu ; tout le contenu est décalé de la marge et rogné au fond perdu (un élément qui déborde loin n'atteint pas les traits)
+    p.drawRectangle({ x: m - b, y: m - b, width: w + 2 * b, height: h + 2 * b, color: rgb(bg.r, bg.g, bg.b) })
+    if (m > 0) p.pushOperators(pushGraphicsState(), concatTransformationMatrix(1, 0, 0, 1, m, m), moveTo(-b, -b), lineTo(w + b, -b), lineTo(w + b, h + b), lineTo(-b, h + b), closePath(), clip(), endPath())
     for (const el of page.elements) if (!el.hidden) await ctx.drawElement(p, el) // un calque masqué n'est jamais exporté
+    if (m > 0) p.pushOperators(popGraphicsState())
+    if (setup.marks) {
+      // noir en quadrichromie (« registration ») : les traits apparaissent sur toutes les plaques, filet fin
+      for (const [x1, y1, x2, y2] of cropMarkSegments(w, h, layout)) p.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 0.25, color: rgb(0, 0, 0) })
+    }
   }
   return { dataUrl: 'data:application/pdf;base64,' + (await pdf.saveAsBase64()), fallbacks: ctx.fallbacks }
 }

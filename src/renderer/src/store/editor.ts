@@ -22,6 +22,7 @@ import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
 import { flipPatches, isFlipExempt, type FlipAxis } from '@/flip'
 import { sameTypeIds, tabTarget } from '@/selection'
+import { sanitizePrintSetup } from '@/printSetup'
 import type { Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
@@ -121,6 +122,7 @@ export function parseDocument(json: string): TrameDocument {
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
   sanitizeFonts(doc)
   sanitizeFrame(doc)
+  sanitizePrintSetup(doc)
   sanitizeMergeData(doc)
   const transition = cleanTransition(doc.transition)
   if (transition) doc.transition = transition
