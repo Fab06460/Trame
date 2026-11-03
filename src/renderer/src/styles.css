@@ -461,5 +461,11 @@ button.danger { color: #ff7b7b; }
 .pdft-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pdft-actions { display: flex; gap: 2px; justify-content: space-between; }
 .pdft-actions button { padding: 2px 5px; font-size: 12px; }
-.cloud-preview { display: block; max-width: 100%; align-self: center; border: 1px solid var(--border); border-radius: 6px; }
-.modal.cloud-dialog { width: min(640px, calc(100vw - 32px)); }
+.cloud-preview { display: block; width: auto; height: auto; max-width: 100%; max-height: 200px; align-self: center; border: 1px solid var(--border); border-radius: 6px; }
+.modal.cloud-dialog { width: min(640px, calc(100vw - 32px)); gap: 8px; }
+/* le champ ne doit jamais s'écraser quand la fenêtre est basse : c'est la boîte qui défile, pas lui */
+.cloud-dialog textarea.text-field { flex: none; display: block; width: 100%; box-sizing: border-box; min-height: 96px; resize: vertical; line-height: 1.4; }
+.cloud-dialog .cloud-exclude { display: flex; align-items: center; gap: 8px; }
+.cloud-dialog .cloud-exclude input { flex: 1; min-width: 0; }
+.cloud-dialog .row { flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.cloud-dialog .row label { display: inline-flex; align-items: center; gap: 8px; }

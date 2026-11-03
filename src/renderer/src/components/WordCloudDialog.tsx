@@ -116,7 +116,7 @@ function Cloud({ onClose }: { onClose: () => void }): React.JSX.Element {
         <textarea
           className="text-field"
           data-field="cloudText"
-          rows={6}
+          rows={4}
           maxLength={MAX_CLOUD_INPUT}
           placeholder={t('cloud.placeholder')}
           value={input}
@@ -156,7 +156,7 @@ function Cloud({ onClose }: { onClose: () => void }): React.JSX.Element {
           </label>
           <button data-action="cloud-shuffle" title={t('cloud.shuffle.title')} onClick={() => setSeed((s) => s + 1)}>{t('cloud.shuffle')}</button>
         </div>
-        <label>
+        <label className="cloud-exclude">
           {t('cloud.exclude')}
           <input type="text" className="text-field" data-field="cloudExclude" placeholder={t('cloud.exclude.placeholder')} value={exclude} onChange={(e) => setExclude(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
         </label>
