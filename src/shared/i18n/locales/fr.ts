@@ -1323,7 +1323,11 @@ export const fr = {
   'cloud.shuffle.title': 'Place les mots autrement',
   'cloud.exclude': 'Mots à exclure',
   'cloud.exclude.placeholder': 'séparés par des virgules',
-  'cloud.insert': 'Insérer'
+  'cloud.insert': 'Insérer',
+  // Réglages (langue, version, mises à jour)
+  'settings.label': 'Réglages',
+  'settings.title': 'Langue, version et mises à jour',
+  'settings.updateAvailable': 'une mise à jour est proposée'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

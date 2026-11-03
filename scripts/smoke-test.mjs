@@ -1811,8 +1811,21 @@ try {
   // mises à jour (moteur simulé en mode test : aucune requête réseau) : vérifier, télécharger, installer
   await reloadApp()
   await sleep(500)
-  await clickSel('[data-action="update-open"]')
   const appVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8')).version
+  // réglages : bouton fixe au bas de la colonne d'icônes (hors du contenu qui défile), fenêtre avec la langue et la version
+  const settingsGeo = await run(`(() => { const b = document.querySelector('[data-action="settings-open"]'); if (!b) return null; const r = b.getBoundingClientRect(); const rev = document.querySelector('.side-tab[data-tab="review"]').getBoundingClientRect(); return { inRail: !!b.closest('.side-rail'), inContent: !!b.closest('.side-content'), below: r.top >= rev.bottom, oldFooter: !!document.querySelector('.sidebar-footer, .sidebar-version') } })()`)
+  check("réglages : le bouton est dans la colonne d'icônes (pas dans le contenu qui défile), sous les onglets, et l'ancien pied a disparu", !!settingsGeo && settingsGeo.inRail && !settingsGeo.inContent && settingsGeo.below && !settingsGeo.oldFooter, JSON.stringify(settingsGeo))
+  check('réglages : la fenêtre est fermée au départ', (await nBrand('[data-settings-popup]')) === 0)
+  await clickSel('[data-action="settings-open"]')
+  await sleep(300)
+  check('réglages : la fenêtre propose la langue et la version, entièrement visible', (await nBrand('[data-settings-popup] [data-field="language"]')) === 1 && (await run(`document.querySelector('[data-settings-popup] [data-action="update-open"]')?.innerText ?? ''`)).includes(appVersion) && (await run(`(() => { const r = document.querySelector('[data-settings-popup]').getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })()`)) === true)
+  if (process.env.SMOKE_SETTINGS_SHOT) await writeFile(process.env.SMOKE_SETTINGS_SHOT, Buffer.from((await cdp('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
+  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
+  await sleep(200)
+  check('réglages : Échap ferme la fenêtre', (await nBrand('[data-settings-popup]')) === 0)
+  await clickSel('[data-action="settings-open"]')
+  await sleep(250)
+  await clickSel('[data-action="update-open"]')
   check('mises à jour : la fenêtre affiche la version installée et le mode test', await waitFor(async () => (await nBrand('[data-update-dialog]')) === 1) && (await run(`document.querySelector('[data-update-version]').innerText`)).includes(appVersion))
   check('mises à jour : le réglage « rechercher au lancement » est proposé (décoché en mode test)', (await run(`document.querySelector('[data-field="updateAuto"]')?.checked`)) === false)
   await clickSel('[data-action="update-check"]')
@@ -3318,11 +3331,16 @@ try {
   await reloadApp()
   const uiText = () => run(`[...document.querySelectorAll('header.toolbar button')].map((b) => b.textContent).join('|') + '#' + [...document.querySelectorAll('.sidebar .tabs button')].map((b) => b.textContent).join('|')`)
   const setLanguage = async (code) => {
+    // le sélecteur est dans la fenêtre « Réglages » : on l'ouvre si besoin
+    await run(`(() => { if (!document.querySelector('[data-field="language"]')) document.querySelector('[data-action="settings-open"]')?.click() })()`)
+    await sleep(200)
     const ok = await run(`(() => { const s = document.querySelector('[data-field="language"]'); if (!s) return false; Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(code)}); s.dispatchEvent(new Event('change', { bubbles: true })); return true })()`)
     await sleep(400)
     return ok
   }
   check('langue : français au lancement (TRAME_LANG=fr)', (await uiText()).includes('Enregistrer') && (await run('document.documentElement.lang')) === 'fr')
+  await run(`(() => { if (!document.querySelector('[data-field="language"]')) document.querySelector('[data-action="settings-open"]')?.click() })()`) // le sélecteur est dans la fenêtre « Réglages »
+  await sleep(300)
   check('langue : le sélecteur propose les quatre langues, chacune dans son nom', JSON.stringify(await run(`[...document.querySelectorAll('[data-field="language"] option')].map((o) => o.textContent)`)) === JSON.stringify(['Français', 'English', 'Deutsch', 'Español']))
   for (const [code, save, present, tab] of [['en', 'Save', 'Present', 'Templates'], ['de', 'Speichern', 'Präsentieren', 'Vorlagen'], ['es', 'Guardar', 'Presentar', 'Plantillas'], ['fr', 'Enregistrer', 'Présenter', 'Modèles']]) {
     check(`langue ${code} : choisie depuis le sélecteur`, await setLanguage(code))
@@ -3337,6 +3355,7 @@ try {
   await key('Escape')
   await setLanguage('fr')
   check('langue : retour au français (document inchangé : aucune modification déclenchée)', (await uiText()).includes('Enregistrer') && !(await run(`document.title`)).includes('•'))
+  await run(`(() => { if (document.querySelector('[data-settings-popup]')) document.querySelector('[data-action="settings-open"]').click() })()`) // referme la fenêtre « Réglages »
 
   // sortie avec modifications non enregistrées (régression : l'appli restait ouverte sans fenêtre)
   if (process.platform === 'darwin') {

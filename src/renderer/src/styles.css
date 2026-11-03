@@ -58,7 +58,15 @@ button.danger { color: #ff7b7b; }
 .add-page { width: 56px; height: 56px; font-size: 22px; align-self: center; flex: none; }
 .sidebar { width: 100%; flex: none; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: row; min-height: 0; overflow: hidden; }
 .side-content { flex: 1; min-width: 0; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-.side-rail { flex: none; width: 62px; display: flex; flex-direction: column; gap: 4px; padding: 8px 5px; border-right: 1px solid var(--border); background: rgba(0, 0, 0, 0.16); overflow-y: auto; overflow-x: hidden; }
+.side-rail { flex: none; width: 62px; display: flex; flex-direction: column; padding: 8px 5px; border-right: 1px solid var(--border); background: rgba(0, 0, 0, 0.16); overflow: hidden; }
+/* les onglets défilent si la fenêtre est basse ; le bouton « Réglages » reste fixé en bas */
+.side-tabs { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; overflow-x: hidden; }
+.side-settings { flex: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+.settings-popup { position: fixed; z-index: 70; width: 230px; display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
+.settings-row { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; color: var(--muted); font-size: 12px; }
+.settings-row select { flex: 1; min-width: 0; }
+button.settings-row { background: transparent; border: 0; text-align: left; cursor: pointer; }
+button.settings-row:hover, button.settings-row:focus-visible { background: rgba(124, 92, 255, 0.22); color: var(--text); }
 .side-group { display: flex; flex-direction: column; gap: 2px; }
 .side-group + .side-group { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--border); }
 .side-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; min-width: 0; padding: 7px 2px 6px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--muted); font-size: 10.5px; line-height: 1.1; }
@@ -68,8 +76,6 @@ button.danger { color: #ff7b7b; }
 .side-tab { position: relative; }
 .side-dot { position: absolute; top: 5px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; border: 2px solid var(--panel); box-sizing: content-box; }
 .side-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-footer { margin-top: auto; position: sticky; bottom: -12px; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 8px 0 4px; background: var(--panel); color: var(--muted); font-size: 12px; }
-.sidebar-footer select { flex: 1; min-width: 0; }
 .sidebar h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; background: #1b1c21; font-size: 11px; color: var(--muted); }
@@ -442,9 +448,6 @@ button.danger { color: #ff7b7b; }
 .compare-preview figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 
 /* Mises à jour */
-.sidebar-version { margin-top: auto; background: transparent; border: 0; color: var(--muted); font-size: 12px; text-align: left; padding: 6px 0 0; cursor: pointer; }
-.sidebar-version:hover { color: inherit; text-decoration: underline; }
-.sidebar-version + .sidebar-footer { margin-top: 0; }
 .update-banner { position: fixed; left: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 10px; background: var(--panel, #24252b); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
 
 .redact-canvas { display: block; max-width: 100%; align-self: center; border-radius: 6px; cursor: crosshair; touch-action: none; background: repeating-conic-gradient(#3a3b42 0% 25%, #2c2d33 0% 50%) 50% / 16px 16px; }

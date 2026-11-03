@@ -33,4 +33,4 @@ Ne publiez pas tant que les trois systèmes n'ont pas leurs fichiers : une appli
 ## Vérifier
 
 - `npm run pack` puis `dist/mac-arm64/Trame.app/Contents/Resources/app-update.yml` doit nommer votre dépôt.
-- Installer l'ancienne version, publier la suivante, lancer l'ancienne : « Rechercher maintenant » (Fichier → Mises à jour…, ou le numéro de version au pied de la barre latérale) doit proposer la nouvelle.
+- Installer l'ancienne version, publier la suivante, lancer l'ancienne : « Rechercher maintenant » (Fichier → Mises à jour…, ou ⚙ Réglages → numéro de version) doit proposer la nouvelle.

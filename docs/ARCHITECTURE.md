@@ -497,6 +497,10 @@ Même principe que les graphiques : **pas de nouveau type d'élément**. `qr.ts`
 - **Lecture d'un fichier** : `sanitizeQr` retire la description si le contenu est vide ou dépasse 1 000 caractères, remet les valeurs par défaut pour un niveau ou une couleur invalide ; les deux éléments restent.
 - Vérifié : tests unitaires (grille, repères de position, octets UTF-8, tracé relu rectangle par rectangle, marge, carré, contraste, lecture), **décodage réel** de 16 QR codes (4 contenus × 4 niveaux, accents, emoji, 400 caractères) rastérisés depuis le tracé avec un lecteur indépendant (jsQR, hors dépôt), smoke (insertion, contenu, niveaux, contraste, PDF vectoriel), `npm run fidelity` (cas `qr-code`, 0,00 % de pixels différents) ; QR codes de publipostage (adresses accentuées, rotations 0°, 25°, 90°, 180°, 270°) rastérisés puis décodés avec le même lecteur indépendant : 10 sur 10.
 
+### Réglages (langue, version, mises à jour)
+
+`SettingsMenu.tsx` : bouton ⚙ « Réglages » **hors du contenu du panneau** (il ne défile jamais) : la colonne d'icônes est un conteneur `.side-rail` fait de la liste des onglets (`.side-tabs`, `role="tablist"`, qui défile si la fenêtre est basse) et du bloc `.side-settings` fixé en dessous. Il ouvre une petite fenêtre (`.settings-popup`) avec le sélecteur de langue (`data-field="language"`) et la version installée (`data-action="update-open"`, qui ouvre `UpdateDialog`). La fenêtre est en `position: fixed`, placée d'après le rectangle du bouton (recalculée au redimensionnement) : la barre latérale a `overflow: hidden` et couperait tout ce qui dépasse. Fermeture : clic à l'extérieur ou Échap (`useDismiss`). Un point sur le bouton signale une mise à jour proposée (`available`, `ready`).
+
 ### Nuage de mots
 
 Aucun nouveau type d'élément : le résultat est un **groupe de textes ordinaires** (un par mot, gras, un quart de tour pour les mots verticaux), rendu tel quel par l'éditeur et tous les exports. Le nuage n'est **pas** relié à ses données : une fois inséré, ce sont des textes comme les autres (pour changer de texte, on supprime le groupe et on en crée un autre ; « Annuler » rétablit la page).

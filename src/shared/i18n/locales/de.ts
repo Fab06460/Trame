@@ -1322,5 +1322,9 @@ export const de: Catalog = {
   'cloud.shuffle.title': 'Ordnet die Wörter anders an',
   'cloud.exclude': 'Auszuschließende Wörter',
   'cloud.exclude.placeholder': 'durch Kommas getrennt',
-  'cloud.insert': 'Einfügen'
+  'cloud.insert': 'Einfügen',
+  // Réglages (langue, version, mises à jour)
+  'settings.label': 'Einstellungen',
+  'settings.title': 'Sprache, Version und Updates',
+  'settings.updateAvailable': 'ein Update ist verfügbar'
 }

@@ -62,3 +62,14 @@ export function SideIcon({ tab }: { tab: SidebarTab }): React.JSX.Element {
     </svg>
   )
 }
+
+/** Roue crantée du bouton « Réglages » : même grille 24 × 24 et même trait que les onglets. */
+export function SettingsIcon(): React.JSX.Element {
+  return (
+    <svg className="side-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+      <circle cx="12" cy="12" r="6.3" />
+      <circle cx="12" cy="12" r="2.4" />
+      <path d="M12 3v2.7M12 18.3V21M3 12h2.7M18.3 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9" />
+    </svg>
+  )
+}

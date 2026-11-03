@@ -131,7 +131,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
 | H3 | Correction orthographique | S | Correcteur du système sur macOS (hors-ligne) : à vérifier au moment du développement ; ailleurs les dictionnaires doivent être embarqués. | — |
-| U1 | Déplacer « Trame X.Y.Z · Mises à jour » et le choix de la langue hors du panneau de gauche | S | Aujourd'hui ils sont en bas du contenu du panneau et défilent avec lui : emplacement ni logique ni esthétique. À repenser (pied de panneau fixe, menu ou fenêtre « À propos / Réglages », barre d'état…) avec la question de place pour les futurs réglages ; à décider avec l'utilisateur avant de coder. Touche `Sidebar.tsx`, `LanguageSelect`, `UpdateDialog` et leurs captures dans le smoke test. | — |
+| U1 | Déplacer « Trame X.Y.Z · Mises à jour » et le choix de la langue hors du panneau de gauche | S | ✅ **Fait** : bouton ⚙ « Réglages » fixé au bas de la colonne d'icônes (hors du contenu qui défile), qui ouvre une petite fenêtre avec la langue, la version (→ fenêtre des mises à jour) ; un point signale une mise à jour proposée. Emplacement choisi par l'utilisateur parmi trois (colonne d'icônes, barre d'outils, barre d'état). Place libre pour de futurs réglages. | — |
 
 ### Phase 5 — Vidéo (hors périmètre à court terme)
 

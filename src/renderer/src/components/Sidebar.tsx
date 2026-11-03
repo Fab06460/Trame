@@ -17,7 +17,7 @@ import { PhotosPanel } from './PhotosPanel'
 import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
-import { LanguageSelect } from './LanguageSelect'
+import { SettingsMenu } from './SettingsMenu'
 import { AiPanel } from './AiPanel'
 import { AccessibilityPanel } from './AccessibilityPanel'
 import { ReviewPanel } from './ReviewPanel'
@@ -83,8 +83,9 @@ export function Sidebar(): React.JSX.Element {
 
   return (
     <aside className="sidebar">
-      <nav
-        className="tabs side-rail"
+      <div className="side-rail">
+      <div
+        className="tabs side-tabs"
         role="tablist"
         aria-orientation="vertical"
         aria-label={t('sidebar.tabs')}
@@ -124,7 +125,9 @@ export function Sidebar(): React.JSX.Element {
             ))}
           </div>
         ))}
-      </nav>
+      </div>
+      <SettingsMenu />
+      </div>
 
       <div className="side-content" id="side-panel" role="tabpanel" aria-labelledby={`side-tab-${tab}`}>
 
@@ -247,7 +250,6 @@ export function Sidebar(): React.JSX.Element {
           </section>
         </>
       )}
-      <LanguageSelect />
       </div>
     </aside>
   )
