@@ -32,6 +32,7 @@
 - Seul le **dernier** fichier est ouvert quand plusieurs sont sélectionnés dans le Finder (un document à la fois).
 - Ouvrir un fichier alors que le document courant a des modifications non enregistrées affiche la confirmation habituelle ; si l'utilisateur annule, le fichier envoyé par le Finder est simplement ignoré.
 - Fonctionne avec l'application **installée/empaquetée** ; le mode `npm run dev` n'est pas associé aux `.trame`.
+- **Dépôt d'images sur la page** : seules les images (PNG, JPEG, GIF, WebP, SVG, 40 Mo au plus) sont prises en compte ; un autre fichier (PDF, `.trame`) déposé sur la page est ignoré sans message, tout comme une image illisible. Un GIF animé devient une image fixe. Essayé sur macOS seulement ; le test automatique simule le dépôt.
 
 ## Projets récents
 

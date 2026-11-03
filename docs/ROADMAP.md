@@ -84,7 +84,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E4 | Typographie : espacement des lettres, interligne, souligné, barré, majuscules | M | **Fait.** Konva dessine lettre par lettre avec un interlettrage (pas de crénage) : le PDF fait de même (`Tc`) ; décorations et interligne identiques à Konva, vérifiés par `fidelity` (page 2). Les listes sont E21. | — |
 | E5 | Panneau Calques : verrouiller, masquer, renommer | M | **Fait** (liste, œil, cadenas, renommage, glisser-déposer, ⌘L). Prérequis des modèles de marque verrouillés. | — |
 | E6 | Guides magnétiques, règles, grille | M | **Fait.** Règles, repères, aimantation (déplacement + côtés au redimensionnement). Logique pure testable (aimantation aux bords/centres). | — |
-| E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | Équivalent hors-ligne des « intégrations » de photos. | — |
+| E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | **Fait** : plusieurs images à la fois, centrées sur le point lâché (`imageDrop.ts`). | — |
 | E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | **Fait en partie** : recadrage (en %), miroirs. Restent : poignées de recadrage sur le canvas, redressement, cadres. Rendu : pixels recadrés/retournés cuits dans un canvas partagé. | — |
 | E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | **Fait** (6 réglages + 6 préréglages), cuits dans l'image, y compris pour le PDF. | E8 |
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | **Fait** (toutes les pages : elles partagent le format du document). Voir `docs/ARCHITECTURE.md`. | — |

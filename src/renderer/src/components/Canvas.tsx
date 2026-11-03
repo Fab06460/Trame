@@ -6,6 +6,7 @@ import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { pathSceneFunc, boxHitFunc } from '@/shapes'
 import { useView } from '@/store/view'
+import { dropImages } from '@/imageDrop'
 import { useColorVision } from '@/store/colorVision'
 import { colorVisionFilter } from '@/readability'
 import { usePdfIssues } from '@/store/pdfIssues'
@@ -154,6 +155,32 @@ export function Canvas(): React.JSX.Element {
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
+
+  // Dépôt d'images depuis le Finder / l'explorateur : insérées là où on les lâche
+  useEffect(() => {
+    const el = wrapRef.current!
+    const hasFiles = (e: DragEvent): boolean => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files')
+    const onOver = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      e.dataTransfer!.dropEffect = 'copy'
+    }
+    const onDrop = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      const files = [...(e.dataTransfer?.files ?? [])]
+      const rect = el.getBoundingClientRect()
+      const { doc: d } = useEditor.getState()
+      const at = { x: (e.clientX - rect.left - offX) / scale, y: (e.clientY - rect.top - offY) / scale }
+      void dropImages(files, at, d)
+    }
+    el.addEventListener('dragover', onOver)
+    el.addEventListener('drop', onDrop)
+    return () => {
+      el.removeEventListener('dragover', onOver)
+      el.removeEventListener('drop', onDrop)
+    }
+  }, [offX, offY, scale])
 
   // Attache le transformer au nœud sélectionné
   useEffect(() => {

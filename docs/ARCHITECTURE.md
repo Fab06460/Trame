@@ -333,6 +333,10 @@ La taille et les espacements se saisissent dans des champs numériques validés 
 - **Masqué** (`hidden`) : l'élément n'est ni dessiné dans l'éditeur, ni exporté (PNG/JPG, PDF), ni affiché dans les miniatures, ni cible d'aimantation, ni pris par le lasso ou « tout sélectionner », et son éventuel avertissement de PDF disparaît. La règle est appliquée aux **quatre rendus** (voir plus haut) ; elle est vérifiée de bout en bout par l'export d'un PNG dont on lit un pixel et par l'inspection du flux du PDF.
 - **Verrouillé** (`locked`) : la **position** est verrouillée, pas le style. L'élément ne se glisse plus (`draggable` faux ; dans une sélection mixte, les verrouillés restent en place), n'a plus de poignées (cadre en pointillés), ne s'aligne ni ne se répartit, ne se déplace plus au clavier ni par les champs X/Y/L/H/rotation, et ne se supprime plus (il reste sélectionné). Les gardes sont **dans le store** (`movable()` : `nudgeSelected`, `align`, `distribute`, `removeSelected`), pas seulement dans l'interface, pour qu'aucun raccourci ne les contourne. Couleur, police, opacité et contenu du texte restent modifiables. ⌘L (ou le bouton « Verrouiller ») bascule la sélection ; `setLayerFlag` retire la clé du fichier quand l'indicateur est levé.
 
+## Dépôt d'images
+
+Le canvas (`.canvas-wrap`) accepte les fichiers déposés depuis le Finder ou l'explorateur (`dragover` / `drop` natifs, sans IPC : le fichier est lu par `FileReader`). `imageDrop.ts` ne garde que les images (PNG, JPEG, GIF, WebP, SVG, 40 Mo au plus), réduit les grandes (`downscaleImage`, comme les photos en ligne) et les insère par `insertImage` **centrées sur le point lâché** (converti en coordonnées de page, ramené dans la page) ; plusieurs fichiers se décalent en cascade. Un fichier illisible ou d'un autre type est ignoré sans message.
+
 ## Règles, repères et aimantation
 
 **Repères** (`page.guides`) : lignes d'alignement posées par l'utilisateur, **dans le document** (donc enregistrées, annulables, propres à chaque page, copiées avec la page). Modifiés par `updateGuides(f, commit?)` (même règle d'historique que le reste : `beginChange()` puis `commit=false` pour un geste continu).

@@ -1970,6 +1970,22 @@ try {
   check('nuage de mots : la boîte se ferme et la page reçoit 5 textes', (await run(`document.querySelector('[data-cloud-dialog]') ? 1 : 0`)) === 0 && (await layerCount()) === cloudBefore + 5)
   check('nuage de mots : le calque porte le mot « Soleil »', (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Soleil'))`)) === true)
 
+  // dépôt d'images sur le canvas : insérées là où on les lâche, un fichier qui n'est pas une image est ignoré
+  const dropAt = (dx, name, type, b64) =>
+    run(`(() => { const w = document.querySelector('.canvas-wrap'); const r = w.getBoundingClientRect(); const bin = atob(${JSON.stringify(b64)}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const dt = new DataTransfer(); dt.items.add(new File([a], ${JSON.stringify(name)}, { type: ${JSON.stringify(type)} })); const o = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + r.width / 2 + ${dx}, clientY: r.top + r.height / 2 }; const over = new DragEvent('dragover', o); w.dispatchEvent(over); w.dispatchEvent(new DragEvent('drop', o)); return over.defaultPrevented })()`)
+  const dropBefore = await layerCount()
+  const dropPng = testPng(200, 100).toString('base64')
+  check('dépôt : le survol d\'un fichier est accepté (le navigateur n\'ouvre pas le fichier)', (await dropAt(-150, 'a.png', 'image/png', dropPng)) === true)
+  await sleep(600)
+  const leftX = await field('x')
+  check('dépôt d\'une image : un calque de plus, sélectionné, à sa taille (200 × 100)', (await layerCount()) === dropBefore + 1 && (await field('width')) === 200 && (await field('height')) === 100, `${await layerCount()} / ${await field('width')}`)
+  await dropAt(150, 'b.png', 'image/png', dropPng)
+  await sleep(600)
+  check('dépôt : lâchée plus à droite, la seconde image est plus à droite', (await layerCount()) === dropBefore + 2 && (await field('x')) > leftX + 50, `${leftX} → ${await field('x')}`)
+  await dropAt(0, 'notes.pdf', 'application/pdf', dropPng)
+  await sleep(500)
+  check('dépôt d\'un fichier qui n\'est pas une image : ignoré', (await layerCount()) === dropBefore + 2)
+
   // le document porte une bulle non enregistrée : on repart d'un document neuf pour ouvrir un modèle sans question
   await reloadApp()
   await sleep(500)
