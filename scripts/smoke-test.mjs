@@ -881,18 +881,17 @@ try {
   check('PDF sans retouche : l\'image d\'origine (PNG) est embarquée telle quelle', lastPdfRaw.includes('/Subtype /Image'))
 
   // miroir horizontal
-  await clickSel('.panel [data-flip="x"]')
+  await clickSel('.panel [data-action="flip-h"]')
   await sleep(500)
   png = await exportPng()
   check('miroir horizontal : gauche bleue, droite rouge, carré vert en haut à droite', isBlue(pngPixel(png, ...L)) && isRed(pngPixel(png, ...R)) && isGreen(pngPixel(png, 840, 400)) && !isGreen(pngPixel(png, ...CORNER)))
-  check('le bouton miroir est enfoncé', (await run(`document.querySelector('.panel [data-flip="x"]').getAttribute('aria-pressed')`)) === 'true')
-  await clickSel('.panel [data-flip="x"]')
+  await clickSel('.panel [data-action="flip-h"]')
   await sleep(400)
-  await clickSel('.panel [data-flip="y"]')
+  await clickSel('.panel [data-action="flip-v"]')
   await sleep(500)
   png = await exportPng()
   check('miroir vertical : le carré vert passe en bas à gauche', isGreen(pngPixel(png, 240, 680)) && !isGreen(pngPixel(png, ...CORNER)))
-  await clickSel('.panel [data-flip="y"]')
+  await clickSel('.panel [data-action="flip-v"]')
   await sleep(400)
 
   // recadrage : on retire 50 % à gauche → seule la moitié bleue reste, au même endroit

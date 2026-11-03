@@ -122,14 +122,6 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
         {t('style.open')}
       </button>
       {redacting && <RedactDialog el={el} onClose={() => setRedacting(false)} />}
-      <div className="row">
-        <button data-flip="x" aria-pressed={!!el.flipX} className={el.flipX ? 'active' : ''} title={t('img.flipX')} onClick={() => updateElement(el.id, { flipX: el.flipX ? undefined : true })}>
-          ⇋
-        </button>
-        <button data-flip="y" aria-pressed={!!el.flipY} className={el.flipY ? 'active' : ''} title={t('img.flipY')} onClick={() => updateElement(el.id, { flipY: el.flipY ? undefined : true })}>
-          ⇅
-        </button>
-      </div>
 
       <h4>{t('alt.label')}</h4>
       <textarea

@@ -326,8 +326,6 @@ export const en: Catalog = {
   'img.blur': 'Blur',
   'img.replace.title': 'Keeps the position and size of this image; the new one is cropped to cover it',
   'img.replace': 'Replace the image…',
-  'img.flipX': 'Flip horizontally',
-  'img.flipY': 'Flip vertically',
   'img.credit': 'Credit',
   'img.credit.copy': 'Copy the credit',
   'img.crop': 'Crop',

@@ -326,8 +326,6 @@ export const de: Catalog = {
   'img.blur': 'Weichzeichnung',
   'img.replace.title': 'Behält Position und Größe dieses Bildes; das neue wird zugeschnitten, um es zu füllen',
   'img.replace': 'Bild ersetzen …',
-  'img.flipX': 'Horizontal spiegeln',
-  'img.flipY': 'Vertikal spiegeln',
   'img.credit': 'Bildnachweis',
   'img.credit.copy': 'Bildnachweis kopieren',
   'img.crop': 'Zuschneiden',

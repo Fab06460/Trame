@@ -326,8 +326,6 @@ export const es: Catalog = {
   'img.blur': 'Desenfoque',
   'img.replace.title': 'Conserva la posición y el tamaño de esta imagen; la nueva se recorta para cubrirla',
   'img.replace': 'Reemplazar la imagen…',
-  'img.flipX': 'Voltear horizontalmente',
-  'img.flipY': 'Voltear verticalmente',
   'img.credit': 'Crédito',
   'img.credit.copy': 'Copiar el crédito',
   'img.crop': 'Recorte',

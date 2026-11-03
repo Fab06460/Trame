@@ -327,8 +327,6 @@ export const fr = {
   'img.blur': 'Flou',
   'img.replace.title': 'Garde la place et la taille de cette image ; la nouvelle est recadrée pour la couvrir',
   'img.replace': 'Remplacer l\'image…',
-  'img.flipX': 'Retourner horizontalement',
-  'img.flipY': 'Retourner verticalement',
   'img.credit': 'Crédit',
   'img.credit.copy': 'Copier le crédit',
   'img.crop': 'Recadrage',
