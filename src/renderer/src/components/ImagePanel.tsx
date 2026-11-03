@@ -6,6 +6,7 @@ import { downscaleImage } from '@/photoImport'
 import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
+import { useStyleMatch } from '@/store/styleMatch'
 import { RedactDialog } from './RedactDialog'
 import { useLocale, useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
@@ -116,6 +117,9 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       </button>
       <button data-action="redact-open" title={t('redact.open.title')} onClick={() => setRedacting(true)}>
         {t('redact.open')}
+      </button>
+      <button data-action="style-open" title={t('style.open.title')} disabled={!el.src} onClick={() => useStyleMatch.getState().show(el.src ?? null)}>
+        {t('style.open')}
       </button>
       {redacting && <RedactDialog el={el} onClose={() => setRedacting(false)} />}
       <div className="row">

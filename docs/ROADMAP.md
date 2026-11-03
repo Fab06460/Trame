@@ -49,7 +49,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Magic Edit / Magic Eraser | 🚫 Écarté | **Écarté** (IA). Effacer un objet = « inpainting » ; la partie générative de Magic Edit est de toute façon en ligne. | — |
 | Magic Expand | ⛔ Hors-ligne impossible | Étendre une photo suppose de **générer** du contenu : modèle génératif distant. | — |
 | Magic Grab | 🚫 Écarté | **Écarté** (IA : segmentation d'image). | — |
-| Style Match | ⬜ À faire | Version algorithmique hors-ligne possible : extraire la palette d'une image et recolorier le design, sans IA générative. | C4 |
+| Style Match | ✅ Fait (version algorithmique) | Palette d'une image et recoloriage du design, sans IA générative (`palette.ts`, `recolor.ts`). Pas de proposition de mise en page ni de polices : seulement les couleurs. | C4 |
 
 ### 4. Image de marque et collaboration
 
@@ -107,7 +107,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | C1 | Bibliothèque d'icônes et d'illustrations embarquée, avec recherche | M | **Icônes faites** : 1 434 icônes Phosphor (MIT), contour ou plein, onglet Icônes avec recherche en français/anglais et catégories (voir `docs/ARCHITECTURE.md`). **Illustrations** (dessins en couleurs) : non. | E1 |
 | C2 | Davantage de modèles (CV, flyers, logos, cartes de visite, bannières, affiches) + packs de modèles importables/exportables | M | Contenu à produire ; format de pack = fichier. | — |
 | C3 | Bibliothèque de médias locale (dossier surveillé, étiquettes, recherche) | M |  | E7 |
-| C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | Algorithme (quantification de couleurs), sans IA. | E11 |
+| C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | **Fait** : fenêtre « Style d'après une image » (3 à 8 couleurs, kit de marque, aperçu avant / après, page ou toutes les pages). Voir `docs/ARCHITECTURE.md`. | E11 |
 | C5 | Kit de marque local : couleurs, logos, polices (plusieurs kits) | M | **Fait pour un kit** (voir `docs/ARCHITECTURE.md`). | E11, E12 |
 | C6 | Modèles de marque : éléments verrouillés / modifiables | M | **Fait** : éléments figés ou à remplir, modification du modèle, remplacement d'image. Aide à la cohérence, pas une sécurité. | E5, C5 |
 | C7 | Graphiques (barres, courbes, secteurs) et tableaux à partir de données collées ou CSV | L | Nouveau type d'élément : 4 rendus à écrire. | — |

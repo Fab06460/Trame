@@ -1358,5 +1358,27 @@ export const en: Catalog = {
   'icons.cat.people': 'People',
   'icons.cat.system': 'System',
   'icons.cat.tech': 'Technology',
-  'icons.cat.weather': 'Weather'
+  'icons.cat.weather': 'Weather',
+  // Style d'après une image (palette et recoloriage)
+  'style.open': 'Style from this image…',
+  'style.open.title': 'Extract the image\'s colors and recolor the design with them',
+  'style.brand': 'Colors from an image…',
+  'style.title': 'Style from an image',
+  'style.hint': 'Extracts the dominant colors of an image and recolors the design with them: light stays light, dark stays dark, and readable text stays readable.',
+  'style.choose': 'Choose an image…',
+  'style.count': 'Number of colors',
+  'style.empty': 'No color found in this image.',
+  'style.swatch': '{color} ({share}%) — click to leave it out or bring it back',
+  'style.addKit': 'Add to brand kit',
+  'style.inKit': 'Already in the kit',
+  'style.scope': 'Recolor',
+  'style.scope.page': 'The current page',
+  'style.scope.all': 'All pages',
+  'style.neutrals': 'Keep white, black and gray',
+  'style.background': 'Also recolor page backgrounds',
+  'style.before': 'Before',
+  'style.after': 'After',
+  'style.nothing': 'Nothing to recolor with these settings.',
+  'style.summary': { one: '{count} element recolored', other: '{count} elements recolored' },
+  'style.apply': 'Recolor the design'
 }

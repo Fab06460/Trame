@@ -1358,5 +1358,27 @@ export const de: Catalog = {
   'icons.cat.people': 'Personen',
   'icons.cat.system': 'System',
   'icons.cat.tech': 'Technik',
-  'icons.cat.weather': 'Wetter'
+  'icons.cat.weather': 'Wetter',
+  // Style d'après une image (palette et recoloriage)
+  'style.open': 'Stil aus diesem Bild …',
+  'style.open.title': 'Die Farben des Bildes auslesen und das Design damit umfärben',
+  'style.brand': 'Farben aus einem Bild …',
+  'style.title': 'Stil aus einem Bild',
+  'style.hint': 'Liest die vorherrschenden Farben eines Bildes aus und färbt das Design damit um: Helles bleibt hell, Dunkles bleibt dunkel, lesbarer Text bleibt lesbar.',
+  'style.choose': 'Bild auswählen …',
+  'style.count': 'Anzahl der Farben',
+  'style.empty': 'In diesem Bild wurde keine Farbe gefunden.',
+  'style.swatch': '{color} ({share} %) — klicken, um sie wegzulassen oder wieder aufzunehmen',
+  'style.addKit': 'Zum Markenkit hinzufügen',
+  'style.inKit': 'Schon im Kit',
+  'style.scope': 'Umfärben',
+  'style.scope.page': 'Die aktuelle Seite',
+  'style.scope.all': 'Alle Seiten',
+  'style.neutrals': 'Weiß, Schwarz und Grau beibehalten',
+  'style.background': 'Auch Seitenhintergründe umfärben',
+  'style.before': 'Vorher',
+  'style.after': 'Nachher',
+  'style.nothing': 'Mit diesen Einstellungen gibt es nichts umzufärben.',
+  'style.summary': { one: '{count} Element umgefärbt', other: '{count} Elemente umgefärbt' },
+  'style.apply': 'Design umfärben'
 }

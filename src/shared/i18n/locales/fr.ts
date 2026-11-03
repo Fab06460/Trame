@@ -1359,7 +1359,29 @@ export const fr = {
   'icons.cat.people': 'Personnes',
   'icons.cat.system': 'Système',
   'icons.cat.tech': 'Technologie',
-  'icons.cat.weather': 'Météo'
+  'icons.cat.weather': 'Météo',
+  // Style d'après une image (palette et recoloriage)
+  'style.open': 'Style d\'après cette image…',
+  'style.open.title': 'Extraire les couleurs de l\'image et recolorer le design avec elles',
+  'style.brand': 'Couleurs d\'après une image…',
+  'style.title': 'Style d\'après une image',
+  'style.hint': 'Extrait les couleurs dominantes d\'une image et recolore le design avec elles : le clair reste clair, le sombre reste sombre, et un texte lisible le reste.',
+  'style.choose': 'Choisir une image…',
+  'style.count': 'Nombre de couleurs',
+  'style.empty': 'Aucune couleur trouvée dans cette image.',
+  'style.swatch': '{color} ({share} %) — cliquer pour l\'écarter ou la reprendre',
+  'style.addKit': 'Ajouter au kit de marque',
+  'style.inKit': 'Déjà dans le kit',
+  'style.scope': 'Recolorer',
+  'style.scope.page': 'La page courante',
+  'style.scope.all': 'Toutes les pages',
+  'style.neutrals': 'Garder blanc, noir et gris',
+  'style.background': 'Recolorer aussi le fond des pages',
+  'style.before': 'Avant',
+  'style.after': 'Après',
+  'style.nothing': 'Rien à recolorer avec ces réglages.',
+  'style.summary': { one: '{count} élément recoloré', other: '{count} éléments recolorés' },
+  'style.apply': 'Recolorer le design'
 } as const satisfies Record<string, Message>
 
 export type MessageKey = keyof typeof fr

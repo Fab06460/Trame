@@ -5,6 +5,7 @@ import { MAX_COLORS, MAX_FONTS, MAX_LOGOS } from '@/brandKit'
 import { applyColor, applyFont, pickScreenColor, placeLogo } from '@/brandActions'
 import { fontName, useBrand } from '@/store/brand'
 import { useT } from '@/i18n'
+import { useStyleMatch } from '@/store/styleMatch'
 
 /** Pastille de couleur : un clic l'applique ; la croix (si `onRemove`) la retire du kit. */
 function Swatch({ color, kind, onRemove }: { color: string; kind: 'brand' | 'recent'; onRemove?: () => void }): React.JSX.Element {
@@ -51,6 +52,7 @@ export function BrandPanel(): React.JSX.Element {
           ))}
           {kit.colors.length === 0 && <p className="hint">{t('brand.colors.empty')}</p>}
         </div>
+        <button data-action="style-open-brand" title={t('style.open.title')} onClick={() => useStyleMatch.getState().show()}>{t('style.brand')}</button>
         <div className="row">
           <input type="color" data-field="brandColor" value={color} onChange={(e) => setColor(e.target.value)} aria-label={t('brand.color.add.label')} />
           <button data-action="brand-add-color" disabled={kit.colors.length >= MAX_COLORS} onClick={() => brand.addColor(color)}>

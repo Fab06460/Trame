@@ -1358,5 +1358,27 @@ export const es: Catalog = {
   'icons.cat.people': 'Personas',
   'icons.cat.system': 'Sistema',
   'icons.cat.tech': 'Tecnología',
-  'icons.cat.weather': 'Tiempo'
+  'icons.cat.weather': 'Tiempo',
+  // Style d'après une image (palette et recoloriage)
+  'style.open': 'Estilo a partir de esta imagen…',
+  'style.open.title': 'Extraer los colores de la imagen y recolorear el diseño con ellos',
+  'style.brand': 'Colores a partir de una imagen…',
+  'style.title': 'Estilo a partir de una imagen',
+  'style.hint': 'Extrae los colores dominantes de una imagen y recolorea el diseño con ellos: lo claro sigue claro, lo oscuro sigue oscuro y el texto legible sigue siéndolo.',
+  'style.choose': 'Elegir una imagen…',
+  'style.count': 'Número de colores',
+  'style.empty': 'No se encontró ningún color en esta imagen.',
+  'style.swatch': '{color} ({share} %) — clic para descartarlo o recuperarlo',
+  'style.addKit': 'Añadir al kit de marca',
+  'style.inKit': 'Ya está en el kit',
+  'style.scope': 'Recolorear',
+  'style.scope.page': 'La página actual',
+  'style.scope.all': 'Todas las páginas',
+  'style.neutrals': 'Conservar blanco, negro y gris',
+  'style.background': 'Recolorear también el fondo de las páginas',
+  'style.before': 'Antes',
+  'style.after': 'Después',
+  'style.nothing': 'Nada que recolorear con estos ajustes.',
+  'style.summary': { one: '{count} elemento recoloreado', other: '{count} elementos recoloreados' },
+  'style.apply': 'Recolorear el diseño'
 }
