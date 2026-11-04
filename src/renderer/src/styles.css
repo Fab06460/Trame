@@ -200,6 +200,9 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .swatch { width: 28px; height: 28px; padding: 0; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
 .swatch-x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; padding: 0; line-height: 14px; font-size: 12px; border-radius: 50%; display: none; }
 .swatch-wrap:hover .swatch-x, .brand-font:hover .swatch-x { display: block; }
+.swatch-x.swatch-add { right: auto; left: -6px; }
+.swatch-x.swatch-replace { top: auto; bottom: -6px; }
+.swatch.inline { display: inline-block; width: 22px; height: 22px; cursor: default; }
 .swatch-x.static { position: static; width: 22px; height: 22px; margin-left: 4px; border-radius: 6px; }
 .brand-font { display: flex; align-items: center; }
 .brand-font > button:first-child { flex: 1; text-align: left; font-size: 16px; }

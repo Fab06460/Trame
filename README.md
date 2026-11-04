@@ -42,7 +42,7 @@
 - Export SVG de la page courante (textes en vrai texte, polices incorporées) depuis le menu Exporter
 - Export PowerPoint (.pptx) : textes, formes et images modifiables dans PowerPoint, Keynote ou Google Slides
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export)
-- Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette
+- Kit de marque : couleurs, polices et logos enregistrés, couleurs récentes, pipette ; **couleurs du document** (celles qu'il utilise, un clic pour les appliquer, « + » pour les garder dans le kit, « ⇄ » pour en remplacer une partout)
 - **Style d'après une image** : extrait les couleurs dominantes d'une image (bouton sur une image sélectionnée, ou onglet Marque) et recolore la page ou tout le document avec elles — le clair reste clair, le sombre reste sombre, un texte lisible le reste ; les couleurs se gardent dans le kit de marque
 - Listes à puces et numérotées (retrait des lignes suivantes, texte vectoriel dans le PDF)
 - Modèles de marque verrouillés : éléments figés ou à remplir, remplacement d'image en gardant la place

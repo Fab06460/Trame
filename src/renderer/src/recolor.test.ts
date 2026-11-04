@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, parseHex } from '@/accessibility'
-import { buildMapping, collectColors, normalizeHex, recolorDoc } from '@/recolor'
+import { buildMapping, collectColors, normalizeHex, recolorDoc, replaceColor } from '@/recolor'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 const el = (over: Partial<TrameElement> = {}): TrameElement => ({ id: 'a', type: 'rect', x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1, fill: '#d62828', ...over })
@@ -149,5 +149,28 @@ describe('recoloriage', () => {
     const d = doc([page('p', [el({ id: 't', type: 'text', text: 'Pâle', fontSize: 40, fill: '#f5c040', x: 10, y: 10, width: 300, height: 60 })], '#fcbf49')])
     const r = recolorDoc(d, m, { pageIds: all(d), ...OPTS })
     expect(r.doc.pages[0].elements[0].fill).toBe('#1d4a38')
+  })
+})
+
+describe('remplacer une couleur partout', () => {
+  it('change remplissages, contours, dégradés, ombres et fonds de toutes les pages', () => {
+    const d = doc([
+      page('p', [el({ id: '1', fill: '#D62828', stroke: '#d62828', strokeWidth: 2 }), el({ id: '2', fill: '#003049' })], '#d62828'),
+      page('q', [el({ id: '3', gradient: { type: 'linear', from: '#d62828', to: '#003049', angle: 0 } }), el({ id: '4', fill: '#003049', shadow: { color: '#d62828', blur: 4, offsetX: 1, offsetY: 1, opacity: 0.5 } })])
+    ])
+    const r = replaceColor(d, '#d62828', '#00ff00', false)
+    expect(r.doc.pages[0].background).toBe('#00ff00')
+    expect(r.doc.pages[0].elements.map((e) => e.fill)).toEqual(['#00ff00', '#003049'])
+    expect(r.doc.pages[0].elements[0].stroke).toBe('#00ff00')
+    expect(r.doc.pages[1].elements[0].gradient).toMatchObject({ from: '#00ff00', to: '#003049' })
+    expect(r.doc.pages[1].elements[1].shadow?.color).toBe('#00ff00')
+    expect(collectColors(r.doc, all(r.doc)).map((c) => c.color)).not.toContain('#d62828')
+  })
+
+  it('même couleur, couleur invalide ou absente : document inchangé', () => {
+    const d = doc([page('p', [el({ fill: '#d62828' })])])
+    expect(replaceColor(d, '#d62828', '#D62828', false).doc).toBe(d)
+    expect(replaceColor(d, '#d62828', 'rouge', false).doc).toBe(d)
+    expect(replaceColor(d, '#123456', '#00ff00', false).doc).toBe(d)
   })
 })

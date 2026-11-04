@@ -164,3 +164,11 @@ export function recolorDoc(doc: TrameDocument, mapping: ReadonlyMap<string, stri
   })
   return changed === 0 && pages.every((p, i) => p === doc.pages[i]) ? { doc, changed: 0 } : { doc: { ...doc, pages }, changed }
 }
+
+/** Remplace une couleur par une autre partout dans le document (toutes les pages, fonds compris). Même document s'il n'y a rien à changer. */
+export function replaceColor(doc: TrameDocument, from: string, to: string, enforced: boolean): { doc: TrameDocument; changed: number } {
+  const a = normalizeHex(from)
+  const b = normalizeHex(to)
+  if (!a || !b || a === b) return { doc, changed: 0 }
+  return recolorDoc(doc, new Map([[a, b]]), { pageIds: new Set(doc.pages.map((p) => p.id)), enforced, background: true })
+}
