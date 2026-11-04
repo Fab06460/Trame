@@ -79,6 +79,10 @@ export function CropHandles({ el, offX, offY, scale }: { el: TrameElement; offX:
           onDragEnd={(e) => {
             e.cancelBubble = true
             start.current = null
+            // la poignée revient sur son bord / son coin de l'image recadrée (le recadrage peut avoir été limité, ou la boîte avoir changé de taille)
+            const id = el.id
+            const now = useEditor.getState().doc.pages.flatMap((p) => p.elements).find((o) => o.id === id)
+            if (now) e.target.position({ x: hd.fx * now.width * scale - SIZE / 2, y: hd.fy * now.height * scale - SIZE / 2 })
           }}
         />
       ))}
