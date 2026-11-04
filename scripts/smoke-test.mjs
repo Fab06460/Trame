@@ -2142,6 +2142,53 @@ try {
   png = await exportPng()
   check('arrière-plan : le coin de la page est rempli par l\'image (rouge)', pngPixel(png, 5, 5)[0] > 180 && pngPixel(png, 5, 5)[1] < 80)
 
+  // images : cadre en forme, redressement, recadrage par les poignées du canvas
+  await reloadApp()
+  await sleep(500)
+  await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(800, 400)) // 648 × 324 en (216, 378) ; gauche rouge, droite bleue, carré vert en haut à gauche
+  await click('header.toolbar button', 'Image')
+  await sleep(700)
+  const gIsGreen = (p) => p[1] > 150 && p[0] < 60 && p[2] < 60
+  const gIsWhite = (p) => p.every((v) => v > 240)
+  png = await exportPng()
+  check('cadre : avant, le coin de l\'image est le carré vert', gIsGreen(pngPixel(png, 240, 400)))
+  await clickSel('.panel [data-mask="ellipse"]')
+  await sleep(600)
+  png = await exportPng()
+  check('cadre : en ellipse, le coin est découpé (page visible) et le centre reste rempli', gIsWhite(pngPixel(png, 222, 384)) && !gIsWhite(pngPixel(png, 300, 560)))
+  check('cadre : le bouton du cadre choisi est enfoncé', (await run(`document.querySelector('.panel [data-mask="ellipse"]').getAttribute('aria-pressed')`)) === 'true')
+  await exportPdfText()
+  check('cadre : le PDF reçoit l\'image découpée (une image, pas de pastille de repli)', lastPdfRaw.includes('/Subtype /Image'))
+  await clickSel('.panel [data-mask="none"]')
+  await sleep(500)
+  png = await exportPng()
+  check('cadre : « aucun » rend le rectangle', gIsGreen(pngPixel(png, 240, 400)))
+  await run(`(() => { const i = document.querySelector('.panel [data-field="straighten"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '12'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await sleep(700)
+  png = await exportPng()
+  check('redressement : l\'image tourne (le carré vert a quitté son coin) et remplit toujours sa boîte (coins non vides)', !gIsGreen(pngPixel(png, 240, 400)) && !gIsWhite(pngPixel(png, 220, 380)) && !gIsWhite(pngPixel(png, 860, 698)))
+  await run(`(() => { const i = document.querySelector('.panel [data-field="straighten"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '0'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await sleep(500)
+  // poignées : on tire le bord droit de 162 px vers la gauche (25 % de la largeur)
+  let cWrap = await measure()
+  for (let i = 0; i < 20; i++) { await sleep(150); const again = await measure(); const same = JSON.stringify(again) === JSON.stringify(cWrap); cWrap = again; if (same) break }
+  const cFit = Math.max(0.01, Math.min((cWrap.w - 96) / 1080, (cWrap.h - 96) / 1080))
+  const cx = (d) => cWrap.l + (cWrap.w - 1080 * cFit) / 2 + d * cFit
+  const cy = (d) => cWrap.t + (cWrap.h - 1080 * cFit) / 2 + d * cFit
+  await clickSel('.panel [data-action="crop-mode"]')
+  await sleep(400)
+  if (process.env.SMOKE_CROP_SHOT) await writeFile(process.env.SMOKE_CROP_SHOT, Buffer.from((await cdp('Page.captureScreenshot', { format: 'png' })).result.data, 'base64')) // inspection visuelle
+  check('recadrage : le bouton passe en « Terminer »', (await run(`document.querySelector('.panel [data-action="crop-mode"]').getAttribute('aria-pressed')`)) === 'true')
+  await drag([cx(864), cy(540)], [cx(864 - 162), cy(540)])
+  await sleep(500)
+  check('recadrage : le bord droit tiré vers l\'intérieur réduit la largeur de 25 % (486 px), la position ne bouge pas', Math.abs((await field('width')) - 486) < 3 && (await field('x')) === 216, `${await field('width')} / ${await field('x')}`)
+  check('recadrage : le champ « marge droite » le reflète (25 %)', Math.abs((await field('cropRight')) - 25) < 1, String(await field('cropRight')))
+  png = await exportPng()
+  check('recadrage : la partie masquée est vide (page visible à droite), le reste n\'a pas bougé', gIsWhite(pngPixel(png, 800, 540)) && !gIsWhite(pngPixel(png, 300, 560)) && gIsGreen(pngPixel(png, 240, 400)))
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'z', code: 'KeyZ', modifiers: 4 })
+  await sleep(400)
+  check('recadrage : toute la séance s\'annule d\'un seul ⌘Z', Math.abs((await field('width')) - 648) < 1, String(await field('width')))
+
   // style d'après une image : palette de l'image choisie, recoloriage d'un rectangle violet, une seule étape d'historique
   await reloadApp()
   await sleep(500)

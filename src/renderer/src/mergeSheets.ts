@@ -138,7 +138,7 @@ export function clipToCard(e: TrameElement, width: number, height: number): { el
     const x0 = Math.max(0, e.x), y0 = Math.max(0, e.y), x1 = Math.min(width, e.x + e.width), y1 = Math.min(height, e.y + e.height)
     return { element: { ...e, x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, overflow: false }
   }
-  if (plain && e.type === 'image' && !e.flipX && !e.flipY) {
+  if (plain && e.type === 'image' && !e.flipX && !e.flipY && !e.mask && !e.straighten) {
     const x0 = Math.max(0, e.x), y0 = Math.max(0, e.y), x1 = Math.min(width, e.x + e.width), y1 = Math.min(height, e.y + e.height)
     const c = e.crop ?? { x: 0, y: 0, width: 1, height: 1 }
     const fx0 = (x0 - e.x) / e.width, fx1 = (x1 - e.x) / e.width, fy0 = (y0 - e.y) / e.height, fy1 = (y1 - e.y) / e.height

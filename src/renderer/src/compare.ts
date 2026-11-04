@@ -47,6 +47,8 @@ const ASPECT_OF: Record<string, ElementAspect> = {
   filters: 'image',
   flipX: 'image',
   flipY: 'image',
+  mask: 'image',
+  straighten: 'image',
   hidden: 'visibility',
   opacity: 'visibility'
 }

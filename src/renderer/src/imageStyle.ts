@@ -1,4 +1,14 @@
+import { SHAPES } from '@/shapes'
 import type { Crop, ImageFilters, TrameElement } from '@/types'
+
+/** Cadres proposés : l'ellipse (un cercle dans une boîte carrée), le rectangle aux coins arrondis et les formes vectorielles de Trame. */
+export const MASKS: readonly string[] = ['ellipse', 'rounded', ...SHAPES.map((s) => s.id)]
+export const isMask = (v: unknown): v is string => typeof v === 'string' && MASKS.includes(v)
+
+/** Rayon des coins du cadre « arrondi », en fraction du plus petit côté. */
+export const ROUNDED_RATIO = 0.14
+
+export const STRAIGHTEN_LIMIT = 45
 
 export const FILTER_LIMITS = {
   brightness: { min: -100, max: 100 },
@@ -39,10 +49,27 @@ export function activeFilters(el: Pick<TrameElement, 'filters'>): ImageFilters {
 export const hasFilters = (el: Pick<TrameElement, 'filters'>): boolean => Object.keys(activeFilters(el)).length > 0
 export const hasCrop = (el: Pick<TrameElement, 'crop'>): boolean => !!el.crop
 export const hasFlip = (el: Pick<TrameElement, 'flipX' | 'flipY'>): boolean => !!el.flipX || !!el.flipY
+export const hasMask = (el: Pick<TrameElement, 'mask'>): boolean => isMask(el.mask)
+export const hasStraighten = (el: Pick<TrameElement, 'straighten'>): boolean => isNum(el.straighten) && el.straighten !== 0
+
+/** Champs d'un élément image qui changent les pixels dessinés. */
+export type ImageEditFields = 'filters' | 'crop' | 'flipX' | 'flipY' | 'mask' | 'straighten'
 
 /** L'image doit-elle être retravaillée avant d'être dessinée ? (sinon on l'utilise telle quelle, sans perte) */
-export const hasImageEdits = (el: Pick<TrameElement, 'filters' | 'crop' | 'flipX' | 'flipY'>): boolean =>
-  hasFilters(el) || hasCrop(el) || hasFlip(el)
+export const hasImageEdits = (el: Pick<TrameElement, ImageEditFields>): boolean =>
+  hasFilters(el) || hasCrop(el) || hasFlip(el) || hasMask(el) || hasStraighten(el)
+
+/**
+ * Agrandissement qui garde une boîte w × h entièrement remplie quand l'image tourne de `deg` degrés autour de son centre
+ * (sans lui, les coins de la boîte découvriraient du vide).
+ */
+export function straightenScale(w: number, h: number, deg: number): number {
+  if (w <= 0 || h <= 0) return 1
+  const r = (Math.abs(deg) * Math.PI) / 180
+  const c = Math.cos(r)
+  const s = Math.sin(r)
+  return Math.max(c + (h / w) * s, c + (w / h) * s)
+}
 
 /**
  * Valeur de la propriété CSS/canvas `filter`. `blurScale` convertit les pixels de design en pixels de l'image dessinée.
@@ -61,8 +88,8 @@ export function cssFilter(el: Pick<TrameElement, 'filters'>, blurScale = 1): str
 }
 
 /** Clé de cache décrivant exactement les retouches (deux éléments identiques partagent le même rendu). */
-export const editKey = (el: Pick<TrameElement, 'filters' | 'crop' | 'flipX' | 'flipY'>): string =>
-  JSON.stringify([el.crop ?? null, !!el.flipX, !!el.flipY, activeFilters(el)])
+export const editKey = (el: Pick<TrameElement, ImageEditFields>): string =>
+  JSON.stringify([el.crop ?? null, !!el.flipX, !!el.flipY, activeFilters(el), isMask(el.mask) ? el.mask : null, hasStraighten(el) ? el.straighten : 0])
 
 /** Recadrage valide : dans l'image, au moins MIN_CROP dans chaque sens. */
 export function clampCrop(c: Crop): Crop {
@@ -103,6 +130,25 @@ export function recrop(el: Pick<TrameElement, 'x' | 'y' | 'width' | 'height' | '
   }
 }
 
+/**
+ * Recadrage par les poignées du canvas : `l`, `t`, `r`, `b` sont les déplacements des quatre bords, en pixels de design dans le repère de
+ * l'image (positif vers la droite / le bas ; un bord qui s'éloigne du centre révèle de l'image, un bord qui s'approche la masque).
+ * Chaque bord est borné séparément (dans l'image, et au moins MIN_CROP de reste) : tirer un bord au-delà de la limite ne déplace pas le bord opposé.
+ */
+export function cropByEdges(
+  el: Pick<TrameElement, 'x' | 'y' | 'width' | 'height' | 'rotation' | 'crop'>,
+  move: { l?: number; t?: number; r?: number; b?: number }
+): ReturnType<typeof recrop> {
+  const from = currentCrop(el)
+  const sx = el.width / from.width
+  const sy = el.height / from.height
+  const left = clamp(from.x + (move.l ?? 0) / sx, 0, from.x + from.width - MIN_CROP)
+  const top = clamp(from.y + (move.t ?? 0) / sy, 0, from.y + from.height - MIN_CROP)
+  const right = clamp(from.x + from.width + (move.r ?? 0) / sx, left + MIN_CROP, 1)
+  const bottom = clamp(from.y + from.height + (move.b ?? 0) / sy, top + MIN_CROP, 1)
+  return recrop(el, { x: left, y: top, width: right - left, height: bottom - top })
+}
+
 /** Nettoyage à la lecture : recadrage, miroirs et réglages invalides sont retirés (jamais devinés). Modifie en place. */
 export function sanitizeImageStyle(element: object): void {
   const e = element as Record<string, unknown>
@@ -119,6 +165,9 @@ export function sanitizeImageStyle(element: object): void {
   }
   if (e.flipX !== true) delete e.flipX
   if (e.flipY !== true) delete e.flipY
+  if (!isMask(e.mask)) delete e.mask
+  if (!isNum(e.straighten) || e.straighten === 0) delete e.straighten
+  else e.straighten = clamp(Math.round(e.straighten * 10) / 10, -STRAIGHTEN_LIMIT, STRAIGHTEN_LIMIT)
   if (e.filters !== undefined) {
     const f = e.filters as Record<string, unknown> | null
     const clean: ImageFilters = {}

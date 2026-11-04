@@ -3,7 +3,9 @@ import { prepareDescribeSource } from '@/aiEdit'
 import { useAi, aiErrorMessage } from '@/store/ai'
 import { useEditor } from '@/store/editor'
 import { downscaleImage } from '@/photoImport'
-import { FILTER_LIMITS, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
+import { SHAPES } from '@/shapes'
+import { useCropMode } from '@/store/crop'
+import { FILTER_LIMITS, MASKS, STRAIGHTEN_LIMIT, coverCrop, FILTER_PRESETS, activeFilters, clampCrop, cropInsets, currentCrop, hasCrop, hasFilters, recrop, type FilterKey } from '@/imageStyle'
 import type { ImageFilters, TrameElement } from '@/types'
 import { NumberField } from './NumberField'
 import { mmToPx, printSetupOf } from '@/printSetup'
@@ -27,6 +29,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
   const t = useT()
   const { updateElement, beginChange } = useEditor.getState()
   const filters = activeFilters(el)
+  const cropping = useCropMode((c) => c.id) === el.id
   const inset = cropInsets(el)
   const crop = currentCrop(el)
   const columns = useEditor((s) => s.doc.mailMerge?.columns) ?? []
@@ -228,6 +231,9 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       )}
 
       <h4>{t('img.crop')}</h4>
+      <button data-action="crop-mode" aria-pressed={cropping} className={cropping ? 'active' : ''} title={t('img.crop.handles.title')} onClick={() => useCropMode.getState().set(cropping ? null : el.id)}>
+        {cropping ? t('img.crop.handles.done') : t('img.crop.handles')}
+      </button>
       <div className="num-grid">
         <NumberField label={t('img.crop.left')} field="cropLeft" value={inset.left} min={0} max={95} suffix="%" onCommit={(v) => setInset('left', v)} />
         <NumberField label={t('img.crop.top')} field="cropTop" value={inset.top} min={0} max={95} suffix="%" onCommit={(v) => setInset('top', v)} />
@@ -239,6 +245,37 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
           {t('img.crop.reset', { w: Math.round(crop.width * 100), h: Math.round(crop.height * 100) })}
         </button>
       )}
+
+      <h4>{t('img.straighten')}</h4>
+      <label>
+        {t('img.straighten.label', { deg: (el.straighten ?? 0).toFixed(1) })}
+        <input
+          type="range"
+          data-field="straighten"
+          min={-STRAIGHTEN_LIMIT}
+          max={STRAIGHTEN_LIMIT}
+          step={0.5}
+          value={el.straighten ?? 0}
+          onPointerDown={beginChange}
+          onChange={(e) => updateElement(el.id, { straighten: Number(e.target.value) || undefined }, false)}
+          onDoubleClick={() => updateElement(el.id, { straighten: undefined })}
+        />
+      </label>
+
+      <h4>{t('img.mask')}</h4>
+      <div className="mask-grid" data-mask-grid>
+        <button className={`mask-cell${el.mask ? '' : ' active'}`} data-mask="none" aria-pressed={!el.mask} title={t('img.mask.none')} onClick={() => updateElement(el.id, { mask: undefined })}>
+          <svg viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" fill="currentColor" /></svg>
+        </button>
+        {MASKS.map((m) => (
+          <button key={m} className={`mask-cell${el.mask === m ? ' active' : ''}`} data-mask={m} aria-pressed={el.mask === m} title={t(`img.mask.${m}` as MessageKey)} onClick={() => updateElement(el.id, { mask: m })}>
+            <svg viewBox="0 0 100 100">
+              {m === 'ellipse' ? <ellipse cx="50" cy="50" r="42" fill="currentColor" /> : m === 'rounded' ? <rect x="8" y="8" width="84" height="84" rx="14" fill="currentColor" /> : <path d={SHAPES.find((s) => s.id === m)?.path} fill="currentColor" />}
+            </svg>
+          </button>
+        ))}
+      </div>
+      {el.mask && <p className="hint">{t('img.mask.hint')}</p>}
 
       <h4>{t('img.filters')}</h4>
       <div className="presets">

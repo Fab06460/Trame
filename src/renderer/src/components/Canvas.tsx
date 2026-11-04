@@ -22,6 +22,8 @@ import { ZoomControls } from './ZoomControls'
 import { CommentPins } from './CommentPins'
 import { useReview } from '@/store/review'
 import { hitStack, throughTarget } from '@/selection'
+import { useCropMode } from '@/store/crop'
+import { CropHandles } from './CropHandles'
 import { mmToPx, printSetupOf, safeBox } from '@/printSetup'
 import type { TrameElement } from '@/types'
 
@@ -66,6 +68,7 @@ export function Canvas(): React.JSX.Element {
   const trRef = useRef<Konva.Transformer>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [editing, setEditing] = useState<string | null>(null)
+  const cropId = useCropMode((c) => c.id)
   const [lasso, setLasso] = useState<Box | null>(null)
   const lassoStart = useRef<{ x: number; y: number; additive: boolean } | null>(null)
   const dragStart = useRef<Record<string, { x: number; y: number }>>({})
@@ -186,14 +189,19 @@ export function Canvas(): React.JSX.Element {
     }
   }, [offX, offY, scale])
 
+  // le recadrage s'arrête dès que l'image n'est plus la seule sélection (ou qu'on change de page)
+  useEffect(() => {
+    if (cropId && !(selectedIds.length === 1 && selectedIds[0] === cropId)) useCropMode.getState().set(null)
+  }, [cropId, selectedIds, page.id])
+
   // Attache le transformer au nœud sélectionné
   useEffect(() => {
     const tr = trRef.current
     const stage = stageRef.current
     if (!tr || !stage) return
-    const nodes = editing ? [] : selectedIds.map((id) => stage.findOne('#' + id)).filter((n): n is Konva.Node => !!n)
+    const nodes = editing || cropId ? [] : selectedIds.map((id) => stage.findOne('#' + id)).filter((n): n is Konva.Node => !!n)
     tr.nodes(nodes)
-  }, [selectedIds, page.elements, editing, page.id])
+  }, [selectedIds, page.elements, editing, page.id, cropId])
 
   const printSetup = printSetupOf(doc)
   const bleedPx = mmToPx(printSetup.bleedMm)
@@ -222,8 +230,12 @@ export function Canvas(): React.JSX.Element {
       if (target) select([target])
     },
     onTap: () => select([el.id]),
-    // double-clic sur un membre de groupe : on entre dans le groupe (ce membre seul est sélectionné) ; un texte s'ouvre en saisie, voir plus bas
-    onDblClick: () => el.groupId && selectExact([el.id]),
+    // double-clic : sur un membre de groupe, on entre dans le groupe (ce membre seul est sélectionné) ; sur une image seule, on la recadre ;
+    // un texte s'ouvre en saisie, voir plus bas
+    onDblClick: () => {
+      if (el.groupId && !(selectedIds.length === 1 && selectedIds[0] === el.id)) selectExact([el.id])
+      else if (el.type === 'image' && !positionLocked(el, enforced) && !contentLocked(el, enforced)) useCropMode.getState().set(cropId === el.id ? null : el.id)
+    },
     onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => {
       // Alt + glisser : on laisse une copie derrière (un seul cran d'historique pour la copie et le déplacement)
       if (e.evt.altKey) cloneSelectedInPlace()
@@ -454,6 +466,10 @@ export function Canvas(): React.JSX.Element {
               )
             })}
           </Group>
+          {(() => {
+            const ce = cropId ? page.elements.find((x) => x.id === cropId && x.type === 'image' && !x.hidden) : undefined
+            return ce && selectedIds.length === 1 && selectedIds[0] === ce.id ? <CropHandles el={ce} offX={offX} offY={offY} scale={scale} /> : null
+          })()}
           {/* fond perdu (trait du bord fini) et marge de sécurité : repères d'édition, absents de tous les exports */}
           {(bleedPx > 0 || safe) && (
             <Group x={offX} y={offY} scaleX={scale} scaleY={scale} listening={false}>

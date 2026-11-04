@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { cssFilter, editKey, hasImageEdits } from '@/imageStyle'
+import { ROUNDED_RATIO, cssFilter, editKey, hasImageEdits, hasStraighten, straightenScale, type ImageEditFields } from '@/imageStyle'
+import { SHAPES } from '@/shapes'
 import type { TrameElement } from '@/types'
 import { t } from '@/i18n'
 
 /** Plus grand côté du rendu d'une image retouchée (au-delà, on réduit : la mémoire d'un canvas n'est pas illimitée). */
 const MAX_SIDE = 4096
 
-type ImageEl = Pick<TrameElement, 'src' | 'width' | 'filters' | 'crop' | 'flipX' | 'flipY'>
+type ImageEl = Pick<TrameElement, 'src' | 'width' | ImageEditFields>
 export type Drawable = HTMLImageElement | HTMLCanvasElement
 
 const loadImage = (src: string): Promise<HTMLImageElement> =>
@@ -37,6 +38,19 @@ class Lru<V> {
     this.map.set(k, v)
     if (this.map.size > this.max) this.map.delete(this.map.keys().next().value as string)
   }
+}
+
+/** Forme du cadre, étirée à w × h. */
+function maskPath(mask: string, w: number, h: number): Path2D {
+  const p = new Path2D()
+  if (mask === 'ellipse') p.ellipse(w / 2, h / 2, w / 2, h / 2, 0, 0, Math.PI * 2)
+  else if (mask === 'rounded') p.roundRect(0, 0, w, h, Math.min(w, h) * ROUNDED_RATIO)
+  else {
+    const shape = SHAPES.find((s) => s.id === mask)
+    if (shape) p.addPath(new Path2D(shape.path), new DOMMatrix([w / 100, 0, 0, h / 100, 0, 0]))
+    else p.rect(0, 0, w, h)
+  }
+  return p
 }
 
 const sources = new Lru<Promise<HTMLImageElement>>(12)
@@ -79,9 +93,24 @@ export async function editedImage(el: ImageEl): Promise<Drawable> {
   canvas.height = h
   const ctx = canvas.getContext('2d')!
   ctx.filter = cssFilter(el, blurScale)
+  if (hasStraighten(el)) {
+    // redressement (dans le sens où on voit l'image, donc avant le miroir) : rotation autour du centre, agrandie pour que la boîte reste remplie
+    const k2 = straightenScale(w, h, el.straighten as number)
+    ctx.translate(w / 2, h / 2)
+    ctx.rotate(((el.straighten as number) * Math.PI) / 180)
+    ctx.scale(k2, k2)
+    ctx.translate(-w / 2, -h / 2)
+  }
   ctx.translate(el.flipX ? w : 0, el.flipY ? h : 0)
   ctx.scale(el.flipX ? -1 : 1, el.flipY ? -1 : 1)
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h)
+  if (el.mask) {
+    // cadre : on ne garde que l'intérieur de la forme (le reste devient transparent) ; ni filtre ni transformation pour ce tracé
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.filter = 'none'
+    ctx.globalCompositeOperation = 'destination-in'
+    ctx.fill(maskPath(el.mask, w, h))
+  }
   edited.set(key, canvas)
   return canvas
 }

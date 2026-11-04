@@ -36,7 +36,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Retouche photo | 🟡 Partiel | Recadrage, miroirs et filtres faits ; restent poignées de recadrage, redressement, cadres. Recadrage, retournement, redressement, filtres, réglages de lumière, flou, cadres : faisables hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
+| Retouche photo | 🟡 Partiel | **Fait** : recadrage (champs et poignées sur le canvas), miroirs, redressement, cadres en forme, filtres, réglages de lumière, flou — tout hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
 | Montage vidéo | 🔶 À faire, lourd | Faisable hors-ligne (lecture native, encodage avec ffmpeg embarqué, enregistrement d'écran natif d'Electron) mais c'est un produit à part entière. Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
 | Effets graphiques | ⬜ À faire | Pas d'ombre, de lueur, de contour ni de dégradé aujourd'hui. Tout est faisable hors-ligne ; en PDF ces effets obligent à une image pour l'élément concerné (voir risques). | E1, E2, E3 |
 
@@ -85,7 +85,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E5 | Panneau Calques : verrouiller, masquer, renommer | M | **Fait** (liste, œil, cadenas, renommage, glisser-déposer, ⌘L). Prérequis des modèles de marque verrouillés. | — |
 | E6 | Guides magnétiques, règles, grille | M | **Fait.** Règles, repères, aimantation (déplacement + côtés au redimensionnement). Logique pure testable (aimantation aux bords/centres). | — |
 | E7 | Dépôt de fichiers images depuis le Finder sur le canvas | S | **Fait** : plusieurs images à la fois, centrées sur le point lâché (`imageDrop.ts`). | — |
-| E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | **Fait en partie** : recadrage (en %), miroirs. Restent : poignées de recadrage sur le canvas, redressement, cadres. Rendu : pixels recadrés/retournés cuits dans un canvas partagé. | — |
+| E8 | Images : recadrage, retournement, redressement, masque en forme (cadres) | M | **Fait** : recadrage (en % et par poignées sur le canvas), miroirs, redressement, cadres en forme (ellipse, coins arrondis, formes de Trame). Rendu : pixels recadrés, redressés, retournés et découpés cuits dans un canvas partagé. | — |
 | E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | **Fait** (6 réglages + 6 préréglages), cuits dans l'image, y compris pour le PDF. | E8 |
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | **Fait** (toutes les pages : elles partagent le format du document). Voir `docs/ARCHITECTURE.md`. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S | **Fait en partie** : pipette (API `EyeDropper`), couleurs récentes, palette du kit. Restent : couleurs du document. | — |

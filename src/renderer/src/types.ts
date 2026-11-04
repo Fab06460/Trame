@@ -127,6 +127,10 @@ export interface TrameElement {
   flipY?: boolean
   /** réglages de lumière et de couleur */
   filters?: ImageFilters
+  /** cadre : l'image n'est visible que dans cette forme (voir `imageStyle.ts`) ; absent = rectangle */
+  mask?: string
+  /** redressement : rotation de l'image dans sa boîte, en degrés (−45 à 45), agrandie pour que la boîte reste remplie */
+  straighten?: number
 }
 
 /** Repère d'alignement posé par l'utilisateur : `v` = ligne verticale à x = position, `h` = ligne horizontale à y = position (pixels de design). */

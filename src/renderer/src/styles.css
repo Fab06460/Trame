@@ -185,6 +185,11 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 
 .panel h4 { margin: 10px 0 2px; font-size: 11px; font-weight: 600; color: var(--muted, #9aa0aa); text-transform: uppercase; letter-spacing: 0.04em; }
 .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.mask-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.mask-cell { aspect-ratio: 1; padding: 5px; display: flex; background: #1b1c21; color: #cfd0dc; }
+.mask-cell:hover { color: #fff; background: #26272e; }
+.mask-cell.active { color: var(--accent); border-color: var(--accent); }
+.mask-cell svg { width: 100%; height: 100%; }
 .toolbar .doc-name { flex: 0 1 180px; min-width: 90px; width: 180px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 4px 8px; font: inherit; text-align: right; }
 .toolbar .doc-name:hover { border-color: var(--border); }
 .toolbar .doc-name:focus { border-color: var(--accent); background: #1b1c21; outline: none; text-align: left; }
