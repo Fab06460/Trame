@@ -321,6 +321,7 @@ export const en: Catalog = {
   'font.group.serif': 'Serif',
   'font.group.handwriting': 'Handwriting',
   'font.group.mono': 'Mono',
+  'font.group.brand': 'Brand kit',
   'pdf.family.unknown': 'unknown',
   'pdf.reason.unknownFont': 'the font “{family}” is not embedded: pick a font from the “Font” menu',
   'pdf.reason.missingVariant': '“{family}” does not exist in {variant}: remove this style or choose another font',

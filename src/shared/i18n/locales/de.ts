@@ -321,6 +321,7 @@ export const de: Catalog = {
   'font.group.serif': 'Serif',
   'font.group.handwriting': 'Handschrift',
   'font.group.mono': 'Monospace',
+  'font.group.brand': 'Markenkit',
   'pdf.family.unknown': 'unbekannt',
   'pdf.reason.unknownFont': 'die Schrift „{family}“ ist nicht eingebettet: Wählen Sie eine Schrift aus dem Menü „Schrift“',
   'pdf.reason.missingVariant': '„{family}“ gibt es nicht in {variant}: Entfernen Sie diesen Stil oder wählen Sie eine andere Schrift',

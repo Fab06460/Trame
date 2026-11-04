@@ -3467,6 +3467,7 @@ try {
   await clickSel('[data-brand-font]')
   await sleep(400)
   check('un clic sur la police de la marque l\'applique au texte sélectionné', (await run(`document.querySelector('.panel select[style*="font-family"]')?.value`)) === brandFam)
+  check('sélecteur de police : les polices du kit forment le premier groupe, et chaque police n\'apparaît qu\'une fois', (await run(`document.querySelector('[data-field="fontFamily"] optgroup')?.dataset.fontGroup`)) === 'brand' && (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].filter(o => o.value === ${JSON.stringify(brandFam)}).length`)) === 1)
   // logos
   await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(200, 100))
   await clickSel('[data-action="brand-add-logo"]')

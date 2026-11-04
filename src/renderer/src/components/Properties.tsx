@@ -33,6 +33,7 @@ export function Properties(): React.JSX.Element {
   const t = useT()
   useFonts((s) => s.version) // la liste des polices change quand on en ajoute ou retire
   const fonts = allFonts()
+  const kitFamilies = useBrand((s) => s.kit.fonts)
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
   const el = page.elements.find((e) => e.id === selectedIds[0])
@@ -278,9 +279,19 @@ export function Properties(): React.JSX.Element {
             >
               {el.fontFamily === SYSTEM_FONT && <option value={SYSTEM_FONT}>{t('prop.font.system')}</option>}
               {el.fontFamily && el.fontFamily !== SYSTEM_FONT && !fonts.some((f) => f.family === el.fontFamily) && <option value={el.fontFamily}>{t('prop.font.missing', { name: el.fontFamily.split(',')[0].replace(/"/g, '') })}</option>}
-              {[...new Set(fonts.map((f) => f.group))].map((g) => (
+              {fonts.some((f) => kitFamilies.includes(f.family)) && (
+                // polices du kit de marque en tête (et seulement là : une police n'apparaît qu'une fois dans la liste)
+                <optgroup label={t('font.group.brand')} data-font-group="brand">
+                  {fonts.filter((f) => kitFamilies.includes(f.family)).map((f) => (
+                    <option key={f.name} value={f.family} style={{ fontFamily: f.family }}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {[...new Set(fonts.filter((f) => !kitFamilies.includes(f.family)).map((f) => f.group))].map((g) => (
                 <optgroup key={g} label={t(`font.group.${g}` as MessageKey)}>
-                  {fonts.filter((f) => f.group === g).map((f) => (
+                  {fonts.filter((f) => f.group === g && !kitFamilies.includes(f.family)).map((f) => (
                     <option key={f.name} value={f.family} style={{ fontFamily: f.family }}>
                       {f.name}
                     </option>

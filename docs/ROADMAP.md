@@ -55,7 +55,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Kit de marque | 🟡 Partiel | Onglet « Marque » : couleurs, polices et logos enregistrés localement (un kit), couleurs récentes, pipette, couleurs du document (appliquer, ajouter au kit, remplacer partout). Restent : plusieurs kits, proposition dans les sélecteurs de couleur et de police. | C5, E11, E12 |
+| Kit de marque | 🟡 Partiel | Onglet « Marque » : couleurs, polices et logos enregistrés localement (un kit), couleurs récentes, pipette, couleurs du document (appliquer, ajouter au kit, remplacer partout). Les polices du kit passent en tête du sélecteur de police. Restent : plusieurs kits, proposition dans les sélecteurs de couleur. | C5, E11, E12 |
 | Modèles de marque verrouillés | ⬜ À faire | Éléments verrouillés / éditables dans un modèle, modèles échangés sous forme de fichiers. Faisable ; dépend du verrouillage de calques. | C6, E5 |
 | Collaboration en temps réel | ⛔ Hors-ligne impossible | Exige un serveur et du réseau : contraire à l'objectif. Substituts hors-ligne : échange de fichiers `.trame`, packs de modèles, historique de versions local. | — |
 
@@ -89,7 +89,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E9 | Images : filtres et réglages (luminosité, contraste, saturation, flou, N&B, sépia) | M | **Fait** (6 réglages + 6 préréglages), cuits dans l'image, y compris pour le PDF. | E8 |
 | E10 | Magic Resize : adapter un design à un autre format (une page ou toutes) | M | **Fait** (toutes les pages : elles partagent le format du document). Voir `docs/ARCHITECTURE.md`. | — |
 | E11 | Couleurs : pipette, couleurs du document, palettes enregistrées | S | **Fait** : pipette (API `EyeDropper`), couleurs récentes, palette du kit, couleurs du document (liste, ajout au kit, remplacement partout). | — |
-| E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | **Fait en partie** : catalogue en ligne de ~1 900 polices libres (installation sur demande, embarquées dans les documents, WOFF2 dans le PDF). **Import de ses propres fichiers (TTF, OTF, WOFF, WOFF2) fait.** | — |
+| E12 | Polices : importer ses propres TTF/OTF/WOFF + davantage de polices embarquées | M | **Fait en partie** : catalogue en ligne de ~1 900 polices libres (installation sur demande, embarquées dans les documents, WOFF2 dans le PDF). **Import de ses propres fichiers (TTF, OTF, WOFF, WOFF2) fait.** Polices du kit de marque en tête du sélecteur. Restent : davantage de polices embarquées hors ligne, alphabets cyrillique et grec. | — |
 | E13 | **Position et taille numériques** (X, Y, largeur, hauteur, rotation, verrouillage des proportions) | S | **Fait.** Manque majeur : on ne peut régler un élément qu'à la souris. Sert aussi à tester l'aimantation. | — |
 | E14 | **Poignées à la Canva** : coins proportionnels, rotation aimantée (45°), redimensionnement avec aimantation | S | **Fait** (coins proportionnels, texte en largeur seule, rotation aimantée). L'aimantation des coins est volontairement exclue. Konva : `keepRatio`, `rotationSnaps`. | E6 |
 | E15 | Alt + glisser = dupliquer ; Maj = déplacement sur un axe | S | **Fait** (Alt = dupliquer, Maj = axe, ⌘ = suspendre l'aimantation). | — |

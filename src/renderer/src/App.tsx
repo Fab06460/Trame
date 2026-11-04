@@ -27,6 +27,7 @@ import { startUpdateWatch } from '@/updateActions'
 import { checkRecovery, startAutosave } from '@/recoveryActions'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
 import { useEditor } from '@/store/editor'
+import { useBrand } from '@/store/brand'
 import { useView } from '@/store/view'
 import { useLayout } from '@/store/layout'
 import { Splitter } from '@/components/Splitter'
@@ -126,6 +127,11 @@ export default function App(): React.JSX.Element {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Kit de marque : chargé dès le départ (ses polices passent en tête du sélecteur de police)
+  useEffect(() => {
+    void useBrand.getState().load()
   }, [])
 
   // Taille de la fenêtre : bascule entre panneaux ancrés et panneaux en recouvrement (voir layout.ts)
