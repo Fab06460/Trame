@@ -1,6 +1,8 @@
 import { chartElements, defaultSpec } from '@/chart'
 import { bookletDocument, nUpDocument } from '@/imposition'
 import { mergeDocument } from '@/mailMerge'
+import illustrationRaw from '@/illustrationData.json'
+import { fromRaw, illustrationElements, type RawIllustrations } from '@/illustrations'
 import { DEFAULT_QR, qrElements } from '@/qr'
 import { sheetsFromMerged } from '@/mergeSheets'
 import { TEMPLATES, instantiate } from '@/templates'
@@ -210,6 +212,50 @@ function qrDoc(): TrameDocument {
   return { version: 2, name: 'QR code', width: 1080, height: 1080, pages: [{ id: 'p', background: '#e9ebf2', elements }] }
 }
 
+/** Quatre illustrations (tracés « pair-impair » : les contours imbriqués percent le fond), dont une avec contour : le remplissage et les trous doivent être les mêmes dans le PDF et à l'écran. */
+function illustrationsDoc(): TrameDocument {
+  const all = fromRaw(illustrationRaw as RawIllustrations)
+  const spots: Array<[string, number, number, Partial<TrameElement>]> = [
+    ['coffee', 30, 40, {}],
+    ['reading', 560, 40, {}],
+    ['meditating', 30, 560, { stroke: '#7c5cff', strokeWidth: 2 }],
+    ['doggie', 560, 560, {}]
+  ]
+  const elements = spots.flatMap(([id, x, y, over], k) =>
+    illustrationElements(all.find((i) => i.id === id)!, { width: 1080, height: 1080 }, { ink: '#1e1f24', accent: ['#ff5678', '#2563eb', '#16a34a', '#f59e0b'][k] }, id, () => `${id}-${Math.random().toString(36).slice(2, 8)}`).map((e) => ({
+      ...e,
+      x,
+      y,
+      width: 490,
+      height: Math.round(490 / (1024 / 768)),
+      ...over
+    }))
+  )
+  return { version: 2, name: 'Illustrations', width: 1080, height: 1080, pages: [{ id: 'p', background: '#f3f4f8', elements }] }
+}
+
+/** Texte en colonnes : trois colonnes, deux colonnes centrées et une liste à puces sur deux colonnes (chaque colonne a ses lignes de base, ses marqueurs, son interligne). */
+function columnsDoc(): TrameDocument {
+  const para = 'Premier paragraphe du texte. Deuxième paragraphe un peu plus long pour passer à la ligne. Troisième. Quatrième paragraphe, également assez long pour faire plusieurs lignes dans une colonne étroite.'
+  return {
+    version: 2,
+    name: 'Colonnes',
+    width: 1080,
+    height: 1080,
+    pages: [
+      {
+        id: 'p',
+        background: '#ffffff',
+        elements: [
+          text('c3', { x: 60, y: 60, width: 960, fontSize: 30, text: para.replace(/\. /g, '.\n') + '\n' + para, columns: 3, columnGap: 40 }),
+          text('c2', { x: 60, y: 420, width: 960, fontSize: 30, text: para + ' ' + para, columns: 2, align: 'center' }),
+          text('cl', { x: 60, y: 760, width: 960, fontSize: 28, text: 'Un\nDeux\nTrois\nQuatre\nCinq\nSix\nSept', columns: 2, columnGap: 80, list: 'number' })
+        ]
+      }
+    ]
+  }
+}
+
 /** Un document de 6 pages A5 (559 × 794) : titre et numéro, pour contrôler l'ordre et le placement d'un livret et d'une impression à 4 par feuille. */
 function pagesDoc(): TrameDocument {
   const page = (n: number): TrameDocument['pages'][number] => ({
@@ -229,6 +275,8 @@ export const cases = (): Case[] => [
   { name: '4-par-feuille', doc: nUpDocument(pagesDoc(), { paper: 'a4', landscape: false, cols: 2, rows: 2, marginMm: 10, gapMm: 4, border: true }).doc, expectText: ['Page 1', 'Page 4'], expectFallbacks: 0 },
   ...(['bar', 'hbar', 'line', 'pie', 'table'] as const).map((k): Case => ({ name: `graphique-${k}`, doc: chartDoc(k), expectText: ['Moyennes par matière', 'Maths'], expectFallbacks: 0 })),
   { name: 'qr-code', doc: qrDoc(), expectText: [], expectFallbacks: 0 },
+  { name: 'illustrations', doc: illustrationsDoc(), expectText: [], expectFallbacks: 0 },
+  { name: 'colonnes', doc: columnsDoc(), expectText: ['Premier paragraphe du texte.', 'Trois', 'Sept'], expectFallbacks: 0 },
   { name: 'polices-lisibles', doc: readable(), expectText: ['Atkinson lisible', 'Lexend gras', 'OpenDyslexic', 'Atkinson gras italique'], expectFallbacks: 0 },
   { name: 'mixte', doc: mixed(), expectText: ['Texte', 'vectoriel', 'BEBAS À DROITE', 'DEUX LIGNES', 'Lora gras italique tourné', 'Opacité 40 %', 'mono 0O1l', 'Souligné', 'Barré', 'Les deux à la fois', 'MAJUSCULES LORA', 'Un interligne généreux', 'Contour', 'Ombre portée', 'Lueur douce', 'Texte translucide', '•', '3.'], expectFallbacks: 2, maxBigPct: [1.3, 1.6, 0.9, 0.3, 0.3, 0.5, 1.15] }, // mesuré : 0,92 / 1,24 / 0,55 / 0,00 / 0,08 / 0,22 / 1,07 %
   ...TEMPLATES.map((t): Case => {

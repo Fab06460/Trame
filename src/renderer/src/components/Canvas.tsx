@@ -435,6 +435,7 @@ export function Canvas(): React.JSX.Element {
                     height={el.height}
                     fill={el.fill}
                     trameGradient={el.gradient}
+                    trameFillRule={el.fillRule}
                     sceneFunc={pathSceneFunc(el.path)}
                     hitFunc={boxHitFunc}
                   />

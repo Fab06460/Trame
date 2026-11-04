@@ -78,7 +78,7 @@ export function pathSceneFunc(d: string) {
     const c = ctx._context
     c.save()
     c.fillStyle = nativeFill(c, shape.getAttr('trameGradient') as Gradient | undefined, shape.width(), shape.height(), shape.fill() as string)
-    c.fill(p)
+    c.fill(p, shape.getAttr('trameFillRule') === 'evenodd' ? 'evenodd' : 'nonzero')
     if (shape.strokeEnabled() && shape.strokeWidth() > 0) {
       c.lineWidth = shape.strokeWidth()
       c.strokeStyle = shape.stroke() as string

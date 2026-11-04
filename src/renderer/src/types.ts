@@ -112,6 +112,8 @@ export interface TrameElement {
   columnGap?: number
   // path : chemin SVG (viewBox 100×100)
   path?: string
+  /** règle de remplissage d'un tracé : `evenodd` (pair-impair : les contours imbriqués percent le fond) ; absent = règle ordinaire (non nul) */
+  fillRule?: 'evenodd'
   // image
   src?: string
   /** image de fond issue d'un PDF importé : page d'origine (à partir de 1) du PDF stocké dans `TrameDocument.sources` ; l'export PDF la remet en vectoriel */

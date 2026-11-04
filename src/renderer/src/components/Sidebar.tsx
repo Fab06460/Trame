@@ -14,7 +14,7 @@ import { TemplateCard } from './TemplateCard'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
 import { PhotosPanel } from './PhotosPanel'
-import { IconsPanel } from './IconsPanel'
+import { LibraryPanel } from './LibraryPanel'
 import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
 import { UserTemplates } from './UserTemplates'
@@ -138,7 +138,7 @@ export function Sidebar(): React.JSX.Element {
 
       {tab === 'photos' && <PhotosPanel />}
 
-      {tab === 'icons' && <IconsPanel />}
+      {tab === 'icons' && <LibraryPanel />}
 
       {tab === 'ai' && <AiPanel />}
 

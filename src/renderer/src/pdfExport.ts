@@ -164,7 +164,7 @@ class ExportContext {
         // dessiné dans un repère étiré aurait une épaisseur différente en largeur et en hauteur.
         const scaled = scalePath(el.path, el.width / 100, el.height / 100)
         if (scaled) {
-          paintShape(scaled)
+          if (!(el.fillRule === 'evenodd' && !el.gradient && this.paintEvenOdd(p, el, scaled, fill, stroke ? border : null))) paintShape(scaled)
         } else {
           p.pushOperators(pushGraphicsState(), concatTransformationMatrix(el.width / 100, 0, 0, el.height / 100, 0, 0))
           p.drawSvgPath(el.path, { x: 0, y: 0, color: fill, opacity: el.opacity })
@@ -234,6 +234,26 @@ class ExportContext {
    * de la forme (`W n`, puis `sh`). Le chemin est écrit dans le repère SVG (y vers le bas) puis le repère est rétabli : le détourage,
    * lui, reste acquis. Retourne false si le chemin n'est pas convertible (l'appelant peint alors la couleur unie).
    */
+  /** Remplissage « pair-impair » d'un tracé uni (illustrations : les contours imbriqués percent le fond), puis son contour. Faux si le tracé n'est pas lisible. */
+  private paintEvenOdd(p: PDFPage, el: TrameElement, pathD: string, fill: ReturnType<typeof rgb>, border: object | null): boolean {
+    const segments = svgPathToSegments(pathD)
+    if (!segments) return false
+    const ops = [pushGraphicsState()]
+    if (el.opacity < 1) ops.push(setGraphicsState(this.gstate(p, el.opacity)))
+    // repère de l'élément : y vers le haut, comme pour le dégradé
+    ops.push(concatTransformationMatrix(1, 0, 0, -1, 0, 0), setFillingColor(fill))
+    for (const sg of segments) {
+      if (sg.op === 'M') ops.push(moveTo(sg.x, sg.y))
+      else if (sg.op === 'L') ops.push(lineTo(sg.x, sg.y))
+      else if (sg.op === 'C') ops.push(appendBezierCurve(sg.x1, sg.y1, sg.x2, sg.y2, sg.x, sg.y))
+      else ops.push(closePath())
+    }
+    ops.push(PDFOperator.of(PDFOperatorNames.FillEvenOdd), popGraphicsState())
+    p.pushOperators(...ops)
+    if (border) p.drawSvgPath(pathD, { x: 0, y: 0, ...border })
+    return true
+  }
+
   private paintGradient(p: PDFPage, el: TrameElement, pathD: string): boolean {
     const g = el.gradient
     const segments = g ? svgPathToSegments(pathD) : null

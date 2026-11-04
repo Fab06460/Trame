@@ -107,6 +107,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeShadow(e)
       sanitizeList(e)
       sanitizeColumns(e)
+      if (e.type !== 'path' || e.fillRule !== 'evenodd') delete e.fillRule
       if (e.type === 'image') sanitizeImageStyle(e)
       sanitizeAiInfo(e)
       sanitizeImageField(e)

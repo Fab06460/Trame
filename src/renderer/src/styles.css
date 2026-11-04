@@ -87,6 +87,10 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .icon-cell { aspect-ratio: 1; padding: 6px; background: #1b1c21; color: #cfd0dc; display: flex; }
 .icon-cell:hover { color: #fff; background: #26272e; }
 .icon-cell svg { width: 100%; height: 100%; }
+.grid.illustrations { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.illustration-cell { padding: 6px; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+.illustration-cell:hover { outline: 2px solid var(--accent); }
+.illustration-cell svg { width: 100%; height: auto; display: block; }
 .shape:hover { color: var(--accent); }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 .text-preset { text-align: left; padding: 10px 12px; background: #1b1c21; }

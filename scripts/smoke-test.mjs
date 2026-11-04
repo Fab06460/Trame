@@ -21,7 +21,8 @@ import { join, resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 
 /** Pixel (x, y) d'un PNG 8 bits RGBA/RGB non entrelacé, en [r, g, b]. Suffit pour vérifier ce qu'un export a réellement dessiné. */
-function pngPixel(buf, px, py) {
+/** Décode le PNG une seule fois : renvoie une fonction (x, y) → [r, g, b] (pour balayer beaucoup de points). */
+function pngReader(buf) {
   let w = 0, h = 0, channels = 4
   const idat = []
   for (let at = 8; at < buf.length; ) {
@@ -46,8 +47,13 @@ function pngPixel(buf, px, py) {
     }
     rows.push(row)
   }
-  const i = px * channels
-  return [rows[py][i], rows[py][i + 1], rows[py][i + 2]]
+  return (px, py) => {
+    const i = px * channels
+    return [rows[py][i], rows[py][i + 1], rows[py][i + 2]]
+  }
+}
+function pngPixel(buf, px, py) {
+  return pngReader(buf)(px, py)
 }
 /** PNG RGB 8 bits : moitié gauche rouge, moitié droite bleue, un carré vert en haut à gauche (repère de recadrage et de miroir). */
 function testPng(w, h) {
@@ -2026,6 +2032,34 @@ try {
   await exportPdfText()
   check('icônes : le PDF les dessine en vectoriel (aucune image)', !lastPdfRaw.includes('/Subtype /Image'))
 
+  // illustrations : même onglet que les icônes, recherche, insertion d'un groupe de tracés « pair-impair » aux couleurs choisies
+  await reloadApp()
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="icons"]')
+  await clickSel('[data-library="illustrations"]')
+  check('illustrations : le sélecteur bascule des icônes aux illustrations (une trentaine, chargées à la demande)', await waitFor(async () => (await run(`Number(document.querySelector('[data-illustration-count]')?.getAttribute('data-illustration-count') ?? 0)`)) >= 30) && (await run(`document.querySelector('[data-icon-grid]') ? 1 : 0`)) === 0)
+  const illSearch = async (q) => {
+    await run(`(() => { const i = document.querySelector('[data-field="illustrationQuery"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(q)}); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await sleep(250)
+    return run(`[...document.querySelectorAll('[data-illustration]')].map(b => b.getAttribute('data-illustration'))`)
+  }
+  check('illustrations : « chien » trouve les dessins avec un chien (recherche en français)', (await illSearch('chien')).includes('doggie'))
+  check('illustrations : une saisie sans résultat le dit', (await illSearch('zzzqqq')).length === 0 && (await run(`document.querySelector('[data-illustration-count]').textContent`)).includes('Aucune'))
+  const ills0 = await layerCount()
+  await clickSel('.sidebar .tabs button[data-tab="icons"]') // le sélecteur garde le dernier choix : on retrouve les illustrations
+  await sleep(500)
+  await illSearch('coffee')
+  await run(`(() => { const i = document.querySelector('[data-field="illustrationAccent"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '#ff0000'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await clickSel('[data-illustration="coffee"]')
+  await sleep(600)
+  const ills1 = await layerCount()
+  check('illustrations : un clic insère plusieurs calques (un groupe de tracés), tous sélectionnés', ills1 - ills0 >= 2 && (await run(`document.querySelectorAll('.layer.selected, .layer[aria-selected="true"]').length`)) >= 2, `${ills0} → ${ills1}`)
+  png = await exportPng()
+  const scanFor = (img, test) => { const at = pngReader(img); let n = 0; for (let y = 0; y < 1080; y += 4) for (let x = 0; x < 1080; x += 4) if (test(at(x, y))) n++; return n }
+  check('illustrations : l\'export dessine l\'encre (sombre) et l\'accent choisi (rouge), sur un fond resté blanc', scanFor(png, (v) => v.every((c) => c < 70)) > 200 && scanFor(png, (v) => v[0] > 220 && v[1] < 60 && v[2] < 60) > 100 && pngPixel(png, 5, 5).every((c) => c > 240))
+  await exportPdfText()
+  check('illustrations : le PDF les dessine en vectoriel (aucune image) avec la règle pair-impair (f*)', !lastPdfRaw.includes('/Subtype /Image') && (await exportPdfText()).includes('f*'))
+
   // retourner une forme : le miroir vertical d'un triangle (pointe en haut) le met pointe en bas, sans changer sa place
   await reloadApp()
   await sleep(500)
@@ -2203,7 +2237,7 @@ try {
   await setField('width', 800)
   await setField('fontSize', 60)
   await sleep(400)
-  const inkIn = (img, x0, y0, x1, y1) => { let n = 0; for (let y = y0; y < y1; y += 3) for (let x = x0; x < x1; x += 3) if (pngPixel(img, x, y).every((v) => v < 90)) n++; return n }
+  const inkIn = (img, x0, y0, x1, y1) => { const at = pngReader(img); let n = 0; for (let y = y0; y < y1; y += 3) for (let x = x0; x < x1; x += 3) if (at(x, y).every((v) => v < 90)) n++; return n }
   png = await exportPng()
   check('colonnes : une seule colonne au départ (quatre lignes à gauche, rien à droite)', inkIn(png, 100, 105, 400, 335) > 60 && inkIn(png, 530, 105, 800, 335) === 0)
   check('colonnes : le panneau propose 1 à 4 colonnes, la première est active, pas de réglage d\'espace', (await nBrand('.panel [data-columns]')) === 4 && (await run(`document.querySelector('.panel [data-columns="1"]').getAttribute('aria-pressed')`)) === 'true' && (await nBrand('.panel [data-field="columnGap"]')) === 0)

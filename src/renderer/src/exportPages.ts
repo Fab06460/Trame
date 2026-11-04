@@ -68,7 +68,7 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
     })
   }
   if (e.type === 'path' && e.path) {
-    return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, sceneFunc: pathSceneFunc(e.path) })
+    return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, trameFillRule: e.fillRule, sceneFunc: pathSceneFunc(e.path) })
   }
   if (e.type === 'image' && e.src) {
     return new Konva.Image({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, image: await editedImage(e) })

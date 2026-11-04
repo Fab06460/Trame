@@ -109,6 +109,7 @@ export function PageThumb({
                 <path
                   d={e.path}
                   fill={e.gradient ? `url(#g-${e.id})` : e.fill}
+                  fillRule={e.fillRule}
                   {...(hasStroke(e)
                     ? { stroke: e.stroke, strokeWidth: w, vectorEffect: 'non-scaling-stroke', strokeDasharray: e.strokeDashed ? dashPattern(w).join(' ') : undefined }
                     : {})}

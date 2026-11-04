@@ -74,8 +74,8 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       const d = scalePath(el.path, el.width / 100, el.height / 100)
       parts.push(
         d
-          ? `<path d="${escXml(d)}" fill="${fill}"${stroke}/>`
-          : `<path d="${escXml(el.path)}" transform="scale(${n(el.width / 100)} ${n(el.height / 100)})" fill="${fill}"${stroke ? stroke + ' vector-effect="non-scaling-stroke"' : ''}/>`
+          ? `<path d="${escXml(d)}" fill="${fill}"${el.fillRule ? ' fill-rule="evenodd"' : ''}${stroke}/>`
+          : `<path d="${escXml(el.path)}" transform="scale(${n(el.width / 100)} ${n(el.height / 100)})" fill="${fill}"${el.fillRule ? ' fill-rule="evenodd"' : ''}${stroke ? stroke + ' vector-effect="non-scaling-stroke"' : ''}/>`
       )
     } else if (el.type === 'image' && el.src) {
       const href = hasImageEdits(el) || !el.src.startsWith('data:') ? await editedPng(el) : el.src

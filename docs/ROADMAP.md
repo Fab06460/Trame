@@ -104,7 +104,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| C1 | Bibliothèque d'icônes et d'illustrations embarquée, avec recherche | M | **Icônes faites** : 1 434 icônes Phosphor (MIT), contour ou plein, onglet Icônes avec recherche en français/anglais et catégories (voir `docs/ARCHITECTURE.md`). **Illustrations** (dessins en couleurs) : non. | E1 |
+| C1 | Bibliothèque d'icônes et d'illustrations embarquée, avec recherche | M | **Icônes faites** : 1 434 icônes Phosphor (MIT), contour ou plein, onglet Icônes avec recherche en français/anglais et catégories (voir `docs/ARCHITECTURE.md`). **Illustrations** : 32 dessins en couleurs (Open Doodles, CC0), insérés comme groupes de formes recolorables ; un seul style, à étoffer. | E1 |
 | C2 | Davantage de modèles (CV, flyers, logos, cartes de visite, bannières, affiches) + packs de modèles importables/exportables | M | Contenu à produire ; format de pack = fichier. | — |
 | C3 | Bibliothèque de médias locale (dossier surveillé, étiquettes, recherche) | M |  | E7 |
 | C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | **Fait** : fenêtre « Style d'après une image » (3 à 8 couleurs, kit de marque, aperçu avant / après, page ou toutes les pages). Voir `docs/ARCHITECTURE.md`. | E11 |
