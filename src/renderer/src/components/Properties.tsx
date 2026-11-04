@@ -1,3 +1,4 @@
+import { COLUMN_GAP, columnGapOf, columnsOf } from '@/columnStyle'
 import { isFlipExempt } from '@/flip'
 import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
@@ -373,6 +374,24 @@ export function Properties(): React.JSX.Element {
               </button>
             ))}
           </div>
+          <div className="row" role="group" aria-label={t('prop.columns')}>
+            <span className="row-label">{t('prop.columns')}</span>
+            {[1, 2, 3, 4].map((n) => (
+              <button
+                key={n}
+                data-columns={n}
+                aria-pressed={columnsOf(el) === n}
+                className={columnsOf(el) === n ? 'active' : ''}
+                title={t('prop.columns.n', { n })}
+                onClick={() => updateElement(el.id, { columns: n === 1 ? undefined : n, ...(n === 1 ? { columnGap: undefined } : {}) })}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          {columnsOf(el) > 1 && (
+            <NumberField label={t('prop.columnGap')} field="columnGap" value={columnGapOf(el)} min={COLUMN_GAP.min} max={COLUMN_GAP.max} suffix="px" onCommit={(v) => updateElement(el.id, { columnGap: v })} />
+          )}
           <div className="num-grid">
             <NumberField label={t('prop.letterSpacing')} field="letterSpacing" value={el.letterSpacing ?? 0} min={LETTER_SPACING.min} max={LETTER_SPACING.max} step={0.5} suffix="px" onCommit={(v) => updateElement(el.id, { letterSpacing: v || undefined })} />
             <NumberField label={t('prop.lineHeight')} field="lineHeight" value={el.lineHeight ?? LINE_HEIGHT.default} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.05} suffix="×" onCommit={(v) => updateElement(el.id, { lineHeight: v === LINE_HEIGHT.default ? undefined : v })} />

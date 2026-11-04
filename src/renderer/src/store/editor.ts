@@ -14,6 +14,7 @@ import { sanitizeQr } from '@/qr'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
 import { cleanDocName } from '@/docName'
+import { sanitizeColumns } from '@/columnStyle'
 import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
@@ -105,6 +106,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeGradient(e)
       sanitizeShadow(e)
       sanitizeList(e)
+      sanitizeColumns(e)
       if (e.type === 'image') sanitizeImageStyle(e)
       sanitizeAiInfo(e)
       sanitizeImageField(e)

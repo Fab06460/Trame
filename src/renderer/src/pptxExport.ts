@@ -101,7 +101,9 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
         const text = displayText(el)
         if (!text.trim()) continue
         // la hauteur d'un texte est celle que Konva mesure (la hauteur enregistrée n'est qu'indicative)
-        const height = createTextNode(el).height()
+        // pptxgenjs ne sait pas écrire de colonnes : le texte est exporté sur une seule colonne, de la largeur entière
+        const flat = { ...el, columns: undefined, columnGap: undefined }
+        const height = createTextNode(flat).height()
         const { x, y } = centredBox(el, el.width, height)
         const indent = el.list ? listIndent(el.fontSize) * PT : 0
         const runs = text.split('\n').map((para, i, all) => ({

@@ -4,6 +4,7 @@ import { dashPattern, hasStroke } from '@/strokeStyle'
 import { useEditedImage } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { useEffect, useRef } from 'react'
+import { columnGapOf, columnsOf } from '@/columnStyle'
 import { listIndent, markersFor } from '@/listStyle'
 import type { ListKind, TrameElement, TramePage } from '@/types'
 
@@ -133,6 +134,7 @@ export function PageThumb({
                   letterSpacing: e.letterSpacing ?? 0,
                   textDecoration: [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].filter(Boolean).join(' ') || 'none',
                   textTransform: e.uppercase ? 'uppercase' : 'none',
+                  ...(columnsOf(e) > 1 ? { columnCount: columnsOf(e), columnGap: columnGapOf(e), columnFill: 'balance' as const } : {}),
                   ...(hasStroke(e) ? { WebkitTextStroke: `${w}px ${e.stroke}` } : {})
                 }}
               >

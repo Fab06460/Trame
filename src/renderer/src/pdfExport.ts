@@ -18,6 +18,7 @@ import { dashPattern, hasStroke, scalePath } from '@/strokeStyle'
 import { boundsOf } from '@/geometry'
 import { NO_PRINT_SETUP, cropMarkSegments, pdfPageLayout, printSetupOf } from '@/printSetup'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
+import { columnLayout, placeLine } from '@/columnStyle'
 import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
 import { editedPng } from '@/imageRender'
@@ -302,9 +303,17 @@ class ExportContext {
     const lines: Line[] = []
     const markerLines: Line[] = [] // marqueurs d'une liste : dans la colonne de retrait, jamais soulignés ni barrés
     const indent = el.list ? listIndent(el.fontSize) : 0
+    // colonnes : chaque ligne tombe dans une colonne (décalage horizontal) et sur une rangée de cette colonne
+    const cols = columnLayout(el, node.textArr.length)
     const entries = [
-      ...node.textArr.map((line, i) => ({ text: line.text, width: line.width, i, x: indent + lineOffsetX(el.align, el.width - indent, line.width), into: lines })),
-      ...((node as ListTextNode).listMarkers ?? []).map((m) => ({ text: m.text, width: node.measureSize(m.text).width, i: m.line, x: 0, into: markerLines }))
+      ...node.textArr.map((line, i) => {
+        const at = placeLine(i, cols.rows, cols.width, cols.gap)
+        return { text: line.text, width: line.width, i: at.row, x: at.x + indent + lineOffsetX(el.align, cols.width - indent, line.width), into: lines }
+      }),
+      ...((node as ListTextNode).listMarkers ?? []).map((m) => {
+        const at = placeLine(m.line, cols.rows, cols.width, cols.gap)
+        return { text: m.text, width: node.measureSize(m.text).width, i: at.row, x: at.x, into: markerLines }
+      })
     ]
     for (const { text, width, i, x, into } of entries) {
       const line = { text, width }

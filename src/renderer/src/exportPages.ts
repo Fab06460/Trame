@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import { pathSceneFunc } from '@/shapes'
+import { columnGapOf, columnsOf } from '@/columnStyle'
 import { patchListText } from '@/listText'
 import { konvaGradientProps } from '@/gradient'
 import { editedImage } from '@/imageRender'
@@ -25,7 +26,9 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
     fill: e.fill,
     ...strokeProps(e),
     ...shadowProps(e),
-    trameList: e.list
+    trameList: e.list,
+    trameColumns: columnsOf(e),
+    trameColumnGap: columnGapOf(e)
   })
   patchListText(node)
   return node

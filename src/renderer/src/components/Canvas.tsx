@@ -11,6 +11,7 @@ import { useColorVision } from '@/store/colorVision'
 import { colorVisionFilter } from '@/readability'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { konvaGradientProps } from '@/gradient'
+import { columnGapOf, columnsOf } from '@/columnStyle'
 import { patchListText } from '@/listText'
 import { contentLocked, isEnforced, positionLocked } from '@/protection'
 import { useFonts } from '@/store/fonts'
@@ -457,6 +458,8 @@ export function Canvas(): React.JSX.Element {
                   align={el.align}
                   fill={el.fill}
                   trameList={el.list}
+                  trameColumns={columnsOf(el)}
+                  trameColumnGap={columnGapOf(el)}
                   ref={(n: Konva.Text | null) => {
                     if (n) patchListText(n)
                   }}

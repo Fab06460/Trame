@@ -98,7 +98,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | E18 | Sélection : Tab (élément suivant), cliquer à travers (⌘-clic), entrer dans un groupe, sélectionner tout ce qui est du même type | M | **Fait** (voir `docs/ARCHITECTURE.md`, « Sélection au clavier et à la souris »). | E5 |
 | E19 | Pages : marges de sécurité, repères d'impression (fond perdu), arrière-plan image | M | **Fait** (voir `docs/ARCHITECTURE.md`, « Impression professionnelle »). L'arrière-plan est un élément image ordinaire, verrouillé et placé en bas. | E6 |
 | E20 | Recherche / remplacement de texte dans le document | S | **Fait** (panneau de recherche : `FindPanel.tsx`, `store/find.ts`, `textSearch.ts`). | — |
-| E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | **Listes à puces et numérotées faites** (retrait des lignes suivantes, PDF en vrai texte). Reste : colonnes. | E4 |
+| E21 | Texte : listes à puces et numérotées, texte sur plusieurs colonnes | M | **Fait** : listes à puces et numérotées (retrait des lignes suivantes, PDF en vrai texte) et texte sur 2 à 4 colonnes équilibrées (espace réglable, PDF et SVG en vrai texte). | E4 |
 
 ### Phase 2 — Contenus et identité de marque (bibliothèques, kit de marque, graphiques)
 

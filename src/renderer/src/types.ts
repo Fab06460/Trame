@@ -106,6 +106,10 @@ export interface TrameElement {
   qr?: QrSpec
   /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
   list?: ListKind
+  /** texte sur plusieurs colonnes (2 à 4, absent = une seule) : le texte coule de colonne en colonne, équilibrées ; la largeur de l'élément est celle de l'ensemble */
+  columns?: number
+  /** espace entre les colonnes en pixels (absent : une fois la taille de police) */
+  columnGap?: number
   // path : chemin SVG (viewBox 100×100)
   path?: string
   // image

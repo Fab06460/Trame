@@ -1,6 +1,7 @@
 import { createTextNode } from '@/exportPages'
 import { editedPng } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
+import { columnLayout, placeLine } from '@/columnStyle'
 import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
 import { baselineY, lineOffsetX } from '@/pdfMath'
@@ -123,9 +124,16 @@ function textSvg(el: TrameElement): string {
   const attrs = `${fontAttrs(el)} fill="${escXml(el.fill)}"${spacing !== 0 ? ` letter-spacing="${n(spacing)}" style="font-kerning:none;font-variant-ligatures:none"` : ''}${strokeAttrs(el)} xml:space="preserve"`
 
   const out: string[] = []
-  const lines = node.textArr.map((line, i) => ({ text: line.text, width: line.width, x: indent + lineOffsetX(el.align, el.width - indent, line.width), y: baselineY(i, fontSize, lineHeight, ascent, descent) }))
+  const cols = columnLayout(el, node.textArr.length)
+  const lines = node.textArr.map((line, i) => {
+    const at = placeLine(i, cols.rows, cols.width, cols.gap)
+    return { text: line.text, width: line.width, x: at.x + indent + lineOffsetX(el.align, cols.width - indent, line.width), y: baselineY(at.row, fontSize, lineHeight, ascent, descent) }
+  })
   for (const l of lines) if (l.text) out.push(`<text x="${n(l.x)}" y="${n(l.y)}" ${attrs}>${escXml(l.text)}</text>`)
-  for (const m of (node as ListTextNode).listMarkers ?? []) out.push(`<text x="0" y="${n(baselineY(m.line, fontSize, lineHeight, ascent, descent))}" ${attrs}>${escXml(m.text)}</text>`)
+  for (const m of (node as ListTextNode).listMarkers ?? []) {
+    const at = placeLine(m.line, cols.rows, cols.width, cols.gap)
+    out.push(`<text x="${n(at.x)}" y="${n(baselineY(at.row, fontSize, lineHeight, ascent, descent))}" ${attrs}>${escXml(m.text)}</text>`)
+  }
 
   // soulignement et barré : rectangles (mêmes position et épaisseur que Konva), reconnus par tous les logiciels de dessin
   if (el.underline || el.strike) {
