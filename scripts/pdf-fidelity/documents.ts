@@ -289,6 +289,8 @@ export const cases = (): Case[] => [
       expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
       // la page du carrousel au grand titre serif : l'écart SVG / éditeur est un peu plus grand (mesuré 0,59 %)
       ...(t.id === 'carousel' ? { maxSvgBigPct: [0.5, 0.5, 0.7] } : {}),
+      // le menu : filet doré de 4 px et lignes de texte fines sur fond crème, lissées autrement par PDFKit (mesuré 1,02 %)
+      ...(t.id === 'menu' ? { maxBigPct: [1.2] } : {}),
       expectText: doc.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && !e.uppercase && !e.letterSpacing && e.text && e.text.length < 14).map((e) => e.text!))
     }
   }),

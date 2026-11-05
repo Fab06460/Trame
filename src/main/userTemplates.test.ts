@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_NAME, MAX_THUMBNAIL_CHARS, addHidden, addMeta, isBuiltinId, isValidId, normalizeName, parseHidden, parseTemplateIndex,
+  MAX_NAME, MAX_PACK_TEMPLATES, MAX_THUMBNAIL_CHARS, PACK_FORMAT, addHidden, buildPack, parsePack, addMeta, isBuiltinId, isValidId, normalizeName, parseHidden, parseTemplateIndex,
   removeMeta, renameMeta, replaceMeta, sanitizeMeta, visibleBuiltins, type TemplateMeta
 } from './userTemplates'
 
@@ -122,5 +122,54 @@ describe('modèles intégrés masqués', () => {
     expect(visibleBuiltins(builtins, ['quote'], []).map((b) => b.id)).toEqual(['promo', 'deck'])
     expect(visibleBuiltins(builtins, [], [{ basedOn: 'deck' }, {}]).map((b) => b.id)).toEqual(['promo', 'quote'])
     expect(visibleBuiltins(builtins, ['promo'], [{ basedOn: 'promo' }]).map((b) => b.id)).toEqual(['quote', 'deck'])
+  })
+})
+
+describe('packs de modèles', () => {
+  const doc = JSON.stringify({ version: 2, name: 'X', width: 100, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
+  const entry = (name: string, json = doc): { meta: Parameters<typeof buildPack>[0][number]['meta']; json: string } => ({
+    meta: { name, width: 100, height: 100, pageCount: 1, thumbnail: 'data:image/jpeg;base64,AAAA' },
+    json
+  })
+
+  it('un pack exporté se relit à l\'identique (nom, taille, miniature, document)', () => {
+    const back = parsePack(buildPack([entry('A'), entry('B')]))!
+    expect(back.skipped).toBe(0)
+    expect(back.entries.map((e) => e.meta.name)).toEqual(['A', 'B'])
+    expect(back.entries[0].meta).toEqual(entry('A').meta)
+    expect(JSON.parse(back.entries[0].json)).toEqual(JSON.parse(doc))
+  })
+
+  it('n\'emporte ni identifiant, ni date, ni modèle intégré remplacé', () => {
+    const raw = buildPack([{ ...entry('A'), meta: { ...entry('A').meta, id: 'secret-id', basedOn: 'promo', createdAt: 5 } as never }])
+    expect(raw).not.toMatch(/secret-id|basedOn|promo|createdAt/)
+  })
+
+  it('écarte un document illisible à l\'export', () => {
+    expect(parsePack(buildPack([entry('A'), entry('B', 'pas du json')]))!.entries.map((e) => e.meta.name)).toEqual(['A'])
+  })
+
+  it.each(['', 'pas du json', '[]', 'null', JSON.stringify({ format: 'autre', templates: [] }), JSON.stringify({ format: PACK_FORMAT })])(
+    'refuse %j : ce n\'est pas un pack',
+    (raw) => expect(parsePack(raw)).toBeNull()
+  )
+
+  it('écarte les modèles invalides en les comptant, garde les autres', () => {
+    const good = { ...entry('Bon').meta, document: JSON.parse(doc) }
+    const raw = JSON.stringify({
+      format: PACK_FORMAT,
+      version: 1,
+      templates: [good, { ...good, thumbnail: 'http://x/y.png' }, { ...good, document: { pages: [] } }, { ...good, document: 'texte' }, { ...good, width: -1 }]
+    })
+    const back = parsePack(raw)!
+    expect(back.entries.map((e) => e.meta.name)).toEqual(['Bon'])
+    expect(back.skipped).toBe(4)
+  })
+
+  it('borne le nombre de modèles lus', () => {
+    const good = { ...entry('M').meta, document: JSON.parse(doc) }
+    const back = parsePack(JSON.stringify({ format: PACK_FORMAT, version: 1, templates: Array.from({ length: MAX_PACK_TEMPLATES + 3 }, () => good) }))!
+    expect(back.entries).toHaveLength(MAX_PACK_TEMPLATES)
+    expect(back.skipped).toBe(3)
   })
 })

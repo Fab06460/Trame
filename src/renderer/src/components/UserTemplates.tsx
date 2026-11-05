@@ -15,6 +15,8 @@ export function UserTemplates(): React.JSX.Element {
   const [name, setName] = useState('')
   const [replace, setReplace] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [packing, setPacking] = useState(false)
+  const [chosen, setChosen] = useState<string[]>([])
   const docName = useEditor((s) => s.doc.name)
   const origin = useEditor((s) => s.templateOrigin)
   const isEmpty = useEditor((s) => s.doc.pages.every((p) => p.elements.length === 0))
@@ -37,6 +39,19 @@ export function UserTemplates(): React.JSX.Element {
     } finally {
       setBusy(false)
     }
+  }
+
+  const exportPack = async (): Promise<void> => {
+    const count = await window.trame.exportTemplatePack(chosen)
+    if (count === null) return
+    setPacking(false)
+    await window.trame.showInfo(t('tpl.pack.exported'), t('tpl.pack.exported.detail', { count }))
+  }
+  const importPack = async (): Promise<void> => {
+    const res = await window.trame.importTemplatePack()
+    if (!res) return
+    await refresh()
+    await window.trame.showInfo(t('tpl.pack.imported'), t('tpl.pack.imported.detail', { count: res.imported }) + (res.skipped ? t('tpl.pack.skipped', { count: res.skipped }) : ''))
   }
 
   return (
@@ -96,6 +111,44 @@ export function UserTemplates(): React.JSX.Element {
         >
           {t('tpl.saveAs')}
         </button>
+      )}
+
+      {!naming && (
+        <div className="row pack-row">
+          <button
+            type="button"
+            data-pack="export"
+            disabled={items.length === 0 || packing}
+            title={t('tpl.pack.export.title')}
+            onClick={() => {
+              setChosen(items.map((u) => u.id))
+              setPacking(true)
+            }}
+          >
+            {t('tpl.pack.export')}
+          </button>
+          <button type="button" data-pack="import" title={t('tpl.pack.import.title')} onClick={() => void importPack()}>
+            {t('tpl.pack.import')}
+          </button>
+        </div>
+      )}
+
+      {packing && (
+        <fieldset className="choice" data-pack-list>
+          <legend>{t('tpl.pack.choose')}</legend>
+          {items.map((u) => (
+            <label key={u.id}>
+              <input type="checkbox" data-pack-item={u.id} checked={chosen.includes(u.id)} onChange={(e) => setChosen((c) => (e.target.checked ? [...c, u.id] : c.filter((x) => x !== u.id)))} />
+              {u.name}
+            </label>
+          ))}
+          <div className="row">
+            <button type="button" className="primary" data-pack="export-go" disabled={chosen.length === 0} onClick={() => void exportPack()}>
+              {t('tpl.pack.export.button')}
+            </button>
+            <button type="button" onClick={() => setPacking(false)}>{t('common.cancel')}</button>
+          </div>
+        </fieldset>
       )}
 
       {items.length === 0 ? (

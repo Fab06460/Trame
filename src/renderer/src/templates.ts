@@ -12,8 +12,8 @@ interface TemplatePage {
   elements: Draft[]
 }
 
-export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'resume' | 'letter' | 'card' | 'flyer' | 'invitation' | 'linkedin' | 'thumbnail' | 'carousel' | 'certificate' | 'badge' | 'label' | 'flashcard' | 'flashcard-qa' | 'comic-strip' | 'comic-4' | 'comic-6'
-export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'document' | 'print' | 'social' | 'mailmerge' | 'comic'
+export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'resume' | 'letter' | 'card' | 'flyer' | 'invitation' | 'linkedin' | 'thumbnail' | 'carousel' | 'poster-sale' | 'poster-talk' | 'poster-school' | 'logo-monogram' | 'logo-badge' | 'logo-emblem' | 'menu' | 'planner' | 'report' | 'newsletter' | 'certificate' | 'badge' | 'label' | 'flashcard' | 'flashcard-qa' | 'comic-strip' | 'comic-4' | 'comic-6'
+export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'document' | 'print' | 'social' | 'logo' | 'mailmerge' | 'comic'
 
 /** Tableau d'exemple d'un modèle de publipostage : noms des champs (clés `tpl.field.<id>`) et lignes fictives. */
 interface MergeSample {
@@ -414,6 +414,219 @@ export const TEMPLATES: Template[] = [
           text(150, 740, 780, L('tpl.carousel.end.text'), 46, '#e9e3ff', { align: 'center', fontStyle: 'normal', lineHeight: 1.4, height: 130 }),
           shape('rect', { x: 340, y: 980, width: 400, height: 110 }, '#ffd166', { cornerRadius: 55 }),
           text(340, 1012, 400, L('tpl.carousel.end.cta'), 46, '#1e1f24', { align: 'center', height: 54 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'poster-sale',
+    category: 'poster',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#ffd166',
+        elements: [
+          shape('ellipse', { x: 430, y: -140, ...sq(560) }, '#ff7a59'),
+          text(60, 140, 674, L('tpl.sale.title'), 210, '#1e1f24', { fontFamily: DISPLAY, fontStyle: 'normal', lineHeight: 0.95, height: 420 }),
+          text(60, 610, 674, L('tpl.sale.date'), 40, '#1e1f24', { height: 50 }),
+          shape('rect', { x: 60, y: 690, width: 120, height: 8 }, '#1e1f24'),
+          text(60, 730, 674, L('tpl.sale.text'), 26, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 120 }),
+          shape('rect', { x: 60, y: 930, width: 674, height: 110 }, '#1e1f24', { cornerRadius: 20 }),
+          text(60, 964, 674, L('tpl.sale.place'), 32, '#ffffff', { align: 'center', height: 42 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'poster-talk',
+    category: 'poster',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#0f2a4a',
+        elements: [
+          shape('ellipse', { x: 400, y: 470, ...sq(440) }, '#1d4e89'),
+          shape('ellipse', { x: 600, y: 690, ...sq(220) }, '#ffd166'),
+          text(60, 90, 674, L('tpl.talk.kicker'), 26, '#ffd166', { letterSpacing: 6, height: 34 }),
+          text(60, 150, 674, L('tpl.talk.title'), 92, '#ffffff', { fontFamily: SERIF, lineHeight: 1.05, height: 300 }),
+          text(60, 640, 340, L('tpl.talk.with'), 22, '#a9c4ee', { fontStyle: 'normal', height: 28 }),
+          text(60, 678, 340, L('tpl.talk.speaker'), 40, '#ffffff', { lineHeight: 1.15, height: 100 }),
+          text(60, 790, 340, L('tpl.talk.role'), 22, '#a9c4ee', { fontStyle: 'normal', lineHeight: 1.4, height: 64 }),
+          shape('rect', { x: 60, y: 960, width: 674, height: 2 }, '#3a5a85'),
+          text(60, 990, 674, L('tpl.talk.date'), 34, '#ffffff', { height: 42 }),
+          text(60, 1040, 674, L('tpl.talk.place'), 24, '#a9c4ee', { fontStyle: 'normal', height: 30 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'poster-school',
+    category: 'poster',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#e8f4ff',
+        elements: [
+          shape('ellipse', { x: -120, y: -120, ...sq(380) }, '#ffd166'),
+          shape('ellipse', { x: 580, y: 60, ...sq(300) }, '#ff7a59'),
+          shape('ellipse', { x: 600, y: 860, ...sq(360) }, '#2a9d8f'),
+          text(60, 300, 674, L('tpl.school.title'), 170, '#2f6fb3', { fontFamily: DISPLAY, fontStyle: 'normal', lineHeight: 0.95, height: 330 }),
+          text(60, 680, 674, L('tpl.school.date'), 40, '#1e1f24', { height: 54 }),
+          text(60, 770, 500, L('tpl.school.program'), 28, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.6, height: 190 }),
+          text(60, 1010, 500, L('tpl.school.place'), 26, '#2f6fb3', { height: 34 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'logo-monogram',
+    category: 'logo',
+    width: 1000,
+    height: 1000,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('ellipse', { x: 200, y: 110, ...sq(600) }, '#22304a'),
+          shape('ellipse', { x: 230, y: 140, ...sq(540) }, '#22304a', { stroke: '#ffd166', strokeWidth: 6 }),
+          text(200, 320, 600, L('tpl.logo.initials'), 220, '#ffffff', { align: 'center', fontFamily: SERIF, height: 270 }),
+          text(100, 780, 800, L('tpl.logo.name'), 58, '#22304a', { align: 'center', letterSpacing: 10, height: 70 }),
+          text(100, 866, 800, L('tpl.logo.tagline'), 28, '#6b6b80', { align: 'center', fontStyle: 'normal', letterSpacing: 4, height: 34 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'logo-badge',
+    category: 'logo',
+    width: 1000,
+    height: 1000,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('ellipse', { x: 150, y: 150, ...sq(700) }, '#1e1f24'),
+          shape('ellipse', { x: 190, y: 190, ...sq(620) }, '#fffaf0'),
+          text(190, 312, 620, L('tpl.logo.badge.top'), 44, '#1e1f24', { align: 'center', letterSpacing: 8, height: 54 }),
+          icon('star', { x: 450, y: 390, ...sq(100) }, '#e63946'),
+          text(190, 520, 620, L('tpl.logo.badge.main'), 120, '#e63946', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal', height: 140 }),
+          text(190, 680, 620, L('tpl.logo.badge.since'), 32, '#1e1f24', { align: 'center', fontStyle: 'normal', letterSpacing: 6, height: 40 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'logo-emblem',
+    category: 'logo',
+    width: 1000,
+    height: 1000,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          icon('hexagon', { x: 250, y: 110, ...sq(500) }, '#2a9d8f'),
+          icon('bolt', { x: 370, y: 230, ...sq(260) }, '#ffffff'),
+          text(100, 650, 800, L('tpl.logo.emblem.name'), 190, '#1e1f24', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal', letterSpacing: 20, height: 210 }),
+          text(100, 870, 800, L('tpl.logo.emblem.tagline'), 30, '#6b6b80', { align: 'center', fontStyle: 'normal', letterSpacing: 6, height: 36 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'menu',
+    category: 'document',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#fffaf0',
+        elements: [
+          shape('rect', { x: 30, y: 30, width: 734, height: 1063 }, '#b8893b'),
+          shape('rect', { x: 34, y: 34, width: 726, height: 1055 }, '#fffaf0'),
+          text(60, 80, 674, L('tpl.menu.title'), 72, '#1e1f24', { align: 'center', fontFamily: SERIF, fontStyle: 'italic', height: 90 }),
+          text(60, 176, 674, L('tpl.menu.subtitle'), 22, '#6b6b80', { align: 'center', fontStyle: 'normal', letterSpacing: 6, uppercase: true, height: 28 }),
+          text(60, 270, 674, L('tpl.menu.starters'), 36, '#b8893b', { align: 'center', fontFamily: SERIF, height: 44 }),
+          text(60, 330, 674, L('tpl.menu.starters.items'), 24, '#3a3b45', { align: 'center', fontStyle: 'normal', lineHeight: 1.8, height: 130 }),
+          shape('rect', { x: 347, y: 490, width: 100, height: 2 }, '#b8893b'),
+          text(60, 530, 674, L('tpl.menu.mains'), 36, '#b8893b', { align: 'center', fontFamily: SERIF, height: 44 }),
+          text(60, 590, 674, L('tpl.menu.mains.items'), 24, '#3a3b45', { align: 'center', fontStyle: 'normal', lineHeight: 1.8, height: 130 }),
+          shape('rect', { x: 347, y: 750, width: 100, height: 2 }, '#b8893b'),
+          text(60, 790, 674, L('tpl.menu.desserts'), 36, '#b8893b', { align: 'center', fontFamily: SERIF, height: 44 }),
+          text(60, 850, 674, L('tpl.menu.desserts.items'), 24, '#3a3b45', { align: 'center', fontStyle: 'normal', lineHeight: 1.8, height: 130 }),
+          text(60, 1010, 674, L('tpl.menu.footer'), 22, '#6b6b80', { align: 'center', fontStyle: 'italic', height: 28 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'planner',
+    category: 'document',
+    width: 1123,
+    height: 794,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          text(37, 40, 700, L('tpl.planner.title'), 64, '#22304a', { fontFamily: DISPLAY, fontStyle: 'normal', height: 78 }),
+          text(700, 66, 386, L('tpl.planner.week'), 26, '#6b6b80', { align: 'right', fontStyle: 'normal', height: 34 }),
+          ...([1, 2, 3, 4, 5, 6, 7] as const).flatMap((d): Draft[] => {
+            const x = 37 + (d - 1) * 151
+            return [
+              shape('rect', { x, y: 140, width: 143, height: 560 }, '#ffffff', { stroke: '#cfd2d8', strokeWidth: 2 }),
+              shape('rect', { x, y: 140, width: 143, height: 50 }, d > 5 ? '#4a63a8' : '#22304a'),
+              text(x, 152, 143, L(`tpl.planner.d${d}` as MessageKey), 20, '#ffffff', { align: 'center', height: 26 })
+            ]
+          }),
+          text(37, 722, 1049, L('tpl.planner.notes'), 22, '#6b6b80', { fontStyle: 'normal', height: 28 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'report',
+    category: 'document',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 794, height: 560 }, '#22304a'),
+          shape('ellipse', { x: 520, y: 260, ...sq(420) }, '#1d4e89'),
+          text(70, 150, 600, L('tpl.report.kicker'), 22, '#ffd166', { letterSpacing: 6, height: 28 }),
+          text(70, 200, 600, L('tpl.report.title'), 76, '#ffffff', { fontFamily: SERIF, lineHeight: 1.05, height: 170 }),
+          text(70, 440, 600, L('tpl.report.subtitle'), 26, '#a9c4ee', { fontStyle: 'normal', height: 34 }),
+          text(70, 640, 600, L('tpl.report.by'), 20, '#6b6b80', { fontStyle: 'normal', height: 26 }),
+          text(70, 674, 600, L('tpl.report.author'), 34, '#1e1f24', { height: 42 }),
+          text(70, 730, 600, L('tpl.report.date'), 24, '#6b6b80', { fontStyle: 'normal', height: 30 }),
+          shape('rect', { x: 70, y: 1000, width: 654, height: 2 }, '#cfd2d8'),
+          text(70, 1022, 654, L('tpl.report.footer'), 20, '#6b6b80', { fontStyle: 'normal', height: 26 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'newsletter',
+    category: 'document',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 794, height: 150 }, '#e63946'),
+          text(60, 28, 674, L('tpl.news.name'), 90, '#ffffff', { fontFamily: DISPLAY, fontStyle: 'normal', letterSpacing: 4, height: 100 }),
+          text(60, 112, 674, L('tpl.news.issue'), 22, '#ffe3e6', { fontStyle: 'normal', height: 28 }),
+          shape('rect', { x: 60, y: 190, width: 674, height: 260 }, '#e8e8ee'),
+          icon('star', { x: 357, y: 270, ...sq(100) }, '#cfd2d8'),
+          text(60, 480, 674, L('tpl.news.headline'), 44, '#1e1f24', { fontFamily: SERIF, lineHeight: 1.1, height: 100 }),
+          text(60, 600, 674, L('tpl.news.lead'), 18, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.6, height: 100 }),
+          shape('rect', { x: 60, y: 716, width: 674, height: 2 }, '#e63946'),
+          text(60, 742, 674, L('tpl.news.columns'), 17, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.6, columns: 2, columnGap: 40, height: 250 }),
+          text(60, 1050, 674, L('tpl.news.footer'), 14, '#6b6b80', { fontStyle: 'normal', height: 20 })
         ]
       }
     ]

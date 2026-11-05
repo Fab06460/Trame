@@ -23,8 +23,8 @@ import { createFileInbox } from './fileInbox'
 import { projectFilesFromArgv } from './launchArgs'
 import { initMainLocale, setMainLocale, tm } from './i18n'
 import {
-  addHidden, addMeta, isBuiltinId, isValidId, parseHidden, parseTemplateIndex, removeMeta, renameMeta, replaceMeta, sanitizeMeta,
-  type TemplateMeta
+  PACK_EXTENSION, addHidden, addMeta, buildPack, isBuiltinId, isValidId, parseHidden, parsePack, parseTemplateIndex, removeMeta, renameMeta, replaceMeta,
+  sanitizeMeta, type PackEntry, type TemplateMeta
 } from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
 import { registerAiHandlers } from './aiIpc'
@@ -366,6 +366,54 @@ ipcMain.handle('templates:delete', async (_e, id: unknown) => {
   await saveTemplateIndex(removeMeta(await loadTemplateIndex(), id))
 })
 
+// Packs de modèles : plusieurs modèles personnels dans un seul fichier à partager (voir buildPack / parsePack)
+ipcMain.handle('templates:export-pack', async (_e, ids: unknown) => {
+  const wanted = Array.isArray(ids) ? ids.filter(isValidId) : []
+  const entries: PackEntry[] = []
+  for (const meta of (await loadTemplateIndex()).filter((m) => wanted.includes(m.id))) {
+    const json = await readFile(join(templatesDir(), `${meta.id}.json`), 'utf-8').catch(() => null)
+    if (json) entries.push({ meta, json })
+  }
+  if (entries.length === 0) return null
+  const name = `${tm('main.pack.defaultName')}.${PACK_EXTENSION}`
+  let path: string
+  if (TEST_EXPORT_DIR) {
+    path = join(TEST_EXPORT_DIR, name) // mode test (voir export:save)
+  } else {
+    const res = await dialog.showSaveDialog({ defaultPath: name, filters: [{ name: tm('main.pack.filter'), extensions: [PACK_EXTENSION] }] })
+    if (res.canceled || !res.filePath) return null
+    path = res.filePath
+  }
+  await writeFile(path, buildPack(entries), 'utf-8')
+  return entries.length
+})
+
+ipcMain.handle('templates:import-pack', async () => {
+  const file = await pickImportFile(PACK_EXTENSION, tm('main.pack.filter'))
+  if (!file) return null
+  const pack = parsePack(Buffer.from(file.bytes).toString('utf-8'))
+  if (!pack) {
+    dialog.showErrorBox(tm('main.pack.invalid.title'), tm('main.pack.invalid'))
+    return null
+  }
+  await mkdir(templatesDir(), { recursive: true })
+  let index = await loadTemplateIndex()
+  let skipped = pack.skipped
+  let imported = 0
+  for (const entry of pack.entries) {
+    const meta = sanitizeMeta(entry.meta, randomUUID(), Date.now())
+    if (!meta) {
+      skipped++
+      continue
+    }
+    await writeFile(join(templatesDir(), `${meta.id}.json`), entry.json, 'utf-8')
+    index = addMeta(index, meta)
+    imported++
+  }
+  await saveTemplateIndex(index)
+  return { imported, skipped }
+})
+
 ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, confirmLabel: string) => {
   if (TEST_EXPORT_DIR) {
     // mode test (voir export:save) : on garde la question et on répond « oui », sans boîte que le test ne pourrait pas fermer
@@ -456,7 +504,7 @@ ipcMain.on('app:close-confirmed', () => {
 const MAX_IMPORT_BYTES = 150_000_000
 
 /** Choix d'un fichier à importer (PDF, PPTX) : retourne son nom (sans extension) et son contenu. */
-async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
+async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv' | 'tramepack', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
   let path: string
   if (TEST_EXPORT_DIR) {
     // tests de bout en bout : le fichier pick-import.<ext> du dossier de test tient lieu de choix (aucun dialogue natif)
@@ -471,7 +519,7 @@ async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv', label: string): Promi
     dialog.showErrorBox(tm('main.import.tooBig.title'), tm('main.import.tooBig'))
     return null
   }
-  return { name: basename(path).replace(/\.(pdf|pptx|csv|tsv|txt)$/i, ''), bytes: new Uint8Array(await readFile(path)) }
+  return { name: basename(path).replace(/\.(pdf|pptx|csv|tsv|txt|tramepack)$/i, ''), bytes: new Uint8Array(await readFile(path)) }
 }
 
 // --- Photos libres (Openverse) -------------------------------------------------------------------------------------------------

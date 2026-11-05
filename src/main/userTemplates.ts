@@ -102,3 +102,64 @@ export function visibleBuiltins<T extends { id: string }>(builtins: T[], hidden:
   const replaced = new Set(userTemplates.map((t) => t.basedOn).filter(Boolean))
   return builtins.filter((b) => !hidden.includes(b.id) && !replaced.has(b.id))
 }
+
+// ── Packs de modèles (un fichier .tramepack qui réunit plusieurs modèles pour les partager) ───────────────────
+export const PACK_FORMAT = 'trame-template-pack'
+export const PACK_EXTENSION = 'tramepack'
+/** Au plus autant de modèles par pack : au-delà, c'est autre chose qu'un pack de modèles. */
+export const MAX_PACK_TEMPLATES = 100
+/** Document d'un modèle : même borne que l'enregistrement d'un modèle (voir `templates:save`). */
+export const MAX_PACK_DOCUMENT_CHARS = 64 * 1024 * 1024
+
+export interface PackEntry {
+  meta: Pick<TemplateMeta, 'name' | 'width' | 'height' | 'pageCount' | 'thumbnail'>
+  /** document du modèle (JSON `.trame`) */
+  json: string
+}
+
+/**
+ * Contenu d'un pack : nom, taille, miniature et document de chaque modèle. L'identifiant, la date et le modèle intégré remplacé
+ * (`basedOn`) ne sont pas repris : ils n'ont de sens que sur le poste d'origine.
+ */
+export function buildPack(entries: PackEntry[]): string {
+  const templates = entries.flatMap((e) => {
+    try {
+      const { name, width, height, pageCount, thumbnail } = e.meta
+      return [{ name, width, height, pageCount, thumbnail, document: JSON.parse(e.json) }]
+    } catch {
+      return [] // document illisible : on ne l'embarque pas
+    }
+  })
+  return JSON.stringify({ format: PACK_FORMAT, version: 1, templates })
+}
+
+/**
+ * Lit un pack. `null` si ce n'est pas un pack de Trame ; sinon les modèles valides (métadonnées assainies, document de pages
+ * non vide) et le nombre de ceux qui ont été écartés (illisibles, trop lourds, au-delà de la limite).
+ */
+export function parsePack(raw: string): { entries: PackEntry[]; skipped: number } | null {
+  let data: any
+  try {
+    data = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!data || data.format !== PACK_FORMAT || !Array.isArray(data.templates)) return null
+  const entries: PackEntry[] = []
+  let skipped = 0
+  for (const item of data.templates.slice(0, MAX_PACK_TEMPLATES)) {
+    const meta = sanitizeMeta(item, 'pack-entry', 0)
+    const doc = item?.document
+    if (!meta || !doc || typeof doc !== 'object' || !Array.isArray(doc.pages) || doc.pages.length === 0) {
+      skipped++
+      continue
+    }
+    const json = JSON.stringify(doc)
+    if (json.length > MAX_PACK_DOCUMENT_CHARS) {
+      skipped++
+      continue
+    }
+    entries.push({ meta: { name: meta.name, width: meta.width, height: meta.height, pageCount: meta.pageCount, thumbnail: meta.thumbnail }, json })
+  }
+  return { entries, skipped: skipped + Math.max(0, data.templates.length - MAX_PACK_TEMPLATES) }
+}

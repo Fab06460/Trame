@@ -119,6 +119,10 @@ const api = {
   unhideAllTemplates: (): Promise<void> => ipcRenderer.invoke('templates:unhide-all'),
   loadUserTemplate: (id: string): Promise<string | null> => ipcRenderer.invoke('templates:load', id),
   deleteUserTemplate: (id: string): Promise<void> => ipcRenderer.invoke('templates:delete', id),
+  /** Exporte les modèles personnels choisis dans un fichier .tramepack (boîte « Enregistrer ») ; leur nombre, ou null si annulé. */
+  exportTemplatePack: (ids: string[]): Promise<number | null> => ipcRenderer.invoke('templates:export-pack', ids),
+  /** Importe un pack de modèles (boîte « Ouvrir ») ; null si annulé ou illisible (erreur affichée). */
+  importTemplatePack: (): Promise<{ imported: number; skipped: number } | null> => ipcRenderer.invoke('templates:import-pack'),
   /** Boîte de confirmation native ; true si l'utilisateur choisit `confirmLabel`. */
   confirm: (message: string, detail: string, confirmLabel: string): Promise<boolean> =>
     ipcRenderer.invoke('dialog:confirm', message, detail, confirmLabel),
