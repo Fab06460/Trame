@@ -595,3 +595,7 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .video-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .video-progress progress { flex: 1; height: 8px; }
 .video-footer { justify-content: flex-end; gap: 8px; }
+.video-music { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px 10px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.video-music legend { padding: 0 6px; font-size: 12px; font-weight: 600; }
+.video-music .row { align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+.video-music label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; }

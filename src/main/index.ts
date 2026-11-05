@@ -22,6 +22,7 @@ import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type Speaker
 import { createFileInbox } from './fileInbox'
 import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeRelative, mediaMime, parseMediaState, withTags, type MediaItem, type MediaState } from '../shared/mediaLibrary'
 import { projectFilesFromArgv } from './launchArgs'
+import { AUDIO_EXTENSIONS, MAX_AUDIO_BYTES, isAudioFile, type AudioPick } from '../shared/audioFiles'
 import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
 import { contextPlan, dictionariesFor, isDictionaryWord, parseSpellSettings, SPELL_LANGUAGES, type ContextItem, type SpellSettings } from './spellSettings'
 import {
@@ -1201,6 +1202,25 @@ ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   if (res.canceled || !res.filePath) return null
   await writeFile(res.filePath, Buffer.from(dataUrl.split(',')[1], 'base64'))
   return res.filePath
+})
+
+// musique de fond d'une vidéo : le fichier choisi par la personne est lu et remis tel quel à l'interface (qui le décode)
+ipcMain.handle('audio:pick', async (): Promise<AudioPick> => {
+  // tests de bout en bout : le fichier « choisi » est pick-audio.wav du dossier de test (aucun dialogue natif)
+  if (TEST_EXPORT_DIR) {
+    const buf = await readFile(join(TEST_EXPORT_DIR, 'pick-audio.wav')).catch(() => null)
+    return buf ? { name: 'pick-audio.wav', bytes: new Uint8Array(buf) } : null
+  }
+  const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: tm('main.filter.audio'), extensions: [...AUDIO_EXTENSIONS] }] })
+  if (res.canceled || !res.filePaths[0]) return null
+  const path = res.filePaths[0]
+  if (!isAudioFile(path)) return { error: 'unreadable' }
+  try {
+    if ((await stat(path)).size > MAX_AUDIO_BYTES) return { error: 'tooBig' }
+    return { name: basename(path), bytes: new Uint8Array(await readFile(path)) }
+  } catch {
+    return { error: 'unreadable' }
+  }
 })
 
 /** Octets d'un fichier vidéo : seuls .mp4 et .webm, jusqu'à 2 Go ; le nom est celui proposé dans la boîte d'enregistrement. */

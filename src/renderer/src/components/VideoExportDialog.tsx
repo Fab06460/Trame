@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { fileSafeName } from '@/docName'
 import { chooseCodec, exportVideo, VideoCancelled, videoSupported, type VideoFormat, type VideoResult } from '@/videoExport'
+import { DEFAULT_MUSIC, decodeAudio, MAX_AUDIO_SECONDS, type DecodedAudio, type MusicOptions } from '@/audioTrack'
 import { DEFAULT_VIDEO, FPS_CHOICES, MAX_SECONDS, MIN_SECONDS, SIZE_CHOICES, totalSeconds, videoProblem, videoSize, type VideoOptions } from '@/videoTimeline'
 import { useEditor } from '@/store/editor'
 import { useVideoExport } from '@/store/videoExport'
@@ -26,6 +27,10 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   const [note, setNote] = useState('')
   const [format, setFormat] = useState<VideoFormat | null | undefined>(undefined)
   const abort = useRef<AbortController | null>(null)
+  /** musique de fond choisie (fichier décodé) et ses réglages */
+  const [music, setMusic] = useState<{ name: string; audio: DecodedAudio } | null>(null)
+  const [musicOptions, setMusicOptions] = useState<MusicOptions>(DEFAULT_MUSIC)
+  const [musicProblem, setMusicProblem] = useState<MessageKey | null>(null)
 
   const size = videoSize(doc, options.longSide)
   const problem = videoProblem(doc, options)
@@ -33,11 +38,25 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   useEffect(() => {
     let live = true
     setFormat(undefined)
-    void chooseCodec(size.width, size.height, options.fps).then((c) => live && setFormat(c ? c.format : null))
+    void chooseCodec(size.width, size.height, options.fps, !!music).then((c) => live && setFormat(c ? c.format : null))
     return () => {
       live = false
     }
-  }, [size.width, size.height, options.fps])
+  }, [size.width, size.height, options.fps, music])
+
+  const chooseMusic = async (): Promise<void> => {
+    setMusicProblem(null)
+    const picked = await window.trame.pickAudio()
+    if (!picked) return
+    if ('error' in picked) return setMusicProblem(picked.error === 'tooBig' ? 'video.music.tooBig' : 'video.music.unreadable')
+    try {
+      const audio = await decodeAudio(picked.bytes)
+      if (audio.seconds > MAX_AUDIO_SECONDS) return setMusicProblem('video.music.tooLong')
+      setMusic({ name: picked.name, audio })
+    } catch {
+      setMusicProblem('video.music.unreadable')
+    }
+  }
 
   const patch = (p: Partial<VideoOptions>): void => setOptions((o) => ({ ...o, ...p }))
   const busy = status === 'working'
@@ -56,7 +75,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
     const controller = new AbortController()
     abort.current = controller
     try {
-      const r = await exportVideo(doc, options, (done, total) => setProgress({ done, total }), controller.signal)
+      const r = await exportVideo(doc, options, (done, total) => setProgress({ done, total }), controller.signal, music ? { audio: music.audio, options: musicOptions } : undefined)
       setResult(r)
       setStatus('ready')
       await save(r)
@@ -105,6 +124,33 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
           </label>
         </div>
 
+        <fieldset className="video-music" data-video-music disabled={busy}>
+          <legend>{t('video.music')}</legend>
+          {music ? (
+            <>
+              <p className="hint" data-video-music-name>{t('video.music.info', { name: music.name, duration: clock(music.audio.seconds) })}</p>
+              <div className="row">
+                <label>
+                  {t('video.music.volume')}
+                  <input type="range" data-field="videoVolume" min={0} max={1} step={0.05} value={musicOptions.volume} onChange={(e) => setMusicOptions({ ...musicOptions, volume: Number(e.target.value) })} />
+                  <span className="hint">{Math.round(musicOptions.volume * 100)} %</span>
+                </label>
+                <label className="check">
+                  <input type="checkbox" data-field="videoFade" checked={musicOptions.fade} onChange={(e) => setMusicOptions({ ...musicOptions, fade: e.target.checked })} /> {t('video.music.fade')}
+                </label>
+              </div>
+              <div className="row">
+                <button data-action="video-music-pick" onClick={() => void chooseMusic()}>{t('video.music.change')}</button>
+                <button data-action="video-music-remove" onClick={() => setMusic(null)}>{t('video.music.remove')}</button>
+              </div>
+              <p className="hint">{t('video.music.hint')}</p>
+            </>
+          ) : (
+            <button data-action="video-music-pick" onClick={() => void chooseMusic()}>{t('video.music.pick')}</button>
+          )}
+          {musicProblem && <p className="warn" role="alert" data-video-music-problem>{t(musicProblem, { max: Math.round(MAX_AUDIO_SECONDS / 60) })}</p>}
+        </fieldset>
+
         {!videoSupported() || format === null ? (
           <p className="warn" role="alert" data-video-unsupported>{t('video.noEncoder')}</p>
         ) : problem ? (
@@ -113,7 +159,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
           <p className="hint" data-video-summary>
             {format ? t('video.summary', { format: t(`video.format.${format}` as MessageKey), w: size.width, h: size.height, duration: clock(totalSeconds(doc, options)) }) : t('video.probing')}
             {' · '}
-            {t('video.noSound')}
+            {music ? t('video.withMusic') : t('video.noSound')}
           </p>
         )}
 

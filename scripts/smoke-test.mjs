@@ -3393,6 +3393,45 @@ try {
   check('vidéo : « Arrêter » ferme la boîte sans rien enregistrer', (await nBrand('[data-video-dialog]')) === 0 && !existsSync(videoFile))
   // sécurité : le processus principal n'écrit que des .mp4 / .webm
   check('vidéo : un autre type de fichier ou un contenu vide est refusé par le processus principal', (await run(`Promise.all([window.trame.saveExportBytes(new Uint8Array([1, 2, 3]), 'x.exe'), window.trame.saveExportBytes(new Uint8Array(0), 'x.mp4'), window.trame.saveExportBytes(new Uint8Array([1]), '../x.sh')]).then(r => r.every(v => v === null))`)) === true && !existsSync(join(exportsDir, 'x.exe')))
+  // musique de fond : fichier illisible refusé, WAV choisi, volume, fondu, boucle ; relecture de la piste son du MP4
+  const sineWav = (seconds, rate = 44100, hz = 440, amp = 0.8) => {
+    const n = Math.round(seconds * rate)
+    const buf = Buffer.alloc(44 + n * 2)
+    buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVEfmt ', 8); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22)
+    buf.writeUInt32LE(rate, 24); buf.writeUInt32LE(rate * 2, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34); buf.write('data', 36); buf.writeUInt32LE(n * 2, 40)
+    for (let k = 0; k < n; k++) buf.writeInt16LE(Math.round(Math.sin((2 * Math.PI * hz * k) / rate) * amp * 32767), 44 + k * 2)
+    return buf
+  }
+  await rm(videoFile, { force: true })
+  await writeFile(join(exportsDir, 'pick-audio.wav'), Buffer.from('ceci n\'est pas un fichier audio'))
+  await exportVia('video')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 1)
+  check('musique : avant tout choix, la boîte propose « Choisir un fichier audio… » et annonce « sans son »', (await nBrand('[data-video-music] [data-action="video-music-pick"]')) === 1 && /sans son/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)))
+  await clickSel('[data-action="video-music-pick"]')
+  await waitFor(async () => (await nBrand('[data-video-music-problem]')) === 1)
+  check('musique : un fichier illisible est refusé avec un message, sans musique choisie', (await nBrand('[data-video-music-name]')) === 0)
+  await writeFile(join(exportsDir, 'pick-audio.wav'), sineWav(1))
+  await clickSel('[data-action="video-music-pick"]')
+  await waitFor(async () => (await nBrand('[data-video-music-name]')) === 1)
+  check('musique : le WAV est décodé (nom et durée 0:01 affichés), le message d\'erreur disparaît', /pick-audio\.wav · 0:01/.test(await run(`document.querySelector('[data-video-music-name]').innerText`)) && (await nBrand('[data-video-music-problem]')) === 0)
+  await typeInto('[data-field="videoSeconds"]', '1')
+  await setSelect('[data-field="videoSize"]', 854)
+  await setSelect('[data-field="videoFps"]', 24)
+  await run(`(() => { const r = document.querySelector('[data-field="videoVolume"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '1'); r.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await waitFor(async () => /avec musique/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)))
+  check('musique : le résumé annonce « avec musique »', /avec musique/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)))
+  await clickSel('[data-action="video-start"]')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 0, 180000)
+  check('musique : la vidéo avec son est enregistrée', existsSync(videoFile) && statSync(videoFile).size > 1000)
+  const withSound = await readFile(videoFile)
+  const track = await run(`(async () => { const bin = atob(${JSON.stringify(withSound.toString('base64'))}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const ctx = new OfflineAudioContext(2, 1, 48000); const b = await ctx.decodeAudioData(a.buffer); const ch = b.getChannelData(0); const rms = (from, to) => { let s = 0; const i0 = Math.round(from * b.sampleRate), i1 = Math.round(to * b.sampleRate); for (let i = i0; i < i1; i++) s += ch[i] * ch[i]; return Math.sqrt(s / (i1 - i0)) }; return { d: b.duration, ch: b.numberOfChannels, start: rms(0, 0.05), mid: rms(1.3, 1.7), loop: rms(1.2, 1.8), end: rms(b.duration - 0.05, b.duration - 0.005) } })().catch(e => ({ error: String(e) }))`)
+  check('musique : la piste son du MP4 se décode (stéréo, durée de la vidéo)', track.ch === 2 && Math.abs(track.d - videoPages) < 0.3, JSON.stringify(track))
+  check('musique : fondu d\'entrée et de sortie (silence aux deux bouts, plein volume au milieu)', track.start < 0.08 && track.end < 0.08 && track.mid > 0.35, JSON.stringify(track))
+  check('musique : le son de 1 s recommence (il y en a encore après la première seconde)', track.loop > 0.3, JSON.stringify(track))
+  const stillVideo = await run(`(async () => { const bin = atob(${JSON.stringify(withSound.toString('base64'))}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(new Blob([a], { type: 'video/mp4' })); await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('illisible')); setTimeout(() => rej(new Error('délai')), 15000) }); const out = { w: v.videoWidth, d: v.duration }; v.src = ''; return out })().catch(e => ({ error: String(e) }))`)
+  check('musique : le lecteur vidéo relit toujours le fichier avec son', stillVideo.w === 854 && Math.abs(stillVideo.d - videoPages) < 0.3, JSON.stringify(stillVideo))
+  await rm(join(exportsDir, 'pick-audio.wav'), { force: true })
+
 
   // notes de l'orateur : saisie par page, affichage en présentation (N), export et import PowerPoint
   const notesField = () => run(`document.querySelector('[data-notes="text"]')?.value ?? null`)
