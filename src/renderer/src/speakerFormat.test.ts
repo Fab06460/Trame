@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampNotesSize, formatElapsed, nextIndex, NOTES_SIZE } from './speakerFormat'
+import { clampNotesSize, formatElapsed, NOTES_SIZE } from './speakerFormat'
 
 describe('écran de l\'orateur : mise en forme', () => {
   it('durée en m:ss puis h:mm:ss', () => {
@@ -18,9 +18,5 @@ describe('écran de l\'orateur : mise en forme', () => {
     expect(clampNotesSize(500)).toBe(NOTES_SIZE.max)
     expect(clampNotesSize('x')).toBe(NOTES_SIZE.def)
     expect(clampNotesSize(30.4)).toBe(30)
-  })
-  it('page suivante', () => {
-    expect(nextIndex(0, 3)).toBe(1)
-    expect(nextIndex(2, 3)).toBeNull()
   })
 })

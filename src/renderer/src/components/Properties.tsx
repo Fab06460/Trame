@@ -1,3 +1,4 @@
+import { AppearancePanel } from '@/components/AppearancePanel'
 import { COLUMN_GAP, columnGapOf, columnsOf } from '@/columnStyle'
 import { isFlipExempt } from '@/flip'
 import { sameTypeIds } from '@/selection'
@@ -136,6 +137,7 @@ export function Properties(): React.JSX.Element {
         <PositionPanel />
         {alignButtons}
         {layerButtons}
+        <AppearancePanel />
       </aside>
     )
   }
@@ -150,6 +152,7 @@ export function Properties(): React.JSX.Element {
         <PositionPanel />
         {alignButtons}
         {layerButtons}
+        <AppearancePanel />
       </aside>
     )
   }
@@ -168,6 +171,7 @@ export function Properties(): React.JSX.Element {
         <PositionPanel />
         {alignButtons}
         {layerButtons}
+        <AppearancePanel />
         <ProtectionControls />
       </aside>
     )
@@ -479,6 +483,7 @@ export function Properties(): React.JSX.Element {
       <PositionPanel />
       {alignButtons}
       {layerButtons}
+      <AppearancePanel />
       <ProtectionControls />
     </aside>
   )

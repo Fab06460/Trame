@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { renderPage } from '@/exportPages'
 import { registerEmbeddedFonts } from '@/fonts'
-import { clampNotesSize, formatElapsed, NOTES_SIZE, nextIndex } from '@/speakerFormat'
+import { nextPosition, pageAtStep } from '@/builds'
+import { clampNotesSize, formatElapsed, NOTES_SIZE } from '@/speakerFormat'
 import { parseDocument } from '@/store/editor'
 import type { TrameDocument } from '@/types'
 import { useLocale, useT } from '@/i18n'
@@ -18,12 +19,14 @@ const readSize = (): number => {
 interface View {
   doc: TrameDocument
   index: number
+  /** clics déjà faits sur la page (éléments qui apparaissent pas à pas) */
+  step: number
   black: boolean
   startedAt: number
 }
 
 /** Image d'une page, rendue comme à l'export (mêmes polices, effets, ombres) puis mise en cache. */
-function usePageImage(doc: TrameDocument | null, index: number | null, maxSide: number): string | null {
+function usePageImage(doc: TrameDocument | null, index: number | null, step: number, maxSide: number): string | null {
   const cache = useRef(new Map<string, Promise<string>>())
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -35,10 +38,10 @@ function usePageImage(doc: TrameDocument | null, index: number | null, maxSide: 
       setUrl(null)
       return
     }
-    const key = `${index}@${maxSide}`
+    const key = `${index}:${step}@${maxSide}`
     let p = cache.current.get(key)
     if (!p) {
-      p = renderPage(doc, doc.pages[index], 'image/jpeg', undefined, { scale: Math.min(2, maxSide / Math.max(doc.width, doc.height)), quality: 0.9 })
+      p = renderPage(doc, pageAtStep(doc.pages[index], step), 'image/jpeg', undefined, { scale: Math.min(2, maxSide / Math.max(doc.width, doc.height)), quality: 0.9 })
       cache.current.set(key, p)
       p.catch(() => cache.current.delete(key))
     }
@@ -46,7 +49,7 @@ function usePageImage(doc: TrameDocument | null, index: number | null, maxSide: 
     return () => {
       live = false
     }
-  }, [doc, index, maxSide])
+  }, [doc, index, step, maxSide])
   return url
 }
 
@@ -69,19 +72,19 @@ export function SpeakerView(): React.JSX.Element {
   }, [t])
 
   useEffect(() => {
-    const apply = (s: { doc: string | null; index: number; black: boolean; startedAt: number }): void => {
+    const apply = (s: { doc: string | null; index: number; step: number; black: boolean; startedAt: number }): void => {
       if (s.doc !== null && s.doc !== docJson.current) {
         docJson.current = s.doc
         try {
           const doc = parseDocument(s.doc)
           void registerEmbeddedFonts(doc.fonts)
-          setView({ doc, index: s.index, black: s.black, startedAt: s.startedAt })
+          setView({ doc, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt })
         } catch {
           /* document illisible : on garde l'état précédent */
         }
         return
       }
-      setView((v) => (v ? { ...v, index: s.index, black: s.black, startedAt: s.startedAt } : v))
+      setView((v) => (v ? { ...v, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt } : v))
     }
     void window.trame.speakerHello().then((s) => s && apply(s))
     const off = window.trame.onSpeakerState(apply)
@@ -97,7 +100,7 @@ export function SpeakerView(): React.JSX.Element {
     (to: number) => {
       if (!view) return
       const index = Math.max(0, Math.min(view.doc.pages.length - 1, to))
-      setView({ ...view, index }) // affichage immédiat ; la présentation confirme ensuite
+      setView({ ...view, index, step: 0 }) // affichage immédiat ; la présentation confirme ensuite
       window.trame.sendSpeakerCommand({ type: 'go', index })
     },
     [view]
@@ -107,8 +110,8 @@ export function SpeakerView(): React.JSX.Element {
       if (!view) return
       const k = e.key
       let handled = true
-      if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) go(view.index + 1)
-      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) go(view.index - 1)
+      if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) window.trame.sendSpeakerCommand({ type: 'next' })
+      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) window.trame.sendSpeakerCommand({ type: 'prev' })
       else if (k === 'Home') go(0)
       else if (k === 'End') go(count - 1)
       else if (k.toLowerCase() === 'b') window.trame.sendSpeakerCommand({ type: 'black' })
@@ -120,9 +123,12 @@ export function SpeakerView(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [view, go, count])
 
-  const current = usePageImage(view?.doc ?? null, view?.index ?? null, 1400)
-  const upcoming = view ? nextIndex(view.index, count) : null
-  const next = usePageImage(view?.doc ?? null, upcoming, 700)
+  const current = usePageImage(view?.doc ?? null, view?.index ?? null, view?.step ?? 0, 1400)
+  // ce que le prochain clic fera apparaître : l'étape suivante de la page, ou la page suivante
+  const at = view ? { index: view.index, step: view.step } : null
+  const upcomingAt = view && at ? nextPosition(view.doc, at) : null
+  const upcoming = upcomingAt && at && (upcomingAt.index !== at.index || upcomingAt.step !== at.step) ? upcomingAt : null
+  const next = usePageImage(view?.doc ?? null, upcoming?.index ?? null, upcoming?.step ?? 0, 700)
 
   if (!view) return <div className="speaker speaker-wait" role="status">{t('speaker.waiting')}</div>
   const notes = view.doc.pages[view.index].notes
@@ -145,8 +151,8 @@ export function SpeakerView(): React.JSX.Element {
         <button data-speaker="reset" onClick={() => setResetAt(Date.now())} title={t('speaker.reset.title')}>↺</button>
         <span className="speaker-clock" data-speaker="clock">{new Date(now).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
         <span className="spacer" />
-        <button data-speaker="prev" disabled={view.index === 0} onClick={() => go(view.index - 1)}>{t('speaker.prev')}</button>
-        <button data-speaker="next" className="primary" disabled={upcoming === null} onClick={() => go(view.index + 1)}>{t('speaker.next')}</button>
+        <button data-speaker="prev" disabled={view.index === 0 && view.step === 0} onClick={() => window.trame.sendSpeakerCommand({ type: 'prev' })}>{t('speaker.prev')}</button>
+        <button data-speaker="next" className="primary" disabled={upcoming === null} onClick={() => window.trame.sendSpeakerCommand({ type: 'next' })}>{t('speaker.next')}</button>
         <button data-speaker="black" aria-pressed={view.black} className={view.black ? 'active' : ''} onClick={() => window.trame.sendSpeakerCommand({ type: 'black' })} title={t('speaker.black.title')}>{t('speaker.black')}</button>
         <button data-speaker="swap" onClick={() => window.trame.sendSpeakerCommand({ type: 'swap' })} title={t('speaker.swap.title')}>{t('speaker.swap')}</button>
         <button data-speaker="exit" className="danger" onClick={() => window.trame.sendSpeakerCommand({ type: 'exit' })} title={t('speaker.exit.title')}>{t('speaker.exit')}</button>
@@ -159,7 +165,7 @@ export function SpeakerView(): React.JSX.Element {
         <aside className="speaker-side">
           <section className="speaker-next" aria-label={t('speaker.nextLabel')}>
             <h2>{t('speaker.upNext')}</h2>
-            {next ? <img src={next} alt={t('pres.page', { page: (upcoming ?? 0) + 1 })} data-speaker="next-image" data-speaker-index={upcoming ?? -1} draggable={false} /> : <div className="speaker-end" data-speaker="end">{upcoming === null ? t('speaker.end') : t('pres.preparing')}</div>}
+            {next ? <img src={next} alt={t('pres.page', { page: (upcoming?.index ?? 0) + 1 })} data-speaker="next-image" data-speaker-index={upcoming?.index ?? -1} data-speaker-step={upcoming?.step ?? 0} draggable={false} /> : <div className="speaker-end" data-speaker="end">{upcoming === null ? t('speaker.end') : t('pres.preparing')}</div>}
           </section>
           <section className="speaker-notes" aria-label={t('speaker.notes')}>
             <h2>

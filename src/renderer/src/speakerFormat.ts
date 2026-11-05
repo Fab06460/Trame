@@ -13,6 +13,3 @@ export function formatElapsed(ms: number): string {
 export const NOTES_SIZE = { min: 16, max: 72, def: 28, step: 4 }
 
 export const clampNotesSize = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(NOTES_SIZE.max, Math.max(NOTES_SIZE.min, Math.round(v))) : NOTES_SIZE.def)
-
-/** Page suivante dans la présentation, ou null après la dernière. */
-export const nextIndex = (index: number, count: number): number | null => (index + 1 < count ? index + 1 : null)

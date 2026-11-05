@@ -69,6 +69,8 @@ export interface TrameElement {
   locked?: boolean
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */
   hidden?: boolean
+  /** apparition en présentation : numéro du clic (1 à 30) qui fait apparaître l'élément ; absent = visible dès l'ouverture de la page */
+  build?: number
   fill: string
   /** dégradé de remplissage (rectangle, ellipse, forme) : remplace `fill` tant qu'il est présent */
   gradient?: Gradient

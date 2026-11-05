@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LaserPointer } from '@/components/LaserPointer'
 import { InkLayer } from '@/components/InkLayer'
+import { PresentationOverview } from '@/components/PresentationOverview'
+import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
 import { renderPage } from '@/exportPages'
 import { usePresentation } from '@/store/presentation'
@@ -20,10 +22,11 @@ export function PresentationMode(): React.JSX.Element | null {
   const active = usePresentation((s) => s.active)
   const doc = usePresentation((s) => s.doc)
   const index = usePresentation((s) => s.index)
-  const [image, setImage] = useState<{ index: number; url: string; kind: PageTransition } | null>(null)
+  const step = usePresentation((s) => s.step)
+  const [image, setImage] = useState<{ index: number; step: number; url: string; kind: PageTransition } | null>(null)
   /** page qui s'efface pendant la transition (retirée au bout de la durée de l'animation) */
-  const [leaving, setLeaving] = useState<{ index: number; url: string; dir: 1 | -1; n: number; kind: PageTransition } | null>(null)
-  const shown = useRef<{ index: number; url: string; kind: PageTransition } | null>(null)
+  const [leaving, setLeaving] = useState<{ index: number; step: number; url: string; dir: 1 | -1; n: number; kind: PageTransition } | null>(null)
+  const shown = useRef<{ index: number; step: number; url: string; kind: PageTransition } | null>(null)
   const moves = useRef(0)
   const [controls, setControls] = useState(true)
   const [auto, setAuto] = useState(0)
@@ -33,6 +36,13 @@ export function PresentationMode(): React.JSX.Element | null {
   const [speaker, setSpeaker] = useState(false)
   const [laser, setLaser] = useState(false)
   const [onBar, setOnBar] = useState(false)
+  /** vue d'ensemble des pages (touche G) et numéro de page en cours de saisie (chiffres puis Entrée) */
+  const [overview, setOverview] = useState(false)
+  const [goto, setGoto] = useState('')
+  const overviewRef = useRef(false)
+  overviewRef.current = overview
+  const gotoRef = useRef('')
+  gotoRef.current = goto
   /** annotations à l'écran : traits par page (le temps de la présentation seulement) et réglages du stylo */
   const [draw, setDraw] = useState(false)
   const [ink, setInk] = useState<Record<string, Stroke[]>>({})
@@ -40,7 +50,7 @@ export function PresentationMode(): React.JSX.Element | null {
   const [color, setColor] = useState<string>(INK_COLORS[0])
   const startedAt = usePresentation((s) => s.startedAt)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
-  const cache = useRef(new Map<number, Promise<string>>())
+  const cache = useRef(new Map<string, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bar = useRef<HTMLDivElement>(null)
   /** la barre est utilisée (souris dessus ou focus dedans, menu déroulant ouvert compris) : elle ne se masque pas */
@@ -60,17 +70,19 @@ export function PresentationMode(): React.JSX.Element | null {
     }
     const s = usePresentation.getState()
     if (!s.doc) return
-    void window.trame.speakerOpen({ doc: JSON.stringify(s.doc), index: s.index, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
+    void window.trame.speakerOpen({ doc: JSON.stringify(s.doc), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
   }
   const toggleSpeakerRef = useRef(toggleSpeaker)
   toggleSpeakerRef.current = toggleSpeaker
   useEffect(() => {
-    if (active && speaker) window.trame.speakerSync({ doc: null, index, black, startedAt })
-  }, [active, speaker, index, black, startedAt])
+    if (active && speaker) window.trame.speakerSync({ doc: null, index, step, black, startedAt })
+  }, [active, speaker, index, step, black, startedAt])
   useEffect(() => {
     if (!active) return
     const offCommand = window.trame.onSpeakerCommand((cmd) => {
       if (cmd.type === 'go') usePresentation.getState().go(cmd.index)
+      else if (cmd.type === 'next') usePresentation.getState().next()
+      else if (cmd.type === 'prev') usePresentation.getState().prev()
       else if (cmd.type === 'black') setBlack((b) => !b)
       else if (cmd.type === 'exit') usePresentation.getState().stop()
     })
@@ -119,6 +131,8 @@ export function PresentationMode(): React.JSX.Element | null {
     setTool('pen')
     setColor(INK_COLORS[0])
     setOnBar(false)
+    setOverview(false)
+    setGoto('')
     setAuto(0)
     setPaused(false)
     setControls(true)
@@ -136,15 +150,16 @@ export function PresentationMode(): React.JSX.Element | null {
   }, [active])
 
   const ensure = useCallback(
-    (i: number): Promise<string> => {
+    (i: number, st = 0): Promise<string> => {
       if (!doc) return Promise.reject(new Error('aucun document'))
-      let p = cache.current.get(i)
+      const key = `${i}:${st}`
+      let p = cache.current.get(key)
       if (!p) {
         const fit = Math.min(size.w / doc.width, size.h / doc.height)
         const scale = Math.min(fit * Math.min(window.devicePixelRatio || 1, 2), MAX_SIDE / Math.max(doc.width, doc.height))
-        p = renderPage(doc, doc.pages[i], 'image/jpeg', undefined, { scale, quality: 0.92 })
-        cache.current.set(i, p)
-        p.catch(() => cache.current.delete(i))
+        p = renderPage(doc, pageAtStep(doc.pages[i], st), 'image/jpeg', undefined, { scale, quality: 0.92 })
+        cache.current.set(key, p)
+        p.catch(() => cache.current.delete(key))
       }
       return p
     },
@@ -155,26 +170,28 @@ export function PresentationMode(): React.JSX.Element | null {
   useEffect(() => {
     if (!active || !doc) return
     let live = true
-    void ensure(index).then(
+    void ensure(index, step).then(
       (url) => {
         if (!live) return
         const prev = shown.current
         // une page d'arrivée différente de celle qui est affichée : la précédente reste en dessous le temps de la transition
         // transition de la page d'arrivée (en reculant : celle de la page quittée), voir transitionBetween
-        const move = prev && prev.index !== index ? transitionBetween(doc, prev.index, index) : null
+        // même page, un clic de plus ou de moins : l'élément apparaît (ou disparaît) en fondu
+        const move = prev && prev.index !== index ? transitionBetween(doc, prev.index, index) : prev && prev.step !== step ? ('fade' as const) : null
         if (prev && move && move !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto > 0), n: ++moves.current, kind: move })
         // la classe de l'image arrivante ne change plus ensuite (un changement relancerait l'animation)
-        const entry = { index, url, kind: move ?? (prev?.index === index ? prev.kind : pageTransition(doc, index)) }
+        const entry = { index, step, url, kind: move ?? (prev?.index === index ? prev.kind : pageTransition(doc, index)) }
         shown.current = entry
         setImage(entry)
       },
       () => {}
     )
-    for (const n of [index + 1, index - 1]) if (n >= 0 && n < doc.pages.length) void ensure(n).catch(() => {})
+    // les positions voisines (clic suivant, page suivante, retour) sont préparées d'avance
+    for (const n of [nextPosition(doc, { index, step }), prevPosition(doc, { index, step })]) if (n.index !== index || n.step !== step) void ensure(n.index, n.step).catch(() => {})
     return () => {
       live = false
     }
-  }, [active, doc, index, ensure, auto])
+  }, [active, doc, index, step, ensure, auto])
 
   useEffect(() => {
     if (!leaving) return
@@ -182,10 +199,15 @@ export function PresentationMode(): React.JSX.Element | null {
     return () => clearTimeout(t)
   }, [leaving])
 
+  // lecture automatique : les éléments qui apparaissent pas à pas sont montrés d'emblée (personne ne clique)
+  useEffect(() => {
+    if (active && auto > 0) usePresentation.getState().go(usePresentation.getState().index, 'end')
+  }, [active, auto])
+
   // lecture automatique (boucle)
   useEffect(() => {
     if (!active || !doc || auto === 0 || paused) return
-    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1), auto * 1000)
+    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1, 'end'), auto * 1000)
     return () => clearTimeout(t)
   }, [active, doc, auto, paused, index])
 
@@ -202,19 +224,28 @@ export function PresentationMode(): React.JSX.Element | null {
   useEffect(() => {
     if (!active) return
     const onKey = (e: KeyboardEvent): void => {
+      // la vue d'ensemble lit le clavier elle-même
+      if (overviewRef.current) return
       const s = usePresentation.getState()
       const last = (s.doc?.pages.length ?? 1) - 1
       const k = e.key
       let handled = true
       const pageId = s.doc?.pages[s.index]?.id
       if (k === 'Escape') {
-        if (drawRef.current) setDraw(false)
+        if (gotoRef.current) setGoto('')
+        else if (drawRef.current) setDraw(false)
         else exit()
       }
-      else if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) s.go(s.index + 1)
-      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) s.go(s.index - 1)
+      else if (k === 'Enter' && gotoRef.current) {
+        s.go(Number(gotoRef.current) - 1)
+        setGoto('')
+      }
+      else if (/^\d$/.test(k) && !drawRef.current && !e.metaKey && !e.ctrlKey) setGoto((g) => (g + k).slice(-4))
+      else if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) s.next()
+      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) s.prev()
       else if (k === 'Home') s.go(0)
-      else if (k === 'End') s.go(last)
+      else if (k === 'End') s.go(last, 'end')
+      else if (k.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey) setOverview(true)
       else if (k.toLowerCase() === 'b') setBlack((b) => !b)
       else if (k.toLowerCase() === 'p') setPaused((p) => !p)
       else if (k.toLowerCase() === 'n') setShowNotes((n) => !n)
@@ -240,6 +271,13 @@ export function PresentationMode(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [active, exit, wake])
 
+  // un numéro de page saisi puis laissé : il s'efface de lui-même
+  useEffect(() => {
+    if (!goto) return
+    const t = setTimeout(() => setGoto(''), 2500)
+    return () => clearTimeout(t)
+  }, [goto])
+
   // les commandes et le curseur se masquent quand la souris ne bouge plus
   useEffect(() => {
     if (active) wake()
@@ -255,9 +293,9 @@ export function PresentationMode(): React.JSX.Element | null {
         overBar.current = !!bar.current?.contains(e.target as Node)
         if (laser) setOnBar(overBar.current)
         wake()
-      }} onClick={() => usePresentation.getState().go(index + 1)}>
+      }} onClick={() => usePresentation.getState().next()}>
       {!black && leaving && <img key={`out-${leaving.n}`} className={`presentation-page leaving t-${leaving.kind}`} style={{ '--dir': leaving.dir } as React.CSSProperties} src={leaving.url} alt="" aria-hidden draggable={false} data-pres-leaving={leaving.index} />}
-      {!black && image && <img key={image.index} className={`presentation-page entering t-${image.kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={t('pres.page', { page: image.index + 1 })} draggable={false} data-pres-shown={image.index} />}
+      {!black && image && <img key={`${image.index}.${image.step}`} className={`presentation-page entering t-${image.kind}`} style={{ '--dir': leaving?.dir ?? 1 } as React.CSSProperties} src={image.url} alt={t('pres.page', { page: image.index + 1 })} draggable={false} data-pres-shown={image.index} />}
       {!black && !image && <div className="presentation-loading" role="status">{t('pres.preparing')}</div>}
       {showNotes && (
         <div className={`presentation-notes${doc.pages[index].notes ? '' : ' empty'}`} data-pres="notes" onClick={(e) => e.stopPropagation()}>
@@ -266,6 +304,8 @@ export function PresentationMode(): React.JSX.Element | null {
       )}
       {!black && <InkLayer strokes={ink[doc.pages[index].id] ?? []} drawing={draw} tool={tool} color={color} docWidth={doc.width} docHeight={doc.height} onStroke={(st) => setInk((m) => ({ ...m, [doc.pages[index].id]: addStroke(m[doc.pages[index].id] ?? [], st) }))} />}
       {laser && <LaserPointer hidden={onBar} />}
+      {goto && <div className="presentation-goto" data-pres="goto" role="status">{t('pres.goto', { n: goto, total: doc.pages.length })}</div>}
+      {overview && <PresentationOverview doc={doc} current={index} onClose={() => setOverview(false)} onPick={(i) => { usePresentation.getState().go(i); setOverview(false) }} />}
       <div
         ref={bar}
         className="presentation-bar"
@@ -276,9 +316,10 @@ export function PresentationMode(): React.JSX.Element | null {
         }}
         onBlur={wake}
       >
-        <button data-pres="prev" disabled={index === 0} onClick={() => usePresentation.getState().go(index - 1)} aria-label={t('pres.prev')}>‹</button>
+        <button data-pres="prev" disabled={index === 0 && step === 0} onClick={() => usePresentation.getState().prev()} aria-label={t('pres.prev')}>‹</button>
         <span data-pres="counter">{index + 1} / {doc.pages.length}</span>
-        <button data-pres="next" disabled={index === last} onClick={() => usePresentation.getState().go(index + 1)} aria-label={t('pres.next')}>›</button>
+        {stepsOf(doc.pages[index]) > 0 && <span className="pres-step" data-pres="step" title={t('pres.step.title')}>{t('pres.step', { n: step, total: stepsOf(doc.pages[index]) })}</span>}
+        <button data-pres="next" disabled={index === last && step >= stepsOf(doc.pages[index])} onClick={() => usePresentation.getState().next()} aria-label={t('pres.next')}>›</button>
         {doc.pages.length > 1 && (
           <label className="pres-auto" title={t('pres.auto.title')}>
             {t('pres.auto')}
@@ -297,6 +338,7 @@ export function PresentationMode(): React.JSX.Element | null {
             ))}
           </select>
         </label>
+        <button data-pres="overview" onClick={() => setOverview(true)} title={t('pres.overview.title')}>{t('pres.overview')}</button>
         <button data-pres="laser" aria-pressed={laser} onClick={() => { setDraw(false); setLaser((l) => !l) }} title={t('pres.laser.title')}>{t('pres.laser')}</button>
         <button data-pres="draw" aria-pressed={draw} onClick={() => { setLaser(false); setDraw((d) => !d) }} title={t('pres.draw.title')}>{t('pres.draw')}</button>
         <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title={t('pres.speaker.title')}>{t('pres.speaker')}</button>
