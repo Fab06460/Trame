@@ -507,7 +507,8 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .font-picker > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .font-list { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #1b1c21; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
 .font-list > [role='listbox'] { flex: 1; min-height: 0; overflow-y: auto; }
-.font-group-label { padding: 6px 8px 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.font-group-label { position: sticky; top: 0; z-index: 1; margin-top: 6px; padding: 5px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; background: #2c2e38; border-left: 3px solid var(--accent); border-radius: 4px; }
+[data-font-group='brand'] > .font-group-label { background: var(--accent); }
 .font-option { padding: 6px 8px; border-radius: 6px; font-size: 17px; line-height: 1.25; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .font-option.active { background: rgba(124, 92, 255, 0.28); }
 .font-option.selected::after { content: ' ✓'; color: var(--accent); }
