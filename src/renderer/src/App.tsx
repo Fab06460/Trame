@@ -16,6 +16,7 @@ import { MailMergeDialog } from '@/components/MailMergeDialog'
 import { PdfToolsDialog } from '@/components/PdfToolsDialog'
 import { WordCloudDialog } from '@/components/WordCloudDialog'
 import { SignatureDialog } from '@/components/SignatureDialog'
+import { VideoExportDialog } from '@/components/VideoExportDialog'
 import { StyleMatchDialog } from '@/components/StyleMatchDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { usePrintDialog } from '@/store/printDialog'
@@ -216,6 +217,7 @@ export default function App(): React.JSX.Element {
       <PdfToolsDialog />
       <WordCloudDialog />
       <SignatureDialog />
+      <VideoExportDialog />
       <StyleMatchDialog />
       <VersionsDialog />
       <RecoveryDialog />

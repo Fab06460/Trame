@@ -101,6 +101,8 @@ const api = {
   /** Impression directe d'une page HTML préparée (une section par feuille de `widthPx` × `heightPx`) ; ouvre la boîte d'impression du système. */
   printHtml: (html: string, widthPx: number, heightPx: number, duplex: 'simplex' | 'shortEdge' | 'longEdge'): Promise<{ status: 'printed' } | { status: 'opened' } | { status: 'cancelled' } | { status: 'failed'; reason: string }> =>
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
+  /** Enregistre des octets (vidéo .mp4 ou .webm) : boîte d'enregistrement du système ; chemin choisi, ou null si annulé. */
+  saveExportBytes: (bytes: Uint8Array, name: string): Promise<string | null> => ipcRenderer.invoke('export:save-bytes', bytes, name),
   saveExport: (dataUrl: string, name: string): Promise<string | null> =>
     ipcRenderer.invoke('export:save', dataUrl, name),
   /** Export vers un dossier : choix du dossier (null si annulé ; `existing` : fichiers qui seraient remplacés), puis écriture fichier par fichier. */

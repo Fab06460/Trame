@@ -11,7 +11,7 @@
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdtemp, rm, mkdir, readFile, readdir, writeFile, copyFile, symlink } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
@@ -3351,6 +3351,49 @@ try {
   // sécurité : le processus principal refuse un mot invalide
   check('orthographe : un mot invalide (espace, vide, trop long) est refusé par le processus principal', (await run(`Promise.all([window.trame.addSpellWord('deux mots'), window.trame.addSpellWord(''), window.trame.addSpellWord('x'.repeat(61))]).then(r => r.every(v => v === false))`)) === true)
 
+  // export en vidéo : réglages, génération (MP4 H.264 par WebCodecs), relecture du fichier par un lecteur vidéo, arrêt en cours de route
+  const videoFile = join(exportsDir, 'Sans titre.mp4')
+  const setSelect = (sel, value) => run(`(() => { const s = document.querySelector(${JSON.stringify(sel)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(String(value))}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await rm(videoFile, { force: true })
+  const videoPages = await nBrand('.page-item')
+  await exportVia('video')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 1)
+  await waitFor(async () => /MP4|WebM/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)))
+  check('vidéo : la boîte annonce un format (MP4 ou WebM) et « sans son »', /MP4 \(H\.264\)|WebM \(VP9\)/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)) && /sans son/.test(await run(`document.querySelector('[data-video-summary]').innerText`)), await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`))
+  await typeInto('[data-field="videoSeconds"]', '0')
+  await waitFor(async () => (await nBrand('[data-video-problem="badSeconds"]')) === 1)
+  check('vidéo : une durée hors bornes est signalée et « Créer la vidéo » est inactif', (await run(`document.querySelector('[data-action="video-start"]').disabled`)) === true)
+  await typeInto('[data-field="videoSeconds"]', '1')
+  await setSelect('[data-field="videoSize"]', 854)
+  await setSelect('[data-field="videoFps"]', 24)
+  await waitFor(async () => (await nBrand('[data-video-problem]')) === 0 && /MP4/.test(await run(`document.querySelector('[data-video-summary]')?.innerText ?? ''`)))
+  const summary = await run(`document.querySelector('[data-video-summary]').innerText`)
+  check('vidéo : le résumé donne la taille et la durée (480p, page carrée, une seconde par page)', summary.includes('854 × 854') && summary.includes(`0:0${videoPages}`), summary)
+  await clickSel('[data-action="video-start"]')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 0, 180000)
+  check('vidéo : le fichier .mp4 est enregistré et la boîte se ferme', existsSync(videoFile) && statSync(videoFile).size > 1000, existsSync(videoFile) ? String(statSync(videoFile).size) : 'absent')
+  const mp4 = await readFile(videoFile)
+  check('vidéo : c\'est un vrai fichier MP4 (boîte « ftyp »)', mp4.subarray(4, 8).toString('latin1') === 'ftyp')
+  const meta = await run(`(async () => { const bin = atob(${JSON.stringify(mp4.toString('base64'))}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(new Blob([a], { type: 'video/mp4' })); await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('illisible')); setTimeout(() => rej(new Error('délai')), 15000) }); const out = { w: v.videoWidth, h: v.videoHeight, d: v.duration }; v.src = ''; return out })().catch(e => ({ error: String(e) }))`)
+  check('vidéo : un lecteur vidéo relit le fichier (854 × 854, durée = pages × 1 s)', meta.w === 854 && meta.h === 854 && Math.abs(meta.d - videoPages) < 0.3, JSON.stringify(meta))
+  const frameAt = (time) => run(`(async () => { const bin = atob(${JSON.stringify(mp4.toString('base64'))}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(new Blob([a], { type: 'video/mp4' })); await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('illisible')); setTimeout(() => rej(new Error('délai')), 15000) }); v.currentTime = ${time}; await new Promise((res, rej) => { v.onseeked = res; setTimeout(() => rej(new Error('délai')), 15000) }); const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; const x = c.getContext('2d'); x.drawImage(v, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 200 || d[i + 1] < 200 || d[i + 2] < 200) dark++; v.src = ''; return dark / (d.length / 4) })().catch(() => -1)`)
+  const firstFrame = await frameAt(0.2)
+  const lastFrame = await frameAt(videoPages - 0.3)
+  check('vidéo : les images sont celles des pages (la première page a du contenu, la dernière aussi)', firstFrame > 0.003 && lastFrame > 0.003, `${firstFrame} / ${lastFrame}`)
+  // arrêt en cours de route : rien n'est enregistré
+  await rm(videoFile, { force: true })
+  await exportVia('video')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 1)
+  await typeInto('[data-field="videoSeconds"]', '60')
+  await waitFor(async () => (await nBrand('[data-video-problem]')) === 0 && (await run(`document.querySelector('[data-action="video-start"]').disabled`)) === false)
+  await clickSel('[data-action="video-start"]')
+  await waitFor(async () => (await nBrand('[data-video-progress]')) === 1)
+  await clickSel('[data-action="video-cancel"]')
+  await sleep(1500)
+  check('vidéo : « Arrêter » ferme la boîte sans rien enregistrer', (await nBrand('[data-video-dialog]')) === 0 && !existsSync(videoFile))
+  // sécurité : le processus principal n'écrit que des .mp4 / .webm
+  check('vidéo : un autre type de fichier ou un contenu vide est refusé par le processus principal', (await run(`Promise.all([window.trame.saveExportBytes(new Uint8Array([1, 2, 3]), 'x.exe'), window.trame.saveExportBytes(new Uint8Array(0), 'x.mp4'), window.trame.saveExportBytes(new Uint8Array([1]), '../x.sh')]).then(r => r.every(v => v === null))`)) === true && !existsSync(join(exportsDir, 'x.exe')))
+
   // notes de l'orateur : saisie par page, affichage en présentation (N), export et import PowerPoint
   const notesField = () => run(`document.querySelector('[data-notes="text"]')?.value ?? null`)
   const typeNotes = (text) => run(`(() => { const t = document.querySelector('[data-notes="text"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(t, ${JSON.stringify(text)}); t.dispatchEvent(new Event('input', { bubbles: true })) })()`)
@@ -3725,7 +3768,7 @@ try {
   check('le menu est fermé au départ', (await nBrand('[role="menu"]')) === 0)
   await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Exporter'))?.click()`)
   await sleep(250)
-  check('le menu propose PDF, PowerPoint, la présentation web, PNG, JPG, SVG, plusieurs pages, l\'impression pratique et le publipostage', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,html,png,jpg,svg,pages,print,merge')
+  check('le menu propose PDF, PowerPoint, la présentation web, la vidéo, PNG, JPG, SVG, plusieurs pages, l\'impression pratique et le publipostage', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.export).join()`)) === 'pdf,pptx,html,video,png,jpg,svg,pages,print,merge')
   // aucune légende ne dépasse du menu (la barre d'outils est en « nowrap » : les menus doivent rétablir le retour à la ligne)
   const popupOverflow = () => run(`(() => { const p = document.querySelector('.export-popup'); if (!p) return 'menu absent'; const pr = p.getBoundingClientRect(); const bad = [...p.querySelectorAll('button, strong, span')].filter((e) => { const r = e.getBoundingClientRect(); return r.right > pr.right + 0.5 || r.left < pr.left - 0.5 || e.scrollWidth > e.clientWidth + 1 }).map((e) => e.textContent.slice(0, 40)); return bad.length ? bad.join(' | ') : '' })()`)
   check('menu Exporter : aucune légende ne dépasse du conteneur', (await popupOverflow()) === '', await popupOverflow())

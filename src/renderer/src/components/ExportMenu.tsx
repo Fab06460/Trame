@@ -9,6 +9,7 @@ import { exportPptx } from '@/pptxExport'
 import { pageToSvg } from '@/svgExport'
 import { useEditor } from '@/store/editor'
 import { useExportPages } from '@/store/exportPages'
+import { useVideoExport } from '@/store/videoExport'
 import { useMailMerge } from '@/store/mailMerge'
 import { usePrintDialog } from '@/store/printDialog'
 import { usePdfIssues } from '@/store/pdfIssues'
@@ -117,6 +118,10 @@ export function ExportMenu(): React.JSX.Element {
           <button role="menuitem" data-export="html" onClick={() => choose(exportHtmlFile)}>
             <strong>{t('export.html')}</strong>
             <span>{t('export.html.desc')}</span>
+          </button>
+          <button role="menuitem" data-export="video" onClick={() => choose(() => useVideoExport.getState().setOpen(true))}>
+            <strong>{t('video.menu')}</strong>
+            <span>{t('video.menu.desc')}</span>
           </button>
           <div className="export-sep" role="separator" />
           <button role="menuitem" data-export="png" onClick={() => choose(() => exportImage('image/png'))}>

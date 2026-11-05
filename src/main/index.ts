@@ -1203,6 +1203,23 @@ ipcMain.handle('export:save', async (_e, dataUrl: string, name: string) => {
   return res.filePath
 })
 
+/** Octets d'un fichier vidéo : seuls .mp4 et .webm, jusqu'à 2 Go ; le nom est celui proposé dans la boîte d'enregistrement. */
+const MAX_BINARY_EXPORT = 2 * 1024 * 1024 * 1024
+ipcMain.handle('export:save-bytes', async (_e, bytes: unknown, name: unknown) => {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_BINARY_EXPORT || typeof name !== 'string') return null
+  const ext = name.split('.').pop()?.toLowerCase()
+  if (ext !== 'mp4' && ext !== 'webm') return null
+  if (TEST_EXPORT_DIR) {
+    const path = join(TEST_EXPORT_DIR, basename(name))
+    await writeFile(path, bytes)
+    return path
+  }
+  const res = await dialog.showSaveDialog({ defaultPath: basename(name), filters: [{ name: ext.toUpperCase(), extensions: [ext] }] })
+  if (res.canceled || !res.filePath) return null
+  await writeFile(res.filePath, bytes)
+  return res.filePath
+})
+
 // Export vers un dossier : le renderer ne choisit jamais le dossier. Il en demande un (boîte système) et n'écrit ensuite que dans
 // celui qui lui a été accordé, des fichiers images à nom simple (voir exportFolder.ts).
 const grantedFolders = new Set<string>()
