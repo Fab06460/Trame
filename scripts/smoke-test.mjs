@@ -394,6 +394,13 @@ try {
   // modèles : masquer / restaurer, renommer, rétablir l'original, remplacer après modification (parcours dans l'interface)
   const count = (sel) => run(`document.querySelectorAll(${JSON.stringify(sel)}).length`)
   const clickSel = (sel) => run(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true })()`)
+  // sélecteur de police maison : la liste n'existe que ouverte
+  const fontsOpen = () => run(`!!document.querySelector('[data-font-list]')`)
+  const toggleFonts = () => clickSel('[data-field="fontFamily"]')
+  const openFonts = async () => { if (!(await fontsOpen())) { await toggleFonts(); await sleep(200) } }
+  const closeFonts = async () => { if (await fontsOpen()) { await toggleFonts(); await sleep(100) } }
+  const fontNames = async () => { await openFonts(); const names = await run(`[...document.querySelectorAll('[data-font-option]')].map(o => o.textContent)`); await closeFonts(); return names }
+  const fontValue = () => run(`document.querySelector('[data-field="fontFamily"]')?.dataset.value`)
   // menu « Importer ▾ » : on l'ouvre puis on choisit l'entrée (pdf | pptx)
   const importVia = async (kind) => {
     await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Importer'))?.click()`)
@@ -2417,7 +2424,7 @@ try {
   await sleep(500)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
-  const pickFont = (value) => run(`(() => { const s = document.querySelector('[data-field="fontFamily"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(value)}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  const pickFont = async (value) => { await openFonts(); await run(`(() => { const v = ${JSON.stringify(value)}; if (v === '__more-fonts__') return document.querySelector('[data-font-more]').click(); [...document.querySelectorAll('[data-font-option]')].find(o => o.dataset.fontOption === v).click() })()`) }
   const fontReqs = () => photoRequests.filter((r) => r.path.startsWith('/fontsource') || r.path === '/v1/fonts').length
   check('aucune requête de polices avant d\'ouvrir le catalogue', fontReqs() === 0)
   await pickFont('__more-fonts__')
@@ -2442,10 +2449,10 @@ try {
   await clickSel('[data-action="fonts-close"]')
   await sleep(300)
   check('le catalogue se referme', (await nBrand('.modal')) === 0)
-  check('la police installée apparaît dans la liste des polices', (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].some(o => o.textContent === 'Zeta Test')`)) === true)
+  check('la police installée apparaît dans la liste des polices', (await fontNames()).includes('Zeta Test'))
   await pickFont('"Zeta Test", serif')
   await sleep(500)
-  check('elle s\'applique au texte sélectionné', (await run(`document.querySelector('[data-field="fontFamily"]').value`)) === '"Zeta Test", serif')
+  check('elle s\'applique au texte sélectionné', (await fontValue()) === '"Zeta Test", serif')
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
   const fontPdf = await exportPdfText()
   check('PDF avec une police en ligne : vrai texte (TJ), aucune image, aucun avertissement', fontPdf.includes(' TJ') && !lastPdfRaw.includes('/Subtype /Image') && !(await readFile(join(tmp, 'exports', 'dialog-info.txt'), 'utf-8').catch(() => '')))
@@ -2455,7 +2462,7 @@ try {
   await sleep(600)
   await click('header.toolbar button', 'Texte')
   await sleep(500)
-  check('la police installée survit au rechargement (hors ligne : aucune requête de plus)', (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].some(o => o.textContent === 'Zeta Test')`)) === true)
+  check('la police installée survit au rechargement (hors ligne : aucune requête de plus)', (await fontNames()).includes('Zeta Test'))
   // embarquement : le document enregistré contient la police
   await pickFont('"Zeta Test", serif')
   await sleep(300)
@@ -2507,7 +2514,7 @@ try {
   check('« Mes polices » liste les deux familles importées', (await nBrand('[data-my-font]')) === 2)
   await clickSel('[data-action="fonts-close"]')
   await sleep(300)
-  check('les polices importées apparaissent dans la liste des polices', (await run(`['Liberation Sans', 'Lora (perso)'].every(n => [...document.querySelectorAll('[data-field="fontFamily"] option')].some(o => o.textContent === n))`)) === true)
+  check('les polices importées apparaissent dans la liste des polices', (await fontNames()).filter((n) => ['Liberation Sans', 'Lora (perso)'].includes(n)).length === 2)
   await pickFont('"Liberation Sans", sans-serif')
   await sleep(500)
   // un nouveau texte est déjà en gras : c'est la variante « 700 » de la police importée qui doit servir
@@ -3500,8 +3507,14 @@ try {
   const brandFam = await run(`document.querySelector('[data-brand-font]').dataset.brandFont`)
   await clickSel('[data-brand-font]')
   await sleep(400)
-  check('un clic sur la police de la marque l\'applique au texte sélectionné', (await run(`document.querySelector('.panel select[style*="font-family"]')?.value`)) === brandFam)
-  check('sélecteur de police : les polices du kit forment le premier groupe, et chaque police n\'apparaît qu\'une fois', (await run(`document.querySelector('[data-field="fontFamily"] optgroup')?.dataset.fontGroup`)) === 'brand' && (await run(`[...document.querySelectorAll('[data-field="fontFamily"] option')].filter(o => o.value === ${JSON.stringify(brandFam)}).length`)) === 1)
+  check('un clic sur la police de la marque l\'applique au texte sélectionné', (await fontValue()) === brandFam)
+  await openFonts()
+  check('sélecteur de police : les polices du kit forment le premier groupe, et chaque police n\'apparaît qu\'une fois', (await run(`document.querySelector('[data-font-list] [data-font-group]')?.dataset.fontGroup`)) === 'brand' && (await run(`[...document.querySelectorAll('[data-font-option]')].filter(o => o.dataset.fontOption === ${JSON.stringify(brandFam)}).length`)) === 1)
+  check('sélecteur de police : chaque nom est écrit dans sa propre police', (await run(`[...document.querySelectorAll('[data-font-option]')].every(o => o.style.fontFamily.replace(/"/g, '').includes(o.textContent))`)) === true)
+  await run(`(() => { const i = document.querySelector('[data-field="fontQuery"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'montser'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await sleep(200)
+  check('sélecteur de police : la recherche filtre la liste', (await run(`[...document.querySelectorAll('[data-font-option]')].map(o => o.textContent).join()`)) === 'Montserrat')
+  await closeFonts()
   // logos
   await writeFile(join(tmp, 'exports', 'pick-image.png'), testPng(200, 100))
   await clickSel('[data-action="brand-add-logo"]')

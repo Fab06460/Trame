@@ -3,13 +3,14 @@ import { isFlipExempt } from '@/flip'
 import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
 import { useEditor, selectPage } from '@/store/editor'
-import { allFonts, SYSTEM_FONT } from '@/fonts'
+import { allFonts } from '@/fonts'
 import { useFonts } from '@/store/fonts'
 import { explain } from '@/pdfFallbacks'
 import { suggestFix } from '@/pdfTextCheck'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
+import { FontPicker } from './FontPicker'
 import { ImagePanel } from './ImagePanel'
 import { useBrand } from '@/store/brand'
 import { PageSize } from './PageSize'
@@ -21,13 +22,10 @@ import { DEFAULT_STROKE_COLOR, STROKE_WIDTH, hasStroke } from '@/strokeStyle'
 import { defaultGradient } from '@/gradient'
 import { SHADOW_LIMITS, dropShadow, glow } from '@/shadowStyle'
 import { useT } from '@/i18n'
-import type { MessageKey } from '@shared/i18n'
 import { TextAiHelp } from './TextAiHelp'
 import { ChartPanel } from './ChartPanel'
 import { QrPanel } from './QrPanel'
 import { fieldsIn } from '@/mailMerge'
-
-const MORE_FONTS = '__more-fonts__'
 
 export function Properties(): React.JSX.Element {
   const t = useT()
@@ -271,35 +269,7 @@ export function Properties(): React.JSX.Element {
         <>
           <label>
             {t('prop.font')}
-            <select
-              value={el.fontFamily}
-              style={{ fontFamily: el.fontFamily }}
-              data-field="fontFamily"
-              onChange={(e) => (e.target.value === MORE_FONTS ? useFonts.getState().setDialog(true) : updateElement(el.id, { fontFamily: e.target.value }))}
-            >
-              {el.fontFamily === SYSTEM_FONT && <option value={SYSTEM_FONT}>{t('prop.font.system')}</option>}
-              {el.fontFamily && el.fontFamily !== SYSTEM_FONT && !fonts.some((f) => f.family === el.fontFamily) && <option value={el.fontFamily}>{t('prop.font.missing', { name: el.fontFamily.split(',')[0].replace(/"/g, '') })}</option>}
-              {fonts.some((f) => kitFamilies.includes(f.family)) && (
-                // polices du kit de marque en tête (et seulement là : une police n'apparaît qu'une fois dans la liste)
-                <optgroup label={t('font.group.brand')} data-font-group="brand">
-                  {fonts.filter((f) => kitFamilies.includes(f.family)).map((f) => (
-                    <option key={f.name} value={f.family} style={{ fontFamily: f.family }}>
-                      {f.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {[...new Set(fonts.filter((f) => !kitFamilies.includes(f.family)).map((f) => f.group))].map((g) => (
-                <optgroup key={g} label={t(`font.group.${g}` as MessageKey)}>
-                  {fonts.filter((f) => f.group === g && !kitFamilies.includes(f.family)).map((f) => (
-                    <option key={f.name} value={f.family} style={{ fontFamily: f.family }}>
-                      {f.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-              <option value={MORE_FONTS}>{t('prop.font.more')}</option>
-            </select>
+            <FontPicker value={el.fontFamily} fonts={fonts} kitFamilies={kitFamilies} onChange={(family) => updateElement(el.id, { fontFamily: family })} onMore={() => useFonts.getState().setDialog(true)} />
           </label>
           {pdfIssue && (
             <div className="warn" role="status">

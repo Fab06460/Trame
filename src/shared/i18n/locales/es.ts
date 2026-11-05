@@ -322,6 +322,8 @@ export const es: Catalog = {
   'font.group.handwriting': 'Manuscrita',
   'font.group.mono': 'Monoespaciada',
   'font.group.brand': 'Kit de marca',
+  'font.search.placeholder': 'Buscar fuentes…',
+  'font.none': 'Ninguna fuente coincide.',
   'pdf.family.unknown': 'desconocida',
   'pdf.reason.unknownFont': 'la fuente «{family}» no está incorporada: elija una fuente del menú «Fuente»',
   'pdf.reason.missingVariant': '«{family}» no existe en {variant}: quite este estilo o elija otra fuente',

@@ -323,6 +323,8 @@ export const fr = {
   'font.group.handwriting': 'Manuscrit',
   'font.group.mono': 'Mono',
   'font.group.brand': 'Kit de marque',
+  'font.search.placeholder': 'Rechercher une police…',
+  'font.none': 'Aucune police ne correspond.',
   'pdf.family.unknown': 'inconnue',
   'pdf.reason.unknownFont': 'la police « {family} » n\'est pas embarquée : choisissez une police du menu « Police »',
   'pdf.reason.missingVariant': '« {family} » n\'existe pas en {variant} : retirez ce style ou choisissez une autre police',
