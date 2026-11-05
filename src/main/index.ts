@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, net, screen, session, shell, type MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'fs/promises'
@@ -22,7 +22,8 @@ import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type Speaker
 import { createFileInbox } from './fileInbox'
 import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeRelative, mediaMime, parseMediaState, withTags, type MediaItem, type MediaState } from '../shared/mediaLibrary'
 import { projectFilesFromArgv } from './launchArgs'
-import { initMainLocale, setMainLocale, tm } from './i18n'
+import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
+import { contextPlan, dictionariesFor, isDictionaryWord, parseSpellSettings, SPELL_LANGUAGES, type ContextItem, type SpellSettings } from './spellSettings'
 import {
   PACK_EXTENSION, addHidden, addMeta, buildPack, isBuiltinId, isValidId, parseHidden, parsePack, parseTemplateIndex, removeMeta, renameMeta, replaceMeta,
   sanitizeMeta, type PackEntry, type TemplateMeta
@@ -131,6 +132,7 @@ function createWindow(): void {
   })
   // le zoom de la page est géré par l'éditeur (canvas) : on interdit le zoom visuel du navigateur (pincement)
   win.webContents.on('did-finish-load', () => win.webContents.setVisualZoomLevelLimits(1, 1))
+  win.webContents.on('context-menu', (_e, params) => showContextMenu(win, params))
   win.on('closed', () => {
     mainWindow = null
     fileInbox.onRendererGone()
@@ -283,6 +285,70 @@ ipcMain.handle('signatures:save', async (_e, json: unknown) => {
     return false
   }
 })
+
+// correcteur orthographique : réglages enregistrés (activé, langue) ; le dictionnaire personnel est celui de Chromium (session)
+const spellFile = (): string => join(app.getPath('userData'), 'spell-settings.json')
+let spellSettings: SpellSettings = parseSpellSettings(null)
+
+/** Applique les réglages à la session. Sur macOS le système choisit seul la langue (l'appel serait sans effet). */
+function applySpellSettings(): void {
+  const ses = session.defaultSession
+  ses.setSpellCheckerEnabled(spellSettings.enabled)
+  if (process.platform === 'darwin') return
+  const dictionaries = dictionariesFor(spellSettings, mainLocale(), ses.availableSpellCheckerLanguages)
+  if (dictionaries.length) ses.setSpellCheckerLanguages(dictionaries)
+}
+
+async function initSpellcheck(): Promise<void> {
+  spellSettings = TEST_EXPORT_DIR ? parseSpellSettings(null) : parseSpellSettings(await readFile(spellFile(), 'utf-8').catch(() => null))
+  applySpellSettings()
+}
+
+const spellState = (): { enabled: boolean; language: SpellSettings['language']; languages: readonly string[]; systemManaged: boolean } => ({
+  enabled: spellSettings.enabled,
+  language: spellSettings.language,
+  languages: SPELL_LANGUAGES,
+  systemManaged: process.platform === 'darwin'
+})
+
+ipcMain.handle('spell:state', () => spellState())
+ipcMain.handle('spell:set', async (_e, raw: unknown) => {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  spellSettings = parseSpellSettings({ enabled: o.enabled ?? spellSettings.enabled, language: o.language ?? spellSettings.language })
+  applySpellSettings()
+  if (!TEST_EXPORT_DIR) await writeFile(spellFile(), JSON.stringify(spellSettings), 'utf-8').catch(() => {})
+  return spellState()
+})
+ipcMain.handle('spell:dictionary', async () => (await session.defaultSession.listWordsInSpellCheckerDictionary()).filter(isDictionaryWord).sort((a, b) => a.localeCompare(b)))
+ipcMain.handle('spell:add', (_e, word: unknown) => isDictionaryWord(word) && session.defaultSession.addWordToSpellCheckerDictionary(word))
+ipcMain.handle('spell:remove', (_e, word: unknown) => isDictionaryWord(word) && session.defaultSession.removeWordFromSpellCheckerDictionary(word))
+
+/** Clic droit : suggestions d'orthographe et commandes de saisie (Electron n'en affiche aucun de lui-même). */
+function showContextMenu(win: BrowserWindow, params: Electron.ContextMenuParams): void {
+  const wc = win.webContents
+  const label = (item: ContextItem): MenuItemConstructorOptions | null => {
+    switch (item.kind) {
+      case 'suggestion':
+        return { label: item.word, click: () => wc.replaceMisspelling(item.word) }
+      case 'no-suggestion':
+        return { label: tm('main.ctx.noSuggestion'), enabled: false }
+      case 'add-word':
+        return { label: tm('main.ctx.addWord', { word: item.word }), click: () => void session.defaultSession.addWordToSpellCheckerDictionary(item.word) }
+      case 'separator':
+        return { type: 'separator' }
+      case 'cut':
+        return { label: tm('main.ctx.cut'), role: 'cut', enabled: item.enabled }
+      case 'copy':
+        return { label: tm('main.ctx.copy'), role: 'copy', enabled: item.enabled }
+      case 'paste':
+        return { label: tm('main.ctx.paste'), role: 'paste', enabled: item.enabled }
+      case 'select-all':
+        return { label: tm('main.ctx.selectAll'), role: 'selectAll', enabled: item.enabled }
+    }
+  }
+  const items = contextPlan(params).map(label).filter((i): i is MenuItemConstructorOptions => i !== null)
+  if (items.length) Menu.buildFromTemplate(items).popup({ window: win })
+}
 
 ipcMain.handle('recent:list', async () => {
   const home = homedir()
@@ -1233,7 +1299,10 @@ async function openFromSystem(path: string): Promise<void> {
   mainWindow?.focus()
 }
 
-ipcMain.handle('i18n:set', (_e, code: unknown) => setMainLocale(code))
+ipcMain.handle('i18n:set', (_e, code: unknown) => {
+  setMainLocale(code)
+  applySpellSettings() // la langue « automatique » suit celle de l'application
+})
 // Le renderer écoute désormais : on lui remet le fichier reçu pendant le démarrage, s'il y en a un
 ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
 
@@ -1293,6 +1362,7 @@ ipcMain.handle('update:open-page', async () => {
 app.whenReady().then(() => {
   if (!gotLock) return
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
+  void initSpellcheck().catch(() => {})
   createWindow()
   // vérification au lancement, après le démarrage (pas avant que la fenêtre soit prête)
   setTimeout(() => void getUpdater().init(), TEST_EXPORT_DIR ? 500 : 8000)

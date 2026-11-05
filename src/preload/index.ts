@@ -1,8 +1,17 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { UpdateState } from '../shared/update'
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, EditKind, WriteAction } from '../shared/ai'
 import type { MediaItem } from '../shared/mediaLibrary'
+
+/** État du correcteur orthographique tel que l'interface le voit. */
+export interface SpellUiState {
+  enabled: boolean
+  language: 'auto' | 'fr' | 'en' | 'de' | 'es'
+  languages: readonly string[]
+  /** macOS : le système choisit la langue, le réglage de langue est sans effet */
+  systemManaged: boolean
+}
 
 export interface RecentProject {
   path: string
@@ -100,6 +109,14 @@ const api = {
   /** Kit de marque (JSON brut, à valider côté interface) ; null s'il n'existe pas encore. */
   loadBrandKit: (): Promise<string | null> => ipcRenderer.invoke('brand:load'),
   saveBrandKit: (json: string): Promise<boolean> => ipcRenderer.invoke('brand:save', json),
+  /** Mots mal orthographiés parmi ceux-ci, avec quelques suggestions (correcteur du système ; rien ne quitte l'ordinateur). */
+  spellCheck: (words: string[]): Array<{ word: string; suggestions: string[] } | null> =>
+    words.map((w) => (webFrame.isWordMisspelled(w) ? { word: w, suggestions: webFrame.getWordSuggestions(w).slice(0, 5) } : null)),
+  spellState: (): Promise<SpellUiState> => ipcRenderer.invoke('spell:state'),
+  setSpell: (patch: { enabled?: boolean; language?: string }): Promise<SpellUiState> => ipcRenderer.invoke('spell:set', patch),
+  spellDictionary: (): Promise<string[]> => ipcRenderer.invoke('spell:dictionary'),
+  addSpellWord: (word: string): Promise<boolean> => ipcRenderer.invoke('spell:add', word),
+  removeSpellWord: (word: string): Promise<boolean> => ipcRenderer.invoke('spell:remove', word),
   loadSignatures: (): Promise<string | null> => ipcRenderer.invoke('signatures:load'),
   saveSignatures: (json: string): Promise<boolean> => ipcRenderer.invoke('signatures:save', json),
   listRecents: (): Promise<RecentProject[]> => ipcRenderer.invoke('recent:list'),

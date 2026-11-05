@@ -30,13 +30,14 @@ import { imagesMissingAlt } from '@/altCheck'
 import { CHART_KINDS, insertChart } from '@/chartActions'
 import { insertQr } from '@/qrActions'
 import { useSignature } from '@/store/signature'
+import { SpellPanel } from '@/components/SpellPanel'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
 const TAB_GROUPS: Array<Array<{ id: SidebarTab; label: MessageKey }>> = [
   [{ id: 'recents', label: 'sidebar.recents' }, { id: 'templates', label: 'sidebar.templates' }],
   [{ id: 'elements', label: 'sidebar.elements' }, { id: 'icons', label: 'sidebar.icons' }, { id: 'photos', label: 'sidebar.photos' }, { id: 'ai', label: 'ai.tab' }],
-  [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }, { id: 'a11y', label: 'a11y.tab' }, { id: 'review', label: 'review.tab' }]
+  [{ id: 'layers', label: 'sidebar.layers' }, { id: 'brand', label: 'sidebar.brand' }, { id: 'a11y', label: 'a11y.tab' }, { id: 'spell', label: 'spell.tab' }, { id: 'review', label: 'review.tab' }]
 ]
 const TAB_ORDER = TAB_GROUPS.flat().map((x) => x.id)
 
@@ -144,6 +145,7 @@ export function Sidebar(): React.JSX.Element {
       {tab === 'ai' && <AiPanel />}
 
       {tab === 'a11y' && <AccessibilityPanel />}
+      {tab === 'spell' && <SpellPanel />}
       {tab === 'review' && <ReviewPanel />}
 
       {tab === 'recents' && <RecentsPanel items={recents} refresh={refreshRecents} />}

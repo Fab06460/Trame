@@ -130,7 +130,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| H3 | Correction orthographique | S | Correcteur du système sur macOS (hors-ligne) : à vérifier au moment du développement ; ailleurs les dictionnaires doivent être embarqués. | — |
+| H3 | Correction orthographique | S | ✅ **Fait** avec le correcteur du système : soulignement à la saisie, clic droit (suggestions, dictionnaire), onglet « Orthographe » pour tout le document, réglages et dictionnaire personnel. Vérifié sur macOS ; sous Windows et Linux, Chromium télécharge ses dictionnaires (non vérifié, voir les limites). | — |
 | U1 | Déplacer « Trame X.Y.Z · Mises à jour » et le choix de la langue hors du panneau de gauche | S | ✅ **Fait** : bouton ⚙ « Réglages » fixé au bas de la colonne d'icônes (hors du contenu qui défile), qui ouvre une petite fenêtre avec la langue, la version (→ fenêtre des mises à jour) ; un point signale une mise à jour proposée. Emplacement choisi par l'utilisateur parmi trois (colonne d'icônes, barre d'outils, barre d'état). Place libre pour de futurs réglages. | — |
 
 ### Phase 5 — Vidéo (hors périmètre à court terme)
