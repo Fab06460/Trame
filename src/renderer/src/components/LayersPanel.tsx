@@ -67,7 +67,7 @@ export function LayersPanel(): React.JSX.Element {
           >
             {el.hidden ? '◌' : '●'}
           </button>
-          <span className="layer-glyph" aria-hidden>{GLYPH[el.type]}</span>
+          <span className="layer-glyph" aria-hidden>{el.video ? '▶' : GLYPH[el.type]}</span>
           {renaming === el.id ? (
             <input
               className="layer-rename"

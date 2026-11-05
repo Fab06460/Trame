@@ -53,3 +53,35 @@ export async function decodeAudio(bytes: Uint8Array): Promise<DecodedAudio> {
   const buffer = await context.decodeAudioData(bytes.slice().buffer)
   return { channels: Array.from({ length: Math.min(2, buffer.numberOfChannels) }, (_, c) => buffer.getChannelData(c).slice()), seconds: buffer.duration }
 }
+
+/** Un son à ajouter à la bande son : sa place (secondes), son arrêt au plus tard, son volume, et s'il recommence. `source` est à `AUDIO_RATE`. */
+export interface SoundEvent {
+  source: readonly Float32Array[]
+  at: number
+  until: number
+  volume: number
+  loop: boolean
+}
+
+/** Une bande son silencieuse de la durée donnée (deux canaux). */
+export const silence = (seconds: number): [Float32Array, Float32Array] => [new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE))), new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE)))]
+
+/** Ajoute les sons à la bande (somme, ramenée entre −1 et 1). Un son commence à `at`, s'arrête à `until` ou à sa fin, recommence s'il boucle. Modifie `track`. */
+export function addSounds(track: [Float32Array, Float32Array], events: readonly SoundEvent[]): void {
+  for (const e of events) {
+    const inL = e.source[0]
+    const inR = e.source[1] ?? e.source[0]
+    const n = inL?.length ?? 0
+    if (n === 0) continue
+    const volume = clamp(e.volume, 0, 1)
+    const from = Math.max(0, Math.round(e.at * AUDIO_RATE))
+    const to = Math.min(track[0].length, Math.round(e.until * AUDIO_RATE))
+    for (let i = from; i < to; i++) {
+      const k = i - from
+      if (!e.loop && k >= n) break
+      const at = k % n
+      track[0][i] = clamp(track[0][i] + inL[at] * volume, -1, 1)
+      track[1][i] = clamp(track[1][i] + inR[at] * volume, -1, 1)
+    }
+  }
+}

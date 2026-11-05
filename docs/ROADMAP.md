@@ -137,7 +137,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
-| V1 | Vidéo : importer des clips, découper, assembler, exporter en MP4 | XL | **Fait en partie** : export du document en vidéo (MP4/WebM, transitions et apparitions), sans ffmpeg (WebCodecs). Musique de fond faite (un fichier audio, volume, fondus, boucle). Restent : voix off, durée par page, clips dans les pages, découpage, assemblage. | — |
+| V1 | Vidéo : importer des clips, découper, assembler, exporter en MP4 | XL | **Fait en partie** : export du document en vidéo (MP4/WebM, transitions et apparitions), sans ffmpeg (WebCodecs). Musique de fond faite (un fichier audio, volume, fondus, boucle). Clips vidéo dans les pages faits (insertion, aperçu, lecture en présentation, lecture et son dans la vidéo exportée, page allongée pour montrer le clip). Restent : voix off, durée par page réglable, découpage et assemblage de clips, clips dans la présentation web. | — |
 | V2 | Enregistrement d'écran | L | API native d'Electron, aucun réseau. | V1 |
 
 ## 3. Ce qui est volontairement écarté

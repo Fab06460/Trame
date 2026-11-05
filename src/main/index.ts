@@ -23,6 +23,7 @@ import { createFileInbox } from './fileInbox'
 import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeRelative, mediaMime, parseMediaState, withTags, type MediaItem, type MediaState } from '../shared/mediaLibrary'
 import { projectFilesFromArgv } from './launchArgs'
 import { AUDIO_EXTENSIONS, MAX_AUDIO_BYTES, isAudioFile, type AudioPick } from '../shared/audioFiles'
+import { MAX_CLIP_BYTES, VIDEO_TYPES, isVideoFile, videoMime, type VideoPick } from '../shared/videoFiles'
 import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
 import { contextPlan, dictionariesFor, isDictionaryWord, parseSpellSettings, SPELL_LANGUAGES, type ContextItem, type SpellSettings } from './spellSettings'
 import {
@@ -112,6 +113,8 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // les clips vidéo d'une présentation démarrent seuls, avec leur son (la présentation est lancée par la personne elle-même)
+      autoplayPolicy: 'no-user-gesture-required',
       // en test, la fenêtre peut être recouverte ou passée à l'arrière-plan : Chromium suspendrait alors rendu et minuteurs
       backgroundThrottling: !TEST_EXPORT_DIR || Boolean(process.env.SMOKE_THROTTLE)
     }
@@ -1218,6 +1221,26 @@ ipcMain.handle('audio:pick', async (): Promise<AudioPick> => {
   try {
     if ((await stat(path)).size > MAX_AUDIO_BYTES) return { error: 'tooBig' }
     return { name: basename(path), bytes: new Uint8Array(await readFile(path)) }
+  } catch {
+    return { error: 'unreadable' }
+  }
+})
+
+// clip vidéo à placer dans une page : lu tel quel et remis à l'interface (qui en tire l'aperçu et le garde dans le document)
+ipcMain.handle('video:pick', async (): Promise<VideoPick> => {
+  // tests de bout en bout : le clip « choisi » est pick-video.mp4 du dossier de test (aucun dialogue natif)
+  if (TEST_EXPORT_DIR) {
+    const buf = await readFile(join(TEST_EXPORT_DIR, 'pick-video.mp4')).catch(() => null)
+    return buf ? { name: 'pick-video.mp4', mime: 'video/mp4', bytes: new Uint8Array(buf) } : null
+  }
+  const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: tm('main.filter.video'), extensions: Object.keys(VIDEO_TYPES) }] })
+  if (res.canceled || !res.filePaths[0]) return null
+  const path = res.filePaths[0]
+  const mime = videoMime(path)
+  if (!mime || !isVideoFile(path)) return { error: 'unreadable' }
+  try {
+    if ((await stat(path)).size > MAX_CLIP_BYTES) return { error: 'tooBig' }
+    return { name: basename(path), mime, bytes: new Uint8Array(await readFile(path)) }
   } catch {
     return { error: 'unreadable' }
   }

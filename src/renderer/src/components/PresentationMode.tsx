@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LaserPointer } from '@/components/LaserPointer'
 import { InkLayer } from '@/components/InkLayer'
 import { PresentationOverview } from '@/components/PresentationOverview'
+import { PresentationClip } from '@/components/PresentationClip'
+import { clipElements, withoutClips } from '@/videoClips'
+import { pageRect } from '@/annotation'
 import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
 import { renderPage } from '@/exportPages'
@@ -70,7 +73,7 @@ export function PresentationMode(): React.JSX.Element | null {
     }
     const s = usePresentation.getState()
     if (!s.doc) return
-    void window.trame.speakerOpen({ doc: JSON.stringify(s.doc), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
+    void window.trame.speakerOpen({ doc: JSON.stringify(withoutClips(s.doc)), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
   }
   const toggleSpeakerRef = useRef(toggleSpeaker)
   toggleSpeakerRef.current = toggleSpeaker
@@ -303,6 +306,11 @@ export function PresentationMode(): React.JSX.Element | null {
         </div>
       )}
       {!black && <InkLayer strokes={ink[doc.pages[index].id] ?? []} drawing={draw} tool={tool} color={color} docWidth={doc.width} docHeight={doc.height} onStroke={(st) => setInk((m) => ({ ...m, [doc.pages[index].id]: addStroke(m[doc.pages[index].id] ?? [], st) }))} />}
+      {!black && image && image.index === index && image.step === step && (() => {
+        // clips de la page, tels qu'ils sont à cette étape d'apparition ; placés d'après le rectangle que la page occupe dans la fenêtre
+        const r = pageRect(size.w, size.h, doc.width, doc.height)
+        return clipElements(pageAtStep(doc.pages[index], step).elements).map((el) => <PresentationClip key={`${index}:${el.id}`} doc={doc} el={el} rect={{ x: r.x, y: r.y, k: r.w / doc.width }} />)
+      })()}
       {laser && <LaserPointer hidden={onBar} />}
       {goto && <div className="presentation-goto" data-pres="goto" role="status">{t('pres.goto', { n: goto, total: doc.pages.length })}</div>}
       {overview && <PresentationOverview doc={doc} current={index} onClose={() => setOverview(false)} onPick={(i) => { usePresentation.getState().go(i); setOverview(false) }} />}

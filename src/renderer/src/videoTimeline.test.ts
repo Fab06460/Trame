@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO, easeCss, layersAt, MAX_VIDEO_SECONDS, revealTimes, totalFrames, totalSeconds, transitionSeconds, videoProblem, videoSize, type VideoOptions } from './videoTimeline'
+import { clipSounds, clipsAt, DEFAULT_VIDEO, easeCss, layersAt, MAX_VIDEO_SECONDS, revealTimes, scheduleOf, totalFrames, totalSeconds, transitionSeconds, videoProblem, videoSize, type Layer, type VideoOptions } from './videoTimeline'
 import type { PageTransition } from './transition'
 import type { TrameElement, TramePage } from './types'
 
@@ -139,5 +139,94 @@ describe('apparition pas à pas', () => {
   it('sans effets : coupes franches, tous les éléments visibles', () => {
     expect(layersAt(d, opts({ effects: false }), 0)).toEqual([expect.objectContaining({ page: 0, step: 2 })])
     expect(layersAt(doc([page('a'), page('b')]), opts({ effects: false }), 4.1)).toEqual([expect.objectContaining({ page: 1 })])
+  })
+})
+
+describe('clips vidéo', () => {
+  const clipEl = (id: string, duration: number, extra: Partial<TrameElement> = {}): TrameElement => ({ ...el(id), type: 'image', video: { id: `c-${id}`, duration }, ...extra })
+  const withClip = (d: number, extra: Partial<TrameElement> = {}, extraVideo: Partial<NonNullable<TrameElement['video']>> = {}) => {
+    const c = clipEl('v', d, extra)
+    c.video = { ...c.video!, ...extraVideo }
+    return doc([page('a', [c]), page('b')])
+  }
+
+  it('une page garde sa durée si le clip tient dedans', () => {
+    expect(scheduleOf(withClip(3), opts({ secondsPerPage: 4 })).durations).toEqual([4, 4])
+  })
+  it('une page est allongée pour montrer un clip plus long en entier', () => {
+    const s = scheduleOf(withClip(9.2), opts({ secondsPerPage: 4 }))
+    expect(s.durations).toEqual([9.2, 4])
+    expect(s.starts).toEqual([0, 9.2])
+    expect(s.total).toBeCloseTo(13.2)
+  })
+  it('sans « adapter », la durée reste celle choisie', () => {
+    expect(scheduleOf(withClip(9.2), opts({ secondsPerPage: 4, fitClips: false })).durations).toEqual([4, 4])
+  })
+  it('un clip en boucle n\'allonge pas la page', () => {
+    expect(scheduleOf(withClip(9.2, {}, { loop: true }), opts({ secondsPerPage: 4 })).durations[0]).toBe(4)
+  })
+  it('un clip qui apparaît à un clic demande plus de temps (il démarre plus tard)', () => {
+    const d = doc([page('a', [el('x'), clipEl('v', 3, { build: 1 })])])
+    const s = scheduleOf(d, opts({ secondsPerPage: 4 }))
+    expect(s.durations[0]).toBeGreaterThan(5)
+    // le clip a bien le temps de se finir avant la fin de la page
+    const frame = clipsAt(d, opts({ secondsPerPage: 4 }), s, layersAt(d, opts({ secondsPerPage: 4 }), s.total - 0.01, s)[0], s.total - 0.01)
+    expect(frame[0].time).toBeCloseTo(3 - 0.05, 1)
+  })
+  it('la durée totale tient compte des pages allongées (et du plafond)', () => {
+    expect(totalSeconds(withClip(9.2), opts({ secondsPerPage: 4 }))).toBeCloseTo(13.2)
+    expect(videoProblem(withClip(1500), opts({ secondsPerPage: 4 }))).toBe('tooLong')
+  })
+  it('layersAt suit les départs de pages inégales', () => {
+    const d = withClip(9.2)
+    const o = opts({ secondsPerPage: 4 })
+    expect(layersAt(d, o, 9.0)[0].page).toBe(0)
+    // 0,3 s après le départ de la page 2, on est encore dans la transition : la page 1 est dessous, la page 2 dessus
+    expect(layersAt(d, o, 9.5).map((l) => l.page)).toEqual([0, 1])
+    expect(layersAt(d, o, 10.5).map((l) => l.page)).toEqual([1])
+  })
+
+  it('clipsAt : le clip démarre avec sa page, son temps avance avec la vidéo', () => {
+    const d = withClip(9)
+    const o = opts({ secondsPerPage: 4 })
+    const s = scheduleOf(d, o)
+    const l = layersAt(d, o, 2, s)[0]
+    expect(clipsAt(d, o, s, l, 2)).toEqual([expect.objectContaining({ time: 2 })])
+    expect(clipsAt(d, o, s, l, 0)[0].time).toBe(0)
+  })
+  it('clipsAt : sans boucle il reste sur sa dernière image, en boucle il recommence', () => {
+    const o = opts({ secondsPerPage: 1, fitClips: false })
+    const plain = withClip(2)
+    const sp = scheduleOf(plain, o)
+    const lp: Layer = { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }
+    expect(clipsAt(plain, o, sp, lp, 5)[0].time).toBeCloseTo(1.95, 2)
+    const loop = withClip(2, {}, { loop: true })
+    expect(clipsAt(loop, o, scheduleOf(loop, o), lp, 5)[0].time).toBeCloseTo(1, 5)
+  })
+  it('clipsAt : un clip à clic n\'est pas montré avant son étape', () => {
+    const d = doc([page('a', [clipEl('v', 3, { build: 1 })])])
+    const o = opts({ secondsPerPage: 6 })
+    const s = scheduleOf(d, o)
+    expect(clipsAt(d, o, s, { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }, 0.1)).toEqual([])
+    expect(clipsAt(d, o, s, { page: 0, step: 1, alpha: 1, tx: 0, scale: 1, shadow: false }, s.total - 0.5)).toHaveLength(1)
+  })
+  it('clipsAt : la page quittée garde son horloge pendant la transition', () => {
+    const d = withClip(9)
+    const o = opts({ secondsPerPage: 4 })
+    const s = scheduleOf(d, o)
+    const [from] = layersAt(d, o, s.starts[1] + 0.1, s)
+    expect(from.page).toBe(0)
+    // son horloge continue (9,1 s) mais le clip de 9 s est fini : il reste sur sa dernière image
+    expect(clipsAt(d, o, s, from, s.starts[1] + 0.1)[0].time).toBeCloseTo(8.95, 5)
+  })
+
+  it('clipSounds : un son par clip non muet, de sa page, avec ses réglages', () => {
+    const d = doc([page('a', [clipEl('v', 3, {}), { ...clipEl('m', 3), video: { id: 'c-m', duration: 3, muted: true } }, { ...clipEl('q', 3), video: { id: 'c-q', duration: 3, volume: 0 } }]), page('b', [{ ...clipEl('w', 2), video: { id: 'c-w', duration: 2, loop: true, volume: 0.5 } }])])
+    const o = opts({ secondsPerPage: 4 })
+    const s = scheduleOf(d, o)
+    const sounds = clipSounds(d, o, s)
+    expect(sounds.map((x) => x.id)).toEqual(['c-v', 'c-w'])
+    expect(sounds[0]).toMatchObject({ at: 0, until: s.durations[0], volume: 1, loop: false })
+    expect(sounds[1]).toMatchObject({ at: s.starts[1], volume: 0.5, loop: true })
   })
 })

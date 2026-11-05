@@ -2,6 +2,7 @@ import { fileSafeName } from '@/docName'
 import { embedFonts } from '@/fontEmbed'
 import { extraFonts } from '@/fonts'
 import { pruneSources } from '@/pdfSources'
+import { pruneClips, withoutClips } from '@/videoClips'
 import { t } from '@/i18n'
 import { parseDocument, useEditor } from '@/store/editor'
 import type { TrameDocument } from '@/types'
@@ -9,9 +10,12 @@ import type { TrameDocument } from '@/types'
 /** Ce que l'utilisateur s'apprête à faire (le processus principal traduit la question, voir `unsaved.action.*`). */
 export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'
 
-/** Contenu du fichier `.trame` : polices utilisées incorporées, sources PDF inutilisées retirées. */
-export function documentJson(doc: TrameDocument): string {
-  return JSON.stringify(embedFonts(pruneSources(doc), extraFonts()))
+/**
+ * Contenu du fichier `.trame` : polices utilisées incorporées, sources PDF et clips inutilisés retirés. `keepClips: false` (copies de
+ * secours et versions) laisse les clips de côté : ils pèseraient des dizaines de Mo à chaque copie, et les éléments gardent leur aperçu.
+ */
+export function documentJson(doc: TrameDocument, keepClips = true): string {
+  return JSON.stringify(embedFonts(pruneSources(keepClips ? pruneClips(doc) : withoutClips(doc)), extraFonts()))
 }
 
 /** Enregistre le document. `saveAs` force le choix d'un nouvel emplacement. Retourne false si annulé ou en échec. */

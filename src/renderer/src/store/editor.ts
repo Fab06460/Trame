@@ -14,6 +14,7 @@ import { sanitizeBuild } from '@/builds'
 import { sanitizeQr } from '@/qr'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
+import { sanitizeClips } from '@/videoClips'
 import { cleanDocName } from '@/docName'
 import { sanitizeColumns } from '@/columnStyle'
 import { sanitizeList } from '@/listStyle'
@@ -125,6 +126,7 @@ export function parseDocument(json: string): TrameDocument {
     }
   }
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
+  sanitizeClips(doc as unknown as Parameters<typeof sanitizeClips>[0])
   sanitizeFonts(doc)
   sanitizeFrame(doc)
   sanitizePrintSetup(doc)
@@ -192,6 +194,8 @@ interface EditorState {
   revealElement: (pageId: string, elementId: string) => void
   beginChange: () => void
   removeSelected: () => void
+  /** Ajoute un clip vidéo : ses octets (data URL) au document et son image d'aperçu comme élément de la page, en un seul pas d'historique. */
+  insertClip: (id: string, dataUrl: string, preview: Partial<TrameElement> & Pick<TrameElement, 'type'>) => void
   /** Remplace le texte de plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément figé par le modèle est ignoré et compté. */
   replaceTexts: (changes: Array<{ elementId: string; text: string }>) => { replaced: number; skipped: number }
   /** Modifie plusieurs éléments (toutes pages) en un seul cran d'historique ; un élément protégé par le modèle est ignoré et compté. */
@@ -474,6 +478,11 @@ export const useEditor = create<EditorState>((set, get) => {
 
     editRequest: null,
     clearEditRequest: () => set({ editRequest: null }),
+
+    insertClip: (id, dataUrl, preview) => {
+      get().addElement(preview)
+      set((s) => ({ doc: { ...s.doc, clips: { ...s.doc.clips, [id]: dataUrl } } }))
+    },
 
     addElement: (partial, opts) => {
       const { doc } = get()

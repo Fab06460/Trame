@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { boundsOf, intersects, snapBox, snapEdges, unionBox, type Box, type ChangedEdges, type SnapLine } from '@/geometry'
 import { Rulers, ViewOptions } from './Rulers'
 import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
@@ -45,9 +45,34 @@ const SIDE_EDGES: Record<string, ChangedEdges> = {
   'bottom-center': { bottom: true }
 }
 
+/** Copie de l'aperçu d'un clip avec un repère de lecture au centre (éditeur seulement : les exports montrent l'aperçu seul). */
+function withPlayBadge(img: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+  const w = img instanceof HTMLImageElement ? img.naturalWidth || img.width : img.width
+  const h = img instanceof HTMLImageElement ? img.naturalHeight || img.height : img.height
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(img, 0, 0, w, h)
+  const r = Math.max(12, Math.min(w, h) * 0.14)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+  ctx.beginPath()
+  ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#fff'
+  ctx.beginPath()
+  ctx.moveTo(w / 2 - r * 0.32, h / 2 - r * 0.5)
+  ctx.lineTo(w / 2 + r * 0.55, h / 2)
+  ctx.lineTo(w / 2 - r * 0.32, h / 2 + r * 0.5)
+  ctx.closePath()
+  ctx.fill()
+  return canvas
+}
+
 function ImageNode({ el, ...props }: Konva.NodeConfig & { el: TrameElement }): React.JSX.Element {
   const img = useEditedImage(el)
-  return <KImage {...props} image={img} />
+  const shown = useMemo(() => (el.video && img ? withPlayBadge(img as HTMLImageElement | HTMLCanvasElement) : img), [el.video, img])
+  return <KImage {...props} image={shown} />
 }
 
 export function Canvas(): React.JSX.Element {

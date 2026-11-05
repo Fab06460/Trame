@@ -33,6 +33,8 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   const [musicProblem, setMusicProblem] = useState<MessageKey | null>(null)
 
   const size = videoSize(doc, options.longSide)
+  const hasClips = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden))
+  const clipsSound = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden && !e.video.muted && (e.video.volume ?? 1) > 0))
   const problem = videoProblem(doc, options)
   // le format réellement disponible sur cet ordinateur pour cette taille
   useEffect(() => {
@@ -119,6 +121,11 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
               ))}
             </select>
           </label>
+          {hasClips && (
+            <label className="check">
+              <input type="checkbox" data-field="videoFitClips" disabled={busy} checked={options.fitClips} onChange={(e) => patch({ fitClips: e.target.checked })} /> {t('video.fitClips')}
+            </label>
+          )}
           <label className="check">
             <input type="checkbox" data-field="videoEffects" disabled={busy} checked={options.effects} onChange={(e) => patch({ effects: e.target.checked })} /> {t('video.effects')}
           </label>
@@ -159,7 +166,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
           <p className="hint" data-video-summary>
             {format ? t('video.summary', { format: t(`video.format.${format}` as MessageKey), w: size.width, h: size.height, duration: clock(totalSeconds(doc, options)) }) : t('video.probing')}
             {' · '}
-            {music ? t('video.withMusic') : t('video.noSound')}
+            {music ? t('video.withMusic') : clipsSound ? t('video.withClipSound') : t('video.noSound')}
           </p>
         )}
 

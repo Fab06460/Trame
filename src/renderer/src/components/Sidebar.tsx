@@ -30,6 +30,7 @@ import { imagesMissingAlt } from '@/altCheck'
 import { CHART_KINDS, insertChart } from '@/chartActions'
 import { insertQr } from '@/qrActions'
 import { useSignature } from '@/store/signature'
+import { clipResultMessage, insertClipFromFile } from '@/clipActions'
 import { SpellPanel } from '@/components/SpellPanel'
 
 
@@ -253,6 +254,22 @@ export function Sidebar(): React.JSX.Element {
           <section>
             <h3>{t('qr.section')}</h3>
             <button data-action="qr-insert" title={t('qr.insert.title')} onClick={insertQr}>{t('qr.insert')}</button>
+          </section>
+
+          <section>
+            <h3>{t('clip.section')}</h3>
+            <button
+              data-action="clip-insert"
+              title={t('clip.insert.title')}
+              onClick={() =>
+                void insertClipFromFile().then((r) => {
+                  const message = clipResultMessage(r)
+                  if (message) void window.trame.showInfo(t('clip.section'), t(message))
+                })
+              }
+            >
+              {t('clip.insert')}
+            </button>
           </section>
 
           <section>

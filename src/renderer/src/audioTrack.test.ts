@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUDIO_RATE, FADE_SECONDS, isAudioFile, mixTrack } from './audioTrack'
+import { addSounds, AUDIO_RATE, FADE_SECONDS, isAudioFile, mixTrack, silence } from './audioTrack'
 
 const ramp = (n: number, v = 1): Float32Array => new Float32Array(n).fill(v)
 
@@ -68,5 +68,56 @@ describe('isAudioFile', () => {
   })
   it('refuse le reste', () => {
     for (const n of ['a.exe', 'a.mp4', 'mp3', 'a.mp3.txt', '']) expect(isAudioFile(n)).toBe(false)
+  })
+})
+
+describe('addSounds', () => {
+  const at = (s: number): number => Math.round(s * AUDIO_RATE)
+  it('silence : la durée voulue, deux canaux', () => {
+    const [l, r] = silence(2)
+    expect(l).toHaveLength(2 * AUDIO_RATE)
+    expect(r).toHaveLength(2 * AUDIO_RATE)
+    expect(Math.max(...l)).toBe(0)
+  })
+  it('un son est placé à son instant, pas avant', () => {
+    const track = silence(2)
+    addSounds(track, [{ source: [ramp(AUDIO_RATE / 2, 0.5)], at: 1, until: 2, volume: 1, loop: false }])
+    expect(track[0][at(0.9)]).toBe(0)
+    expect(track[0][at(1.1)]).toBeCloseTo(0.5)
+    expect(track[1][at(1.1)]).toBeCloseTo(0.5)
+  })
+  it('sans boucle, il s\'arrête à sa fin ; en boucle, il continue jusqu\'à la limite', () => {
+    const a = silence(2)
+    addSounds(a, [{ source: [ramp(AUDIO_RATE / 4, 0.5)], at: 0, until: 2, volume: 1, loop: false }])
+    expect(a[0][at(0.4)]).toBe(0)
+    const b = silence(2)
+    addSounds(b, [{ source: [ramp(AUDIO_RATE / 4, 0.5)], at: 0, until: 1, volume: 1, loop: true }])
+    expect(b[0][at(0.9)]).toBeCloseTo(0.5)
+    expect(b[0][at(1.1)]).toBe(0)
+  })
+  it('s\'arrête à la limite même si le son est plus long', () => {
+    const track = silence(3)
+    addSounds(track, [{ source: [ramp(3 * AUDIO_RATE, 0.5)], at: 0, until: 1, volume: 1, loop: false }])
+    expect(track[0][at(0.9)]).toBeCloseTo(0.5)
+    expect(track[0][at(1.1)]).toBe(0)
+  })
+  it('les sons s\'additionnent, sans dépasser ±1', () => {
+    const track = silence(1)
+    addSounds(track, [
+      { source: [ramp(AUDIO_RATE, 0.4)], at: 0, until: 1, volume: 1, loop: false },
+      { source: [ramp(AUDIO_RATE, 0.4)], at: 0, until: 1, volume: 0.5, loop: false },
+      { source: [ramp(AUDIO_RATE, 0.9)], at: 0, until: 1, volume: 1, loop: false }
+    ])
+    expect(track[0][10]).toBe(1)
+  })
+  it('volume appliqué ; événement hors de la bande ou source vide : sans effet', () => {
+    const track = silence(1)
+    addSounds(track, [
+      { source: [ramp(100, 0.8)], at: 0, until: 1, volume: 0.5, loop: true },
+      { source: [ramp(100, 0.8)], at: 5, until: 6, volume: 1, loop: true },
+      { source: [], at: 0, until: 1, volume: 1, loop: true }
+    ])
+    expect(track[0][50]).toBeCloseTo(0.4)
+    expect(track[0]).toHaveLength(AUDIO_RATE)
   })
 })

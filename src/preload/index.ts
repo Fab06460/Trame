@@ -4,6 +4,7 @@ import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, EditKind, WriteAction } from '../shared/ai'
 import type { MediaItem } from '../shared/mediaLibrary'
 import type { AudioPick } from '../shared/audioFiles'
+import type { VideoPick } from '../shared/videoFiles'
 
 /** État du correcteur orthographique tel que l'interface le voit. */
 export interface SpellUiState {
@@ -102,6 +103,8 @@ const api = {
   /** Impression directe d'une page HTML préparée (une section par feuille de `widthPx` × `heightPx`) ; ouvre la boîte d'impression du système. */
   printHtml: (html: string, widthPx: number, heightPx: number, duplex: 'simplex' | 'shortEdge' | 'longEdge'): Promise<{ status: 'printed' } | { status: 'opened' } | { status: 'cancelled' } | { status: 'failed'; reason: string }> =>
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
+  /** Choisit un clip vidéo : le fichier, une raison de refus, ou null si annulé. */
+  pickVideo: (): Promise<VideoPick> => ipcRenderer.invoke('video:pick'),
   /** Choisit un fichier audio (musique de fond d'une vidéo) : le fichier, une raison de refus, ou null si annulé. */
   pickAudio: (): Promise<AudioPick> => ipcRenderer.invoke('audio:pick'),
   /** Enregistre des octets (vidéo .mp4 ou .webm) : boîte d'enregistrement du système ; chemin choisi, ou null si annulé. */

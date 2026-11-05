@@ -1,6 +1,7 @@
-import { stepsOf } from '@/builds'
+import { buildNumbers, pageAtStep, stepsOf } from '@/builds'
+import { clipElements } from '@/videoClips'
 import { pageTransition, TRANSITION_MS, type PageTransition } from '@/transition'
-import type { TrameDocument } from '@/types'
+import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 export const FPS_CHOICES = [24, 30, 60] as const
 /** Plus grand côté de la vidéo, en pixels : 480p, 720p et 1080p pour une page 16:9. */
@@ -13,9 +14,11 @@ export interface VideoOptions {
   longSide: (typeof SIZE_CHOICES)[number]
   /** transitions entre pages et apparition pas à pas ; sinon des coupes franches, éléments tous visibles */
   effects: boolean
+  /** une page qui porte un clip plus long qu'elle dure assez longtemps pour le montrer en entier */
+  fitClips: boolean
 }
 
-export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true }
+export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true, fitClips: true }
 export const MIN_SECONDS = 1
 export const MAX_SECONDS = 120
 /** Durée totale maximale : la vidéo est construite en mémoire avant d'être enregistrée. */
@@ -23,10 +26,10 @@ export const MAX_VIDEO_SECONDS = 1200
 
 export type VideoProblem = 'noPages' | 'tooLong' | 'badSeconds'
 
-export function videoProblem(doc: Pick<TrameDocument, 'pages'>, o: Pick<VideoOptions, 'secondsPerPage'>): VideoProblem | null {
+export function videoProblem(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions): VideoProblem | null {
   if (doc.pages.length === 0) return 'noPages'
   if (!(o.secondsPerPage >= MIN_SECONDS && o.secondsPerPage <= MAX_SECONDS)) return 'badSeconds'
-  return doc.pages.length * o.secondsPerPage > MAX_VIDEO_SECONDS ? 'tooLong' : null
+  return totalSeconds(doc, o) > MAX_VIDEO_SECONDS ? 'tooLong' : null
 }
 
 const even = (n: number): number => Math.max(2, Math.round(n / 2) * 2)
@@ -37,8 +40,53 @@ export function videoSize(doc: Pick<TrameDocument, 'width' | 'height'>, longSide
   return { width: even(doc.width * k), height: even(doc.height * k) }
 }
 
-export const totalSeconds = (doc: Pick<TrameDocument, 'pages'>, o: Pick<VideoOptions, 'secondsPerPage'>): number => doc.pages.length * o.secondsPerPage
-export const totalFrames = (doc: Pick<TrameDocument, 'pages'>, o: Pick<VideoOptions, 'secondsPerPage' | 'fps'>): number => Math.round(totalSeconds(doc, o) * o.fps)
+/** Début et durée de chaque page dans la vidéo, en secondes. */
+export interface Schedule {
+  starts: number[]
+  durations: number[]
+  total: number
+}
+
+const BASE_TRANSITION = TRANSITION_MS / 1000
+
+/** Position d'un clip dans sa page : l'instant (depuis le début de la page) où il apparaît, d'après son numéro d'apparition. */
+function clipStartIn(page: Pick<TramePage, 'elements'>, el: TrameElement, seconds: number, effects: boolean): number {
+  if (!effects || !el.build) return 0
+  const numbers = buildNumbers(page)
+  const k = numbers.indexOf(el.build)
+  return k < 0 ? 0 : revealTimes(seconds, numbers.length).at[k]
+}
+
+/** Durée d'une page : celle choisie, allongée si un clip qui ne tourne pas en boucle ne tiendrait pas en entier. */
+function pageSeconds(page: TramePage, o: VideoOptions): number {
+  const base = o.secondsPerPage
+  if (!o.fitClips) return base
+  const n = buildNumbers(page).length
+  let need = base
+  for (const el of clipElements(page.elements)) {
+    if (!el.video || el.video.loop) continue
+    // un clip qui apparaît à l'étape k (sur n) démarre à tr + k × (D − tr) / (n + 1) : il tient si cet instant + sa durée ≤ D
+    const k = o.effects && el.build ? buildNumbers(page).indexOf(el.build) + 1 : 0
+    need = Math.max(need, k === 0 ? el.video.duration : BASE_TRANSITION + (el.video.duration * (n + 1)) / (n + 1 - k))
+  }
+  return Math.ceil(need * 10) / 10
+}
+
+export function scheduleOf(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions): Schedule {
+  const starts: number[] = []
+  const durations: number[] = []
+  let at = 0
+  for (const page of doc.pages) {
+    starts.push(at)
+    const d = pageSeconds(page as TramePage, o)
+    durations.push(d)
+    at += d
+  }
+  return { starts, durations, total: at }
+}
+
+export const totalSeconds = (doc: Pick<TrameDocument, 'pages'>, o: VideoOptions): number => scheduleOf(doc, o).total
+export const totalFrames = (doc: Pick<TrameDocument, 'pages'>, o: VideoOptions): number => Math.round(totalSeconds(doc, o) * o.fps)
 
 /** Une page (à une étape d'apparition) dessinée dans l'image, avec sa position et son opacité. Les couches se dessinent dans l'ordre. */
 export interface Layer {
@@ -102,13 +150,13 @@ function transitionLayers(kind: PageTransition, e: number, from: [number, number
 }
 
 /** Ce qui est à l'image à l'instant `t` (secondes depuis le début de la vidéo). */
-export function layersAt(doc: Pick<TrameDocument, 'pages' | 'transition'>, o: VideoOptions, t: number): Layer[] {
-  const n = doc.pages.length
-  const d = o.secondsPerPage
-  const page = Math.min(n - 1, Math.max(0, Math.floor(t / d)))
+export function layersAt(doc: Pick<TrameDocument, 'pages' | 'transition'>, o: VideoOptions, t: number, schedule: Schedule = scheduleOf(doc, o)): Layer[] {
+  let page = 0
+  for (let i = 0; i < schedule.starts.length; i++) if (t >= schedule.starts[i]) page = i
+  const d = schedule.durations[page]
   const steps = stepsOf(doc.pages[page])
   if (!o.effects) return [layer(page, steps)]
-  const local = t - page * d
+  const local = t - schedule.starts[page]
   const tr = transitionSeconds(d)
   if (page > 0 && local < tr) {
     const kind = pageTransition(doc, page)
@@ -125,3 +173,51 @@ export function layersAt(doc: Pick<TrameDocument, 'pages' | 'transition'>, o: Vi
 
 /** Les pages-étapes qu'il faut avoir sous la main pour dessiner l'image `frame` (clés « page:étape »). */
 export const layerKeys = (layers: readonly Layer[]): string[] => layers.map((l) => `${l.page}:${l.step}`)
+
+/** Un clip à dessiner sur une couche : l'élément et l'instant du clip à montrer. */
+export interface ClipFrame {
+  el: TrameElement
+  time: number
+}
+
+/**
+ * Les clips visibles sur une couche à l'instant `t` (secondes depuis le début de la vidéo) et l'instant de chacun. Un clip démarre avec
+ * sa page (ou à son étape d'apparition), recommence s'il tourne en boucle, sinon s'arrête sur sa dernière image. Une page quittée
+ * pendant une transition garde son horloge : son clip continue de jouer le temps du mouvement.
+ */
+export function clipsAt(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, schedule: Schedule, l: Layer, t: number): ClipFrame[] {
+  const page = doc.pages[l.page] as TramePage
+  const out: ClipFrame[] = []
+  for (const el of clipElements(pageAtStep(page, l.step).elements)) {
+    const clip = el.video
+    if (!clip) continue
+    const elapsed = t - schedule.starts[l.page] - clipStartIn(page, el, schedule.durations[l.page], o.effects)
+    if (elapsed < 0) continue
+    out.push({ el, time: clip.loop ? elapsed % clip.duration : Math.min(elapsed, Math.max(0, clip.duration - 0.05)) })
+  }
+  return out
+}
+
+/** Un son de clip à placer dans la bande son : où il commence, où il doit s'arrêter au plus tard (fin de la page), et ses réglages. */
+export interface ClipSound {
+  id: string
+  at: number
+  until: number
+  volume: number
+  loop: boolean
+}
+
+/** Les sons des clips non muets, dans l'ordre des pages. */
+export function clipSounds(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, schedule: Schedule): ClipSound[] {
+  const out: ClipSound[] = []
+  doc.pages.forEach((p, i) => {
+    for (const el of clipElements(p.elements)) {
+      const clip = el.video
+      if (!clip || clip.muted) continue
+      const volume = typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1
+      if (volume <= 0) continue
+      out.push({ id: clip.id, at: schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects), until: schedule.starts[i] + schedule.durations[i], volume, loop: !!clip.loop })
+    }
+  })
+  return out
+}

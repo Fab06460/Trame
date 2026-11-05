@@ -25,7 +25,7 @@ export async function saveNamedVersion(label: string): Promise<boolean> {
     path = useEditor.getState().filePath
     if (!path) return false
   }
-  const json = documentJson(doc)
+  const json = documentJson(doc, false)
   return (await window.trame.snapshotVersion(path, json, label)) !== null
 }
 

@@ -48,6 +48,21 @@ export interface Gradient {
 export type ListKind = 'bullet' | 'number'
 
 /** Protection d'un élément de modèle : `fixed` = figé, `fill` = à remplir (contenu modifiable, ni déplacé ni supprimé). */
+/** Réglages de lecture d'un clip vidéo (les octets sont dans `TrameDocument.clips[id]`). */
+export interface VideoClip {
+  id: string
+  /** durée en secondes */
+  duration: number
+  /** recommence quand il est fini */
+  loop?: true
+  /** sans le son */
+  muted?: true
+  /** ne démarre pas seul : un clic sur le clip le lance (absent = lecture automatique à l'arrivée sur la page) */
+  manual?: true
+  /** volume de 0 à 1 (absent = 1) */
+  volume?: number
+}
+
 export type Protection = 'fixed' | 'fill'
 
 export interface TrameElement {
@@ -118,6 +133,8 @@ export interface TrameElement {
   fillRule?: 'evenodd'
   // image
   src?: string
+  /** clip vidéo : cet élément image est l'aperçu d'un clip joué en présentation et dans la vidéo exportée ; `id` renvoie à `TrameDocument.clips` */
+  video?: VideoClip
   /** image de fond issue d'un PDF importé : page d'origine (à partir de 1) du PDF stocké dans `TrameDocument.sources` ; l'export PDF la remet en vectoriel */
   pdfSource?: { id: string; page: number }
   /** crédit d'une photo en ligne (auteur, licence, page d'origine), à citer si la licence l'exige */
@@ -273,6 +290,8 @@ export interface TrameDocument {
   transition?: PageTransition
   /** PDF d'origine des pages importées, en base64, par identifiant (références : `TrameElement.pdfSource`) */
   sources?: Record<string, string>
+  /** clips vidéo embarqués, par identifiant : data URL base64 (références : `TrameElement.video`) */
+  clips?: Record<string, string>
   /** données du publipostage : un tableau dont les colonnes remplissent les champs « {{colonne}} » des textes */
   mailMerge?: MergeData
 }

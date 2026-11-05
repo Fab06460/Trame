@@ -13,6 +13,7 @@ import { PositionPanel } from './PositionPanel'
 import { NumberField } from './NumberField'
 import { FontPicker } from './FontPicker'
 import { ImagePanel } from './ImagePanel'
+import { ClipPanel } from './ClipPanel'
 import { useBrand } from '@/store/brand'
 import { PageSize } from './PageSize'
 import { PrintSetupPanel } from './PrintSetupPanel'
@@ -185,7 +186,7 @@ export function Properties(): React.JSX.Element {
       <TemplateBanner />
       <h3>{t(`prop.type.${el.type}`)}</h3>
 
-      {el.type === 'image' && <ImagePanel el={el} />}
+      {el.type === 'image' && (el.video ? <ClipPanel el={el} /> : <ImagePanel el={el} />)}
 
       {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') && (
         <div className="seg" role="group" aria-label={t('prop.fillType')}>

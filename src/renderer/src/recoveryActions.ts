@@ -27,7 +27,7 @@ export function startAutosave(): () => void {
       const { doc, dirty, filePath } = useEditor.getState()
       if (!dirty) return
       touched = true
-      inflight = window.trame.writeRecovery(documentJson(doc), filePath, doc.name).catch(() => false)
+      inflight = window.trame.writeRecovery(documentJson(doc, false), filePath, doc.name).catch(() => false)
       await inflight
     }
   })

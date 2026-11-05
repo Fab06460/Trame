@@ -599,3 +599,10 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .video-music legend { padding: 0 6px; font-size: 12px; font-weight: 600; }
 .video-music .row { align-items: center; flex-wrap: wrap; gap: 8px 14px; }
 .video-music label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; }
+
+/* Clips vidéo */
+.clip-player { width: 100%; max-height: 220px; border-radius: 8px; background: #000; }
+[data-clip-panel] { display: flex; flex-direction: column; gap: 8px; }
+[data-clip-panel] label.check { display: flex; align-items: center; gap: 8px; }
+[data-clip-panel] label:not(.check) { display: flex; flex-direction: column; gap: 4px; }
+.presentation-clip { position: absolute; z-index: 3; object-fit: fill; background: transparent; }
