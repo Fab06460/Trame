@@ -12,8 +12,8 @@ interface TemplatePage {
   elements: Draft[]
 }
 
-export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'certificate' | 'badge' | 'label' | 'flashcard' | 'flashcard-qa' | 'comic-strip' | 'comic-4' | 'comic-6'
-export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'mailmerge' | 'comic'
+export type TemplateId = 'promo' | 'quote' | 'event' | 'story-new' | 'deck' | 'poster' | 'resume' | 'letter' | 'card' | 'flyer' | 'invitation' | 'linkedin' | 'thumbnail' | 'carousel' | 'certificate' | 'badge' | 'label' | 'flashcard' | 'flashcard-qa' | 'comic-strip' | 'comic-4' | 'comic-6'
+export type TemplateCategory = 'instagram' | 'story' | 'presentation' | 'poster' | 'document' | 'print' | 'social' | 'mailmerge' | 'comic'
 
 /** Tableau d'exemple d'un modèle de publipostage : noms des champs (clés `tpl.field.<id>`) et lignes fictives. */
 interface MergeSample {
@@ -206,6 +206,214 @@ export const TEMPLATES: Template[] = [
           text(40, 600, 714, L('tpl.poster.live'), 300, '#ffffff', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal' }),
           text(40, 880, 714, L('tpl.poster.title'), 64, '#ff3d71', { align: 'center' }),
           text(40, 970, 714, L('tpl.poster.info'), 34, '#bdbdbd', { fontStyle: 'normal', align: 'center' })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'resume',
+    category: 'document',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 260, height: 1123 }, '#22304a'),
+          shape('ellipse', { x: 65, y: 60, ...sq(130) }, '#3b4d72'),
+          text(65, 100, 130, L('tpl.resume.initials'), 52, '#ffffff', { align: 'center', fontFamily: SERIF, height: 64 }),
+          text(30, 250, 200, L('tpl.resume.contact.title'), 18, '#ffd166', { letterSpacing: 2, uppercase: true }),
+          text(30, 284, 210, L('tpl.resume.contact.text'), 14, '#d7deee', { fontStyle: 'normal', lineHeight: 1.6, height: 100 }),
+          text(30, 430, 200, L('tpl.resume.skills.title'), 18, '#ffd166', { letterSpacing: 2, uppercase: true }),
+          text(30, 464, 210, L('tpl.resume.skills.text'), 14, '#d7deee', { fontStyle: 'normal', lineHeight: 1.6, height: 130 }),
+          text(30, 640, 200, L('tpl.resume.languages.title'), 18, '#ffd166', { letterSpacing: 2, uppercase: true }),
+          text(30, 674, 210, L('tpl.resume.languages.text'), 14, '#d7deee', { fontStyle: 'normal', lineHeight: 1.6, height: 100 }),
+          text(300, 64, 460, L('tpl.resume.fullname'), 52, '#1e1f24', { fontFamily: SERIF, height: 64 }),
+          text(300, 134, 460, L('tpl.resume.role'), 22, '#4a63a8', { fontStyle: 'normal', height: 30 }),
+          shape('rect', { x: 300, y: 184, width: 60, height: 4 }, '#ffd166'),
+          text(300, 220, 460, L('tpl.resume.profile.title'), 20, '#22304a', { letterSpacing: 2, uppercase: true }),
+          text(300, 256, 460, L('tpl.resume.profile.text'), 15, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 100 }),
+          text(300, 392, 460, L('tpl.resume.exp.title'), 20, '#22304a', { letterSpacing: 2, uppercase: true }),
+          text(300, 430, 460, L('tpl.resume.job1.title'), 17, '#1e1f24', { height: 22 }),
+          text(300, 456, 460, L('tpl.resume.job1.dates'), 13, '#6b6b80', { fontStyle: 'normal', height: 18 }),
+          text(300, 480, 460, L('tpl.resume.job1.text'), 15, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 46 }),
+          text(300, 552, 460, L('tpl.resume.job2.title'), 17, '#1e1f24', { height: 22 }),
+          text(300, 578, 460, L('tpl.resume.job2.dates'), 13, '#6b6b80', { fontStyle: 'normal', height: 18 }),
+          text(300, 602, 460, L('tpl.resume.job2.text'), 15, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 46 }),
+          text(300, 674, 460, L('tpl.resume.job3.title'), 17, '#1e1f24', { height: 22 }),
+          text(300, 700, 460, L('tpl.resume.job3.dates'), 13, '#6b6b80', { fontStyle: 'normal', height: 18 }),
+          text(300, 724, 460, L('tpl.resume.job3.text'), 15, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 46 }),
+          text(300, 820, 460, L('tpl.resume.edu.title'), 20, '#22304a', { letterSpacing: 2, uppercase: true }),
+          text(300, 858, 460, L('tpl.resume.edu1.title'), 17, '#1e1f24', { height: 44 }),
+          text(300, 906, 460, L('tpl.resume.edu1.dates'), 13, '#6b6b80', { fontStyle: 'normal', height: 18 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'letter',
+    category: 'document',
+    width: 794,
+    height: 1123,
+    pages: [
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 794, height: 14 }, '#22304a'),
+          text(70, 70, 340, L('tpl.letter.sender.name'), 22, '#1e1f24', { height: 28 }),
+          text(70, 104, 340, L('tpl.letter.sender.address'), 15, '#6b6b80', { fontStyle: 'normal', lineHeight: 1.5, height: 70 }),
+          text(440, 190, 284, L('tpl.letter.recipient'), 16, '#1e1f24', { fontStyle: 'normal', lineHeight: 1.5, height: 100 }),
+          text(440, 320, 284, L('tpl.letter.date'), 15, '#6b6b80', { fontStyle: 'normal', height: 20 }),
+          text(70, 380, 654, L('tpl.letter.subject'), 18, '#1e1f24', { height: 24 }),
+          text(70, 440, 654, L('tpl.letter.body'), 16, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.6, height: 330 }),
+          text(70, 800, 654, L('tpl.letter.closing'), 16, '#3a3b45', { fontStyle: 'normal', height: 24 }),
+          text(70, 850, 300, L('tpl.letter.sender.name'), 48, '#22304a', { fontFamily: '"Caveat", cursive', fontStyle: 'normal', height: 58 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'card',
+    category: 'print',
+    width: 1050,
+    height: 600,
+    pages: [
+      {
+        background: '#1e1f24',
+        elements: [
+          shape('ellipse', { x: 700, y: -170, ...sq(560) }, '#7c5cff'),
+          shape('ellipse', { x: 820, y: 330, ...sq(300) }, '#ffd166'),
+          shape('rect', { x: 80, y: 190, width: 90, height: 8 }, '#ffd166'),
+          text(80, 230, 700, L('tpl.card.person'), 76, '#ffffff', { fontFamily: SERIF, height: 92 }),
+          text(80, 332, 700, L('tpl.card.role'), 34, '#c9c3ff', { fontStyle: 'normal', height: 42 })
+        ]
+      },
+      {
+        background: '#ffffff',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 24, height: 600 }, '#7c5cff'),
+          text(90, 90, 700, L('tpl.card.company'), 40, '#1e1f24', { height: 48 }),
+          shape('rect', { x: 90, y: 160, width: 90, height: 8 }, '#ffd166'),
+          text(90, 210, 800, L('tpl.card.contact'), 32, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.7, height: 220 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'flyer',
+    category: 'print',
+    width: 559,
+    height: 794,
+    pages: [
+      {
+        background: '#fffbf2',
+        elements: [
+          shape('rect', { x: 0, y: 0, width: 559, height: 330 }, '#e63946'),
+          shape('ellipse', { x: 390, y: 100, ...sq(230) }, '#ff7a59'),
+          text(40, 50, 479, L('tpl.flyer.title'), 100, '#ffffff', { fontFamily: DISPLAY, fontStyle: 'normal', lineHeight: 1, height: 200 }),
+          text(40, 262, 479, L('tpl.flyer.subtitle'), 22, '#ffffff', { fontStyle: 'normal', height: 28 }),
+          text(40, 372, 479, L('tpl.flyer.date'), 30, '#1e1f24', { height: 38 }),
+          text(40, 436, 479, L('tpl.flyer.text'), 20, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.5, height: 120 }),
+          text(40, 590, 479, L('tpl.flyer.place'), 20, '#1e1f24', { lineHeight: 1.5, height: 60 }),
+          shape('rect', { x: 40, y: 690, width: 280, height: 64 }, '#1e1f24', { cornerRadius: 32 }),
+          text(40, 705, 280, L('tpl.flyer.cta'), 24, '#ffffff', { align: 'center', height: 30 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'invitation',
+    category: 'print',
+    width: 559,
+    height: 794,
+    pages: [
+      {
+        background: '#fffaf0',
+        elements: [
+          shape('rect', { x: 24, y: 24, width: 511, height: 746 }, '#b8893b'),
+          shape('rect', { x: 29, y: 29, width: 501, height: 736 }, '#fffaf0'),
+          shape('rect', { x: 42, y: 42, width: 475, height: 710 }, '#b8893b'),
+          shape('rect', { x: 44, y: 44, width: 471, height: 706 }, '#fffaf0'),
+          icon('star', { x: 240, y: 100, ...sq(80) }, '#b8893b'),
+          text(70, 210, 419, L('tpl.invitation.kicker'), 22, '#6b6b80', { align: 'center', fontStyle: 'normal', letterSpacing: 4, uppercase: true, height: 28 }),
+          text(70, 270, 419, L('tpl.invitation.title'), 64, '#1e1f24', { align: 'center', fontFamily: SERIF, fontStyle: 'italic', lineHeight: 1.1, height: 150 }),
+          text(70, 450, 419, L('tpl.invitation.who'), 26, '#b8893b', { align: 'center', fontFamily: SERIF, height: 34 }),
+          shape('rect', { x: 230, y: 520, width: 100, height: 2 }, '#b8893b'),
+          text(70, 560, 419, L('tpl.invitation.date'), 26, '#1e1f24', { align: 'center', height: 34 }),
+          text(70, 610, 419, L('tpl.invitation.place'), 22, '#3a3b45', { align: 'center', fontStyle: 'normal', height: 30 }),
+          text(70, 680, 419, L('tpl.invitation.rsvp'), 18, '#6b6b80', { align: 'center', fontStyle: 'italic', height: 24 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'linkedin',
+    category: 'social',
+    width: 1584,
+    height: 396,
+    pages: [
+      {
+        background: '#0f2a4a',
+        elements: [
+          shape('ellipse', { x: 1160, y: -180, ...sq(560) }, '#1d4e89'),
+          shape('ellipse', { x: 1360, y: 190, ...sq(300) }, '#ffd166'),
+          shape('rect', { x: 120, y: 118, width: 90, height: 8 }, '#ffd166'),
+          text(120, 150, 1000, L('tpl.linkedin.person'), 84, '#ffffff', { fontFamily: SERIF, height: 100 }),
+          text(120, 262, 1000, L('tpl.linkedin.tagline'), 34, '#a9c4ee', { fontStyle: 'normal', height: 42 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'thumbnail',
+    category: 'social',
+    width: 1280,
+    height: 720,
+    pages: [
+      {
+        background: '#ffd166',
+        elements: [
+          shape('ellipse', { x: 800, y: 110, ...sq(400) }, '#e63946'),
+          icon('star', { x: 875, y: 185, ...sq(250) }, '#ffffff'),
+          text(70, 110, 800, L('tpl.thumbnail.title'), 150, '#1e1f24', { fontFamily: DISPLAY, fontStyle: 'normal', lineHeight: 1, height: 320 }),
+          shape('rect', { x: 70, y: 520, width: 420, height: 100 }, '#1e1f24', { cornerRadius: 50 }),
+          text(70, 545, 420, L('tpl.thumbnail.tag'), 44, '#ffffff', { align: 'center', fontFamily: DISPLAY, fontStyle: 'normal', letterSpacing: 2, height: 52 })
+        ]
+      }
+    ]
+  },
+  {
+    id: 'carousel',
+    category: 'instagram',
+    width: 1080,
+    height: 1350,
+    pages: [
+      {
+        background: '#1e1f24',
+        elements: [
+          shape('ellipse', { x: 560, y: -240, ...sq(760) }, '#7c5cff'),
+          text(90, 560, 900, L('tpl.carousel.kicker'), 40, '#ffd166', { letterSpacing: 6, height: 50 }),
+          text(90, 640, 900, L('tpl.carousel.cover'), 130, '#ffffff', { fontFamily: SERIF, lineHeight: 1.05, height: 290 }),
+          text(90, 1170, 600, L('tpl.carousel.swipe'), 44, '#9a9cab', { fontStyle: 'normal', height: 54 }),
+          icon('arrow', { x: 850, y: 1172, width: 140, height: 56 }, '#9a9cab')
+        ]
+      },
+      {
+        background: '#fff4e8',
+        elements: [
+          text(90, 120, 300, L('tpl.carousel.number'), 400, '#7c5cff', { fontFamily: DISPLAY, fontStyle: 'normal', height: 440 }),
+          text(90, 560, 900, L('tpl.carousel.tip.title'), 80, '#1e1f24', { lineHeight: 1.1, height: 180 }),
+          text(90, 780, 900, L('tpl.carousel.tip.text'), 46, '#3a3b45', { fontStyle: 'normal', lineHeight: 1.4, height: 260 })
+        ]
+      },
+      {
+        background: '#7c5cff',
+        elements: [
+          icon('star', { x: 440, y: 260, ...sq(200) }, '#ffd166'),
+          text(90, 560, 900, L('tpl.carousel.end.title'), 110, '#ffffff', { align: 'center', fontFamily: SERIF, lineHeight: 1.05, height: 130 }),
+          text(150, 740, 780, L('tpl.carousel.end.text'), 46, '#e9e3ff', { align: 'center', fontStyle: 'normal', lineHeight: 1.4, height: 130 }),
+          shape('rect', { x: 340, y: 980, width: 400, height: 110 }, '#ffd166', { cornerRadius: 55 }),
+          text(340, 1012, 400, L('tpl.carousel.end.cta'), 46, '#1e1f24', { align: 'center', height: 54 })
         ]
       }
     ]

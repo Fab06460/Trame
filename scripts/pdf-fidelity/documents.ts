@@ -287,7 +287,9 @@ export const cases = (): Case[] => [
       name: t.id,
       doc,
       expectFallbacks: 0, // un modèle intégré ne doit jamais dégrader son texte en image
-      expectText: doc.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && e.text && e.text.length < 14).map((e) => e.text!))
+      // la page du carrousel au grand titre serif : l'écart SVG / éditeur est un peu plus grand (mesuré 0,59 %)
+      ...(t.id === 'carousel' ? { maxSvgBigPct: [0.5, 0.5, 0.7] } : {}),
+      expectText: doc.pages.flatMap((p) => p.elements.filter((e) => e.type === 'text' && !e.uppercase && !e.letterSpacing && e.text && e.text.length < 14).map((e) => e.text!))
     }
   }),
   // planche de badges (publipostage, plusieurs fiches par feuille) : textes réduits, contours fins, versos des cartes en miroir

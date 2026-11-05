@@ -421,15 +421,15 @@ try {
 
   await click('.sidebar .tabs button', 'Modèles')
   await sleep(300)
-  check('14 modèles intégrés affichés au départ', (await count('.builtin-template')) === 14, await builtinIds())
+  check('22 modèles intégrés affichés au départ', (await count('.builtin-template')) === 22, await builtinIds())
 
   // masquer un modèle intégré, puis le restaurer
   await clickSel('.builtin-template[data-template-id="quote"] .card-remove')
-  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 13 && !(await builtinIds()).includes('quote')))
+  check('masquer un modèle intégré le retire de la liste', await waitFor(async () => (await count('.builtin-template')) === 21 && !(await builtinIds()).includes('quote')))
   check('une confirmation est demandée avant de masquer', (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes('Masquer le modèle'))
   check('le modèle masqué est mémorisé côté système', (await run('window.trame.listHiddenTemplates()')).join() === 'quote')
   check('le lien « Restaurer les modèles masqués (1) » apparaît', (await click('.sidebar button.link', 'Restaurer les modèles masqués (1)')) === true)
-  check('restaurer remet les 14 modèles', await waitFor(async () => (await count('.builtin-template')) === 14 && (await run('window.trame.listHiddenTemplates()')).length === 0))
+  check('restaurer remet les 22 modèles', await waitFor(async () => (await count('.builtin-template')) === 22 && (await run('window.trame.listHiddenTemplates()')).length === 0))
 
   // renommer un modèle intégré : crée la version personnalisée, l'original disparaît de sa catégorie
   await clickSel('.builtin-template[data-template-id="promo"] .card-rename')
@@ -437,7 +437,7 @@ try {
   await typeInto('.builtin-template[data-template-id="promo"] .card-rename-input', 'Promo été')
   await pressEnter('.builtin-template[data-template-id="promo"] .card-rename-input')
   check('renommer un modèle intégré crée « votre version » (basedOn) sous le nouveau nom', await waitFor(async () => (await run('window.trame.listUserTemplates()')).some((t) => t.name === 'Promo été' && t.basedOn === 'promo')))
-  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 13))
+  check("l'original n'est plus affiché dans sa catégorie", await waitFor(async () => !(await builtinIds()).includes('promo') && (await count('.builtin-template')) === 21))
   check('la version personnalisée porte l’étiquette « personnalisé »', (await run(`document.querySelector('.user-template .badge')?.textContent`)) === 'personnalisé')
 
   // renommer un modèle personnel
@@ -449,7 +449,7 @@ try {
 
   // rétablir l'original = supprimer la version personnalisée
   await clickSel('.user-template .card-remove')
-  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 14))
+  check("rétablir l'original : la version personnalisée disparaît et le modèle d'origine revient", await waitFor(async () => (await count('.user-template')) === 0 && (await builtinIds()).includes('promo') && (await count('.builtin-template')) === 22))
   check("la confirmation parle de rétablir l'original", (await readFile(join(tmp, 'exports', 'dialog-confirm.txt'), 'utf-8').catch(() => '')).includes("Rétablir le modèle d'origine"))
 
   // modifier le contenu : appliquer, retoucher, enregistrer en REMPLAÇANT
@@ -2326,6 +2326,23 @@ try {
   const outline = pngPixel(png, 40, 300)
   check('planche de 4 cases : papier crème entre les cases, case blanche, contour sombre', gutter[0] > 250 && gutter[2] < 250 && insidePanel.every((v) => v > 250) && outline.every((v) => v < 90), JSON.stringify([gutter, insidePanel, outline]))
   check('planche de 4 cases : un titre, 4 cases et 4 bulles (de 2 éléments)', (await layerCount()) === 13)
+
+  // nouveaux modèles (CV, lettre, carte, flyer, invitation, bannière, miniature, carrousel) : bon format, bon nombre de pages, rendu
+  for (const [id, w, h, pages] of [['resume', 794, 1123, 1], ['letter', 794, 1123, 1], ['card', 1050, 600, 2], ['flyer', 559, 794, 1], ['invitation', 559, 794, 1], ['linkedin', 1584, 396, 1], ['thumbnail', 1280, 720, 1], ['carousel', 1080, 1350, 3]]) {
+    await reloadApp()
+    await sleep(500)
+    await clickSel('.sidebar .tabs button[data-tab="templates"]')
+    await sleep(300)
+    await clickSel(`.builtin-template[data-template-id="${id}"] .card-open`)
+    await sleep(900)
+    await run(`document.querySelector('.doc-name').focus(); document.querySelector('.doc-name').select()`)
+    await cdp('Input.insertText', { text: 'Sans titre' })
+    await run(`document.querySelector('.doc-name').blur()`)
+    await sleep(300)
+    const tplPng = await exportPng()
+    if (process.env.SMOKE_TPL_DIR) await writeFile(join(process.env.SMOKE_TPL_DIR, `${id}.png`), tplPng) // inspection visuelle
+    check(`modèle « ${id} » : format ${w} × ${h}, ${pages} page(s)`, tplPng.readUInt32BE(16) === w && tplPng.readUInt32BE(20) === h && (await nBrand('.page-item')) === pages, `${tplPng.readUInt32BE(16)}×${tplPng.readUInt32BE(20)}`)
+  }
 
   // modèles de publipostage : un modèle arrive avec son tableau d'exemple, le publipostage est utilisable tout de suite
   await reloadApp()
