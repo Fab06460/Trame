@@ -29,6 +29,7 @@ import { SideIcon } from './SideIcons'
 import { imagesMissingAlt } from '@/altCheck'
 import { CHART_KINDS, insertChart } from '@/chartActions'
 import { insertQr } from '@/qrActions'
+import { useSignature } from '@/store/signature'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
@@ -250,6 +251,11 @@ export function Sidebar(): React.JSX.Element {
           <section>
             <h3>{t('qr.section')}</h3>
             <button data-action="qr-insert" title={t('qr.insert.title')} onClick={insertQr}>{t('qr.insert')}</button>
+          </section>
+
+          <section>
+            <h3>{t('sig.section')}</h3>
+            <button data-action="signature-open" title={t('sig.open.title')} onClick={() => useSignature.getState().setOpen(true)}>{t('sig.open')}</button>
           </section>
         </>
       )}

@@ -100,6 +100,8 @@ const api = {
   /** Kit de marque (JSON brut, à valider côté interface) ; null s'il n'existe pas encore. */
   loadBrandKit: (): Promise<string | null> => ipcRenderer.invoke('brand:load'),
   saveBrandKit: (json: string): Promise<boolean> => ipcRenderer.invoke('brand:save', json),
+  loadSignatures: (): Promise<string | null> => ipcRenderer.invoke('signatures:load'),
+  saveSignatures: (json: string): Promise<boolean> => ipcRenderer.invoke('signatures:save', json),
   listRecents: (): Promise<RecentProject[]> => ipcRenderer.invoke('recent:list'),
   removeRecent: (path: string): Promise<void> => ipcRenderer.invoke('recent:remove', path),
   clearRecents: (): Promise<void> => ipcRenderer.invoke('recent:clear'),

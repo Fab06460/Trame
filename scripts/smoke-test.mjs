@@ -55,6 +55,22 @@ function pngReader(buf) {
 function pngPixel(buf, px, py) {
   return pngReader(buf)(px, py)
 }
+/** PNG RGB 8 bits : papier blanc (légèrement gris à droite) et une barre d'encre noire au milieu, comme une signature photographiée. */
+function paperPng(w, h) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcTable[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0 }
+  const chunk = (type, data) => { const t = Buffer.from(type, 'latin1'); const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const c = Buffer.alloc(4); c.writeUInt32BE(crc(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, c]) }
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = y * (w * 3 + 1) + 1 + x * 3
+    const ink = Math.abs(y - h / 2) < h / 12 && x > w * 0.2 && x < w * 0.8
+    const v = ink ? 15 : x > w / 2 ? 238 : 250
+    raw[o] = v; raw[o + 1] = v; raw[o + 2] = v
+  }
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
 /** PNG RGB 8 bits : moitié gauche rouge, moitié droite bleue, un carré vert en haut à gauche (repère de recadrage et de miroir). */
 function testPng(w, h) {
   const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
@@ -2063,6 +2079,86 @@ try {
   await sleep(600)
   check('nuage de mots : la boîte se ferme et la page reçoit 5 textes', (await run(`document.querySelector('[data-cloud-dialog]') ? 1 : 0`)) === 0 && (await layerCount()) === cloudBefore + 5)
   check('nuage de mots : le calque porte le mot « Soleil »', (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Soleil'))`)) === true)
+
+  // signature : dessinée, importée, enregistrée, réutilisée
+  const sigBefore = await layerCount()
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  await clickSel('[data-action="signature-open"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 1)
+  check('signature : la boîte s\'ouvre, « Insérer » est inactif tant que rien n\'est dessiné', (await run(`document.querySelector('[data-action="sig-insert"]').disabled`)) === true)
+  const sigDraw = async (dy = 0) => {
+    const r = await run(`(() => { const b = document.querySelector('[data-sig-pad]').getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height } })()`)
+    const at = (fx, fy) => [r.x + r.w * fx, r.y + r.h * (fy + dy)]
+    const [x0, y0] = at(0.1, 0.5)
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: x0, y: y0, button: 'left', buttons: 1, clickCount: 1 })
+    for (let k = 1; k <= 12; k++) { const [x, y] = at(0.1 + 0.07 * k, 0.5 - 0.15 * Math.sin(k / 2)); await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'left', buttons: 1 }) }
+    const [x1, y1] = at(0.94, 0.5)
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x1, y: y1, button: 'left', buttons: 0, clickCount: 1 })
+    await sleep(150)
+  }
+  await sigDraw()
+  check('signature : après un tracé, « Insérer », « Annuler le dernier trait » et « Tout effacer » sont actifs', (await run(`['sig-insert', 'sig-undo', 'sig-clear'].every(a => !document.querySelector('[data-action="' + a + '"]').disabled)`)) === true)
+  check('signature : la zone a reçu de l\'encre (pixels sombres sur le canvas)', (await run(`(() => { const c = document.querySelector('[data-sig-pad]'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 128) n++; return n })()`)) > 300)
+  await clickSel('[data-action="sig-undo"]')
+  await sleep(150)
+  check('signature : « Annuler le dernier trait » vide la zone, « Insérer » redevient inactif', (await run(`document.querySelector('[data-action="sig-insert"]').disabled`)) === true)
+  await sigDraw()
+  await clickSel('[data-sig-ink="#1f3a93"]')
+  await clickSel('[data-sig-width="bold"]')
+  await clickSel('[data-action="sig-insert"]')
+  await sleep(500)
+  check('signature : « Insérer » ferme la boîte et ajoute un calque « Signature »', (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 0 && (await layerCount()) === sigBefore + 1 && (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Signature'))`)) === true)
+  check('signature : posée à 28 % de la largeur de la page (302 px) et sélectionnée', (await field('width')) === 302, String(await field('width')))
+  const sigStored = async () => JSON.parse((await run(`window.trame.loadSignatures()`)) ?? '{"signatures":[]}').signatures
+  check('signature : enregistrée sur l\'ordinateur (une signature dessinée, bleue)', await (async () => { const l = await sigStored(); return l.length === 1 && l[0].kind === 'ink' && l[0].ink.color === '#1f3a93' })())
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  await clickSel('[data-action="signature-open"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 1)
+  check('signature : la boîte rouverte propose « Mes signatures » (une vignette)', (await run(`document.querySelectorAll('[data-sig-saved]').length`)) === 1)
+  await clickSel('[data-sig-saved]')
+  await sleep(500)
+  check('signature : un clic sur la vignette insère la signature et ferme la boîte', (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 0 && (await layerCount()) === sigBefore + 2)
+  // importée : papier blanc rendu transparent
+  await writeFile(join(tmp, 'exports', 'pick-image.png'), paperPng(400, 200))
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  await clickSel('[data-action="signature-open"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 1)
+  await clickSel('[data-sig-mode="import"]')
+  check('signature : onglet « Importer » : rien à insérer avant d\'avoir choisi une image', (await run(`document.querySelector('[data-action="sig-insert"]').disabled`)) === true)
+  await clickSel('[data-action="sig-pick"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-sig-preview] img') ? 1 : 0`)) === 1)
+  const sigImg = await run(`(async () => { const i = document.querySelector('[data-sig-preview] img'); await i.decode(); const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; let clear = 0, solid = 0; for (let k = 3; k < d.length; k += 4) { if (d[k] < 10) clear++; else if (d[k] > 240) solid++ } return { w: c.width, h: c.height, clear, solid, n: d.length / 4 } })()`)
+  check('signature importée : le papier est transparent, l\'encre reste, l\'image est rognée sur l\'encre', sigImg.solid > 0 && sigImg.clear / sigImg.n < 0.2 && sigImg.w < 400 && sigImg.h < 60, JSON.stringify(sigImg))
+  await clickSel('[data-sig-ink="#1f3a93"]')
+  check('signature importée : l\'encre peut être recolorée (aperçu bleu)', await (async () => { await sleep(200); return (await run(`(async () => { const i = document.querySelector('[data-sig-preview] img'); await i.decode(); const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0); const d = x.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data; return [d[0], d[1], d[2], d[3]] })()`)).join() === '31,58,147,255' })())
+  await clickSel('[data-action="sig-insert"]')
+  await sleep(600)
+  check('signature importée : un calque image de plus, à 302 px de large', (await layerCount()) === sigBefore + 3 && (await field('width')) === 302, String(await field('width')))
+  check('signature importée : enregistrée à son tour (deux signatures, la plus récente d\'abord)', await (async () => { const l = await sigStored(); return l.length === 2 && l[0].kind === 'image' && l[1].kind === 'ink' })())
+  // supprimer, ne pas garder
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  await clickSel('[data-action="signature-open"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 1)
+  await clickSel('[data-sig-remove]')
+  await sleep(300)
+  check('signature : « × » retire la signature de la liste et du fichier', (await run(`document.querySelectorAll('[data-sig-saved]').length`)) === 1 && (await sigStored()).length === 1 && (await sigStored())[0].kind === 'ink')
+  await clickSel('[data-field="sigKeep"]')
+  await sigDraw(0.1)
+  await clickSel('[data-action="sig-insert"]')
+  await sleep(500)
+  check('signature : « Garder pour d\'autres documents » décoché : insérée mais pas enregistrée', (await layerCount()) === sigBefore + 4 && (await sigStored()).length === 1)
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(250)
+  await clickSel('[data-action="signature-open"]')
+  await waitFor(async () => (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 1)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 })
+  await sleep(250)
+  check('signature : Échap ferme la boîte sans rien insérer', (await run(`document.querySelector('[data-signature-dialog]') ? 1 : 0`)) === 0 && (await layerCount()) === sigBefore + 4)
 
   // dépôt d'images sur le canvas : insérées là où on les lâche, un fichier qui n'est pas une image est ignoré
   const dropAt = (dx, name, type, b64) =>

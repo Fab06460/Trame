@@ -269,6 +269,21 @@ ipcMain.handle('brand:save', async (_e, json: unknown) => {
   }
 })
 
+// signatures enregistrées : un fichier JSON dans le dossier de données ; la validation du contenu est faite par l'interface (signature.ts)
+const signaturesFile = (): string => join(app.getPath('userData'), 'signatures.json')
+const MAX_SIGNATURES_BYTES = 12_000_000
+
+ipcMain.handle('signatures:load', async () => readFile(signaturesFile(), 'utf-8').catch(() => null))
+ipcMain.handle('signatures:save', async (_e, json: unknown) => {
+  if (typeof json !== 'string' || json.length > MAX_SIGNATURES_BYTES) return false
+  try {
+    await writeFile(signaturesFile(), json, 'utf-8')
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('recent:list', async () => {
   const home = homedir()
   return Promise.all(
