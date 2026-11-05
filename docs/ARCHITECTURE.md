@@ -191,6 +191,16 @@ Principe : **Trame fonctionne entièrement hors ligne ; un connecteur n'ajoute d
 - Tests : `photos.test.ts` (adresses, licences, lecture tolérante, crédits) ; le smoke test lance un **faux serveur Openverse** local (variable `TRAME_OPENVERSE_URL`, qui autorise aussi `http://127.0.0.1`) : requête et licences demandées, miniatures, insertion, repli sur la miniature quand l'original répond 404, pagination, 429, service injoignable, aucune requête avant la première recherche.
 - ⚠️ **Vérification contre le vrai service limitée** : le développement a eu lieu depuis un environnement qui ne joignait pas `api.openverse.org` ; seuls les retours de l'utilisateur (HTTP 403 de Cloudflare avec le `fetch` de Node, HTTP 500 du service avec le filtre de licences) ont permis les deux corrections ci-dessus. Les noms de champs de la réponse (`thumbnail`, `foreign_landing_url`, `license_version`…) restent ceux de la documentation connue ; en cas de différence, seul `parseSearch` est à ajuster. Le panneau affiche le « détail technique » (code HTTP, début de la réponse) de toute erreur, pour diagnostiquer sans outil.
 
+## Bibliothèque de médias (dossier local)
+
+Onglet « Photos » → « Ma bibliothèque » (`components/PhotosTab.tsx`, `MediaPanel.tsx`). L'utilisateur choisit **un dossier** (boîte système) ; Trame ne copie, ne déplace et ne modifie rien : il le relit à chaque affichage (bouton « Actualiser » : pas de surveillance continue). L'état (`userData/media.json` : `{ folder, tags }`) garde le dossier et les **étiquettes**, par chemin relatif.
+
+- **Sécurité** : le renderer ne fournit jamais de chemin absolu, seulement un chemin relatif à la liste reçue ; le processus principal le revérifie (`isSafeRelative` : ni `..`, ni chemin absolu, ni antislash) et résout le fichier réel (`realpath` doit rester dans le dossier choisi, ni lien symbolique, ni fichier caché). Le parcours (`scanMedia`) ignore les liens symboliques et les fichiers cachés, descend de 4 niveaux au plus et s'arrête à 3 000 images ; une image de plus de 25 Mo n'est pas lue.
+- **Formats** : png, jpg, gif, webp, svg (ceux de l'insertion d'image existante).
+- **Vignettes** (`mediaThumbs.ts`) : lues à la demande quand la case devient visible (`IntersectionObserver`), trois à la fois, réduites à 200 px dans un canvas et gardées en mémoire (clé : chemin + taille du fichier). Rien n'est mis en cache sur le disque : elles sont recalculées à chaque lancement.
+- **Insertion** : un clic lit l'image, la réduit si elle dépasse 2 400 px (`downscaleImage`, comme les photos en ligne) et l'insère comme une image ordinaire (`insertImage`) : le document contient sa propre copie, il ne dépend pas du dossier.
+- **Logique pure** (`shared/mediaLibrary.ts`, testée) : `isMediaFile`, `isSafeRelative`, `normalizeTags` (sans doublon, casse et accents ignorés, 20 par image, 30 caractères), `parseMediaState`, `searchMedia` (mots cherchés dans le chemin et les étiquettes, filtre par étiquette, tri naturel), `allTags`.
+
 ## Connecteur en ligne : images générées par IA
 
 Même principe que les photos (tout dans le processus principal, rien tant que l'utilisateur ne le demande, l'image est **copiée dans le document**), avec en plus des identifiants personnels.

@@ -13,7 +13,7 @@ import { applyBuiltinTemplate, hideBuiltinTemplate, renameBuiltinTemplate, resto
 import { TemplateCard } from './TemplateCard'
 import { PageThumb } from './PageThumb'
 import { RecentsPanel } from './RecentsPanel'
-import { PhotosPanel } from './PhotosPanel'
+import { PhotosTab } from './PhotosTab'
 import { LibraryPanel } from './LibraryPanel'
 import { BrandPanel } from './BrandPanel'
 import { LayersPanel } from './LayersPanel'
@@ -136,7 +136,7 @@ export function Sidebar(): React.JSX.Element {
 
       {tab === 'brand' && <BrandPanel />}
 
-      {tab === 'photos' && <PhotosPanel />}
+      {tab === 'photos' && <PhotosTab />}
 
       {tab === 'icons' && <LibraryPanel />}
 

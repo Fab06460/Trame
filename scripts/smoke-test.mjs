@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { mkdtemp, rm, mkdir, readFile, readdir, writeFile, copyFile } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readFile, readdir, writeFile, copyFile, symlink } from 'node:fs/promises'
 import { deflateSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -513,6 +513,59 @@ try {
   check('packs : le modèle importé s\'ouvre avec son contenu', await (async () => { const [m] = await run('window.trame.listUserTemplates()'); return JSON.parse(await run(`window.trame.loadUserTemplate(${JSON.stringify(m.id)})`)).pages.length >= 1 })())
   for (const m of await run('window.trame.listUserTemplates()')) await run(`window.trame.deleteUserTemplate(${JSON.stringify(m.id)})`)
   await rm(join(tmp, 'exports', 'pick-import.tramepack'), { force: true })
+
+  // bibliothèque de médias : un dossier d'images choisi, recherche, étiquettes, insertion (rien n'est copié)
+  const mediaDir = join(tmp, 'exports', 'media')
+  await mkdir(join(mediaDir, 'sous-dossier'), { recursive: true })
+  await writeFile(join(mediaDir, 'logo-ecole.png'), testPng(120, 60))
+  await writeFile(join(mediaDir, 'chat.png'), testPng(80, 80))
+  await writeFile(join(mediaDir, 'sous-dossier', 'montagne.png'), testPng(200, 100))
+  await writeFile(join(mediaDir, '.cache.png'), testPng(10, 10)) // caché : ignoré
+  await writeFile(join(mediaDir, 'notes.txt'), 'pas une image') // autre format : ignoré
+  await writeFile(join(tmp, 'exports', 'secret.png'), testPng(30, 30))
+  await symlink(join(tmp, 'exports', 'secret.png'), join(mediaDir, 'lien.png')) // lien vers un fichier hors du dossier : ignoré
+  await clickSel('.sidebar .tabs button[data-tab="photos"]')
+  await sleep(300)
+  await clickSel('[data-photos-mode="library"]')
+  await sleep(300)
+  check('médias : sans dossier, la bibliothèque propose d\'en choisir un', (await count('[data-media="empty"]')) === 1)
+  await clickSel('[data-media-choose]')
+  check('médias : les 3 images du dossier (sous-dossier compris) sont listées, ni fichier caché, ni lien, ni autre format', await waitFor(async () => (await run(`[...document.querySelectorAll('[data-media-item]')].map(e => e.dataset.mediaItem).join()`)) === 'chat.png,logo-ecole.png,sous-dossier/montagne.png'), await run(`[...document.querySelectorAll('[data-media-item]')].map(e => e.dataset.mediaItem).join()`))
+  check('médias : les vignettes se chargent', await waitFor(async () => (await count('.media-thumb img')) === 3))
+  await typeInto('[data-field="mediaQuery"]', 'montagne')
+  await sleep(300)
+  check('médias : la recherche filtre par nom (sous-dossier compris)', (await count('[data-media-item]')) === 1)
+  await typeInto('[data-field="mediaQuery"]', '')
+  await sleep(200)
+  await clickSel('[data-media-item="chat.png"] [data-media-edit]')
+  await sleep(200)
+  await typeInto('[data-field="mediaNewTag"]', 'Animal')
+  await pressEnter('[data-field="mediaNewTag"]')
+  check('médias : l\'étiquette est enregistrée et proposée en filtre', await waitFor(async () => (await count('[data-media-tag="Animal"]')) === 1))
+  await clickSel('[data-media-tag="Animal"]')
+  await sleep(300)
+  check('médias : le filtre par étiquette ne garde que l\'image étiquetée', (await run(`[...document.querySelectorAll('[data-media-item]')].map(e => e.dataset.mediaItem).join()`)) === 'chat.png')
+  await clickSel('[data-media-tags] .tag:first-child') // « Toutes »
+  await typeInto('[data-field="mediaQuery"]', 'animal')
+  await sleep(300)
+  check('médias : la recherche porte aussi sur les étiquettes', (await count('[data-media-item]')) === 1)
+  await typeInto('[data-field="mediaQuery"]', '')
+  await sleep(200)
+  const placed = () => run(`document.querySelectorAll('.page-item.current .thumb img').length`) // une image de la page = un <img> dans sa miniature
+  const placedBefore = await placed()
+  await clickSel('[data-media-item="logo-ecole.png"] .media-open')
+  check('médias : un clic insère l\'image dans la page', await waitFor(async () => (await placed()) === placedBefore + 1))
+  check('médias : lire une image hors du dossier est refusé (chemin relatif piégé, lien symbolique)', (await run(`Promise.all([window.trame.readMedia('../secret.png'), window.trame.readMedia('/etc/hosts'), window.trame.readMedia('lien.png'), window.trame.readMedia('notes.txt')]).then(r => r.every(x => x === null))`)) === true)
+  check('médias : une image du dossier se lit', (await run(`window.trame.readMedia('chat.png').then(x => typeof x === 'string' && x.startsWith('data:image/png;base64,'))`)) === true)
+  await reloadApp()
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="photos"]')
+  await sleep(300)
+  await clickSel('[data-photos-mode="library"]')
+  check('médias : le dossier et les étiquettes survivent au rechargement', await waitFor(async () => (await count('[data-media-item]')) === 3 && (await count('[data-media-tag="Animal"]')) === 1))
+  await clickSel('[data-media-forget]')
+  check('médias : « Ne plus utiliser ce dossier » revient à l\'écran de choix (les fichiers restent)', (await waitFor(async () => (await count('[data-media="empty"]')) === 1)) && (await readFile(join(mediaDir, 'chat.png')).catch(() => null)) !== null)
+  await clickSel('[data-photos-mode="online"]')
 
   // position et taille numériques (panneau « Propriétés »)
   const field = (name) => run(`Number(document.querySelector('.panel [data-field="${name}"]')?.value)`)

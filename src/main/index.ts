@@ -1,10 +1,10 @@
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, net, screen, shell } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
+import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { homedir, tmpdir } from 'os'
-import { basename, dirname } from 'path'
+import { basename, dirname, sep } from 'path'
 import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
@@ -20,6 +20,7 @@ import { MAX_MERGE_IMAGE_BYTES, MAX_MERGE_IMAGE_FILES, isMergeImageFile, mergeIm
 import { createFullscreenGuard, leaveFullscreenQuietly } from './fullscreenGuard'
 import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type SpeakerState } from './speakerProtocol'
 import { createFileInbox } from './fileInbox'
+import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeRelative, mediaMime, parseMediaState, withTags, type MediaItem, type MediaState } from '../shared/mediaLibrary'
 import { projectFilesFromArgv } from './launchArgs'
 import { initMainLocale, setMainLocale, tm } from './i18n'
 import {
@@ -412,6 +413,88 @@ ipcMain.handle('templates:import-pack', async () => {
   }
   await saveTemplateIndex(index)
   return { imported, skipped }
+})
+
+// ── Bibliothèque de médias : un dossier choisi par l'utilisateur, relu à chaque affichage ─────────────────────────────────
+// userData/media.json : { folder, tags } ; les images ne sont jamais copiées ni modifiées. Le renderer ne fournit jamais de chemin
+// absolu : seulement un chemin relatif au dossier choisi, revérifié ici (voir isSafeRelative et la résolution réelle du fichier).
+const mediaFile = (): string => join(app.getPath('userData'), 'media.json')
+const loadMedia = async (): Promise<MediaState> => parseMediaState(await readFile(mediaFile(), 'utf-8').catch(() => ''))
+const saveMedia = (state: MediaState): Promise<void> => writeFile(mediaFile(), JSON.stringify(state), 'utf-8')
+
+/** Images du dossier (sous-dossiers compris, sans suivre de lien symbolique ni de fichier caché), par ordre alphabétique. */
+async function scanMedia(folder: string, tags: MediaState['tags']): Promise<{ items: MediaItem[]; truncated: boolean }> {
+  const items: MediaItem[] = []
+  let truncated = false
+  const walk = async (dir: string, rel: string, depth: number): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+    for (const e of entries) {
+      if (items.length >= MAX_MEDIA_FILES) {
+        truncated = true
+        return
+      }
+      if (e.name.startsWith('.') || e.isSymbolicLink()) continue
+      const path = rel ? `${rel}/${e.name}` : e.name
+      if (e.isDirectory()) {
+        if (depth < MAX_MEDIA_DEPTH) await walk(join(dir, e.name), path, depth + 1)
+      } else if (e.isFile() && isMediaFile(e.name)) {
+        const st = await stat(join(dir, e.name)).catch(() => null)
+        if (st) items.push({ path, name: e.name, size: st.size, tags: tags[path] ?? [] })
+      }
+    }
+  }
+  await walk(folder, '', 0)
+  return { items, truncated }
+}
+
+ipcMain.handle('media:state', async () => ({ folder: (await loadMedia()).folder }))
+
+ipcMain.handle('media:choose', async () => {
+  let folder: string
+  if (TEST_EXPORT_DIR) {
+    folder = join(TEST_EXPORT_DIR, 'media') // mode test : le dossier « media » du dossier de test tient lieu de choix
+    if (!(await stat(folder).catch(() => null))?.isDirectory()) return null
+  } else {
+    const res = await dialog.showOpenDialog({ title: tm('main.media.choose'), properties: ['openDirectory'] })
+    if (res.canceled || !res.filePaths[0]) return null
+    folder = res.filePaths[0]
+  }
+  await saveMedia({ ...(await loadMedia()), folder })
+  return folder
+})
+
+ipcMain.handle('media:forget', async () => {
+  await saveMedia({ ...(await loadMedia()), folder: null })
+})
+
+ipcMain.handle('media:list', async () => {
+  const state = await loadMedia()
+  if (!state.folder) return { folder: null, items: [], truncated: false, missing: false }
+  if (!(await stat(state.folder).catch(() => null))?.isDirectory()) return { folder: state.folder, items: [], truncated: false, missing: true }
+  return { folder: state.folder, ...(await scanMedia(state.folder, state.tags)), missing: false }
+})
+
+ipcMain.handle('media:read', async (_e, rel: unknown) => {
+  const { folder } = await loadMedia()
+  if (!folder || !isSafeRelative(rel) || !isMediaFile(rel.split('/').pop()!)) return null
+  try {
+    const target = join(folder, ...rel.split('/'))
+    const info = await lstat(target)
+    if (!info.isFile() || info.isSymbolicLink() || info.size > MAX_MEDIA_BYTES) return null
+    // le fichier réel doit rester dans le dossier choisi (un sous-dossier qui est un lien symbolique ne doit pas en faire sortir)
+    if (!(await realpath(target)).startsWith((await realpath(folder)) + sep)) return null
+    return `data:${mediaMime(rel)};base64,${(await readFile(target)).toString('base64')}`
+  } catch {
+    return null
+  }
+})
+
+ipcMain.handle('media:set-tags', async (_e, rel: unknown, tags: unknown) => {
+  if (!isSafeRelative(rel)) return []
+  const state = withTags(await loadMedia(), rel, tags)
+  await saveMedia(state)
+  return state.tags[rel] ?? []
 })
 
 ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, confirmLabel: string) => {

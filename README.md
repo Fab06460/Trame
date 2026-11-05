@@ -10,6 +10,7 @@
 - Copier / couper / coller des éléments (entre pages et entre documents), coller une image ou du texte venant d'une autre application, **déposer des images** (Finder, explorateur) directement sur la page : elles se centrent là où vous les lâchez
 - Import de ses propres polices (TTF, OTF, WOFF, WOFF2), licence d'intégration contrôlée, embarquées dans les documents
 - Catalogue de polices en ligne (~1 900 polices libres, installées sur demande, embarquées dans les documents)
+- **Ma bibliothèque** (onglet Photos) : choisissez un dossier d'images de votre ordinateur, Trame les affiche en vignettes (sous-dossiers compris) sans rien copier ni déplacer ; recherche par nom, **étiquettes** à vous (« logo », « équipe »…) avec filtre, un clic insère l'image
 - Recherche de photos libres de droits (Openverse, avec Wikimedia Commons en secours ; en ligne, sur demande ; la photo est copiée dans le document, crédit conservé)
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
@@ -130,6 +131,7 @@ src/
   main/recents.ts        Logique pure de la liste des projets récents
   main/fileInbox.ts      Fichiers ouverts par le système en attente d'un renderer prêt
   main/userTemplates.ts  Logique pure des modèles personnels (validation, index)
+  shared/mediaLibrary.ts Logique pure de la bibliothèque de médias (chemins sûrs, étiquettes, recherche)
   preload/index.ts       Pont sécurisé exposé au renderer : window.trame
   renderer/
     index.html           Point d'entrée + Content-Security-Policy

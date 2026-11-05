@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { UpdateState } from '../shared/update'
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, EditKind, WriteAction } from '../shared/ai'
+import type { MediaItem } from '../shared/mediaLibrary'
 
 export interface RecentProject {
   path: string
@@ -123,6 +124,14 @@ const api = {
   exportTemplatePack: (ids: string[]): Promise<number | null> => ipcRenderer.invoke('templates:export-pack', ids),
   /** Importe un pack de modèles (boîte « Ouvrir ») ; null si annulé ou illisible (erreur affichée). */
   importTemplatePack: (): Promise<{ imported: number; skipped: number } | null> => ipcRenderer.invoke('templates:import-pack'),
+  /** Bibliothèque de médias : dossier d'images choisi (jamais copié), lu par chemins relatifs. */
+  mediaState: (): Promise<{ folder: string | null }> => ipcRenderer.invoke('media:state'),
+  chooseMediaFolder: (): Promise<string | null> => ipcRenderer.invoke('media:choose'),
+  forgetMediaFolder: (): Promise<void> => ipcRenderer.invoke('media:forget'),
+  listMedia: (): Promise<{ folder: string | null; items: MediaItem[]; truncated: boolean; missing: boolean }> => ipcRenderer.invoke('media:list'),
+  /** L'image (data URL), ou null si elle est introuvable, trop lourde ou hors du dossier. */
+  readMedia: (path: string): Promise<string | null> => ipcRenderer.invoke('media:read', path),
+  setMediaTags: (path: string, tags: string[]): Promise<string[]> => ipcRenderer.invoke('media:set-tags', path, tags),
   /** Boîte de confirmation native ; true si l'utilisateur choisit `confirmLabel`. */
   confirm: (message: string, detail: string, confirmLabel: string): Promise<boolean> =>
     ipcRenderer.invoke('dialog:confirm', message, detail, confirmLabel),
