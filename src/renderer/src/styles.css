@@ -182,6 +182,7 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .seg button { border: none; border-radius: 0; background: #1b1c21; }
 .seg button.active { background: var(--accent); color: #fff; }
+.side-content > .seg { flex: none; }
 .stroke-row:has([data-field="gradFrom"]) { grid-template-columns: 1fr 40px 1fr; }
 .panel select { background: #1b1c21; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px; font: inherit; }
 .seg.three { grid-template-columns: 1fr 1fr 1fr; }
