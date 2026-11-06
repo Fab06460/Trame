@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addSounds, AUDIO_RATE, FADE_SECONDS, isAudioFile, mixTrack, silence } from './audioTrack'
+import { addSounds, AUDIO_RATE, FADE_SECONDS, isAudioFile, mixTrack, silence, trimSound } from './audioTrack'
 
 const ramp = (n: number, v = 1): Float32Array => new Float32Array(n).fill(v)
 
@@ -119,5 +119,28 @@ describe('addSounds', () => {
     ])
     expect(track[0][50]).toBeCloseTo(0.4)
     expect(track[0]).toHaveLength(AUDIO_RATE)
+  })
+})
+
+describe('trimSound', () => {
+  const ramp = (seconds: number): Float32Array => Float32Array.from({ length: Math.round(seconds * AUDIO_RATE) }, (_, i) => i / AUDIO_RATE)
+  it('garde le morceau demandé, tel quel à la vitesse 1', () => {
+    const [out] = trimSound([ramp(4)], 1, 3, 1)
+    expect(out.length).toBe(2 * AUDIO_RATE)
+    expect(out[0]).toBeCloseTo(1, 4)
+  })
+  it('deux fois plus vite : deux fois plus court, mêmes instants parcourus', () => {
+    const [out] = trimSound([ramp(4)], 1, 3, 2)
+    expect(out.length).toBe(AUDIO_RATE)
+    expect(out[AUDIO_RATE / 2]).toBeCloseTo(2, 3)
+  })
+  it('deux fois plus lent : deux fois plus long', () => {
+    const [out] = trimSound([ramp(4)], 0, 1, 0.5)
+    expect(out.length).toBe(2 * AUDIO_RATE)
+    expect(out[AUDIO_RATE]).toBeCloseTo(0.5, 3)
+  })
+  it('un morceau hors du son donne un son vide, sans erreur', () => {
+    expect(trimSound([ramp(1)], 5, 8, 1)[0].length).toBe(0)
+    expect(trimSound([ramp(1)], 5, 8, 2)[0].length).toBe(0)
   })
 })

@@ -12,6 +12,61 @@ export const clipVolume = (v: VideoClip): number => (typeof v.volume === 'number
 export const clipAutoplay = (v: VideoClip): boolean => !v.manual
 export const clipLoops = (v: VideoClip): boolean => !!v.loop
 
+export const MIN_SPEED = 0.25
+export const MAX_SPEED = 4
+/** Plus petit morceau gardé par un montage, en secondes (réduit pour un clip plus court que le double). */
+export const MIN_TRIM = 0.2
+const round2 = (n: number): number => Math.round(n * 100) / 100
+const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n))
+
+export const clipSpeed = (v: Partial<VideoClip>): number => (typeof v.speed === 'number' && Number.isFinite(v.speed) ? clamp(v.speed, MIN_SPEED, MAX_SPEED) : 1)
+
+/** Le morceau du clip d'origine qui se joue (secondes) : tout le clip tant qu'il n'est pas monté. */
+export function clipRange(v: Pick<VideoClip, 'duration' | 'start' | 'end'>): { start: number; end: number } {
+  const start = typeof v.start === 'number' && Number.isFinite(v.start) && v.start > 0 && v.start < v.duration ? v.start : 0
+  const end = typeof v.end === 'number' && Number.isFinite(v.end) && v.end > start && v.end < v.duration ? v.end : v.duration
+  return { start, end }
+}
+
+/** Durée de lecture du clip monté (secondes) : le morceau gardé, divisé par la vitesse. */
+export function clipLength(v: Pick<VideoClip, 'duration' | 'start' | 'end' | 'speed'>): number {
+  const { start, end } = clipRange(v)
+  return (end - start) / clipSpeed(v)
+}
+
+/**
+ * L'instant du clip d'origine à montrer `elapsed` secondes après le début de sa lecture. En boucle le morceau recommence ; sinon il
+ * s'arrête sur sa dernière image.
+ */
+export function clipSourceTime(v: Pick<VideoClip, 'duration' | 'start' | 'end' | 'speed' | 'loop'>, elapsed: number): number {
+  const { start, end } = clipRange(v)
+  const speed = clipSpeed(v)
+  if (v.loop) return start + (elapsed % ((end - start) / speed)) * speed
+  return Math.min(start + elapsed * speed, Math.max(start, end - 0.05))
+}
+
+/**
+ * Les réglages d'un clip après modification : valeurs ramenées dans leurs limites (le début reste avant la fin d'au moins `MIN_TRIM`)
+ * et seules celles qui s'écartent des valeurs par défaut sont gardées (comme à la lecture d'un fichier).
+ */
+export function withClipSettings(v: VideoClip, patch: { loop?: boolean; muted?: boolean; manual?: boolean; volume?: number; start?: number; end?: number; speed?: number }): VideoClip {
+  const next: VideoClip = { id: v.id, duration: v.duration }
+  const min = Math.min(MIN_TRIM, v.duration / 2)
+  let { start, end } = clipRange(v)
+  if (patch.start !== undefined) start = clamp(patch.start, 0, end - min)
+  if (patch.end !== undefined) end = clamp(patch.end, start + min, v.duration)
+  const speed = patch.speed !== undefined ? clamp(patch.speed, MIN_SPEED, MAX_SPEED) : clipSpeed(v)
+  const volume = patch.volume ?? clipVolume(v)
+  if (patch.loop ?? clipLoops(v)) next.loop = true
+  if (patch.muted ?? !!v.muted) next.muted = true
+  if (patch.manual ?? !!v.manual) next.manual = true
+  if (volume < 1) next.volume = volume
+  if (round2(start) > 0) next.start = round2(start)
+  if (round2(end) < v.duration) next.end = round2(end)
+  if (speed !== 1) next.speed = round2(speed)
+  return next
+}
+
 /** Retire des `clips` ceux qu'aucun élément ne référence (éléments supprimés) : ils alourdiraient le fichier pour rien. */
 export function pruneClips(doc: TrameDocument): TrameDocument {
   if (!doc.clips) return doc
@@ -68,6 +123,11 @@ export function sanitizeClips(doc: { clips?: unknown; pages: Array<{ elements: A
       if (v.muted === true) out.muted = true
       if (v.manual === true) out.manual = true
       if (typeof v.volume === 'number' && Number.isFinite(v.volume) && v.volume >= 0 && v.volume < 1) out.volume = v.volume
+      const duration = v.duration as number
+      const start = typeof v.start === 'number' && Number.isFinite(v.start) && v.start > 0 && v.start < duration ? v.start : 0
+      if (start > 0) out.start = start
+      if (typeof v.end === 'number' && Number.isFinite(v.end) && v.end > start && v.end < duration) out.end = v.end
+      if (typeof v.speed === 'number' && Number.isFinite(v.speed) && v.speed >= MIN_SPEED && v.speed <= MAX_SPEED && v.speed !== 1) out.speed = v.speed
       e.video = out
     }
   }

@@ -3,7 +3,7 @@ import { ArrayBufferTarget as WebmTarget, Muxer as WebmMuxer } from 'webm-muxer'
 import { pageAtStep } from '@/builds'
 import { renderPage } from '@/exportPages'
 import { decodeDataUrl } from '@/pdfMath'
-import { addSounds, AUDIO_RATE, decodeAudio, mixTrack, silence, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
+import { addSounds, AUDIO_RATE, decodeAudio, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
 import { clipUrl } from '@/clipActions'
 import { clipSounds, clipsAt, layerKeys, layersAt, scheduleOf, videoSize, type ClipFrame, type Layer, type VideoOptions } from '@/videoTimeline'
 import type { TrameDocument } from '@/types'
@@ -191,7 +191,7 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
         decoded.set(sound.id, parts ? await decodeAudio(parts.bytes).catch(() => null) : null)
       }
       const audio = decoded.get(sound.id)
-      if (audio && audio.channels.length) events.push({ source: audio.channels, at: sound.at, until: sound.until, volume: sound.volume, loop: sound.loop })
+      if (audio && audio.channels.length) events.push({ source: trimSound(audio.channels, sound.start, sound.end, sound.speed), at: sound.at, until: sound.until, volume: sound.volume, loop: sound.loop })
     }
     addSounds(track, events)
     audioEncoder = new AudioEncoder({

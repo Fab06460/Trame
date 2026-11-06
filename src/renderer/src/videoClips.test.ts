@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipAutoplay, clipElements, clipLoops, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withoutClips } from './videoClips'
+import { clipAutoplay, clipElements, clipLength, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
 import type { TrameDocument, TrameElement } from './types'
 
 const MP4 = 'data:video/mp4;base64,AAAA'
@@ -91,5 +91,71 @@ describe('sanitizeClips', () => {
     const d = raw([], { a: big, b: big, c: big, d: big, e: big })
     sanitizeClips(d)
     expect(Object.keys(d.clips as object).length).toBeLessThan(5)
+  })
+})
+
+describe('montage : début, fin, vitesse', () => {
+  const v = { id: 'u', duration: 10 }
+  it('sans montage : tout le clip, vitesse 1', () => {
+    expect(clipRange(v)).toEqual({ start: 0, end: 10 })
+    expect(clipSpeed(v)).toBe(1)
+    expect(clipLength(v)).toBe(10)
+  })
+  it('un morceau monté et sa durée de lecture selon la vitesse', () => {
+    const m = { ...v, start: 2, end: 6, speed: 2 }
+    expect(clipRange(m)).toEqual({ start: 2, end: 6 })
+    expect(clipLength(m)).toBe(2)
+    expect(clipLength({ ...m, speed: 0.5 })).toBe(8)
+  })
+  it('valeurs incohérentes ignorées à la lecture du montage', () => {
+    expect(clipRange({ ...v, start: -3, end: 99 })).toEqual({ start: 0, end: 10 })
+    expect(clipRange({ ...v, start: 5, end: 4 })).toEqual({ start: 5, end: 10 })
+    expect(clipRange({ ...v, start: NaN, end: NaN })).toEqual({ start: 0, end: 10 })
+    expect(clipSpeed({ speed: 100 })).toBe(4)
+    expect(clipSpeed({ speed: 0 })).toBe(0.25)
+  })
+  it('clipSourceTime : part du début, avance à la vitesse, s\'arrête avant la fin', () => {
+    const m = { ...v, start: 2, end: 6, speed: 2 }
+    expect(clipSourceTime(m, 0)).toBe(2)
+    expect(clipSourceTime(m, 1)).toBe(4)
+    expect(clipSourceTime(m, 50)).toBeCloseTo(5.95, 5)
+  })
+  it('clipSourceTime : en boucle, le morceau recommence', () => {
+    const m = { ...v, start: 2, end: 6, speed: 2, loop: true as const }
+    expect(clipSourceTime(m, 2)).toBe(2)
+    expect(clipSourceTime(m, 2.5)).toBe(3)
+  })
+  it('withClipSettings : ne garde que ce qui s\'écarte des valeurs par défaut', () => {
+    expect(withClipSettings(v, {})).toEqual(v)
+    expect(withClipSettings(v, { start: 1.234, end: 7, speed: 1.5 })).toEqual({ ...v, start: 1.23, end: 7, speed: 1.5 })
+    expect(withClipSettings({ ...v, start: 1, end: 7, speed: 2 }, { start: 0, end: 10, speed: 1 })).toEqual(v)
+  })
+  it('withClipSettings : le début reste avant la fin, la fin après le début, tout dans le clip', () => {
+    const a = withClipSettings({ ...v, end: 4 }, { start: 9 })
+    expect(a.start).toBeCloseTo(3.8, 5)
+    const b = withClipSettings({ ...v, start: 6 }, { end: 1 })
+    expect(b.end).toBeCloseTo(6.2, 5)
+    expect(withClipSettings(v, { end: 50 }).end).toBeUndefined()
+    expect(withClipSettings(v, { speed: 99 }).speed).toBe(4)
+  })
+  it('withClipSettings garde les autres réglages', () => {
+    expect(withClipSettings({ ...v, loop: true, muted: true, manual: true, volume: 0.3 }, { start: 1 })).toEqual({ ...v, loop: true, muted: true, manual: true, volume: 0.3, start: 1 })
+  })
+  it('lecture d\'un fichier : montage valide gardé, incohérent retiré', () => {
+    const d = raw(
+      [
+        { id: 'a', type: 'image', video: { id: 'u', duration: 10, start: 2, end: 6, speed: 2 } },
+        { id: 'b', type: 'image', video: { id: 'u', duration: 10, start: 20, end: 3, speed: 9 } },
+        { id: 'c', type: 'image', video: { id: 'u', duration: 10, start: 5, end: 5, speed: 1 } },
+        { id: 'd', type: 'image', video: { id: 'u', duration: 10, start: 'x', end: null, speed: '2' } }
+      ],
+      { u: MP4 }
+    )
+    sanitizeClips(d)
+    const [a, b, c, e] = d.pages[0].elements.map((x) => x.video)
+    expect(a).toEqual({ id: 'u', duration: 10, start: 2, end: 6, speed: 2 })
+    expect(b).toEqual({ id: 'u', duration: 10, end: 3 }) // début hors du clip ignoré, fin valide gardée
+    expect(c).toEqual({ id: 'u', duration: 10, start: 5 })
+    expect(e).toEqual({ id: 'u', duration: 10 })
   })
 })

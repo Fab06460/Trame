@@ -63,6 +63,27 @@ export interface SoundEvent {
   loop: boolean
 }
 
+/**
+ * Le morceau [start, end] (secondes) d'un son, joué à la vitesse donnée : plus vite = plus court et plus aigu (rééchantillonnage linéaire).
+ * Sans montage, le son est rendu tel quel.
+ */
+export function trimSound(source: readonly Float32Array[], start: number, end: number, speed: number): Float32Array[] {
+  const from = Math.max(0, Math.round(start * AUDIO_RATE))
+  return source.map((channel) => {
+    const to = Math.min(channel.length, Math.round(end * AUDIO_RATE))
+    if (speed === 1) return channel.subarray(Math.min(from, to), to)
+    const count = Math.max(0, Math.floor((to - from) / speed))
+    const out = new Float32Array(count)
+    for (let i = 0; i < count; i++) {
+      const pos = from + i * speed
+      const k = Math.floor(pos)
+      const f = pos - k
+      out[i] = channel[k] * (1 - f) + (channel[Math.min(k + 1, to - 1)] ?? channel[k]) * f
+    }
+    return out
+  })
+}
+
 /** Une bande son silencieuse de la durée donnée (deux canaux). */
 export const silence = (seconds: number): [Float32Array, Float32Array] => [new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE))), new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE)))]
 

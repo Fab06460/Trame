@@ -61,6 +61,12 @@ export interface VideoClip {
   manual?: true
   /** volume de 0 à 1 (absent = 1) */
   volume?: number
+  /** montage : instant (secondes du clip d'origine) où la lecture commence (absent = 0) */
+  start?: number
+  /** montage : instant où la lecture s'arrête (absent = la fin du clip) */
+  end?: number
+  /** vitesse de lecture, de 0,25 à 4 (absent = 1) ; le son suit (plus aigu en accéléré) */
+  speed?: number
 }
 
 export type Protection = 'fixed' | 'fill'

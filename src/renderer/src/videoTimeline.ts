@@ -1,5 +1,5 @@
 import { buildNumbers, pageAtStep, stepsOf } from '@/builds'
-import { clipElements } from '@/videoClips'
+import { clipElements, clipLength, clipSourceTime, clipRange, clipSpeed } from '@/videoClips'
 import { pageTransition, TRANSITION_MS, type PageTransition } from '@/transition'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -67,7 +67,8 @@ function pageSeconds(page: TramePage, o: VideoOptions): number {
     if (!el.video || el.video.loop) continue
     // un clip qui apparaît à l'étape k (sur n) démarre à tr + k × (D − tr) / (n + 1) : il tient si cet instant + sa durée ≤ D
     const k = o.effects && el.build ? buildNumbers(page).indexOf(el.build) + 1 : 0
-    need = Math.max(need, k === 0 ? el.video.duration : BASE_TRANSITION + (el.video.duration * (n + 1)) / (n + 1 - k))
+    const length = clipLength(el.video)
+    need = Math.max(need, k === 0 ? length : BASE_TRANSITION + (length * (n + 1)) / (n + 1 - k))
   }
   return Math.ceil(need * 10) / 10
 }
@@ -182,7 +183,8 @@ export interface ClipFrame {
 
 /**
  * Les clips visibles sur une couche à l'instant `t` (secondes depuis le début de la vidéo) et l'instant de chacun. Un clip démarre avec
- * sa page (ou à son étape d'apparition), recommence s'il tourne en boucle, sinon s'arrête sur sa dernière image. Une page quittée
+ * sa page (ou à son étape d'apparition), recommence s'il tourne en boucle, sinon s'arrête sur sa dernière image. `time` est un instant du
+ * clip d'origine (le montage — début, fin, vitesse — est déjà appliqué). Une page quittée
  * pendant une transition garde son horloge : son clip continue de jouer le temps du mouvement.
  */
 export function clipsAt(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, schedule: Schedule, l: Layer, t: number): ClipFrame[] {
@@ -193,7 +195,7 @@ export function clipsAt(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, sche
     if (!clip) continue
     const elapsed = t - schedule.starts[l.page] - clipStartIn(page, el, schedule.durations[l.page], o.effects)
     if (elapsed < 0) continue
-    out.push({ el, time: clip.loop ? elapsed % clip.duration : Math.min(elapsed, Math.max(0, clip.duration - 0.05)) })
+    out.push({ el, time: clipSourceTime(clip, elapsed) })
   }
   return out
 }
@@ -205,6 +207,10 @@ export interface ClipSound {
   until: number
   volume: number
   loop: boolean
+  /** le morceau gardé du clip (secondes du clip d'origine) et la vitesse de lecture */
+  start: number
+  end: number
+  speed: number
 }
 
 /** Les sons des clips non muets, dans l'ordre des pages. */
@@ -216,7 +222,7 @@ export function clipSounds(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, s
       if (!clip || clip.muted) continue
       const volume = typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1
       if (volume <= 0) continue
-      out.push({ id: clip.id, at: schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects), until: schedule.starts[i] + schedule.durations[i], volume, loop: !!clip.loop })
+      out.push({ id: clip.id, at: schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects), until: schedule.starts[i] + schedule.durations[i], volume, loop: !!clip.loop, ...clipRange(clip), speed: clipSpeed(clip) })
     }
   })
   return out

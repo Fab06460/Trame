@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clipUrl } from '@/clipActions'
+import { useClipBounds } from '@/clipPlayback'
 import { clipAutoplay, clipLoops, clipVolume } from '@/videoClips'
 import type { TrameDocument, TrameElement } from '@/types'
 
@@ -10,6 +11,7 @@ import type { TrameDocument, TrameElement } from '@/types'
  */
 export function PresentationClip({ doc, el, rect }: { doc: TrameDocument; el: TrameElement; rect: { x: number; y: number; k: number } }): React.JSX.Element | null {
   const ref = useRef<HTMLVideoElement>(null)
+  const [node, setNode] = useState<HTMLVideoElement | null>(null)
   const clip = el.video
   const url = clip ? clipUrl(doc, clip.id) : null
   useEffect(() => {
@@ -19,16 +21,20 @@ export function PresentationClip({ doc, el, rect }: { doc: TrameDocument; el: Tr
     v.muted = !!clip.muted
     if (clipAutoplay(clip)) void v.play().catch(() => {})
   }, [clip, url])
+  // le montage (début, fin, vitesse) et la boucle sont gérés ici plutôt que par l'attribut `loop`, qui ignorerait le début et la fin choisis
+  useClipBounds(node, clip, !!clip && clipLoops(clip))
   if (!clip || !url) return null
   const auto = clipAutoplay(clip)
   return (
     <video
-      ref={ref}
+      ref={(v) => {
+        ref.current = v
+        setNode(v)
+      }}
       className="presentation-clip"
       data-pres-clip={el.id}
       src={url}
       poster={el.src}
-      loop={clipLoops(clip)}
       playsInline
       preload="auto"
       style={{

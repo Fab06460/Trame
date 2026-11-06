@@ -229,4 +229,25 @@ describe('clips vidéo', () => {
     expect(sounds[0]).toMatchObject({ at: 0, until: s.durations[0], volume: 1, loop: false })
     expect(sounds[1]).toMatchObject({ at: s.starts[1], volume: 0.5, loop: true })
   })
+
+  it('un clip monté : sa durée de lecture décide de l\'allongement de la page', () => {
+    const o = opts({ secondsPerPage: 4 })
+    // 10 s dont on garde 6 s, ×2 : 3 s, la page de 4 s suffit
+    expect(scheduleOf(withClip(10, {}, { start: 2, end: 8, speed: 2 }), o).durations[0]).toBe(4)
+    // 10 s ralentis ×0,5 : 20 s
+    expect(scheduleOf(withClip(10, {}, { speed: 0.5 }), o).durations[0]).toBe(20)
+  })
+  it('clipsAt : l\'instant montré est celui du clip d\'origine (début et vitesse appliqués)', () => {
+    const d = withClip(10, {}, { start: 2, end: 8, speed: 2 })
+    const o = opts({ secondsPerPage: 4 })
+    const s = scheduleOf(d, o)
+    const l: Layer = { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }
+    expect(clipsAt(d, o, s, l, 0)[0].time).toBe(2)
+    expect(clipsAt(d, o, s, l, 1)[0].time).toBe(4)
+    expect(clipsAt(d, o, s, l, 3.9)[0].time).toBeCloseTo(7.95, 2)
+  })
+  it('clipSounds : transmet le morceau gardé et la vitesse', () => {
+    const d = withClip(10, {}, { start: 2, end: 8, speed: 2 })
+    expect(clipSounds(d, opts({ secondsPerPage: 4 }), scheduleOf(d, opts({ secondsPerPage: 4 })))[0]).toMatchObject({ start: 2, end: 8, speed: 2 })
+  })
 })
