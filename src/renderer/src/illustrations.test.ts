@@ -24,11 +24,14 @@ describe('illustrations embarquées', () => {
   })
 
   it('les coordonnées restent dans le cadre (à quelques pour cent près)', () => {
+    // un seul `expect` à la fin : un par nombre rendait le test très lent sur les machines modestes (délai dépassé en intégration continue)
+    const outside: string[] = []
     for (const ill of all) {
       for (const l of ill.layers) {
-        for (const v of l.d.match(/-?\d*\.?\d+/g)!.map(Number)) expect(v).toBeGreaterThan(-15), expect(v).toBeLessThan(115)
+        for (const v of l.d.match(/-?\d*\.?\d+/g)!.map(Number)) if (!(v > -15 && v < 115)) outside.push(`${ill.id}: ${v}`)
       }
     }
+    expect(outside).toEqual([])
   })
 
   it('« Bikini » n’est pas dans la bibliothèque', () => {
