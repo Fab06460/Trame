@@ -460,6 +460,8 @@ export const es: Catalog = {
   'pres.transition.title': 'Transición entre páginas (se guarda con el documento)',
   'pres.laser': 'Láser',
   'pres.laser.title': 'Puntero láser: un punto rojo que sigue al ratón (L)',
+  'pres.voice': 'Voz',
+  'pres.voice.title': 'Volver a oír la voz en off de la página (R)',
   'pres.speaker': 'Orador',
   'pres.speaker.title': 'Vista del orador: página siguiente, notas y cronómetro en una segunda ventana (S)',
   'pres.notes': 'Notas',

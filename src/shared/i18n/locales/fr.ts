@@ -461,6 +461,8 @@ export const fr = {
   'pres.transition.title': 'Transition entre les pages (enregistrée avec le document)',
   'pres.laser': 'Laser',
   'pres.laser.title': 'Pointeur laser : un point rouge qui suit la souris (L)',
+  'pres.voice': 'Voix',
+  'pres.voice.title': 'Réécouter la voix off de la page (R)',
   'pres.speaker': 'Orateur',
   'pres.speaker.title': 'Écran de l\'orateur : page suivante, notes et chronomètre dans une seconde fenêtre (S)',
   'pres.notes': 'Notes',

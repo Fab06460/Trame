@@ -5,7 +5,7 @@ import { PresentationOverview } from '@/components/PresentationOverview'
 import { PresentationClip } from '@/components/PresentationClip'
 import { PresentationVoice } from '@/components/PresentationVoice'
 import { clipElements, withoutClips } from '@/videoClips'
-import { withoutVoices } from '@/voiceOver'
+import { pageVoice, withoutVoices } from '@/voiceOver'
 import { pageRect } from '@/annotation'
 import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
@@ -40,6 +40,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const [showNotes, setShowNotes] = useState(false)
   const [speaker, setSpeaker] = useState(false)
   const [laser, setLaser] = useState(false)
+  /** nombre de fois que la voix off de la page a été relancée (touche R, bouton) */
+  const [voiceReplays, setVoiceReplays] = useState(0)
   const [onBar, setOnBar] = useState(false)
   /** vue d'ensemble des pages (touche G) et numéro de page en cours de saisie (chiffres puis Entrée) */
   const [overview, setOverview] = useState(false)
@@ -265,6 +267,7 @@ export function PresentationMode(): React.JSX.Element | null {
       else if (k.toLowerCase() === 'c' && !(e.metaKey || e.ctrlKey) && pageId) setInk((m) => (m[pageId]?.length ? { ...m, [pageId]: [] } : m))
       else if (drawRef.current && /^[1-5]$/.test(k)) setColor(INK_COLORS[Number(k) - 1])
       else if (k.toLowerCase() === 's') toggleSpeakerRef.current()
+      else if (k.toLowerCase() === 'r' && !(e.metaKey || e.ctrlKey)) setVoiceReplays((n) => n + 1)
       else handled = false
       if (handled || !(e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -315,7 +318,7 @@ export function PresentationMode(): React.JSX.Element | null {
       })()}
       {laser && <LaserPointer hidden={onBar} />}
       {goto && <div className="presentation-goto" data-pres="goto" role="status">{t('pres.goto', { n: goto, total: doc.pages.length })}</div>}
-      <PresentationVoice doc={doc} index={index} paused={black} />
+      <PresentationVoice doc={doc} index={index} paused={black} replay={voiceReplays} />
       {overview && <PresentationOverview doc={doc} current={index} onClose={() => setOverview(false)} onPick={(i) => { usePresentation.getState().go(i); setOverview(false) }} />}
       <div
         ref={bar}
@@ -350,6 +353,7 @@ export function PresentationMode(): React.JSX.Element | null {
           </select>
         </label>
         <button data-pres="overview" onClick={() => setOverview(true)} title={t('pres.overview.title')}>{t('pres.overview')}</button>
+        {pageVoice(doc, doc.pages[index]) && <button data-pres="voice-replay" onClick={() => setVoiceReplays((n) => n + 1)} title={t('pres.voice.title')}>{t('pres.voice')}</button>}
         <button data-pres="laser" aria-pressed={laser} onClick={() => { setDraw(false); setLaser((l) => !l) }} title={t('pres.laser.title')}>{t('pres.laser')}</button>
         <button data-pres="draw" aria-pressed={draw} onClick={() => { setLaser(false); setDraw((d) => !d) }} title={t('pres.draw.title')}>{t('pres.draw')}</button>
         <button data-pres="speaker" aria-pressed={speaker} onClick={toggleSpeaker} title={t('pres.speaker.title')}>{t('pres.speaker')}</button>

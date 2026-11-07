@@ -460,6 +460,8 @@ export const de: Catalog = {
   'pres.transition.title': 'Übergang zwischen den Seiten (wird mit dem Dokument gespeichert)',
   'pres.laser': 'Laser',
   'pres.laser.title': 'Laserpointer: ein roter Punkt, der der Maus folgt (L)',
+  'pres.voice': 'Stimme',
+  'pres.voice.title': 'Sprechertext der Seite erneut abspielen (R)',
   'pres.speaker': 'Referent',
   'pres.speaker.title': 'Referentenansicht: nächste Seite, Notizen und Stoppuhr in einem zweiten Fenster (S)',
   'pres.notes': 'Notizen',

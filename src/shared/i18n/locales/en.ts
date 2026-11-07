@@ -460,6 +460,8 @@ export const en: Catalog = {
   'pres.transition.title': 'Transition between pages (saved with the document)',
   'pres.laser': 'Laser',
   'pres.laser.title': 'Laser pointer: a red dot that follows the mouse (L)',
+  'pres.voice': 'Voice',
+  'pres.voice.title': 'Replay the page\'s voice-over (R)',
   'pres.speaker': 'Presenter',
   'pres.speaker.title': 'Presenter view: next page, notes and timer in a second window (S)',
   'pres.notes': 'Notes',
