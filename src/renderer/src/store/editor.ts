@@ -1,4 +1,5 @@
 import { limitNotes, sanitizeNotes } from '@/notes'
+import { cleanPageSeconds } from '@/pageDuration'
 import { cleanPageTransition, cleanTransition, type PageTransition } from '@/transition'
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
@@ -98,6 +99,9 @@ export function parseDocument(json: string): TrameDocument {
       const t = cleanPageTransition(page.transition)
       if (t) page.transition = t
       else delete page.transition
+      const seconds = cleanPageSeconds(page.seconds)
+      if (seconds !== undefined) page.seconds = seconds
+      else delete page.seconds
     }
     for (const e of page.elements) {
       if (typeof e?.id !== 'string' || !ELEMENT_TYPES.includes(e.type)) throw invalid(t('file.invalid.element'))
@@ -239,6 +243,10 @@ interface EditorState {
   setTransition: (transition: PageTransition) => void
   /** Transition d'une page (`null` : revient à celle du document). */
   setPageTransition: (pageId: string, transition: PageTransition | null) => void
+  /** Durée d'une page dans la vidéo exportée, en secondes (`null` : revient à la durée de la boîte d'export). */
+  setPageSeconds: (pageId: string, seconds: number | null) => void
+  /** La même durée pour toutes les pages (`null` : toutes reviennent à la durée de la boîte d'export). */
+  applyPageSecondsToAll: (seconds: number | null) => void
   /** Une même transition pour tout le document : réglage par défaut, et les transitions propres à chaque page sont retirées. */
   applyTransitionToAll: (transition: PageTransition) => void
   setSize: (width: number, height: number) => void
@@ -845,6 +853,36 @@ export const useEditor = create<EditorState>((set, get) => {
         },
         dirty: true
       })),
+
+    setPageSeconds: (pageId, seconds) =>
+      set((s) => {
+        const clean = seconds === null ? undefined : cleanPageSeconds(seconds)
+        if (seconds !== null && clean === undefined) return {}
+        return {
+          ...snapshot(),
+          doc: {
+            ...s.doc,
+            pages: s.doc.pages.map((p) => {
+              if (p.id !== pageId) return p
+              const { seconds: _old, ...rest } = p
+              void _old
+              return clean !== undefined ? { ...rest, seconds: clean } : rest
+            })
+          },
+          dirty: true
+        }
+      }),
+
+    applyPageSecondsToAll: (seconds) =>
+      set((s) => {
+        const clean = seconds === null ? undefined : cleanPageSeconds(seconds)
+        if (seconds !== null && clean === undefined) return {}
+        return {
+          ...snapshot(),
+          doc: { ...s.doc, pages: s.doc.pages.map(({ seconds: _old, ...p }) => (void _old, clean !== undefined ? { ...p, seconds: clean } : p)) },
+          dirty: true
+        }
+      }),
 
     applyTransitionToAll: (transition) =>
       set((s) => {

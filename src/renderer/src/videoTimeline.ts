@@ -59,7 +59,7 @@ function clipStartIn(page: Pick<TramePage, 'elements'>, el: TrameElement, second
 
 /** Durée d'une page : celle choisie, allongée si un clip qui ne tourne pas en boucle ne tiendrait pas en entier. */
 function pageSeconds(page: TramePage, o: VideoOptions): number {
-  const base = o.secondsPerPage
+  const base = page.seconds ?? o.secondsPerPage
   if (!o.fitClips) return base
   const n = buildNumbers(page).length
   let need = base

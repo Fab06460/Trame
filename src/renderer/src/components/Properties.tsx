@@ -3,6 +3,7 @@ import { COLUMN_GAP, columnGapOf, columnsOf } from '@/columnStyle'
 import { isFlipExempt } from '@/flip'
 import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
+import { PageDurationPanel } from './PageDurationPanel'
 import { useEditor, selectPage } from '@/store/editor'
 import { allFonts } from '@/fonts'
 import { useFonts } from '@/store/fonts'
@@ -56,6 +57,7 @@ export function Properties(): React.JSX.Element {
           <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
         </label>
         <TransitionPanel />
+        <PageDurationPanel />
       </aside>
     )
   }

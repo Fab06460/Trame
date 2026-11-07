@@ -777,3 +777,39 @@ describe('notes de l\'orateur', () => {
     expect('notes' in parseDocument(JSON.stringify(raw)).pages[0]).toBe(false)
   })
 })
+
+describe('durée d’une page dans la vidéo', () => {
+  it('setPageSeconds règle la durée de la page, null la retire, un pas d’annulation par réglage', () => {
+    const id = S().doc.pages[0].id
+    S().setPageSeconds(id, 7.46)
+    expect(S().doc.pages[0].seconds).toBe(7.5)
+    S().undo()
+    expect(S().doc.pages[0]).not.toHaveProperty('seconds')
+    S().redo()
+    S().setPageSeconds(id, null)
+    expect(S().doc.pages[0]).not.toHaveProperty('seconds')
+  })
+  it('une durée hors limites est refusée sans rien changer', () => {
+    const id = S().doc.pages[0].id
+    S().setPageSeconds(id, 0)
+    S().setPageSeconds(id, 5000)
+    S().setPageSeconds(id, NaN)
+    expect(S().doc.pages[0]).not.toHaveProperty('seconds')
+  })
+  it('applyPageSecondsToAll donne la même durée à toutes les pages, null les retire toutes', () => {
+    S().addPage()
+    S().applyPageSecondsToAll(6)
+    expect(S().doc.pages.map((p) => p.seconds)).toEqual([6, 6])
+    S().applyPageSecondsToAll(null)
+    expect(S().doc.pages.every((p) => !('seconds' in p))).toBe(true)
+  })
+  it('survit à l’enregistrement ; à la lecture une valeur invalide est ignorée', () => {
+    S().setPageSeconds(S().doc.pages[0].id, 12)
+    expect(parseDocument(JSON.stringify(S().doc)).pages[0].seconds).toBe(12)
+    const d = JSON.parse(JSON.stringify(S().doc))
+    for (const bad of [0, -1, 9999, 'x', null]) {
+      d.pages[0].seconds = bad
+      expect(parseDocument(JSON.stringify(d)).pages[0]).not.toHaveProperty('seconds')
+    }
+  })
+})

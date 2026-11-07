@@ -3514,6 +3514,31 @@ try {
   check('clip : l\'élément se supprime comme les autres', (await layerCount()) === clipsBefore)
   await rm(join(exportsDir, 'pick-video.mp4'), { force: true })
 
+  // durée d'une page dans la vidéo : réglage dans les propriétés de la page, bouton « selon le texte », mention dans la boîte d'export
+  await gotoPage(0)
+  await run(`document.querySelector('.stage-wrap, .canvas-wrap')?.focus?.()`)
+  await waitFor(async () => (await nBrand('[data-field="pageSeconds"]')) === 1, 4000)
+  check('durée de page : le champ « Durée de la page dans la vidéo » est dans les propriétés de la page', (await nBrand('[data-field="pageSeconds"]')) === 1)
+  const setPageSeconds = (v) => run(`(() => { const i = document.querySelector('[data-field="pageSeconds"]'); i.focus(); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(v)}); i.dispatchEvent(new Event('input', { bubbles: true })); i.blur() })()`)
+  await setPageSeconds('2,5')
+  await sleep(300)
+  check('durée de page : 2,5 s est enregistrée (champ et mention « 1 page a sa propre durée »)', (await run(`document.querySelector('[data-field="pageSeconds"]').value`)) === '2.5' && /1 page/.test(await run(`document.querySelector('[data-page-seconds-count]')?.innerText ?? ''`)))
+  await exportVia('video')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 1)
+  check('durée de page : la boîte d\'export mentionne les pages à durée propre', (await nBrand('[data-video-custom]')) === 1)
+  await clickSel('[data-action="video-cancel"]')
+  await waitFor(async () => (await nBrand('[data-video-dialog]')) === 0)
+  await clickSel('[data-action="page-seconds-suggest"]')
+  await sleep(300)
+  const suggested = Number(await run(`document.querySelector('[data-field="pageSeconds"]').value`))
+  check('durée de page : « Selon le texte » propose une durée d\'au moins 3 s', suggested >= 3, String(suggested))
+  await setPageSeconds('9999')
+  await sleep(300)
+  check('durée de page : une valeur trop grande est ramenée à 120 s', (await run(`document.querySelector('[data-field="pageSeconds"]').value`)) === '120')
+  await setPageSeconds('')
+  await sleep(300)
+  check('durée de page : un champ vide revient à la durée de l\'export', (await nBrand('[data-page-seconds-count]')) === 0 && (await run(`document.querySelector('[data-field="pageSeconds"]').value`)) === '')
+
 
   // notes de l'orateur : saisie par page, affichage en présentation (N), export et import PowerPoint
   const notesField = () => run(`document.querySelector('[data-notes="text"]')?.value ?? null`)

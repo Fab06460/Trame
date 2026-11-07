@@ -142,6 +142,31 @@ describe('apparition pas à pas', () => {
   })
 })
 
+describe('durée propre à une page', () => {
+  it('une page garde sa durée, les autres celle de l\'export', () => {
+    const d = doc([page('a'), { ...page('b'), seconds: 10 }, page('c')])
+    const s = scheduleOf(d, opts())
+    expect(s.durations).toEqual([4, 10, 4])
+    expect(s.starts).toEqual([0, 4, 14])
+    expect(s.total).toBe(18)
+  })
+  it('layersAt suit les durées propres : la page 2 commence à 4 s et dure 10 s', () => {
+    const d = doc([page('a'), { ...page('b'), seconds: 10 }, page('c')])
+    expect(layersAt(d, opts({ effects: false }), 13.9).map((l) => l.page)).toEqual([1])
+    expect(layersAt(d, opts({ effects: false }), 14.1).map((l) => l.page)).toEqual([2])
+  })
+  it('un clip plus long qu\'une durée propre allonge quand même la page (case « allonger »)', () => {
+    const c: TrameElement = { ...el('v'), type: 'image', video: { id: 'c', duration: 8 } }
+    const d = doc([{ ...page('a', [c]), seconds: 3 }])
+    expect(scheduleOf(d, opts()).durations[0]).toBe(8)
+    expect(scheduleOf(d, opts({ fitClips: false })).durations[0]).toBe(3)
+  })
+  it('la durée totale maximale tient compte des durées propres', () => {
+    const d = doc([{ ...page('a'), seconds: 120 }, ...Array.from({ length: 10 }, (_, i) => ({ ...page(`p${i}`), seconds: 120 }))])
+    expect(videoProblem(d, opts())).toBe('tooLong')
+  })
+})
+
 describe('clips vidéo', () => {
   const clipEl = (id: string, duration: number, extra: Partial<TrameElement> = {}): TrameElement => ({ ...el(id), type: 'image', video: { id: `c-${id}`, duration }, ...extra })
   const withClip = (d: number, extra: Partial<TrameElement> = {}, extraVideo: Partial<NonNullable<TrameElement['video']>> = {}) => {

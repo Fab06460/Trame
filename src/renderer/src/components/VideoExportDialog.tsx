@@ -36,6 +36,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   const hasClips = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden))
   const clipsSound = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden && !e.video.muted && (e.video.volume ?? 1) > 0))
   const problem = videoProblem(doc, options)
+  const customPages = doc.pages.filter((p) => p.seconds !== undefined).length
   // le format réellement disponible sur cet ordinateur pour cette taille
   useEffect(() => {
     let live = true
@@ -130,6 +131,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
             <input type="checkbox" data-field="videoEffects" disabled={busy} checked={options.effects} onChange={(e) => patch({ effects: e.target.checked })} /> {t('video.effects')}
           </label>
         </div>
+        {customPages > 0 && <p className="hint" data-video-custom>{t('video.customSeconds', { count: customPages })}</p>}
 
         <fieldset className="video-music" data-video-music disabled={busy}>
           <legend>{t('video.music')}</legend>

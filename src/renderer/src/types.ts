@@ -205,6 +205,8 @@ export interface TramePage {
   notes?: string
   /** transition jouée à l'arrivée sur cette page en présentation (absente = celle du document) */
   transition?: PageTransition
+  /** durée de cette page dans la vidéo exportée, en secondes (absente = la durée choisie dans la boîte d'export) */
+  seconds?: number
   elements: TrameElement[] // ordre = z-index croissant
 }
 
