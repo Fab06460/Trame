@@ -22,6 +22,14 @@ export function pruneVoices(doc: TrameDocument): TrameDocument {
   return Object.keys(kept).length ? { ...rest, voices: kept } : rest
 }
 
+/** Le document sans ses voix (écran de l'orateur, qui ne les joue pas) : les pages gardent leur référence, inutilisée. */
+export function withoutVoices(doc: TrameDocument): TrameDocument {
+  if (!doc.voices) return doc
+  const { voices: _drop, ...rest } = doc
+  void _drop
+  return rest
+}
+
 /** La voix d'une page avec ses octets, ou null si la page n'en a pas (ou si l'enregistrement manque). */
 export function pageVoice(doc: Pick<TrameDocument, 'voices'>, page: Pick<TramePage, 'voice'>): { id: string; duration: number; data: string } | null {
   const v = page.voice

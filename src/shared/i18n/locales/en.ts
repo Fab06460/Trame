@@ -1612,7 +1612,7 @@ export const en: Catalog = {
   'voice.redo': 'Redo',
   'voice.remove': 'Delete voice',
   'voice.duration': 'Voice-over: {duration}',
-  'voice.hint': 'Recorded with the microphone and kept in the document. It plays with the page in the exported video (the page is lengthened if it is shorter than the voice); it is not played in presentation.',
+  'voice.hint': 'Recorded with the microphone and kept in the document. It plays with the page, in presentation (when you arrive on the page) and in the exported video, where the page is lengthened if it is shorter than the voice.',
   'voice.denied': 'Microphone access is denied. Allow Trame to use the microphone in the system settings, then try again.',
   'voice.noMic': 'No microphone was found.',
   'voice.error': 'Recording failed: {detail}',

@@ -1613,7 +1613,7 @@ export const fr = {
   'voice.redo': 'Refaire',
   'voice.remove': 'Supprimer la voix',
   'voice.duration': 'Voix off : {duration}',
-  'voice.hint': 'Enregistrée au micro et gardée dans le document. Elle se joue avec la page dans la vidéo exportée (la page est allongée si elle est plus courte que la voix) ; elle n\'est pas jouée en présentation.',
+  'voice.hint': 'Enregistrée au micro et gardée dans le document. Elle se joue avec la page, en présentation (à l\'arrivée sur la page) et dans la vidéo exportée, où la page est allongée si elle est plus courte que la voix.',
   'voice.denied': 'L\'accès au micro est refusé. Autorisez Trame à utiliser le micro dans les réglages du système, puis recommencez.',
   'voice.noMic': 'Aucun micro n\'a été trouvé.',
   'voice.error': 'L\'enregistrement a échoué : {detail}',

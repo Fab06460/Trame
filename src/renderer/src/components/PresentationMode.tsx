@@ -3,7 +3,9 @@ import { LaserPointer } from '@/components/LaserPointer'
 import { InkLayer } from '@/components/InkLayer'
 import { PresentationOverview } from '@/components/PresentationOverview'
 import { PresentationClip } from '@/components/PresentationClip'
+import { PresentationVoice } from '@/components/PresentationVoice'
 import { clipElements, withoutClips } from '@/videoClips'
+import { withoutVoices } from '@/voiceOver'
 import { pageRect } from '@/annotation'
 import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
@@ -73,7 +75,7 @@ export function PresentationMode(): React.JSX.Element | null {
     }
     const s = usePresentation.getState()
     if (!s.doc) return
-    void window.trame.speakerOpen({ doc: JSON.stringify(withoutClips(s.doc)), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
+    void window.trame.speakerOpen({ doc: JSON.stringify(withoutVoices(withoutClips(s.doc))), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
   }
   const toggleSpeakerRef = useRef(toggleSpeaker)
   toggleSpeakerRef.current = toggleSpeaker
@@ -313,6 +315,7 @@ export function PresentationMode(): React.JSX.Element | null {
       })()}
       {laser && <LaserPointer hidden={onBar} />}
       {goto && <div className="presentation-goto" data-pres="goto" role="status">{t('pres.goto', { n: goto, total: doc.pages.length })}</div>}
+      <PresentationVoice doc={doc} index={index} paused={black} />
       {overview && <PresentationOverview doc={doc} current={index} onClose={() => setOverview(false)} onPick={(i) => { usePresentation.getState().go(i); setOverview(false) }} />}
       <div
         ref={bar}

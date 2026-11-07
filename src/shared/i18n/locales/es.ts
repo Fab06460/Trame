@@ -1612,7 +1612,7 @@ export const es: Catalog = {
   'voice.redo': 'Repetir',
   'voice.remove': 'Eliminar la voz',
   'voice.duration': 'Voz en off: {duration}',
-  'voice.hint': 'Grabada con el micrófono y guardada en el documento. Se reproduce con la página en el vídeo exportado (la página se alarga si es más corta que la voz); no se reproduce en la presentación.',
+  'voice.hint': 'Grabada con el micrófono y guardada en el documento. Se reproduce con la página, en la presentación (al llegar a la página) y en el vídeo exportado, donde la página se alarga si es más corta que la voz.',
   'voice.denied': 'Se ha denegado el acceso al micrófono. Permita que Trame use el micrófono en los ajustes del sistema y vuelva a intentarlo.',
   'voice.noMic': 'No se ha encontrado ningún micrófono.',
   'voice.error': 'La grabación ha fallado: {detail}',

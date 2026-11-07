@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, voiceNeed } from './voiceOver'
+import { withoutVoices, MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, voiceNeed } from './voiceOver'
 import type { TrameDocument, TramePage } from './types'
 
 const WEBM = 'data:audio/webm;base64,AAAA'
@@ -64,5 +64,17 @@ describe('sanitizeVoices (lecture d\'un fichier)', () => {
     const d = raw([], { a: big, b: big, c: big, d: big, e: big, f: big, g: big })
     sanitizeVoices(d)
     expect(Object.keys(d.voices as object).length).toBeLessThan(7)
+  })
+})
+
+describe('withoutVoices', () => {
+  it('retire les enregistrements, pas les références des pages', () => {
+    const d = withoutVoices(doc([page('a', { id: 'v', duration: 2 })], { v: WEBM }))
+    expect(d).not.toHaveProperty('voices')
+    expect(d.pages[0].voice).toEqual({ id: 'v', duration: 2 })
+  })
+  it('un document sans voix est rendu tel quel', () => {
+    const d = doc([page('a')])
+    expect(withoutVoices(d)).toBe(d)
   })
 })

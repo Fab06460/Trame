@@ -1612,7 +1612,7 @@ export const de: Catalog = {
   'voice.redo': 'Neu aufnehmen',
   'voice.remove': 'Stimme löschen',
   'voice.duration': 'Sprechertext: {duration}',
-  'voice.hint': 'Mit dem Mikrofon aufgenommen und im Dokument gespeichert. Er wird mit der Seite im exportierten Video abgespielt (die Seite wird verlängert, wenn sie kürzer als die Stimme ist); in der Präsentation wird er nicht abgespielt.',
+  'voice.hint': 'Mit dem Mikrofon aufgenommen und im Dokument gespeichert. Er wird mit der Seite abgespielt, in der Präsentation (beim Erreichen der Seite) und im exportierten Video, wo die Seite verlängert wird, wenn sie kürzer als die Stimme ist.',
   'voice.denied': 'Der Zugriff auf das Mikrofon ist verweigert. Erlauben Sie Trame in den Systemeinstellungen die Nutzung des Mikrofons und versuchen Sie es erneut.',
   'voice.noMic': 'Es wurde kein Mikrofon gefunden.',
   'voice.error': 'Die Aufnahme ist fehlgeschlagen: {detail}',
