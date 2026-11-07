@@ -8,7 +8,7 @@ import type { MessageKey } from '@shared/i18n'
 /** Plus grand côté de l'image d'aperçu d'un clip. */
 const POSTER_SIDE = 1600
 
-const toBase64 = (bytes: Uint8Array): string => {
+export const toBase64 = (bytes: Uint8Array): string => {
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   return btoa(bin)
@@ -16,8 +16,10 @@ const toBase64 = (bytes: Uint8Array): string => {
 
 /** Adresse de lecture (blob) d'un clip du document, gardée tant que l'application tourne : la conversion d'un gros clip coûte cher. */
 const urls = new Map<string, string>()
-export function clipUrl(doc: Pick<TrameDocument, 'clips'>, id: string): string | null {
-  const data = doc.clips?.[id]
+export const clipUrl = (doc: Pick<TrameDocument, 'clips'>, id: string): string | null => embeddedUrl(doc.clips?.[id], id)
+
+/** Adresse de lecture (blob) d'un média embarqué (clip, voix off), gardée pour ne pas le convertir à chaque affichage. */
+export function embeddedUrl(data: string | undefined, id: string): string | null {
   if (!data) return null
   const key = `${id}:${data.length}`
   let url = urls.get(key)

@@ -4,6 +4,7 @@ import { isFlipExempt } from '@/flip'
 import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
 import { PageDurationPanel } from './PageDurationPanel'
+import { VoicePanel } from './VoicePanel'
 import { useEditor, selectPage } from '@/store/editor'
 import { allFonts } from '@/fonts'
 import { useFonts } from '@/store/fonts'
@@ -58,6 +59,7 @@ export function Properties(): React.JSX.Element {
         </label>
         <TransitionPanel />
         <PageDurationPanel />
+        <VoicePanel />
       </aside>
     )
   }

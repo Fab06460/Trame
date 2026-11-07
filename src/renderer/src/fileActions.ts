@@ -3,6 +3,7 @@ import { embedFonts } from '@/fontEmbed'
 import { extraFonts } from '@/fonts'
 import { pruneSources } from '@/pdfSources'
 import { pruneClips, withoutClips } from '@/videoClips'
+import { pruneVoices } from '@/voiceOver'
 import { t } from '@/i18n'
 import { parseDocument, useEditor } from '@/store/editor'
 import type { TrameDocument } from '@/types'
@@ -15,7 +16,7 @@ export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx
  * secours et versions) laisse les clips de côté : ils pèseraient des dizaines de Mo à chaque copie, et les éléments gardent leur aperçu.
  */
 export function documentJson(doc: TrameDocument, keepClips = true): string {
-  return JSON.stringify(embedFonts(pruneSources(keepClips ? pruneClips(doc) : withoutClips(doc)), extraFonts()))
+  return JSON.stringify(embedFonts(pruneSources(pruneVoices(keepClips ? pruneClips(doc) : withoutClips(doc))), extraFonts()))
 }
 
 /** Enregistre le document. `saveAs` force le choix d'un nouvel emplacement. Retourne false si annulé ou en échec. */

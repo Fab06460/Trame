@@ -16,6 +16,7 @@ import { sanitizeQr } from '@/qr'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
 import { sanitizeClips } from '@/videoClips'
+import { sanitizeVoices } from '@/voiceOver'
 import { cleanDocName } from '@/docName'
 import { sanitizeColumns } from '@/columnStyle'
 import { sanitizeList } from '@/listStyle'
@@ -131,6 +132,7 @@ export function parseDocument(json: string): TrameDocument {
   }
   sanitizeSources(doc as unknown as Parameters<typeof sanitizeSources>[0])
   sanitizeClips(doc as unknown as Parameters<typeof sanitizeClips>[0])
+  sanitizeVoices(doc as unknown as Parameters<typeof sanitizeVoices>[0])
   sanitizeFonts(doc)
   sanitizeFrame(doc)
   sanitizePrintSetup(doc)
@@ -247,6 +249,8 @@ interface EditorState {
   setPageSeconds: (pageId: string, seconds: number | null) => void
   /** La même durée pour toutes les pages (`null` : toutes reviennent à la durée de la boîte d'export). */
   applyPageSecondsToAll: (seconds: number | null) => void
+  /** Pose (ou, avec `null`, retire) la voix off d'une page : un pas d'annulation. Les octets vont dans `doc.voices`. */
+  setPageVoice: (pageId: string, voice: { id: string; duration: number; data: string } | null) => void
   /** Une même transition pour tout le document : réglage par défaut, et les transitions propres à chaque page sont retirées. */
   applyTransitionToAll: (transition: PageTransition) => void
   setSize: (width: number, height: number) => void
@@ -872,6 +876,22 @@ export const useEditor = create<EditorState>((set, get) => {
           dirty: true
         }
       }),
+
+    setPageVoice: (pageId, voice) =>
+      set((s) => ({
+        ...snapshot(),
+        doc: {
+          ...s.doc,
+          ...(voice ? { voices: { ...s.doc.voices, [voice.id]: voice.data } } : {}),
+          pages: s.doc.pages.map((p) => {
+            if (p.id !== pageId) return p
+            const { voice: _old, ...rest } = p
+            void _old
+            return voice ? { ...rest, voice: { id: voice.id, duration: voice.duration } } : rest
+          })
+        },
+        dirty: true
+      })),
 
     applyPageSecondsToAll: (seconds) =>
       set((s) => {

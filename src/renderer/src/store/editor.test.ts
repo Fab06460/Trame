@@ -813,3 +813,32 @@ describe('durée d’une page dans la vidéo', () => {
     }
   })
 })
+
+describe('voix off d’une page', () => {
+  const voice = (id = 'v1') => ({ id, duration: 3.2, data: 'data:audio/webm;base64,AAAA' })
+  it('setPageVoice pose la voix et ses octets, un pas d’annulation', () => {
+    const id = S().doc.pages[0].id
+    S().setPageVoice(id, voice())
+    expect(S().doc.pages[0].voice).toEqual({ id: 'v1', duration: 3.2 })
+    expect(S().doc.voices).toEqual({ v1: 'data:audio/webm;base64,AAAA' })
+    S().undo()
+    expect(S().doc.pages[0]).not.toHaveProperty('voice')
+  })
+  it('refaire une voix la remplace ; null la retire de la page', () => {
+    const id = S().doc.pages[0].id
+    S().setPageVoice(id, voice('v1'))
+    S().setPageVoice(id, voice('v2'))
+    expect(S().doc.pages[0].voice?.id).toBe('v2')
+    S().setPageVoice(id, null)
+    expect(S().doc.pages[0]).not.toHaveProperty('voice')
+  })
+  it('survit à l’enregistrement ; à la lecture une référence sans enregistrement est retirée', () => {
+    S().setPageVoice(S().doc.pages[0].id, voice())
+    const back = parseDocument(JSON.stringify(S().doc))
+    expect(back.pages[0].voice?.id).toBe('v1')
+    expect(back.voices?.v1).toBeDefined()
+    const d = JSON.parse(JSON.stringify(S().doc))
+    delete d.voices
+    expect(parseDocument(JSON.stringify(d)).pages[0]).not.toHaveProperty('voice')
+  })
+})

@@ -207,6 +207,8 @@ export interface TramePage {
   transition?: PageTransition
   /** durée de cette page dans la vidéo exportée, en secondes (absente = la durée choisie dans la boîte d'export) */
   seconds?: number
+  /** voix off de la page (enregistrée au micro) : jouée avec la page dans la vidéo exportée ; les octets sont dans `TrameDocument.voices[id]` */
+  voice?: { id: string; duration: number }
   elements: TrameElement[] // ordre = z-index croissant
 }
 
@@ -300,6 +302,8 @@ export interface TrameDocument {
   sources?: Record<string, string>
   /** clips vidéo embarqués, par identifiant : data URL base64 (références : `TrameElement.video`) */
   clips?: Record<string, string>
+  /** voix off embarquées, par identifiant : data URL base64 audio (références : `TramePage.voice`) */
+  voices?: Record<string, string>
   /** données du publipostage : un tableau dont les colonnes remplissent les champs « {{colonne}} » des textes */
   mailMerge?: MergeData
 }

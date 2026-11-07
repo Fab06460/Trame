@@ -1,4 +1,5 @@
 import { buildNumbers, pageAtStep, stepsOf } from '@/builds'
+import { pageVoice, VOICE_DELAY, voiceNeed } from '@/voiceOver'
 import { clipElements, clipLength, clipSourceTime, clipRange, clipSpeed } from '@/videoClips'
 import { pageTransition, TRANSITION_MS, type PageTransition } from '@/transition'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
@@ -16,9 +17,11 @@ export interface VideoOptions {
   effects: boolean
   /** une page qui porte un clip plus long qu'elle dure assez longtemps pour le montrer en entier */
   fitClips: boolean
+  /** une page dont la voix off est plus longue qu'elle dure assez longtemps pour l'entendre en entier */
+  fitVoices: boolean
 }
 
-export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true, fitClips: true }
+export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true, fitClips: true, fitVoices: true }
 export const MIN_SECONDS = 1
 export const MAX_SECONDS = 120
 /** Durée totale maximale : la vidéo est construite en mémoire avant d'être enregistrée. */
@@ -60,17 +63,18 @@ function clipStartIn(page: Pick<TramePage, 'elements'>, el: TrameElement, second
 /** Durée d'une page : celle choisie, allongée si un clip qui ne tourne pas en boucle ne tiendrait pas en entier. */
 function pageSeconds(page: TramePage, o: VideoOptions): number {
   const base = page.seconds ?? o.secondsPerPage
-  if (!o.fitClips) return base
-  const n = buildNumbers(page).length
   let need = base
-  for (const el of clipElements(page.elements)) {
+  if (o.fitVoices && page.voice) need = Math.max(need, voiceNeed(page.voice.duration))
+  const n = buildNumbers(page).length
+  for (const el of o.fitClips ? clipElements(page.elements) : []) {
     if (!el.video || el.video.loop) continue
     // un clip qui apparaît à l'étape k (sur n) démarre à tr + k × (D − tr) / (n + 1) : il tient si cet instant + sa durée ≤ D
     const k = o.effects && el.build ? buildNumbers(page).indexOf(el.build) + 1 : 0
     const length = clipLength(el.video)
     need = Math.max(need, k === 0 ? length : BASE_TRANSITION + (length * (n + 1)) / (n + 1 - k))
   }
-  return Math.ceil(need * 10) / 10
+  // au dixième supérieur, sans que le bruit des nombres flottants (10,700000000000001) ajoute un dixième de trop
+  return Math.ceil(need * 10 - 1e-9) / 10
 }
 
 export function scheduleOf(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions): Schedule {
@@ -224,6 +228,23 @@ export function clipSounds(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, s
       if (volume <= 0) continue
       out.push({ id: clip.id, at: schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects), until: schedule.starts[i] + schedule.durations[i], volume, loop: !!clip.loop, ...clipRange(clip), speed: clipSpeed(clip) })
     }
+  })
+  return out
+}
+
+/** La voix off d'une page à placer dans la bande son : où elle commence et où elle doit s'arrêter au plus tard (fin de la page). */
+export interface VoiceSound {
+  id: string
+  at: number
+  until: number
+}
+
+/** Les voix off, dans l'ordre des pages. */
+export function voiceSounds(doc: Pick<TrameDocument, 'pages' | 'voices'>, schedule: Schedule): VoiceSound[] {
+  const out: VoiceSound[] = []
+  doc.pages.forEach((p, i) => {
+    const v = pageVoice(doc, p)
+    if (v) out.push({ id: v.id, at: schedule.starts[i] + VOICE_DELAY, until: schedule.starts[i] + schedule.durations[i] })
   })
   return out
 }

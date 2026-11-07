@@ -105,6 +105,8 @@ const api = {
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
   /** Choisit un clip vidéo : le fichier, une raison de refus, ou null si annulé. */
   pickVideo: (): Promise<VideoPick> => ipcRenderer.invoke('video:pick'),
+  /** Accès au micro pour la voix off : sur macOS le système demande l'autorisation la première fois ; ailleurs le navigateur s'en charge à l'enregistrement. */
+  micAccess: (): Promise<'granted' | 'denied'> => ipcRenderer.invoke('mic:access'),
   /** Choisit un fichier audio (musique de fond d'une vidéo) : le fichier, une raison de refus, ou null si annulé. */
   pickAudio: (): Promise<AudioPick> => ipcRenderer.invoke('audio:pick'),
   /** Enregistre des octets (vidéo .mp4 ou .webm) : boîte d'enregistrement du système ; chemin choisi, ou null si annulé. */

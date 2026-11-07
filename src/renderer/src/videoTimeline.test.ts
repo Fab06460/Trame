@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipSounds, clipsAt, DEFAULT_VIDEO, easeCss, layersAt, MAX_VIDEO_SECONDS, revealTimes, scheduleOf, totalFrames, totalSeconds, transitionSeconds, videoProblem, videoSize, type Layer, type VideoOptions } from './videoTimeline'
+import { clipSounds, clipsAt, DEFAULT_VIDEO, easeCss, layersAt, MAX_VIDEO_SECONDS, revealTimes, scheduleOf, totalFrames, totalSeconds, transitionSeconds, videoProblem, videoSize, voiceSounds, type Layer, type VideoOptions } from './videoTimeline'
 import type { PageTransition } from './transition'
 import type { TrameElement, TramePage } from './types'
 
@@ -164,6 +164,32 @@ describe('durée propre à une page', () => {
   it('la durée totale maximale tient compte des durées propres', () => {
     const d = doc([{ ...page('a'), seconds: 120 }, ...Array.from({ length: 10 }, (_, i) => ({ ...page(`p${i}`), seconds: 120 }))])
     expect(videoProblem(d, opts())).toBe('tooLong')
+  })
+})
+
+describe('voix off', () => {
+  const voiced = (duration: number, seconds?: number): TramePage => ({ ...page('a'), voice: { id: 'v', duration }, ...(seconds ? { seconds } : {}) })
+  it('une page plus courte que sa voix est allongée (silence avant et après compris)', () => {
+    expect(scheduleOf(doc([voiced(10)]), opts()).durations[0]).toBeCloseTo(10.7, 5)
+  })
+  it('une page assez longue garde sa durée', () => {
+    expect(scheduleOf(doc([voiced(2)]), opts()).durations[0]).toBe(4)
+    expect(scheduleOf(doc([voiced(2, 9)]), opts()).durations[0]).toBe(9)
+  })
+  it('sans « allonger », la durée choisie est respectée', () => {
+    expect(scheduleOf(doc([voiced(10)]), opts({ fitVoices: false })).durations[0]).toBe(4)
+  })
+  it('voiceSounds : la voix commence peu après le début de sa page et s\'arrête à sa fin', () => {
+    const d = { ...doc([page('x'), voiced(2)]), voices: { v: 'data:audio/webm;base64,AAAA' } }
+    const s = scheduleOf(d, opts())
+    const [v] = voiceSounds(d, s)
+    expect(v.id).toBe('v')
+    expect(v.at).toBeCloseTo(s.starts[1] + 0.3, 5)
+    expect(v.until).toBe(s.total)
+  })
+  it('voiceSounds : une page sans voix ou dont l\'enregistrement manque n\'a pas de son', () => {
+    expect(voiceSounds(doc([page('x')]), scheduleOf(doc([page('x')]), opts()))).toEqual([])
+    expect(voiceSounds(doc([voiced(2)]), scheduleOf(doc([voiced(2)]), opts()))).toEqual([])
   })
 })
 

@@ -5,7 +5,7 @@ import { renderPage } from '@/exportPages'
 import { decodeDataUrl } from '@/pdfMath'
 import { addSounds, AUDIO_RATE, decodeAudio, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
 import { clipUrl } from '@/clipActions'
-import { clipSounds, clipsAt, layerKeys, layersAt, scheduleOf, videoSize, type ClipFrame, type Layer, type VideoOptions } from '@/videoTimeline'
+import { clipSounds, clipsAt, layerKeys, layersAt, scheduleOf, videoSize, voiceSounds, type ClipFrame, type Layer, type VideoOptions } from '@/videoTimeline'
 import type { TrameDocument } from '@/types'
 
 export type VideoFormat = 'mp4' | 'webm'
@@ -141,14 +141,15 @@ function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: Cli
  * Le document en vidéo : chaque page dure `secondsPerPage` (plus si elle porte un clip plus long), avec les transitions de la présentation,
  * l'apparition pas à pas (fondu) et les clips vidéo des pages, lus image par image. Les pages sont rendues comme à l'export (mêmes
  * polices, effets, ombres), assemblées sur un canevas, encodées par WebCodecs (plus vite que le temps réel) puis placées dans un
- * conteneur MP4 ou WebM. Le son : musique de fond facultative et son des clips.
+ * conteneur MP4 ou WebM. Le son : musique de fond facultative, voix off des pages et son des clips.
  */
 export async function exportVideo(doc: TrameDocument, options: VideoOptions, onProgress: (done: number, total: number) => void, signal: AbortSignal, music?: Music): Promise<VideoResult> {
   const { width, height } = videoSize(doc, options.longSide)
   const schedule = scheduleOf(doc, options)
   const frames = Math.round(schedule.total * options.fps)
   const sounds = clipSounds(doc, options, schedule)
-  const withAudio = !!music || sounds.length > 0
+  const voices = voiceSounds(doc, schedule)
+  const withAudio = !!music || sounds.length > 0 || voices.length > 0
   const codec = await chooseCodec(width, height, options.fps, withAudio)
   if (!codec) throw new Error('codec')
 
@@ -192,6 +193,17 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
       }
       const audio = decoded.get(sound.id)
       if (audio && audio.channels.length) events.push({ source: trimSound(audio.channels, sound.start, sound.end, sound.speed), at: sound.at, until: sound.until, volume: sound.volume, loop: sound.loop })
+    }
+    // voix off : décodée une fois par enregistrement, placée au début de sa page (un enregistrement illisible est ignoré)
+    const voiceAudio = new Map<string, DecodedAudio | null>()
+    for (const voice of voices) {
+      if (!voiceAudio.has(voice.id)) {
+        const data = doc.voices?.[voice.id]
+        const parts = data ? decodeDataUrl(data) : null
+        voiceAudio.set(voice.id, parts ? await decodeAudio(parts.bytes).catch(() => null) : null)
+      }
+      const audio = voiceAudio.get(voice.id)
+      if (audio && audio.channels.length) events.push({ source: audio.channels, at: voice.at, until: voice.until, volume: 1, loop: false })
     }
     addSounds(track, events)
     audioEncoder = new AudioEncoder({

@@ -34,8 +34,10 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
 
   const size = videoSize(doc, options.longSide)
   const hasClips = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden))
+  const hasVoices = doc.pages.some((p) => !!p.voice && !!doc.voices?.[p.voice.id])
   const clipsSound = doc.pages.some((p) => p.elements.some((e) => e.video && !e.hidden && !e.video.muted && (e.video.volume ?? 1) > 0))
   const problem = videoProblem(doc, options)
+  const soundParts: MessageKey[] = [...(music ? (['video.withMusic'] as const) : []), ...(hasVoices ? (['video.withVoice'] as const) : []), ...(clipsSound ? (['video.withClipSound'] as const) : [])]
   const customPages = doc.pages.filter((p) => p.seconds !== undefined).length
   // le format réellement disponible sur cet ordinateur pour cette taille
   useEffect(() => {
@@ -127,6 +129,11 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
               <input type="checkbox" data-field="videoFitClips" disabled={busy} checked={options.fitClips} onChange={(e) => patch({ fitClips: e.target.checked })} /> {t('video.fitClips')}
             </label>
           )}
+          {hasVoices && (
+            <label className="check">
+              <input type="checkbox" data-field="videoFitVoices" disabled={busy} checked={options.fitVoices} onChange={(e) => patch({ fitVoices: e.target.checked })} /> {t('video.fitVoices')}
+            </label>
+          )}
           <label className="check">
             <input type="checkbox" data-field="videoEffects" disabled={busy} checked={options.effects} onChange={(e) => patch({ effects: e.target.checked })} /> {t('video.effects')}
           </label>
@@ -168,7 +175,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
           <p className="hint" data-video-summary>
             {format ? t('video.summary', { format: t(`video.format.${format}` as MessageKey), w: size.width, h: size.height, duration: clock(totalSeconds(doc, options)) }) : t('video.probing')}
             {' · '}
-            {music ? t('video.withMusic') : clipsSound ? t('video.withClipSound') : t('video.noSound')}
+            {soundParts.length ? soundParts.map((k) => t(k)).join(', ') : t('video.noSound')}
           </p>
         )}
 

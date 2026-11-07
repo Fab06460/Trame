@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, net, screen, session, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, net, screen, session, shell, systemPreferences, type MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'fs/promises'
@@ -1226,6 +1226,15 @@ ipcMain.handle('audio:pick', async (): Promise<AudioPick> => {
   }
 })
 
+// micro (voix off) : sur macOS, état de l'autorisation du système, demandée la première fois ; ailleurs le navigateur gère la demande
+ipcMain.handle('mic:access', async (): Promise<'granted' | 'denied'> => {
+  if (TEST_EXPORT_DIR || process.platform !== 'darwin') return 'granted'
+  const status = systemPreferences.getMediaAccessStatus('microphone')
+  if (status === 'granted') return 'granted'
+  if (status === 'not-determined') return (await systemPreferences.askForMediaAccess('microphone').catch(() => false)) ? 'granted' : 'denied'
+  return 'denied'
+})
+
 // clip vidéo à placer dans une page : lu tel quel et remis à l'interface (qui en tire l'aperçu et le garde dans le document)
 ipcMain.handle('video:pick', async (): Promise<VideoPick> => {
   // tests de bout en bout : le clip « choisi » est pick-video.mp4 du dossier de test (aucun dialogue natif)
@@ -1419,8 +1428,19 @@ ipcMain.handle('update:open-page', async () => {
   return !!r
 })
 
+// tests de bout en bout : un micro fictif (un signal de test) et aucune question d'autorisation, faute de micro ni de personne devant l'écran
+if (TEST_EXPORT_DIR) {
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+  app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
+}
+
 app.whenReady().then(() => {
   if (!gotLock) return
+  // le seul droit demandé par l'interface est le micro (voix off) : la caméra reste refusée ; le reste est accordé comme par défaut
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
+    if (permission === 'media') return callback(((details as { mediaTypes?: string[] }).mediaTypes ?? []).every((m) => m === 'audio'))
+    callback(true)
+  })
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   void initSpellcheck().catch(() => {})
   createWindow()

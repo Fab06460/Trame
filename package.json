@@ -94,7 +94,10 @@
         }
       ],
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Trame utilise le micro pour enregistrer la voix off de vos pages. / Trame uses the microphone to record the voice-over of your pages."
+      }
     },
     "dmg": {
       "title": "Trame ${version}"
