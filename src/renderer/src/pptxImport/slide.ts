@@ -5,10 +5,10 @@
  */
 import { nanoid } from 'nanoid'
 import { resolveColor, type ColorMap, type Rgba, type Theme } from '@/pptxImport/colors'
-import { attr, kid, kids, nameOfEl, num } from '@/pptxImport/xml'
+import { attr, deep, kid, kids, nameOfEl, num } from '@/pptxImport/xml'
 import { matchFont } from '@/pdfImport/layout'
 import { SHAPES } from '@/shapes'
-import type { Gradient, Shadow, TrameElement } from '@/types'
+import type { ElementLink, Gradient, Shadow, TrameElement } from '@/types'
 import { t as tr } from '@/i18n'
 import { MAX_ALT } from '@shared/ai'
 
@@ -37,6 +37,8 @@ export interface SlideContext {
   skipPlaceholders?: boolean
   /** style de texte du masque pour un type d'espace réservé (`a:lvl1pPr`) */
   txStyle: (kind: 'title' | 'body' | 'other') => Element | null
+  /** lien d'une relation (`r:id` d'un `a:hlinkClick`) : adresse web ou de courrier, ou diapositive visée (`@chemin`, remplacé par la page une fois toutes lues) ; absent pour les masques et dispositions */
+  link?: (relId: string) => ElementLink | null
 }
 
 /** Positionnement d'un texte à calculer APRÈS mesure (le centre et la rotation de la forme, les marges, l'ancrage). */
@@ -364,6 +366,14 @@ function imageElement(src: string, b: { cx: number; cy: number; w: number; h: nu
   return el
 }
 
+/** Le lien d'une forme ou d'une image : celui de la forme (`cNvPr`), sinon celui du premier passage de texte lié. */
+function linkOf(node: Element, cNvPr: Element | null, st: State): ElementLink | null {
+  if (!st.ctx.link) return null
+  const click = kid(cNvPr, 'hlinkClick') ?? deep(kid(node, 'txBody'), 'hlinkClick')[0]
+  const rid = click ? attr(click, 'id') : null
+  return rid ? st.ctx.link(rid) : null
+}
+
 function walk(tree: Element, t: Tf, st: State): void {
   for (const node of kids(tree)) {
     const kind = nameOfEl(node)
@@ -404,8 +414,10 @@ function walk(tree: Element, t: Tf, st: State): void {
         const text = buildText(node, b, st, ph, type, !!phEl)
         if (text) drafts.push(text)
       }
+      const link = linkOf(node, kid(node, 'nvSpPr', 'cNvPr'), st)
       for (const d of drafts) {
         if (st.groupId) d.el.groupId = st.groupId
+        if (link) d.el.link = link
         st.out.push(d)
       }
     } else if (kind === 'pic') {
@@ -425,6 +437,8 @@ function walk(tree: Element, t: Tf, st: State): void {
       // un nom de fichier (« image1.png », « preencoded.png ») n'est pas une description : PowerPoint et les bibliothèques en mettent par défaut
       if (descr && !/^\S+\.(png|jpe?g|gif|webp|bmp|svg|emf|wmf|tiff?)$/i.test(descr)) el.alt = descr.slice(0, MAX_ALT)
       if (st.groupId) el.groupId = st.groupId
+      const link = linkOf(node, kid(node, 'nvPicPr', 'cNvPr'), st)
+      if (link) el.link = link
       st.out.push({ el })
     } else if (kind === 'grpSp') {
       const g = kid(node, 'grpSpPr', 'xfrm')

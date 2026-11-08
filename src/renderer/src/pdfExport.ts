@@ -7,6 +7,7 @@ import {
   appendBezierCurve, clip, closePath, endPath, lineTo, moveTo, setStrokingColor, setTextRenderingMode
 } from 'pdf-lib'
 import { createTextNode, loadImage } from '@/exportPages'
+import { addPdfLinks } from '@/pdfLinks'
 import { renderElementImage } from '@/elementImage'
 import {
   PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, svgPathToSegments, tjAdjustment
@@ -79,6 +80,7 @@ export async function exportPdf(doc: TrameDocument, options: PdfExportOptions = 
       for (const [x1, y1, x2, y2] of cropMarkSegments(w, h, layout)) p.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 0.25, color: rgb(0, 0, 0) })
     }
   }
+  addPdfLinks(pdf, doc, layout.margin) // une fois toutes les pages créées : un lien peut viser une page qui vient après
   return { dataUrl: 'data:application/pdf;base64,' + (await pdf.saveAsBase64()), fallbacks: ctx.fallbacks }
 }
 

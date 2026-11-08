@@ -1,7 +1,8 @@
 import { escXml } from '@/svgParts'
 import { fontFaces, pageToSvg } from '@/svgExport'
 import { pageTransition, type PageTransition } from '@/transition'
-import type { TrameDocument } from '@/types'
+import { pageLinks } from '@/links'
+import type { TrameDocument, TramePage } from '@/types'
 
 /** Textes de l'interface du fichier, dans la langue de l'éditeur au moment de l'export. */
 export interface HtmlLabels {
@@ -13,6 +14,8 @@ export interface HtmlLabels {
   fullscreen: string
   help: string
   noScript: string
+  /** « Aller à la page {n} » : `{n}` est remplacé par le numéro de la page visée */
+  goPage: string
 }
 
 export interface PresentationInput {
@@ -60,6 +63,8 @@ body.idle #bar{opacity:0;pointer-events:none}
 #bar button:disabled{opacity:.35;cursor:default}
 #count{min-width:110px;text-align:center}
 #help{position:fixed;top:10px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:rgba(30,31,36,.85);font-size:12px;transition:opacity .6s}
+.lk{position:absolute;display:block;border-radius:4px}
+.lk:hover,.lk:focus-visible{outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 noscript{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 `
@@ -98,6 +103,7 @@ function go(d){show(cur+d)}
 function fs(){var d=document,e=d.documentElement;if(d.fullscreenElement){d.exitFullscreen()}else if(e.requestFullscreen){e.requestFullscreen().catch(function(){})}}
 document.addEventListener('keydown',function(e){
   if(e.altKey||e.ctrlKey||e.metaKey)return;
+  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('a.lk'))return;
   var k=e.key,h=true;
   if(k==='ArrowRight'||k==='ArrowDown'||k==='PageDown'||k===' '||k==='Enter')go(1);
   else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'||k==='Backspace')go(-1);
@@ -107,7 +113,7 @@ document.addEventListener('keydown',function(e){
   if(h)e.preventDefault();
 });
 var stage=document.getElementById('stage');
-stage.addEventListener('click',function(e){if(e.target.closest('#bar'))return;var r=stage.getBoundingClientRect();go(e.clientX<r.left+r.width/4?-1:1)});
+stage.addEventListener('click',function(e){if(e.target.closest('#bar'))return;var lk=e.target.closest('a.lk');if(lk){var g=lk.getAttribute('data-go');if(g!==null){e.preventDefault();show(parseInt(g,10))}return}var r=stage.getBoundingClientRect();go(e.clientX<r.left+r.width/4?-1:1)});
 var sx=null,sy=null;
 stage.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
 stage.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){go(dx<0?1:-1);e.preventDefault()}},{passive:false});
@@ -143,10 +149,24 @@ export function buildPresentationHtml(input: PresentationInput): string {
   )
 }
 
+/** Les zones cliquables d'une page : un lien `<a>` par élément lié, placé en pourcentages de la page (donc à la bonne place à toute taille). */
+export function linkZones(doc: Pick<TrameDocument, 'pages' | 'width' | 'height'>, page: TramePage, goPage: string): string {
+  return pageLinks(doc, page)
+    .map(({ target, box }) => {
+      const pos = `left:${pct(box.x / doc.width)}%;top:${pct(box.y / doc.height)}%;width:${pct(box.width / doc.width)}%;height:${pct(box.height / doc.height)}%`
+      return target.kind === 'url'
+        ? `<a class="lk" href="${escXml(target.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escXml(target.url)}" style="${pos}"></a>`
+        : `<a class="lk" href="#${target.index + 1}" data-go="${target.index}" aria-label="${escXml(goPage.replace('{n}', String(target.index + 1)))}" style="${pos}"></a>`
+    })
+    .join('')
+}
+
+const pct = (v: number): string => Number((v * 100).toFixed(3)).toString()
+
 /** Présentation web d'un document : chaque page en SVG vectoriel (textes, polices incorporées une fois pour tout le document, images). */
 export async function documentToHtml(doc: TrameDocument, labels: HtmlLabels): Promise<string> {
   const slides: string[] = []
-  for (let i = 0; i < doc.pages.length; i++) slides.push(inlineSvg(await pageToSvg(doc, doc.pages[i], { embedFonts: false }), i))
+  for (let i = 0; i < doc.pages.length; i++) slides.push(inlineSvg(await pageToSvg(doc, doc.pages[i], { embedFonts: false }), i) + linkZones(doc, doc.pages[i], labels.goPage))
   return buildPresentationHtml({
     title: doc.name,
     width: doc.width,

@@ -11,6 +11,7 @@ import JSZip from 'jszip'
 import { stripPlaceholderAlt } from '@/pptxAlt'
 import { insertTransition } from '@/pptxTransition'
 import { transitionBetween } from '@/transition'
+import { pptxLink } from '@/links'
 import type { TrameDocument, TrameElement } from '@/types'
 
 const IN = 1 / 96 // pouces par pixel de design
@@ -70,7 +71,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
     const asImage = async (el: TrameElement, reason: PptxExportResult['rasterized'][number]['reason']): Promise<void> => {
       const r = await renderElementImage(el, 'full')
       if (!r) return
-      slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN, ...(el.type === 'image' && el.alt ? { altText: el.alt } : {}) })
+      slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN, ...(el.type === 'image' && el.alt ? { altText: el.alt } : {}), ...pptxLink(doc, el) })
       rasterized.push({ page: index + 1, reason })
     }
 
@@ -86,6 +87,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
           fill: { color: hex(el.fill), transparency },
           line: lineOf(el) ?? { type: 'none' },
           shadow: shadowOf(el),
+          ...pptxLink(doc, el),
           ...(round ? { rectRadius: Math.min(el.cornerRadius!, el.width / 2, el.height / 2) * IN } : {})
         })
       } else if (el.type === 'path') {
@@ -96,7 +98,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
         // une image retouchée est cuite (recadrage, miroir, filtres) ; un format que PowerPoint ne lit pas est converti
         if (hasImageEdits(el) || (mime !== 'image/png' && mime !== 'image/jpeg')) { await asImage({ ...el, stroke: undefined }, hasImageEdits(el) ? 'edited' : 'format'); continue }
         const { x, y } = centredBox(el, el.width, el.height)
-        slide.addImage({ data: el.src, x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation, transparency, ...(el.alt ? { altText: el.alt } : {}) })
+        slide.addImage({ data: el.src, x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation, transparency, ...(el.alt ? { altText: el.alt } : {}), ...pptxLink(doc, el) })
       } else if (el.type === 'text') {
         const text = displayText(el)
         if (!text.trim()) continue
@@ -121,6 +123,11 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
           align: el.align ?? 'left', valign: 'top', margin: 0, wrap: true, fit: 'none',
           shadow: shadowOf(el)
         })
+        // le lien d'un texte est porté par une forme transparente posée dessus : pptxgenjs écrit un lien de texte cassé et le souligne
+        const link = pptxLink(doc, el)
+        if (link.hyperlink) {
+          slide.addShape(pptx.ShapeType.rect, { x: x * IN, y: y * IN, w: el.width * IN, h: height * IN, rotate: el.rotation, fill: { color: 'FFFFFF', transparency: 100 }, line: { type: 'none' }, ...link })
+        }
       }
     }
   }

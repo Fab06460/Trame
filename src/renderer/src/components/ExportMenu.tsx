@@ -45,7 +45,8 @@ async function exportHtmlFile(): Promise<void> {
     next: t('html.next'),
     fullscreen: t('html.fullscreen'),
     help: t('html.help'),
-    noScript: t('html.noscript')
+    noScript: t('html.noscript'),
+    goPage: t('pres.link.page', { n: '{n}' })
   })
   const bytes = new TextEncoder().encode(html)
   let bin = ''

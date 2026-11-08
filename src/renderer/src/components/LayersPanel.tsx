@@ -91,6 +91,7 @@ export function LayersPanel(): React.JSX.Element {
               {el.groupId ? <em className="layer-tag" title={t('layer.group.title')}>{t('layer.group')}</em> : null}
               {el.protect ? <em className="layer-protect" data-layer-protect={el.protect} title={el.protect === 'fixed' ? t('layer.protect.fixed') : t('layer.protect.fill')}>{el.protect === 'fixed' ? '🔐' : '🏷'}</em> : null}
               {el.build ? <em className="layer-tag build-tag" data-layer-build={el.build} title={t('build.badge.title', { n: el.build })}>▶{el.build}</em> : null}
+              {el.link ? <em className="layer-tag link-tag" data-layer-link title={t('link.badge.title')}>🔗</em> : null}
               {pdfIssues[el.id] ? <em className="layer-tag warn-tag" title={t('layer.pdfIssue')}> ⚠</em> : null}
             </span>
           )}

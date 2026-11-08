@@ -12,6 +12,7 @@ import { sanitizeFonts } from '@/fontEmbed'
 import { sanitizeImageField, sanitizeMergeData } from '@/mailMerge'
 import { sanitizeChart } from '@/chart'
 import { sanitizeBuild } from '@/builds'
+import { sanitizeLink, withoutLinksToPage } from '@/links'
 import { sanitizeQr } from '@/qr'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
@@ -85,6 +86,7 @@ export function parseDocument(json: string): TrameDocument {
   const doc = migrateDocument(raw)
   if (!isNum(doc.width) || !isNum(doc.height) || doc.width <= 0 || doc.height <= 0) throw invalid(t('file.invalid.size'))
   if (!Array.isArray(doc.pages) || doc.pages.length === 0) throw invalid(t('file.invalid.noPage'))
+  const pageIds = new Set(doc.pages.map((p) => p?.id).filter((id): id is string => typeof id === 'string'))
   for (const page of doc.pages) {
     if (typeof page?.id !== 'string' || typeof page.background !== 'string' || !Array.isArray(page.elements))
       throw invalid(t('file.invalid.page'))
@@ -126,6 +128,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeProtection(e)
       if (e.hidden !== true) delete e.hidden
       sanitizeBuild(e)
+      sanitizeLink(e, pageIds)
       if (typeof e.name !== 'string' || !e.name.trim()) delete e.name
       else e.name = e.name.slice(0, 80)
     }
@@ -468,7 +471,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const { doc, pageId } = get()
       if (doc.pages.length <= 1) return
       const i = doc.pages.findIndex((p) => p.id === id)
-      const pages = doc.pages.filter((p) => p.id !== id)
+      const pages = withoutLinksToPage(doc.pages.filter((p) => p.id !== id), id)
       set({
         ...snapshot(),
         doc: { ...doc, pages },

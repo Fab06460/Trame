@@ -22,6 +22,7 @@ import { mergeSpeakerState, parseSpeakerCommand, parseSpeakerState, type Speaker
 import { createFileInbox } from './fileInbox'
 import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeRelative, mediaMime, parseMediaState, withTags, type MediaItem, type MediaState } from '../shared/mediaLibrary'
 import { projectFilesFromArgv } from './launchArgs'
+import { isOpenableLink } from '../shared/links'
 import { AUDIO_EXTENSIONS, MAX_AUDIO_BYTES, isAudioFile, type AudioPick } from '../shared/audioFiles'
 import { MAX_CLIP_BYTES, VIDEO_TYPES, isVideoFile, videoMime, type VideoPick } from '../shared/videoFiles'
 import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
@@ -1223,6 +1224,22 @@ ipcMain.handle('audio:pick', async (): Promise<AudioPick> => {
     return { name: basename(path), bytes: new Uint8Array(await readFile(path)) }
   } catch {
     return { error: 'unreadable' }
+  }
+})
+
+// lien d'un élément cliqué en présentation : confié au navigateur du système, mais seulement une adresse web ou de courrier déjà normalisée
+ipcMain.handle('link:open', async (_event, url: unknown): Promise<boolean> => {
+  if (!isOpenableLink(url)) return false
+  // tests de bout en bout : aucune fenêtre de navigateur, l'adresse « ouverte » est écrite dans opened-link.txt du dossier de test
+  if (TEST_EXPORT_DIR) {
+    await writeFile(join(TEST_EXPORT_DIR, 'opened-link.txt'), url)
+    return true
+  }
+  try {
+    await shell.openExternal(url)
+    return true
+  } catch {
+    return false
   }
 })
 

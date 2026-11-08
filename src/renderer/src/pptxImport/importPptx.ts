@@ -7,6 +7,7 @@ import { finalizeText, parseSlideTree, readFill, type PlaceholderInfo, type Slid
 import { readNotes } from '@/pptxImport/notes'
 import { readTransition } from '@/pptxImport/transition'
 import { cleanTransition, type PageTransition } from '@/transition'
+import { normalizeLink } from '@/links'
 import { attr, kid, kids, parseXml } from '@/pptxImport/xml'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
@@ -40,7 +41,7 @@ function resolvePath(from: string, target: string): string {
   return parts.join('/')
 }
 
-interface Rel { id: string; type: string; path: string }
+interface Rel { id: string; type: string; path: string; /** cible telle qu'écrite dans le fichier (une adresse pour un lien externe) */ target: string; external: boolean }
 
 class Archive {
   constructor(private zip: JSZip) {}
@@ -55,7 +56,7 @@ class Archive {
     const name = part.split('/').pop()
     const doc = await this.xml(`${dir ? dir + '/' : ''}_rels/${name}.rels`)
     if (!doc) return []
-    return kids(doc.documentElement, 'Relationship').map((r) => ({ id: attr(r, 'Id') ?? '', type: (attr(r, 'Type') ?? '').split('/').pop() ?? '', path: resolvePath(part, attr(r, 'Target') ?? '') }))
+    return kids(doc.documentElement, 'Relationship').map((r) => ({ id: attr(r, 'Id') ?? '', type: (attr(r, 'Type') ?? '').split('/').pop() ?? '', path: resolvePath(part, attr(r, 'Target') ?? ''), target: attr(r, 'Target') ?? '', external: attr(r, 'TargetMode') === 'External' }))
   }
   /** Images d'une partie (relation → data URL). Formats non pris en charge ou trop lourds : absents. */
   async images(part: string): Promise<Map<string, string>> {
@@ -121,6 +122,7 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
   const truncated = slidePaths.length > MAX_PPTX_SLIDES
 
   const pages: TramePage[] = []
+  const pagePaths: string[] = []
   const unsupported = new Map<string, number>()
   const substituted = new Set<string>()
   let elementCount = 0
@@ -154,11 +156,19 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     const txStyles = kid(masterDoc?.documentElement, 'txStyles')
     const txStyle: SlideContext['txStyle'] = (kind) => kid(txStyles, kind === 'title' ? 'titleStyle' : kind === 'body' ? 'bodyStyle' : 'otherStyle')
 
-    const part = (images: Map<string, string>, skipPlaceholders: boolean): SlideContext => ({ theme, colorMap, background: bgHex, image: (id) => images.get(id) ?? null, placeholder, txStyle, skipPlaceholders })
+    // liens de la diapositive : une adresse web ou de courrier valable, ou une autre diapositive (repérée par son chemin, résolue plus bas)
+    const link: SlideContext['link'] = (relId) => {
+      const rel = slideRels.find((r) => r.id === relId)
+      if (!rel) return null
+      if (rel.type === 'slide') return { page: `@${rel.path}` }
+      const url = rel.type === 'hyperlink' && rel.external ? normalizeLink(rel.target) : null
+      return url ? { url } : null
+    }
+    const part = (images: Map<string, string>, skipPlaceholders: boolean, links = false): SlideContext => ({ theme, colorMap, background: bgHex, image: (id) => images.get(id) ?? null, placeholder, txStyle, skipPlaceholders, ...(links ? { link } : {}) })
     const run = (doc: Document | null, images: Map<string, string>, skip: boolean, locked: boolean): TrameElement[] => {
       const tree = kid(doc?.documentElement, 'cSld', 'spTree')
       if (!tree) return []
-      const r = parseSlideTree(tree, part(images, skip))
+      const r = parseSlideTree(tree, part(images, skip, !skip && !locked))
       for (const u of r.unsupported) unsupported.set(u, (unsupported.get(u) ?? 0) + 1)
       for (const f of r.substitutedFonts) substituted.add(f)
       return r.drafts.map((d) => {
@@ -183,9 +193,19 @@ export async function importPptx(bytes: Uint8Array, name: string): Promise<PptxR
     const notes = notesPath ? readNotes(await zip.xml(notesPath)) : undefined
     if (notes) notedSlides++
     transitions.push(readTransition(slideDoc))
+    pagePaths.push(slidePath)
     pages.push({ id: nanoid(8), background: bgFill?.kind === 'solid' ? bgFill.color.hex : '#ffffff', ...(notes ? { notes } : {}), elements })
   }
   if (pages.length === 0) throw new Error(t('imp.pptx.noSlide'))
+  // liens vers une autre diapositive : le chemin devient l'identifiant de la page (le lien disparaît si la diapositive n'a pas été reprise)
+  for (const p of pages) {
+    for (const e of p.elements) {
+      if (!e.link || !('page' in e.link) || !e.link.page.startsWith('@')) continue
+      const target = pages[pagePaths.indexOf(e.link.page.slice(1))]
+      if (target) e.link = { page: target.id }
+      else delete e.link
+    }
+  }
   // transitions : la plus fréquente devient celle du document, les autres pages gardent la leur (PowerPoint n'a que des réglages par diapositive)
   const counts = new Map<PageTransition, number>()
   for (const t of transitions) counts.set(t, (counts.get(t) ?? 0) + 1)

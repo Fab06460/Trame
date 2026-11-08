@@ -606,3 +606,5 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 [data-clip-panel] label.check { display: flex; align-items: center; gap: 8px; }
 [data-clip-panel] label:not(.check) { display: flex; flex-direction: column; gap: 4px; }
 .presentation-clip { position: absolute; z-index: 3; object-fit: fill; background: transparent; }
+.presentation-link { position: absolute; z-index: 4; cursor: pointer; border-radius: 4px; }
+.presentation-link:hover { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.35); }

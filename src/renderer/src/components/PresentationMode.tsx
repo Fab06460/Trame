@@ -3,6 +3,7 @@ import { LaserPointer } from '@/components/LaserPointer'
 import { InkLayer } from '@/components/InkLayer'
 import { PresentationOverview } from '@/components/PresentationOverview'
 import { PresentationClip } from '@/components/PresentationClip'
+import { PresentationLinks } from '@/components/PresentationLinks'
 import { PresentationVoice } from '@/components/PresentationVoice'
 import { clipElements, withoutClips } from '@/videoClips'
 import { autoSeconds, pageVoice, withoutVoices } from '@/voiceOver'
@@ -315,6 +316,10 @@ export function PresentationMode(): React.JSX.Element | null {
         // clips de la page, tels qu'ils sont à cette étape d'apparition ; placés d'après le rectangle que la page occupe dans la fenêtre
         const r = pageRect(size.w, size.h, doc.width, doc.height)
         return clipElements(pageAtStep(doc.pages[index], step).elements).map((el) => <PresentationClip key={`${index}:${el.id}`} doc={doc} el={el} rect={{ x: r.x, y: r.y, k: r.w / doc.width }} />)
+      })()}
+      {!black && image && image.index === index && image.step === step && (() => {
+        const r = pageRect(size.w, size.h, doc.width, doc.height)
+        return <PresentationLinks doc={doc} page={pageAtStep(doc.pages[index], step)} rect={{ x: r.x, y: r.y, k: r.w / doc.width }} disabled={draw} />
       })()}
       {laser && <LaserPointer hidden={onBar} />}
       {goto && <div className="presentation-goto" data-pres="goto" role="status">{t('pres.goto', { n: goto, total: doc.pages.length })}</div>}

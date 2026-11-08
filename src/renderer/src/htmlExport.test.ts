@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildPresentationHtml, inlineSvg, prefixIds, type HtmlLabels } from './htmlExport'
+import { buildPresentationHtml, inlineSvg, linkZones, prefixIds, type HtmlLabels } from './htmlExport'
 
-const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis' }
+const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}' }
 const svg = (id: string): string => `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><title>Doc</title><defs><linearGradient id="${id}"/></defs><rect fill="url(#${id})"/></svg>\n`
 
 describe('présentation web', () => {
@@ -48,5 +48,30 @@ describe('présentation web', () => {
   it('le lecteur est du JavaScript valide', () => {
     const code = /<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1]
     expect(() => new Function(code)).not.toThrow()
+  })
+})
+
+describe('linkZones', () => {
+  const el = (id: string, extra: object) => ({ id, type: 'rect', x: 80, y: 60, width: 160, height: 120, rotation: 0, opacity: 1, fill: '#000', ...extra })
+  const doc = { width: 800, height: 600, pages: [{ id: 'a', background: '#fff', elements: [] }, { id: 'b', background: '#fff', elements: [] }] }
+  const page = (elements: object[]) => ({ id: 'a', background: '#fff', elements }) as never
+  it('pose un lien web qui s\'ouvre ailleurs, en pourcentages de la page', () => {
+    const html = linkZones(doc as never, page([el('1', { link: { url: 'https://exemple.fr/?a=1&b=2' } })]), 'Aller à la page {n}')
+    expect(html).toContain('href="https://exemple.fr/?a=1&amp;b=2"')
+    expect(html).toContain('target="_blank" rel="noopener noreferrer"')
+    expect(html).toContain('left:10%;top:10%;width:20%;height:20%')
+  })
+  it('pose un lien de page avec son rang', () => {
+    const html = linkZones(doc as never, page([el('1', { link: { page: 'b' } })]), 'Aller à la page {n}')
+    expect(html).toContain('data-go="1"')
+    expect(html).toContain('href="#2"')
+    expect(html).toContain('aria-label="Aller à la page 2"')
+  })
+  it('n\'écrit rien pour un élément masqué, un lien cassé ou sans lien', () => {
+    expect(linkZones(doc as never, page([el('1', { link: { url: 'https://exemple.fr/' }, hidden: true }), el('2', { link: { page: 'x' } }), el('3', {})]), 'x')).toBe('')
+  })
+  it('le lecteur gère le clic sur une zone', () => {
+    const html = buildPresentationHtml({ title: 't', width: 1, height: 1, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels })
+    expect(html).toContain("closest('a.lk')")
   })
 })

@@ -105,6 +105,8 @@ const api = {
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
   /** Choisit un clip vidéo : le fichier, une raison de refus, ou null si annulé. */
   pickVideo: (): Promise<VideoPick> => ipcRenderer.invoke('video:pick'),
+  /** Ouvre un lien (adresse web ou de courrier) dans le navigateur du système ; refusé (false) pour tout autre schéma. */
+  openLink: (url: string): Promise<boolean> => ipcRenderer.invoke('link:open', url),
   /** Accès au micro pour la voix off : sur macOS le système demande l'autorisation la première fois ; ailleurs le navigateur s'en charge à l'enregistrement. */
   micAccess: (): Promise<'granted' | 'denied'> => ipcRenderer.invoke('mic:access'),
   /** Choisit un fichier audio (musique de fond d'une vidéo) : le fichier, une raison de refus, ou null si annulé. */

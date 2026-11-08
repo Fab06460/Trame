@@ -1,4 +1,5 @@
 import { buildChoices, withGroupMates } from '@/builds'
+import { LinkPanel } from '@/components/LinkPanel'
 import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
 
@@ -29,6 +30,7 @@ export function AppearancePanel(): React.JSX.Element {
         </select>
       </label>
       <p className="hint">{t('build.hint')}</p>
+      <LinkPanel />
     </>
   )
 }

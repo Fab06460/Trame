@@ -71,6 +71,9 @@ export interface VideoClip {
 
 export type Protection = 'fixed' | 'fill'
 
+/** Lien d'un élément : une adresse web ou de courrier (ouverte dans le navigateur du système), ou une page du document (saut direct). */
+export type ElementLink = { url: string } | { page: string }
+
 export interface TrameElement {
   id: string
   type: ElementType
@@ -90,6 +93,8 @@ export interface TrameElement {
   locked?: boolean
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */
   hidden?: boolean
+  /** lien cliquable en présentation, dans le PDF, la présentation web et PowerPoint ; jamais sur un clip vidéo */
+  link?: ElementLink
   /** apparition en présentation : numéro du clic (1 à 30) qui fait apparaître l'élément ; absent = visible dès l'ouverture de la page */
   build?: number
   fill: string

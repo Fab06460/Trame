@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { DEFAULT_COLOR_MAP, type Theme } from '@/pptxImport/colors'
 import { EMU_PER_PX, custGeomPath, finalizeText, parseSlideTree, type SlideContext } from '@/pptxImport/slide'
 import { kid, parseXml, setXmlParser } from '@/pptxImport/xml'
+import type { ElementLink } from '@/types'
 
 const theme: Theme = { colors: { dk1: '000000', lt1: 'ffffff', accent1: 'ff0000' }, major: 'Montserrat', minor: 'Inter' }
 const ctx = (over: Partial<SlideContext> = {}): SlideContext => ({
@@ -140,5 +141,31 @@ describe('texte', () => {
     const r = tree(`<p:sp><p:nvSpPr><p:cNvPr id="2" name="t"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:t>Titre</a:t></a:r></a:p></p:txBody></p:sp>`, c)
     expect(r.drafts[0].el).toMatchObject({ fill: '#112233', x: 10 }) // position héritée (x provisoire avant finalizeText)
     expect(r.drafts[0].el.fontSize).toBeCloseTo(58.7, 1) // 44 pt
+  })
+})
+
+describe('liens', () => {
+  const links: Record<string, ElementLink> = { rId5: { url: 'https://exemple.fr/' }, rId6: { page: '@ppt/slides/slide2.xml' } }
+  const lc = ctx({ link: (id) => links[id] ?? null })
+  const shape = (cNvPr: string, body = '') => `<p:sp><p:nvSpPr>${cNvPr}<p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm(0, 0, 100, 50)}<a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="000000"/></a:solidFill></p:spPr>${body}</p:sp>`
+  it('lien de la forme (adresse ou diapositive)', () => {
+    const web = tree(shape('<p:cNvPr id="2" name="s"><a:hlinkClick r:id="rId5"/></p:cNvPr>'), lc)
+    expect(web.drafts[0].el.link).toEqual({ url: 'https://exemple.fr/' })
+    const jump = tree(shape('<p:cNvPr id="2" name="s"><a:hlinkClick r:id="rId6" action="ppaction://hlinksldjump"/></p:cNvPr>'), lc)
+    expect(jump.drafts[0].el.link).toEqual({ page: '@ppt/slides/slide2.xml' })
+  })
+  it('à défaut, lien du premier passage de texte lié', () => {
+    const body = '<p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang="fr-FR"><a:hlinkClick r:id="rId5"/></a:rPr><a:t>Bonjour</a:t></a:r></a:p></p:txBody>'
+    const r = tree(shape('<p:cNvPr id="2" name="s"/>', body), lc)
+    expect(r.drafts.length).toBeGreaterThan(0)
+    expect(r.drafts.every((d) => JSON.stringify(d.el.link) === '{"url":"https://exemple.fr/"}')).toBe(true)
+  })
+  it('lien d\'une image', () => {
+    const pic = `<p:pic><p:nvPicPr><p:cNvPr id="3" name="i"><a:hlinkClick r:id="rId5"/></p:cNvPr><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr>${xfrm(0, 0, 40, 40)}</p:spPr></p:pic>`
+    expect(tree(pic, lc).drafts[0].el.link).toEqual({ url: 'https://exemple.fr/' })
+  })
+  it('lien inconnu, ou contexte sans liens (masques) : aucun lien', () => {
+    expect(tree(shape('<p:cNvPr id="2" name="s"><a:hlinkClick r:id="rId99"/></p:cNvPr>'), lc).drafts[0].el.link).toBeUndefined()
+    expect(tree(shape('<p:cNvPr id="2" name="s"><a:hlinkClick r:id="rId5"/></p:cNvPr>')).drafts[0].el.link).toBeUndefined()
   })
 })
