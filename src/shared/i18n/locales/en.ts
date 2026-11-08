@@ -1634,6 +1634,7 @@ export const en: Catalog = {
   'video.music.volume': 'Volume',
   'video.music.fade': 'Fade in and out',
   'video.music.info': '{name} · {duration}',
+  'video.music.duck': 'Lower the music during the voice-over',
   'video.music.hint': 'If shorter than the video, the music starts over; if longer, it is cut. MP3, WAV, M4A/AAC, OGG, FLAC.',
   'video.music.tooBig': 'This audio file is too large (40 MB at most).',
   'video.music.unreadable': 'This audio file cannot be read.',

@@ -1634,6 +1634,7 @@ export const de: Catalog = {
   'video.music.volume': 'Lautstärke',
   'video.music.fade': 'Ein- und Ausblenden',
   'video.music.info': '{name} · {duration}',
+  'video.music.duck': 'Musik während des Sprechertexts leiser stellen',
   'video.music.hint': 'Ist die Musik kürzer als das Video, beginnt sie von vorn; ist sie länger, wird sie abgeschnitten. MP3, WAV, M4A/AAC, OGG, FLAC.',
   'video.music.tooBig': 'Diese Audiodatei ist zu groß (höchstens 40 MB).',
   'video.music.unreadable': 'Diese Audiodatei kann nicht gelesen werden.',

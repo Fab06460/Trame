@@ -1635,6 +1635,7 @@ export const fr = {
   'video.music.volume': 'Volume',
   'video.music.fade': 'Fondu d\'entrée et de sortie',
   'video.music.info': '{name} · {duration}',
+  'video.music.duck': 'Baisser la musique pendant la voix off',
   'video.music.hint': 'Plus courte que la vidéo, la musique recommence ; plus longue, elle est coupée. MP3, WAV, M4A/AAC, OGG, FLAC.',
   'video.music.tooBig': 'Ce fichier audio est trop gros (40 Mo au plus).',
   'video.music.unreadable': 'Ce fichier audio ne peut pas être lu.',

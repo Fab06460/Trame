@@ -19,9 +19,11 @@ export interface VideoOptions {
   fitClips: boolean
   /** une page dont la voix off est plus longue qu'elle dure assez longtemps pour l'entendre en entier */
   fitVoices: boolean
+  /** la musique de fond baisse pendant les voix off */
+  duckMusic: boolean
 }
 
-export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true, fitClips: true, fitVoices: true }
+export const DEFAULT_VIDEO: VideoOptions = { secondsPerPage: 5, fps: 30, longSide: 1920, effects: true, fitClips: true, fitVoices: true, duckMusic: true }
 export const MIN_SECONDS = 1
 export const MAX_SECONDS = 120
 /** Durée totale maximale : la vidéo est construite en mémoire avant d'être enregistrée. */

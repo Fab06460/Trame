@@ -159,6 +159,11 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
                 <button data-action="video-music-pick" onClick={() => void chooseMusic()}>{t('video.music.change')}</button>
                 <button data-action="video-music-remove" onClick={() => setMusic(null)}>{t('video.music.remove')}</button>
               </div>
+              {hasVoices && (
+                <label className="check">
+                  <input type="checkbox" data-field="videoDuck" checked={options.duckMusic} onChange={(e) => patch({ duckMusic: e.target.checked })} /> {t('video.music.duck')}
+                </label>
+              )}
               <p className="hint">{t('video.music.hint')}</p>
             </>
           ) : (

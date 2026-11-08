@@ -3,7 +3,7 @@ import { ArrayBufferTarget as WebmTarget, Muxer as WebmMuxer } from 'webm-muxer'
 import { pageAtStep } from '@/builds'
 import { renderPage } from '@/exportPages'
 import { decodeDataUrl } from '@/pdfMath'
-import { addSounds, AUDIO_RATE, decodeAudio, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
+import { addSounds, AUDIO_RATE, decodeAudio, duckTrack, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
 import { clipUrl } from '@/clipActions'
 import { clipSounds, clipsAt, layerKeys, layersAt, scheduleOf, videoSize, voiceSounds, type ClipFrame, type Layer, type VideoOptions } from '@/videoTimeline'
 import type { TrameDocument } from '@/types'
@@ -196,6 +196,7 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
     }
     // voix off : décodée une fois par enregistrement, placée au début de sa page (un enregistrement illisible est ignoré)
     const voiceAudio = new Map<string, DecodedAudio | null>()
+    const spoken: Array<[number, number]> = []
     for (const voice of voices) {
       if (!voiceAudio.has(voice.id)) {
         const data = doc.voices?.[voice.id]
@@ -203,8 +204,13 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
         voiceAudio.set(voice.id, parts ? await decodeAudio(parts.bytes).catch(() => null) : null)
       }
       const audio = voiceAudio.get(voice.id)
-      if (audio && audio.channels.length) events.push({ source: audio.channels, at: voice.at, until: voice.until, volume: 1, loop: false })
+      if (audio && audio.channels.length) {
+        events.push({ source: audio.channels, at: voice.at, until: voice.until, volume: 1, loop: false })
+        spoken.push([voice.at, Math.min(voice.until, voice.at + audio.channels[0].length / AUDIO_RATE)])
+      }
     }
+    // la musique (seule dans la bande à ce stade) baisse sous les voix, avant que les voix et les clips s'y ajoutent
+    if (music && options.duckMusic) duckTrack(track, spoken)
     addSounds(track, events)
     audioEncoder = new AudioEncoder({
       output: (chunk, meta) => (muxer as Mp4Muxer<Mp4Target>).addAudioChunk(chunk, meta),

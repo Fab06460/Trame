@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addSounds, AUDIO_RATE, FADE_SECONDS, isAudioFile, mixTrack, silence, trimSound } from './audioTrack'
+import { addSounds, AUDIO_RATE, DUCK_ATTACK, DUCK_LEVEL, DUCK_RELEASE, duckTrack, FADE_SECONDS, isAudioFile, mixTrack, silence, trimSound } from './audioTrack'
 
 const ramp = (n: number, v = 1): Float32Array => new Float32Array(n).fill(v)
 
@@ -142,5 +142,46 @@ describe('trimSound', () => {
   it('un morceau hors du son donne un son vide, sans erreur', () => {
     expect(trimSound([ramp(1)], 5, 8, 1)[0].length).toBe(0)
     expect(trimSound([ramp(1)], 5, 8, 2)[0].length).toBe(0)
+  })
+})
+
+describe('duckTrack', () => {
+  const flat = (seconds: number): [Float32Array, Float32Array] => [new Float32Array(Math.round(seconds * AUDIO_RATE)).fill(1), new Float32Array(Math.round(seconds * AUDIO_RATE)).fill(1)]
+  const at = (t: [Float32Array, Float32Array], s: number): number => t[0][Math.round(s * AUDIO_RATE)]
+  it('baisse la musique pendant la voix, la rend avant et après', () => {
+    const t = flat(10)
+    duckTrack(t, [[3, 5]])
+    expect(at(t, 1)).toBe(1)
+    expect(at(t, 4)).toBeCloseTo(DUCK_LEVEL, 5)
+    expect(at(t, 5 + DUCK_RELEASE + 0.5)).toBe(1)
+    expect(t[1][Math.round(4 * AUDIO_RATE)]).toBeCloseTo(DUCK_LEVEL, 5)
+  })
+  it('descend et remonte progressivement', () => {
+    const t = flat(10)
+    duckTrack(t, [[3, 5]])
+    const mid = at(t, 3 - DUCK_ATTACK / 2)
+    expect(mid).toBeGreaterThan(DUCK_LEVEL)
+    expect(mid).toBeLessThan(1)
+    const up = at(t, 5 + DUCK_RELEASE / 2)
+    expect(up).toBeGreaterThan(DUCK_LEVEL)
+    expect(up).toBeLessThan(1)
+  })
+  it('réunit deux voix proches : pas de remontée entre elles', () => {
+    const t = flat(12)
+    duckTrack(t, [[2, 4], [4.6, 7]])
+    expect(at(t, 4.3)).toBeCloseTo(DUCK_LEVEL, 5)
+  })
+  it('laisse remonter la musique entre deux voix éloignées', () => {
+    const t = flat(14)
+    duckTrack(t, [[2, 4], [8, 10]])
+    expect(at(t, 6)).toBe(1)
+  })
+  it('ne touche pas à la musique sans voix et reste dans les bornes de la bande', () => {
+    const t = flat(2)
+    duckTrack(t, [])
+    expect(at(t, 1)).toBe(1)
+    duckTrack(t, [[-1, 0.5], [1.5, 9]])
+    expect(at(t, 0.1)).toBeLessThan(1)
+    expect(t[0].length).toBe(2 * AUDIO_RATE)
   })
 })

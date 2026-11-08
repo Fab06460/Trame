@@ -1634,6 +1634,7 @@ export const es: Catalog = {
   'video.music.volume': 'Volumen',
   'video.music.fade': 'Fundido de entrada y salida',
   'video.music.info': '{name} · {duration}',
+  'video.music.duck': 'Bajar la música durante la voz en off',
   'video.music.hint': 'Si es más corta que el vídeo, la música vuelve a empezar; si es más larga, se corta. MP3, WAV, M4A/AAC, OGG, FLAC.',
   'video.music.tooBig': 'Este archivo de audio es demasiado grande (40 MB como máximo).',
   'video.music.unreadable': 'No se puede leer este archivo de audio.',
