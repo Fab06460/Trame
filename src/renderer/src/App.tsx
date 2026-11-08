@@ -19,6 +19,7 @@ import { SignatureDialog } from '@/components/SignatureDialog'
 import { VideoExportDialog } from '@/components/VideoExportDialog'
 import { StyleMatchDialog } from '@/components/StyleMatchDialog'
 import { PrintDialog } from '@/components/PrintDialog'
+import { HandoutDialog } from '@/components/HandoutDialog'
 import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
 import { RecoveryDialog } from '@/components/RecoveryDialog'
@@ -214,6 +215,7 @@ export default function App(): React.JSX.Element {
       <ExportPagesDialog />
       <MailMergeDialog />
       <PrintDialog />
+      <HandoutDialog />
       <PdfToolsDialog />
       <WordCloudDialog />
       <SignatureDialog />

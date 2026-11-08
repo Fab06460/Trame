@@ -163,6 +163,23 @@ function place(e: TrameElement, s: number, ox: number, oy: number): TrameElement
 
 const band = (x: number, y: number, width: number, height: number, fill: string): TrameElement => ({ id: nanoid(8), type: 'rect', x, y, width, height, rotation: 0, opacity: 1, fill })
 
+/**
+ * Une page du document placée dans un cadre d'une feuille (le cadre a les proportions de la page) : fond, puis ses éléments visibles
+ * réduits à la taille du cadre, ce qui dépasse de la page étant rogné (voir `clipToCard`). `overflow` compte ce qui n'a pu être rogné.
+ */
+export function pageInBox(page: TramePage, source: { width: number; height: number }, box: { x: number; y: number; width: number; height: number }): { elements: TrameElement[]; overflow: number } {
+  const s = box.width / source.width
+  const elements: TrameElement[] = [band(box.x, box.y, box.width, box.height, page.background)]
+  let overflow = 0
+  for (const e of page.elements) {
+    if (e.hidden) continue
+    const clipped = clipToCard(e, source.width, source.height)
+    if (clipped.overflow) overflow++
+    if (clipped.element) elements.push(place(clone(clipped.element), s, box.x, box.y))
+  }
+  return { elements, overflow }
+}
+
 export interface SheetsResult {
   doc: TrameDocument
   /** éléments qui dépassent de leur fiche sans pouvoir être rognés (ils empiètent sur les fiches voisines) */

@@ -645,6 +645,10 @@ Pour masquer un visage, un nom ou une plaque, l'effet doit être **irréversible
 - Le recadrage, le miroir, les filtres et la boîte de l'élément ne changent pas (même proportions).
 - Limites assumées : les **versions enregistrées** et la **reprise après interruption** gardent l'image d'origine (la boîte le dit) ; un flou léger peut être atténué par traitement d'image, la pixellisation est plus sûre (conseillée dans la boîte).
 
+### Notes de l'orateur et polycopié (PDF)
+
+`handout.ts` (pur, testé) fabrique un document de **feuilles** portrait (A4 ou Lettre, marges de 15 mm) que l'export PDF ordinaire écrit, comme le livret : les textes restent du vrai texte, les diapositives sont les éléments de la page réduits dans un cadre (`pageInBox` de `mergeSheets.ts`, même rognage que les planches). `handoutDocument(doc, options, labels, measure)` : mise en page `notes` (une diapositive centrée au plus à 48 % de la hauteur, titre « Notes », puis le texte des notes ; `noteChunks` choisit la plus grande taille de 15 à 10 px qui tient dans la place restante, sinon coupe au dernier mot qui tient et continue sur des feuilles de suite ; sans notes, des lignes à remplir) ou `lines` (2, 3, 4 : une colonne de diapositives numérotées à gauche et des lignes à droite ; 6 : deux colonnes de trois, lignes en dessous). La mesure du texte est injectée (`measureNotes` dans `handoutActions.ts` : même nœud Konva que l'export PDF, `lineHeight` 1,35). `HandoutDialog.tsx` (menu Exporter, `store/handoutDialog.ts`) affiche l'aperçu des deux premières feuilles et enregistre par `exportImposed` (avertissement si des textes ont dû passer en image).
+
 ### Impression pratique (livret et pages par feuille)
 
 `imposition.ts` (pur, testé) fabrique un document de « feuilles » (pages à la taille du papier, les pages d'origine réduites dessus) que l'export PDF ordinaire écrit : texte vectoriel, polices incorporées, aucun nouveau rendu. Le placement réutilise `sheetsFromMerged` (planches du publipostage) avec une page par « fiche ».

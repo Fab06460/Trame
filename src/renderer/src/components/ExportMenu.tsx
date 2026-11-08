@@ -12,6 +12,7 @@ import { useExportPages } from '@/store/exportPages'
 import { useVideoExport } from '@/store/videoExport'
 import { useMailMerge } from '@/store/mailMerge'
 import { usePrintDialog } from '@/store/printDialog'
+import { useHandoutDialog } from '@/store/handoutDialog'
 import { usePdfIssues } from '@/store/pdfIssues'
 import { t, useLocale, useT } from '@/i18n'
 import { useDismiss } from './useDismiss'
@@ -144,6 +145,10 @@ export function ExportMenu(): React.JSX.Element {
           <button role="menuitem" data-export="print" onClick={() => choose(() => usePrintDialog.getState().setOpen(true))}>
             <strong>{t('print.menu')}</strong>
             <span>{t('print.menu.desc')}</span>
+          </button>
+          <button role="menuitem" data-export="handout" onClick={() => choose(() => useHandoutDialog.getState().setOpen(true))}>
+            <strong>{t('handout.menu')}</strong>
+            <span>{t('handout.menu.desc')}</span>
           </button>
           <button role="menuitem" data-export="merge" onClick={() => choose(() => useMailMerge.getState().setOpen(true))}>
             <strong>{t('mm.menu')}</strong>
