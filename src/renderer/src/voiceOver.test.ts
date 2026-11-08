@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { withoutVoices, MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, voiceNeed } from './voiceOver'
+import { withoutVoices, MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, autoSeconds, voiceNeed } from './voiceOver'
 import type { TrameDocument, TramePage } from './types'
 
 const WEBM = 'data:audio/webm;base64,AAAA'
@@ -76,5 +76,21 @@ describe('withoutVoices', () => {
   it('un document sans voix est rendu tel quel', () => {
     const d = doc([page('a')])
     expect(withoutVoices(d)).toBe(d)
+  })
+})
+
+describe('autoSeconds (lecture automatique)', () => {
+  const d = doc([page('a', { id: 'v', duration: 12 }), page('b'), page('c', { id: 'v2', duration: 1 })], { v: WEBM, v2: WEBM })
+  it('garde le réglage sur une page sans voix', () => {
+    expect(autoSeconds(d, d.pages[1], 5)).toBe(5)
+  })
+  it('attend la fin de la voix quand elle dépasse le réglage', () => {
+    expect(autoSeconds(d, d.pages[0], 5)).toBeCloseTo(voiceNeed(12), 10)
+  })
+  it('garde le réglage quand la voix est plus courte', () => {
+    expect(autoSeconds(d, d.pages[2], 10)).toBe(10)
+  })
+  it('ignore une voix dont les octets manquent', () => {
+    expect(autoSeconds(doc([page('a', { id: 'x', duration: 30 })]), page('a', { id: 'x', duration: 30 }), 5)).toBe(5)
   })
 })

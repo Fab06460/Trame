@@ -5,7 +5,7 @@ import { PresentationOverview } from '@/components/PresentationOverview'
 import { PresentationClip } from '@/components/PresentationClip'
 import { PresentationVoice } from '@/components/PresentationVoice'
 import { clipElements, withoutClips } from '@/videoClips'
-import { pageVoice, withoutVoices } from '@/voiceOver'
+import { autoSeconds, pageVoice, withoutVoices } from '@/voiceOver'
 import { pageRect } from '@/annotation'
 import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
@@ -214,7 +214,7 @@ export function PresentationMode(): React.JSX.Element | null {
   // lecture automatique (boucle)
   useEffect(() => {
     if (!active || !doc || auto === 0 || paused) return
-    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1, 'end'), auto * 1000)
+    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1, 'end'), autoSeconds(doc, doc.pages[index], auto) * 1000)
     return () => clearTimeout(t)
   }, [active, doc, auto, paused, index])
 

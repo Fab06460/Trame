@@ -40,6 +40,12 @@ export function pageVoice(doc: Pick<TrameDocument, 'voices'>, page: Pick<TramePa
 /** Temps que la voix demande à sa page dans la vidéo : un petit silence avant, sa durée, un petit silence après. */
 export const voiceNeed = (duration: number): number => VOICE_DELAY + duration + VOICE_TAIL
 
+/** Temps passé sur une page en lecture automatique : le réglage choisi, prolongé jusqu'à la fin de la voix de la page s'il y en a une. */
+export const autoSeconds = (doc: Pick<TrameDocument, 'voices'>, page: Pick<TramePage, 'voice'>, auto: number): number => {
+  const voice = pageVoice(doc, page)
+  return voice ? Math.max(auto, voiceNeed(voice.duration)) : auto
+}
+
 /**
  * Nettoyage à la lecture : voix et références invalides retirées, jamais devinées (une page dont la voix manque n'en a simplement plus).
  * Modifie en place.
