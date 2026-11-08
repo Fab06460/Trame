@@ -52,6 +52,7 @@ export function PageDurationPanel(): React.JSX.Element {
           {t('pageSeconds.all')}
         </button>
       </div>
+      <p className="hint">{t('pageSeconds.hint')}</p>
       {custom > 0 && <p className="hint" data-page-seconds-count>{t('pageSeconds.custom', { count: custom })}</p>}
     </>
   )

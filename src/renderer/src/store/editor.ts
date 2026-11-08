@@ -252,6 +252,8 @@ interface EditorState {
   setPageSeconds: (pageId: string, seconds: number | null) => void
   /** La même durée pour toutes les pages (`null` : toutes reviennent à la durée de la boîte d'export). */
   applyPageSecondsToAll: (seconds: number | null) => void
+  /** Donne à plusieurs pages leur propre durée en une seule action annulable (valeurs invalides ignorées) ; rend le nombre de pages changées. */
+  setPagesSeconds: (changes: Array<{ pageId: string; seconds: number }>) => number
   /** Pose (ou, avec `null`, retire) la voix off d'une page : un pas d'annulation. Les octets vont dans `doc.voices`. */
   setPageVoice: (pageId: string, voice: { id: string; duration: number; data: string } | null) => void
   /** Une même transition pour tout le document : réglage par défaut, et les transitions propres à chaque page sont retirées. */
@@ -906,6 +908,19 @@ export const useEditor = create<EditorState>((set, get) => {
           dirty: true
         }
       }),
+
+    setPagesSeconds: (changes) => {
+      const wanted = new Map<string, number>()
+      for (const c of changes) {
+        const clean = cleanPageSeconds(c.seconds)
+        if (clean !== undefined) wanted.set(c.pageId, clean)
+      }
+      const pages = get().doc.pages
+      const touched = pages.filter((p) => wanted.has(p.id) && p.seconds !== wanted.get(p.id)).length
+      if (touched === 0) return 0
+      set({ ...snapshot(), doc: { ...get().doc, pages: pages.map((p) => (wanted.has(p.id) ? { ...p, seconds: wanted.get(p.id)! } : p)) }, dirty: true })
+      return touched
+    },
 
     applyTransitionToAll: (transition) =>
       set((s) => {

@@ -371,6 +371,14 @@ button.settings-row:hover, button.settings-row:focus-visible { background: rgba(
 .speaker-bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 15px; flex-wrap: nowrap; white-space: nowrap; }
 .speaker-counter { font-weight: 700; font-size: 20px; }
 .speaker-timer { font-variant-numeric: tabular-nums; font-size: 20px; color: #7ee787; }
+.speaker-page-time { font-variant-numeric: tabular-nums; font-size: 16px; color: var(--muted); }
+.speaker-page-time.over { color: #ff7b72; font-weight: 600; }
+.speaker-plan { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); }
+.speaker-plan.late { color: #ff7b72; }
+.timing-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin: 8px 0; }
+.timing-table th, .timing-table td { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.25)); }
+.timing-table th:first-child, .timing-table td:first-child { text-align: left; }
+.timing-table td.late { color: #d1242f; }
 .speaker-clock { color: var(--muted); font-variant-numeric: tabular-nums; }
 .speaker-main { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 14px; }
 .speaker-current { flex: 3; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 8px; overflow: hidden; }

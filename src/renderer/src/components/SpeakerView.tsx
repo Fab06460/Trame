@@ -3,6 +3,7 @@ import { renderPage } from '@/exportPages'
 import { registerEmbeddedFonts } from '@/fonts'
 import { nextPosition, pageAtStep } from '@/builds'
 import { clampNotesSize, formatElapsed, NOTES_SIZE } from '@/speakerFormat'
+import { drift, formatDrift, pageSpent, plannedMs, plannedTotal } from '@/timing'
 import { parseDocument } from '@/store/editor'
 import type { TrameDocument } from '@/types'
 import { useLocale, useT } from '@/i18n'
@@ -23,6 +24,9 @@ interface View {
   step: number
   black: boolean
   startedAt: number
+  /** millisecondes passées sur chaque page avant la visite en cours, et instant d'arrivée sur la page affichée */
+  spent: number[]
+  enteredAt: number
 }
 
 /** Image d'une page, rendue comme à l'export (mêmes polices, effets, ombres) puis mise en cache. */
@@ -72,19 +76,19 @@ export function SpeakerView(): React.JSX.Element {
   }, [t])
 
   useEffect(() => {
-    const apply = (s: { doc: string | null; index: number; step: number; black: boolean; startedAt: number }): void => {
+    const apply = (s: { doc: string | null; index: number; step: number; black: boolean; startedAt: number; spent: number[]; enteredAt: number }): void => {
       if (s.doc !== null && s.doc !== docJson.current) {
         docJson.current = s.doc
         try {
           const doc = parseDocument(s.doc)
           void registerEmbeddedFonts(doc.fonts)
-          setView({ doc, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt })
+          setView({ doc, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt, spent: s.spent, enteredAt: s.enteredAt })
         } catch {
           /* document illisible : on garde l'état précédent */
         }
         return
       }
-      setView((v) => (v ? { ...v, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt } : v))
+      setView((v) => (v ? { ...v, index: s.index, step: s.step, black: s.black, startedAt: s.startedAt, spent: s.spent, enteredAt: s.enteredAt } : v))
     }
     void window.trame.speakerHello().then((s) => s && apply(s))
     const off = window.trame.onSpeakerState(apply)
@@ -133,6 +137,11 @@ export function SpeakerView(): React.JSX.Element {
   if (!view) return <div className="speaker speaker-wait" role="status">{t('speaker.waiting')}</div>
   const notes = view.doc.pages[view.index].notes
   const elapsed = now - (resetAt ?? view.startedAt)
+  // temps de la page, temps prévu (durée de la page) et avance ou retard sur le plan
+  const onPage = pageSpent(view.spent, view.enteredAt, view.index, now)
+  const planned = plannedMs(view.doc.pages[view.index])
+  const target = plannedTotal(view.doc)
+  const late = drift(view.doc, view.spent, view.index)
   const resize = (delta: number): void => {
     const next = clampNotesSize(size + delta)
     setSize(next)
@@ -149,6 +158,14 @@ export function SpeakerView(): React.JSX.Element {
         <span className="speaker-counter" data-speaker="counter">{view.index + 1} / {count}</span>
         <span className="speaker-timer" data-speaker="timer" title={t('speaker.timer.title')}>⏱ {formatElapsed(elapsed)}</span>
         <button data-speaker="reset" onClick={() => setResetAt(Date.now())} title={t('speaker.reset.title')}>↺</button>
+        <span className={`speaker-page-time${planned > 0 && onPage > planned ? ' over' : ''}`} data-speaker="page-time" data-over={planned > 0 && onPage > planned ? 'true' : undefined} title={t('speaker.pageTime.title')}>
+          {planned > 0 ? t('speaker.pageTime.planned', { time: formatElapsed(onPage), planned: formatElapsed(planned) }) : t('speaker.pageTime', { time: formatElapsed(onPage) })}
+        </span>
+        {target > 0 && (
+          <span className={`speaker-plan${late > 1000 ? ' late' : ''}`} data-speaker="plan" data-drift={Math.round(late / 1000)} title={t('speaker.plan.title')}>
+            {t('speaker.plan', { total: formatElapsed(target) })} · {Math.abs(late) < 1000 ? t('speaker.drift.ontime') : late > 0 ? t('speaker.drift.late', { time: formatDrift(late) }) : t('speaker.drift.early', { time: formatDrift(late) })}
+          </span>
+        )}
         <span className="speaker-clock" data-speaker="clock">{new Date(now).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
         <span className="spacer" />
         <button data-speaker="prev" disabled={view.index === 0 && view.step === 0} onClick={() => window.trame.sendSpeakerCommand({ type: 'prev' })}>{t('speaker.prev')}</button>

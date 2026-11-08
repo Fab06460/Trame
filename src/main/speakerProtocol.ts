@@ -12,6 +12,10 @@ export interface SpeakerState {
   black: boolean
   /** début de la présentation (ms depuis 1970) : le chronomètre des deux fenêtres part du même instant */
   startedAt: number
+  /** millisecondes passées sur chaque page avant la visite en cours */
+  spent: number[]
+  /** instant d'arrivée sur la page affichée (ms depuis 1970) */
+  enteredAt: number
 }
 
 export type SpeakerCommand = { type: 'go'; index: number } | { type: 'next' } | { type: 'prev' } | { type: 'black' } | { type: 'exit' } | { type: 'swap' }
@@ -29,7 +33,10 @@ export function parseSpeakerState(v: unknown): SpeakerState | null {
   // `step` absent (ancienne fenêtre) : aucun clic fait
   if (!(o.step === undefined || isIndex(o.step))) return null
   if (typeof o.startedAt !== 'number' || !Number.isFinite(o.startedAt)) return null
-  return { doc: o.doc as string | null, index: o.index, step: (o.step as number | undefined) ?? 0, black: o.black, startedAt: o.startedAt }
+  // chronométrage : absent (ancienne fenêtre) ou invalide = aucun temps passé
+  const spent = Array.isArray(o.spent) && o.spent.length <= 100_000 && o.spent.every((v) => typeof v === 'number' && Number.isFinite(v) && v >= 0) ? (o.spent as number[]) : []
+  const enteredAt = typeof o.enteredAt === 'number' && Number.isFinite(o.enteredAt) ? o.enteredAt : o.startedAt
+  return { doc: o.doc as string | null, index: o.index, step: (o.step as number | undefined) ?? 0, black: o.black, startedAt: o.startedAt, spent, enteredAt }
 }
 
 export function parseSpeakerCommand(v: unknown): SpeakerCommand | null {

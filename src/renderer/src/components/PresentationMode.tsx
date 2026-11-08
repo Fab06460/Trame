@@ -57,6 +57,8 @@ export function PresentationMode(): React.JSX.Element | null {
   const [tool, setTool] = useState<InkTool>('pen')
   const [color, setColor] = useState<string>(INK_COLORS[0])
   const startedAt = usePresentation((s) => s.startedAt)
+  const spent = usePresentation((s) => s.spent)
+  const enteredAt = usePresentation((s) => s.enteredAt)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const cache = useRef(new Map<string, Promise<string>>())
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -78,13 +80,13 @@ export function PresentationMode(): React.JSX.Element | null {
     }
     const s = usePresentation.getState()
     if (!s.doc) return
-    void window.trame.speakerOpen({ doc: JSON.stringify(withoutVoices(withoutClips(s.doc))), index: s.index, step: s.step, black, startedAt: s.startedAt }).then((r) => r && setSpeaker(true))
+    void window.trame.speakerOpen({ doc: JSON.stringify(withoutVoices(withoutClips(s.doc))), index: s.index, step: s.step, black, startedAt: s.startedAt, spent: s.spent, enteredAt: s.enteredAt }).then((r) => r && setSpeaker(true))
   }
   const toggleSpeakerRef = useRef(toggleSpeaker)
   toggleSpeakerRef.current = toggleSpeaker
   useEffect(() => {
-    if (active && speaker) window.trame.speakerSync({ doc: null, index, step, black, startedAt })
-  }, [active, speaker, index, step, black, startedAt])
+    if (active && speaker) window.trame.speakerSync({ doc: null, index, step, black, startedAt, spent, enteredAt })
+  }, [active, speaker, index, step, black, startedAt, spent, enteredAt])
   useEffect(() => {
     if (!active) return
     const offCommand = window.trame.onSpeakerCommand((cmd) => {
