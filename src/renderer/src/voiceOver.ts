@@ -40,6 +40,14 @@ export function pageVoice(doc: Pick<TrameDocument, 'voices'>, page: Pick<TramePa
 /** Temps que la voix demande à sa page dans la vidéo : un petit silence avant, sa durée, un petit silence après. */
 export const voiceNeed = (duration: number): number => VOICE_DELAY + duration + VOICE_TAIL
 
+/** Les voies d'un son ramenées à une seule (moyenne), pour garder une voix légère : la parole n'a pas besoin de stéréo. */
+export function monoMix(channels: readonly Float32Array[]): Float32Array {
+  if (channels.length === 1) return channels[0]
+  const out = new Float32Array(channels[0]?.length ?? 0)
+  for (const ch of channels) for (let i = 0; i < out.length; i++) out[i] += ch[i] / channels.length
+  return out
+}
+
 /** Temps passé sur une page en lecture automatique : le réglage choisi, prolongé jusqu'à la fin de la voix de la page s'il y en a une. */
 export const autoSeconds = (doc: Pick<TrameDocument, 'voices'>, page: Pick<TramePage, 'voice'>, auto: number): number => {
   const voice = pageVoice(doc, page)

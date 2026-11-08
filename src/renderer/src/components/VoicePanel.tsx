@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { embeddedUrl } from '@/clipActions'
-import { startRecording, type Recorder, type VoiceProblem } from '@/voiceActions'
+import { importVoice, startRecording, type Recorder, type VoiceProblem } from '@/voiceActions'
 import { MAX_VOICE_SECONDS, pageVoice } from '@/voiceOver'
 import { useEditor, selectPage } from '@/store/editor'
 import { useT } from '@/i18n'
 import type { MessageKey } from '@shared/i18n'
 
 const clock = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-const PROBLEM: Record<VoiceProblem, MessageKey> = { denied: 'voice.denied', noMic: 'voice.noMic', tooBig: 'voice.tooBig', error: 'voice.error' }
+const PROBLEM: Record<VoiceProblem, MessageKey> = { denied: 'voice.denied', noMic: 'voice.noMic', tooBig: 'voice.tooBig', error: 'voice.error', fileTooBig: 'voice.file.tooBig', fileTooLong: 'voice.file.tooLong', fileUnreadable: 'voice.file.unreadable' }
 
 /**
  * Voix off de la page : enregistrement au micro (avec témoin de niveau), écoute, refaire, supprimer. L'enregistrement est gardé dans le
@@ -47,6 +47,15 @@ export function VoicePanel(): React.JSX.Element {
     setTime(0)
     setLevel(0)
     setRecording(true)
+  }
+
+  const importFile = async (): Promise<void> => {
+    setProblem(null)
+    const pageId = page.id
+    const result = await importVoice()
+    if (!result) return
+    if ('error' in result) return setProblem({ key: PROBLEM[result.error], detail: result.detail })
+    useEditor.getState().setPageVoice(pageId, { id: nanoid(10), duration: Math.round(result.duration * 100) / 100, data: result.data })
   }
 
   useEffect(() => {
@@ -91,11 +100,15 @@ export function VoicePanel(): React.JSX.Element {
           <p className="hint" data-voice-duration>{t('voice.duration', { duration: clock(voice.duration) })}</p>
           <div className="row">
             <button data-action="voice-record" onClick={() => void begin()}>{t('voice.redo')}</button>
+            <button data-action="voice-import" onClick={() => void importFile()}>{t('voice.import')}</button>
             <button data-action="voice-remove" onClick={() => useEditor.getState().setPageVoice(page.id, null)}>{t('voice.remove')}</button>
           </div>
         </>
       ) : (
-        <button data-action="voice-record" onClick={() => void begin()}>{t('voice.record')}</button>
+        <div className="row">
+          <button data-action="voice-record" onClick={() => void begin()}>{t('voice.record')}</button>
+          <button data-action="voice-import" onClick={() => void importFile()}>{t('voice.import')}</button>
+        </div>
       )}
       {problem && <p className="warn" role="alert" data-voice-problem>{t(problem.key, { detail: problem.detail ?? '', max: Math.round(MAX_VOICE_SECONDS / 60) })}</p>}
       <p className="hint">{t('voice.hint')}</p>

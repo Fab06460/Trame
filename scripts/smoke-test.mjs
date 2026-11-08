@@ -3599,6 +3599,19 @@ try {
   await clickSel('[data-action="voice-remove"]')
   await sleep(300)
   check('voix off : « Supprimer la voix » la retire de la page', (await nBrand('[data-voice-player]')) === 0 && (await nBrand('[data-action="voice-record"]')) === 1)
+  // voix off importée depuis un fichier audio : illisible refusé, WAV de 2 s converti en voix de la page
+  await writeFile(join(exportsDir, 'pick-audio.wav'), Buffer.from('ceci n\'est pas un fichier audio'))
+  await clickSel('[data-action="voice-import"]')
+  await waitFor(async () => (await nBrand('[data-voice-problem]')) === 1, 6000)
+  check('voix off : un fichier audio illisible est refusé avec un message, sans voix', (await nBrand('[data-voice-player]')) === 0)
+  await writeFile(join(exportsDir, 'pick-audio.wav'), sineWav(2))
+  await clickSel('[data-action="voice-import"]')
+  await waitFor(async () => (await nBrand('[data-voice-player]')) === 1, 15000)
+  const voiceFileInfo = await run(`document.querySelector('[data-voice-duration]')?.innerText ?? ''`)
+  check('voix off : un fichier WAV importé devient la voix de la page (0:02), message d\'erreur effacé', /0:02/.test(voiceFileInfo) && (await nBrand('[data-voice-problem]')) === 0, voiceFileInfo)
+  await clickSel('[data-action="voice-remove"]')
+  await sleep(300)
+  await rm(join(exportsDir, 'pick-audio.wav'), { force: true })
 
 
   // notes de l'orateur : saisie par page, affichage en présentation (N), export et import PowerPoint

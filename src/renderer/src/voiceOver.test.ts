@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { withoutVoices, MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, autoSeconds, voiceNeed } from './voiceOver'
+import { withoutVoices, MAX_VOICE_CHARS, MAX_VOICE_SECONDS, pageVoice, pruneVoices, sanitizeVoices, VOICE_DELAY, VOICE_TAIL, autoSeconds, monoMix, voiceNeed } from './voiceOver'
 import type { TrameDocument, TramePage } from './types'
 
 const WEBM = 'data:audio/webm;base64,AAAA'
@@ -92,5 +92,19 @@ describe('autoSeconds (lecture automatique)', () => {
   })
   it('ignore une voix dont les octets manquent', () => {
     expect(autoSeconds(doc([page('a', { id: 'x', duration: 30 })]), page('a', { id: 'x', duration: 30 }), 5)).toBe(5)
+  })
+})
+
+describe('monoMix', () => {
+  it('garde un son mono tel quel', () => {
+    const a = new Float32Array([0.1, -0.2])
+    expect(monoMix([a])).toBe(a)
+  })
+  it('fait la moyenne des voies', () => {
+    const m = monoMix([new Float32Array([1, 0.5, -1]), new Float32Array([0, 0.5, 1])])
+    expect(Array.from(m)).toEqual([0.5, 0.5, 0])
+  })
+  it('rend un son vide pour aucune voie', () => {
+    expect(monoMix([]).length).toBe(0)
   })
 })

@@ -1,8 +1,9 @@
-import { decodeAudio } from '@/audioTrack'
+import { ArrayBufferTarget, Muxer } from 'webm-muxer'
+import { AUDIO_RATE, decodeAudio } from '@/audioTrack'
 import { toBase64 } from '@/clipActions'
-import { MAX_VOICE_CHARS } from '@/voiceOver'
+import { MAX_VOICE_CHARS, MAX_VOICE_SECONDS, monoMix } from '@/voiceOver'
 
-export type VoiceProblem = 'denied' | 'noMic' | 'tooBig' | 'error'
+export type VoiceProblem = 'denied' | 'noMic' | 'tooBig' | 'error' | 'fileTooBig' | 'fileTooLong' | 'fileUnreadable'
 
 /** Un enregistrement en cours. */
 export interface Recorder {
@@ -79,5 +80,54 @@ export async function startRecording(): Promise<Recorder | { error: VoiceProblem
         if (recorder.state === 'inactive') recorder.onstop(new Event('stop'))
         else recorder.stop()
       })
+  }
+}
+
+const VOICE_CONFIG: AudioEncoderConfig = { codec: 'opus', sampleRate: AUDIO_RATE, numberOfChannels: 1, bitrate: BITRATE }
+
+/** Encode un son mono (à `AUDIO_RATE`) en Opus dans un WebM : le même format que l'enregistrement au micro, quel que soit le fichier d'origine. */
+async function encodeVoice(samples: Float32Array): Promise<Uint8Array> {
+  if (typeof AudioEncoder === 'undefined' || !(await AudioEncoder.isConfigSupported(VOICE_CONFIG)).supported) throw new Error('opus')
+  const target = new ArrayBufferTarget()
+  const muxer = new Muxer({ target, audio: { codec: 'A_OPUS', numberOfChannels: 1, sampleRate: AUDIO_RATE } })
+  let failure: Error | null = null
+  const encoder = new AudioEncoder({ output: (chunk, meta) => muxer.addAudioChunk(chunk, meta), error: (e) => (failure = e) })
+  encoder.configure(VOICE_CONFIG)
+  const BLOCK = AUDIO_RATE
+  for (let at = 0; at < samples.length && !failure; at += BLOCK) {
+    const part = samples.subarray(at, at + BLOCK)
+    const block = new AudioData({ format: 'f32-planar', sampleRate: AUDIO_RATE, numberOfFrames: part.length, numberOfChannels: 1, timestamp: Math.round((at * 1_000_000) / AUDIO_RATE), data: part.slice() })
+    encoder.encode(block)
+    block.close()
+  }
+  await encoder.flush()
+  encoder.close()
+  if (failure) throw failure
+  muxer.finalize()
+  return new Uint8Array(target.buffer)
+}
+
+/**
+ * « Importer un fichier audio… » : choisit un fichier (MP3, WAV, M4A, OGG, FLAC…), le décode, le passe en mono et le garde en Opus dans un
+ * WebM, comme un enregistrement. `null` si le choix est annulé.
+ */
+export async function importVoice(): Promise<{ data: string; duration: number } | { error: VoiceProblem; detail?: string } | null> {
+  const picked = await window.trame.pickAudio()
+  if (!picked) return null
+  if ('error' in picked) return { error: picked.error === 'tooBig' ? 'fileTooBig' : 'fileUnreadable' }
+  let audio
+  try {
+    audio = await decodeAudio(picked.bytes)
+  } catch {
+    return { error: 'fileUnreadable' }
+  }
+  if (!audio.channels.length || audio.seconds <= 0) return { error: 'fileUnreadable' }
+  if (audio.seconds > MAX_VOICE_SECONDS) return { error: 'fileTooLong' }
+  try {
+    const bytes = await encodeVoice(monoMix(audio.channels))
+    const data = `data:audio/webm;base64,${toBase64(bytes)}`
+    return data.length > MAX_VOICE_CHARS ? { error: 'tooBig' } : { data, duration: audio.seconds }
+  } catch (err) {
+    return { error: 'error', detail: err instanceof Error ? err.message : String(err) }
   }
 }
