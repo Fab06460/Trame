@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { fileSafeName } from '@/docName'
 import { renderPage } from '@/exportPages'
 import { pageFileName } from '@/pageExport'
-import { exportHtml, hasHtmlClips } from '@/htmlActions'
+import { exportHtml, hasHtmlMedia } from '@/htmlActions'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPptx } from '@/pptxExport'
@@ -40,9 +40,9 @@ async function exportSvg(): Promise<void> {
 
 async function exportHtmlFile(): Promise<void> {
   const { doc } = useEditor.getState()
-  // des clips : la fenêtre propose de les embarquer (le fichier grossit) ; sinon l'export part directement
-  if (hasHtmlClips(doc)) useHtmlDialog.getState().setOpen(true)
-  else await exportHtml(doc, false)
+  // des clips ou des voix off : la fenêtre propose de les embarquer (le fichier grossit) ; sinon l'export part directement
+  if (hasHtmlMedia(doc)) useHtmlDialog.getState().setOpen(true)
+  else await exportHtml(doc, { clips: false, voices: false })
 }
 
 async function exportPdfFile(): Promise<void> {

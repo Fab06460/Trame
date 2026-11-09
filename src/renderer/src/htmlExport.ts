@@ -3,6 +3,7 @@ import { fontFaces, pageToSvg } from '@/svgExport'
 import { pageTransition, type PageTransition } from '@/transition'
 import { pageLinks } from '@/links'
 import { clipElements, clipRange, clipSpeed, clipVolume } from '@/videoClips'
+import { pageVoice, VOICE_DELAY } from '@/voiceOver'
 import type { TrameDocument, TramePage } from '@/types'
 
 /** Textes de l'interface du fichier, dans la langue de l'éditeur au moment de l'export. */
@@ -17,6 +18,10 @@ export interface HtmlLabels {
   noScript: string
   /** « Aller à la page {n} » : `{n}` est remplacé par le numéro de la page visée */
   goPage: string
+  /** boutons de la voix off : couper, rétablir, réécouter */
+  mute: string
+  unmute: string
+  replay: string
 }
 
 export interface PresentationInput {
@@ -32,9 +37,12 @@ export interface PresentationInput {
   labels: HtmlLabels
   /** octets (en base64) des clips vidéo posés dans les pages, par identifiant ; absent = aucun clip joué */
   clips?: Record<string, ClipPayload>
+  /** octets (en base64) des voix off par identifiant, et l'identifiant de la voix de chaque page (null = page muette) ; absent = aucune voix jouée */
+  voices?: Record<string, ClipPayload>
+  voiceIds?: Array<string | null>
 }
 
-/** Un clip embarqué dans le fichier : type de média et octets en base64. */
+/** Un clip ou une voix embarqué dans le fichier : type de média et octets en base64. */
 export interface ClipPayload {
   mime: string
   data: string
@@ -76,6 +84,9 @@ body.idle #bar{opacity:0;pointer-events:none}
 .clip.on{opacity:var(--o,1)}
 .clip[data-manual]{cursor:pointer}
 .lk{position:absolute;display:block;border-radius:4px}
+#bar button.attn{border-color:#fff;animation:pl 1.2s ease-in-out infinite}
+@keyframes pl{50%{background:rgba(255,255,255,.35)}}
+@media (prefers-reduced-motion:reduce){#bar button.attn{animation:none;background:rgba(255,255,255,.3)}}
 .lk:hover,.lk:focus-visible{outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 noscript{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -91,7 +102,8 @@ var count=document.getElementById('count'),live=document.getElementById('live');
 var prev=document.getElementById('prev'),next=document.getElementById('next');
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 var urls={},blobs={};
-[].forEach.call(document.querySelectorAll('script[data-clip-data]'),function(s){blobs[s.getAttribute('data-clip-data')]=s});
+[].forEach.call(document.querySelectorAll('script[data-clip-data]'),function(s){blobs['c:'+s.getAttribute('data-clip-data')]=s});
+[].forEach.call(document.querySelectorAll('script[data-voice-data]'),function(s){blobs['v:'+s.getAttribute('data-voice-data')]=s});
 function srcOf(id){
   if(urls[id])return urls[id];var s=blobs[id];if(!s)return null;
   var b=atob(s.textContent.trim()),n=b.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=b.charCodeAt(i);
@@ -107,7 +119,7 @@ function tick(){raf=0;var any=false;
   if(any)raf=requestAnimationFrame(tick);
 }
 function arm(v){
-  if(v.src)return true;var u=srcOf(v.getAttribute('data-clip'));if(!u)return false;
+  if(v.src)return true;var u=srcOf('c:'+v.getAttribute('data-clip'));if(!u)return false;
   v.src=u;v.muted=v.hasAttribute('data-muted');v.volume=+v.getAttribute('data-vol');
   v.defaultPlaybackRate=v.playbackRate=+v.getAttribute('data-speed');v.preservesPitch=false;
   v.addEventListener('loadedmetadata',function(){if(v.paused)v.currentTime=range(v).s});
@@ -120,6 +132,24 @@ function enterClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function
   if(!arm(v)||v.hasAttribute('data-manual'))return;
   var p=v.play();if(p&&p.catch)p.catch(function(){v.controls=true;v.classList.add('on')});
 })}
+var aud=null,vt=0,muted=false,blocked=false;
+var mute=document.getElementById('mute'),replay=document.getElementById('replay');
+function voiceUi(){
+  if(!mute)return;
+  mute.textContent=muted?'\uD83D\uDD07':'\uD83D\uDD0A';mute.setAttribute('aria-label',muted?D.unmute:D.mute);mute.setAttribute('aria-pressed',muted?'true':'false');
+  var has=cur>=0&&!!D.vo[cur];replay.disabled=!has;replay.classList.toggle('attn',has&&blocked);
+}
+function stopVoice(){clearTimeout(vt);if(aud){aud.pause();aud=null}}
+function startVoice(wait){
+  stopVoice();var id=D.vo&&cur>=0?D.vo[cur]:null;
+  if(!id||muted){voiceUi();return}
+  var u=srcOf('v:'+id);if(!u)return;
+  var a=new Audio(u);aud=a;
+  var go=function(){if(aud!==a)return;var p=a.play();if(p&&p.then)p.then(function(){blocked=false;voiceUi()},function(){if(aud===a){blocked=true;voiceUi()}})};
+  if(wait)vt=setTimeout(go,D.vd*1000);else go();
+  voiceUi();
+}
+function again(){if(!D.vo)return;muted=false;startVoice(false)}
 function label(i){return D.page.replace('{page}',i+1).replace('{total}',N)}
 function finish(){if(busy){busy.forEach(function(a){try{a.cancel()}catch(e){}});busy=null}slides.forEach(function(s,i){s.classList.toggle('on',i===cur);s.style.zIndex='';s.setAttribute('aria-hidden',i===cur?'false':'true')})}
 function show(to,instant){
@@ -127,7 +157,8 @@ function show(to,instant){
   finish();var from=cur;cur=to;
   var inc=slides[to],out=from>=0?slides[from]:null;
   if(out)leaveClips(out);
-  inc.classList.add('on');inc.setAttribute('aria-hidden','false');enterClips(inc);
+  stopVoice();
+  inc.classList.add('on');inc.setAttribute('aria-hidden','false');enterClips(inc);startVoice(true);
   var t=from<0?'none':(to<from?D.tr[from]:D.tr[to]),dir=to>=from?1:-1;
   if(!out||instant||reduce||t==='none'||!inc.animate){finish()}
   else{
@@ -152,6 +183,7 @@ document.addEventListener('keydown',function(e){
   else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'||k==='Backspace')go(-1);
   else if(k==='Home')show(0);else if(k==='End')show(N-1);
   else if(k==='f'||k==='F')fs();
+  else if(k==='r'||k==='R')again();
   else h=false;
   if(h)e.preventDefault();
 });
@@ -162,6 +194,7 @@ stage.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.tou
 stage.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){go(dx<0?1:-1);e.preventDefault()}},{passive:false});
 prev.onclick=function(){go(-1)};next.onclick=function(){go(1)};
 document.getElementById('full').onclick=fs;
+if(mute){mute.onclick=function(){muted=!muted;if(muted)stopVoice();else startVoice(false);voiceUi()};replay.onclick=again}
 var idle;function wake(){document.body.classList.remove('idle');clearTimeout(idle);idle=setTimeout(function(){document.body.classList.add('idle')},3000)}
 ['mousemove','keydown','touchstart'].forEach(function(n){document.addEventListener(n,wake,{passive:true})});wake();
 setTimeout(function(){var h=document.getElementById('help');if(h)h.style.opacity=0},5000);
@@ -173,9 +206,11 @@ var start=parseInt(location.hash.slice(1),10);show(start>=1&&start<=N?start-1:0,
 /** Le fichier HTML complet : une seule page autonome, sans réseau (la politique de sécurité interdit toute connexion). */
 export function buildPresentationHtml(input: PresentationInput): string {
   const { labels: l } = input
-  const data = { tr: input.transitions, page: l.page }
+  const voices = Object.entries(input.voices ?? {})
+  const withVoices = voices.length > 0 && !!input.voiceIds
+  const data = { tr: input.transitions, page: l.page, ...(withVoices ? { vo: input.voiceIds, vd: VOICE_DELAY, mute: l.mute, unmute: l.unmute } : {}) }
   const clips = Object.entries(input.clips ?? {})
-  const media = clips.length ? ' media-src blob:;' : ''
+  const media = clips.length || withVoices ? ' media-src blob:;' : ''
   return (
     `<!doctype html>\n<html lang="${escXml(l.lang)}">\n<head>\n<meta charset="utf-8">\n` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">\n` +
@@ -186,10 +221,11 @@ export function buildPresentationHtml(input: PresentationInput): string {
     input.slides.map((svg, i) => `<section class="slide" aria-label="${escXml(l.page.replace('{page}', String(i + 1)).replace('{total}', String(input.slides.length)))}">${svg}</section>`).join('\n') +
     `\n</div></div>\n` +
     `<div id="help">${escXml(l.help)}</div>\n` +
-    `<div id="bar"><button id="prev" aria-label="${escXml(l.previous)}">←</button><span id="count"></span><button id="next" aria-label="${escXml(l.next)}">→</button><button id="full" aria-label="${escXml(l.fullscreen)}">⛶</button></div>\n` +
+    `<div id="bar"><button id="prev" aria-label="${escXml(l.previous)}">←</button><span id="count"></span><button id="next" aria-label="${escXml(l.next)}">→</button>${withVoices ? `<button id="mute" aria-pressed="false" aria-label="${escXml(l.mute)}">\u{1F50A}</button><button id="replay" aria-label="${escXml(l.replay)}" title="${escXml(l.replay)}">↻</button>` : ''}<button id="full" aria-label="${escXml(l.fullscreen)}">⛶</button></div>\n` +
     `<div id="live" class="sr" aria-live="polite"></div>\n` +
     `<noscript>${escXml(l.noScript)}</noscript>\n` +
     clips.map(([id, c]) => `<script type="text/plain" data-clip-data="${escXml(id)}" data-mime="${escXml(c.mime)}">${c.data}</script>\n`).join('') +
+    (withVoices ? voices.map(([id, c]) => `<script type="text/plain" data-voice-data="${escXml(id)}" data-mime="${escXml(c.mime)}">${c.data}</script>\n`).join('') : '') +
     `<script type="application/json" id="data">${jsonForScript(data)}</script>\n` +
     `<script>${SCRIPT}</script>\n</body>\n</html>\n`
   )
@@ -246,19 +282,37 @@ export function clipPayloads(doc: Pick<TrameDocument, 'clips' | 'pages'>): Recor
 /** Taille ajoutée au fichier par les clips (en octets du fichier HTML : le base64 y est écrit tel quel). */
 export const clipsHtmlSize = (doc: Pick<TrameDocument, 'clips' | 'pages'>): number => Object.values(clipPayloads(doc)).reduce((n, c) => n + c.data.length, 0)
 
+/** Les octets (base64) de la voix off de chaque page, une fois par voix. */
+export function voicePayloads(doc: Pick<TrameDocument, 'voices' | 'pages'>): Record<string, ClipPayload> {
+  const out: Record<string, ClipPayload> = {}
+  for (const page of doc.pages) {
+    const voice = pageVoice(doc, page)
+    if (!voice || out[voice.id]) continue
+    const head = /^data:(audio\/[a-z0-9.+-]+);base64,/i.exec(voice.data.slice(0, 100))
+    if (head) out[voice.id] = { mime: head[1].toLowerCase(), data: voice.data.slice(head[0].length) }
+  }
+  return out
+}
+
+/** Taille ajoutée au fichier par les voix off. */
+export const voicesHtmlSize = (doc: Pick<TrameDocument, 'voices' | 'pages'>): number => Object.values(voicePayloads(doc)).reduce((n, c) => n + c.data.length, 0)
+
 export interface HtmlOptions {
   /** embarquer et jouer les clips vidéo ; sinon chaque clip reste son image d'aperçu */
   clips: boolean
+  /** embarquer et jouer les voix off ; sinon les pages sont muettes */
+  voices: boolean
 }
 
 /** Présentation web d'un document : chaque page en SVG vectoriel (textes, polices incorporées une fois pour tout le document, images). */
-export async function documentToHtml(doc: TrameDocument, labels: HtmlLabels, options: HtmlOptions = { clips: false }): Promise<string> {
+export async function documentToHtml(doc: TrameDocument, labels: HtmlLabels, options: HtmlOptions = { clips: false, voices: false }): Promise<string> {
   const slides: string[] = []
   for (let i = 0; i < doc.pages.length; i++) {
     const page = doc.pages[i]
     slides.push(inlineSvg(await pageToSvg(doc, page, { embedFonts: false }), i) + (options.clips ? clipVideos(doc, page) : '') + linkZones(doc, page, labels.goPage))
   }
   const clips = options.clips ? clipPayloads(doc) : undefined
+  const voices = options.voices ? voicePayloads(doc) : undefined
   return buildPresentationHtml({
     title: doc.name,
     width: doc.width,
@@ -267,6 +321,7 @@ export async function documentToHtml(doc: TrameDocument, labels: HtmlLabels, opt
     transitions: doc.pages.map((_, i) => pageTransition(doc, i)),
     fonts: await fontFaces(doc.pages),
     labels,
-    ...(clips && Object.keys(clips).length ? { clips } : {})
+    ...(clips && Object.keys(clips).length ? { clips } : {}),
+    ...(voices && Object.keys(voices).length ? { voices, voiceIds: doc.pages.map((p) => (pageVoice(doc, p) ? p.voice!.id : null)) } : {})
   })
 }

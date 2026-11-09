@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildPresentationHtml, clipPayloads, clipsHtmlSize, clipVideos, inlineSvg, linkZones, prefixIds, type HtmlLabels } from './htmlExport'
+import { buildPresentationHtml, clipPayloads, clipsHtmlSize, clipVideos, inlineSvg, linkZones, prefixIds, voicePayloads, voicesHtmlSize, type HtmlLabels } from './htmlExport'
 
-const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}' }
+const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}', mute: 'Couper', unmute: 'Rétablir', replay: 'Réécouter' }
 const svg = (id: string): string => `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><title>Doc</title><defs><linearGradient id="${id}"/></defs><rect fill="url(#${id})"/></svg>\n`
 
 describe('présentation web', () => {
@@ -125,5 +125,40 @@ describe('clips vidéo dans la présentation web', () => {
     const code = /<script>([\s\S]*)<\/script>\s*<\/body>/.exec(withClips)![1]
     expect(() => new Function(code)).not.toThrow()
     expect(withClips.match(/<\/script>/g)).toHaveLength(3) // clip + données + lecteur
+  })
+})
+
+describe('voix off dans la présentation web', () => {
+  const page = (id: string, voice?: { id: string; duration: number }) => ({ id, background: '#fff', elements: [], ...(voice ? { voice } : {}) })
+  const doc = { voices: { v1: 'data:audio/webm;base64,GkXfowE=', v2: 'data:audio/ogg;base64,T2dnUw==', orphan: 'data:audio/webm;base64,AAAA' }, pages: [page('a', { id: 'v1', duration: 3 }), page('b'), page('c', { id: 'v2', duration: 2 }), page('d', { id: 'v1', duration: 3 })] }
+  it('les octets de chaque voix utilisée, une seule fois, avec leur type', () => {
+    expect(voicePayloads(doc as never)).toEqual({ v1: { mime: 'audio/webm', data: 'GkXfowE=' }, v2: { mime: 'audio/ogg', data: 'T2dnUw==' } })
+    expect(voicesHtmlSize(doc as never)).toBe('GkXfowE='.length + 'T2dnUw=='.length)
+  })
+  it('refuse un son dont le type n\'est pas audio, ou une voix dont les octets manquent', () => {
+    expect(voicePayloads({ voices: { v1: 'data:text/html;base64,PHNjcmlwdD4=' }, pages: [page('a', { id: 'v1', duration: 1 })] } as never)).toEqual({})
+    expect(voicePayloads({ voices: {}, pages: [page('a', { id: 'v1', duration: 1 })] } as never)).toEqual({})
+  })
+  const html = buildPresentationHtml({ title: 't', width: 1920, height: 1080, slides: ['<svg/>', '<svg/>'], transitions: ['none', 'none'], fonts: '', labels, voices: { v1: { mime: 'audio/webm', data: 'GkXfowE=' } }, voiceIds: ['v1', null] })
+  it('le fichier porte les octets, l\'identifiant de la voix de chaque page et le délai de départ', () => {
+    expect(html).toContain('<script type="text/plain" data-voice-data="v1" data-mime="audio/webm">GkXfowE=</script>')
+    const data = JSON.parse(/<script type="application\/json" id="data">(.*?)<\/script>/.exec(html)![1])
+    expect(data.vo).toEqual(['v1', null])
+    expect(data.vd).toBe(0.3)
+  })
+  it('la barre a le bouton de son et celui de la réécoute ; la politique de sécurité n\'ouvre que les sources locales', () => {
+    expect(html).toContain('id="mute"')
+    expect(html).toContain('id="replay"')
+    expect(html).toContain("default-src 'none'; img-src data:; media-src blob:;")
+    expect(html).not.toMatch(/<script[^>]+src=/)
+  })
+  it('sans voix, rien de tout cela : pas de bouton, pas de données, pas de source de média', () => {
+    const plain = buildPresentationHtml({ title: 't', width: 1, height: 1, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels })
+    expect(plain).not.toContain('id="mute"')
+    expect(plain).not.toContain('media-src')
+    expect(plain).not.toContain('"vo"')
+  })
+  it('le lecteur reste du JavaScript valide', () => {
+    expect(() => new Function(/<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
   })
 })

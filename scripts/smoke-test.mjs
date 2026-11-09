@@ -3700,7 +3700,7 @@ try {
   await waitFor(async () => (await nBrand('[data-html-dialog]')) === 1, 8000)
   await clickSel('[data-field="htmlClips"]')
   await sleep(200)
-  check('présentation web : case décochée, la fenêtre annonce que les clips restent des images', /image fixe/.test(await run(`document.querySelector('[data-html-size]').innerText`)))
+  check('présentation web : case décochée, la fenêtre annonce que les clips restent des images', /images fixes/.test(await run(`document.querySelector('[data-html-size]').innerText`)))
   await clickSel('[data-action="html-export"]')
   await waitFor(async () => (await nBrand('[data-html-dialog]')) === 0 && existsSync(htmlFile), 30000)
   const bareHtml = existsSync(htmlFile) ? await readFile(htmlFile, 'utf-8') : ''
@@ -3865,6 +3865,29 @@ try {
   await waitFor(async () => (await nBrand('[data-voice-player]')) === 1, 15000)
   const voiceFileInfo = await run(`document.querySelector('[data-voice-duration]')?.innerText ?? ''`)
   check('voix off : un fichier WAV importé devient la voix de la page (0:02), message d\'erreur effacé', /0:02/.test(voiceFileInfo) && (await nBrand('[data-voice-problem]')) === 0, voiceFileInfo)
+  // présentation web (HTML) : la voix off est proposée à l'export et embarquée dans le fichier
+  const voiceHtmlFile = join(exportsDir, 'Sans titre.html')
+  await rm(voiceHtmlFile, { force: true })
+  await exportVia('html')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 1, 8000)
+  check('présentation web : avec une voix off, la fenêtre propose « Inclure la voix off » (cochée) et pas les clips', (await nBrand('[data-field="htmlVoices"]')) === 1 && (await nBrand('[data-field="htmlClips"]')) === 0 && (await run(`document.querySelector('[data-field="htmlVoices"]').checked`)) === true && Number(await run(`document.querySelector('[data-html-size]').dataset.htmlSize`)) > 1000)
+  await clickSel('[data-action="html-export"]')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 0 && existsSync(voiceHtmlFile), 30000)
+  await sleep(500)
+  const voiceHtml = existsSync(voiceHtmlFile) ? await readFile(voiceHtmlFile, 'utf-8') : ''
+  const voiceParts = { data: /data-voice-data="[^"]+" data-mime="audio\/webm">GkXf/.test(voiceHtml), buttons: voiceHtml.includes('id="mute"') && voiceHtml.includes('id="replay"'), csp: voiceHtml.includes("default-src 'none'; img-src data:; media-src blob:;"), ids: /"vo":\["[^"]+"/.test(voiceHtml) }
+  check('présentation web : le fichier contient la voix (WebM), les boutons son et réécoute, et la voix de la page', Object.values(voiceParts).every(Boolean), JSON.stringify(voiceParts))
+  await rm(voiceHtmlFile, { force: true })
+  await exportVia('html')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 1, 8000)
+  await clickSel('[data-field="htmlVoices"]')
+  await sleep(200)
+  await clickSel('[data-action="html-export"]')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 0 && existsSync(voiceHtmlFile), 30000)
+  await sleep(500)
+  const mutedHtml = existsSync(voiceHtmlFile) ? await readFile(voiceHtmlFile, 'utf-8') : ''
+  check('présentation web : case décochée, le fichier est muet (ni voix, ni boutons, ni source de média)', mutedHtml.startsWith('<!doctype html>') && !mutedHtml.includes('type="text/plain"') && !mutedHtml.includes('id="mute"') && !mutedHtml.includes('media-src'))
+  await rm(voiceHtmlFile, { force: true })
   await clickSel('[data-action="voice-remove"]')
   await sleep(300)
   await rm(join(exportsDir, 'pick-audio.wav'), { force: true })

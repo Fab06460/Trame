@@ -1,5 +1,5 @@
 import { fileSafeName } from '@/docName'
-import { clipPayloads, documentToHtml, type HtmlLabels } from '@/htmlExport'
+import { clipPayloads, documentToHtml, voicePayloads, type HtmlLabels, type HtmlOptions } from '@/htmlExport'
 import { useLocale, t } from '@/i18n'
 import type { TrameDocument } from '@/types'
 
@@ -13,15 +13,18 @@ export function htmlLabels(): HtmlLabels {
     fullscreen: t('html.fullscreen'),
     help: t('html.help'),
     noScript: t('html.noscript'),
-    goPage: t('pres.link.page', { n: '{n}' })
+    goPage: t('pres.link.page', { n: '{n}' }),
+    mute: t('html.voice.mute'),
+    unmute: t('html.voice.unmute'),
+    replay: t('html.voice.replay')
   }
 }
 
-/** Le document porte-t-il des clips vidéo à jouer dans la présentation web ? */
-export const hasHtmlClips = (doc: TrameDocument): boolean => Object.keys(clipPayloads(doc)).length > 0
+/** Le document porte-t-il des clips vidéo ou des voix off à jouer dans la présentation web ? */
+export const hasHtmlMedia = (doc: TrameDocument): boolean => Object.keys(clipPayloads(doc)).length > 0 || Object.keys(voicePayloads(doc)).length > 0
 
 /** Fabrique la présentation web et la fait enregistrer (octets directs : avec des clips le fichier peut peser des dizaines de Mo). */
-export async function exportHtml(doc: TrameDocument, clips: boolean): Promise<boolean> {
-  const html = await documentToHtml(doc, htmlLabels(), { clips })
+export async function exportHtml(doc: TrameDocument, options: HtmlOptions): Promise<boolean> {
+  const html = await documentToHtml(doc, htmlLabels(), options)
   return !!(await window.trame.saveExportBytes(new TextEncoder().encode(html), `${fileSafeName(doc.name)}.html`))
 }
