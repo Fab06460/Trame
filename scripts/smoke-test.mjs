@@ -3737,6 +3737,38 @@ try {
   await setPageSeconds('')
   await sleep(300)
   check('durée de page : un champ vide revient à la durée de l\'export', (await nBrand('[data-page-seconds-count]')) === 0 && (await run(`document.querySelector('[data-field="pageSeconds"]').value`)) === '')
+  // lecture automatique « Selon les pages » : la page 1 dure 1 s, la page 2 dure 2 s
+  await gotoPage(0)
+  await setPageSeconds('1')
+  await sleep(250)
+  await gotoPage(1)
+  await setPageSeconds('2')
+  await sleep(250)
+  await gotoPage(0)
+  await click('header.toolbar button', 'Présenter')
+  await waitFor(async () => (await nBrand('[data-pres="auto"]')) === 1, 8000)
+  check('lecture auto : le menu propose « Selon les pages » en dernier', (await run(`[...document.querySelectorAll('[data-pres="auto"] option')].map((o) => o.textContent).at(-1)`)) === 'Selon les pages')
+  const counter = () => run(`document.querySelector('[data-pres="counter"]')?.innerText ?? ''`)
+  const startedPlay = Date.now()
+  await run(`(() => { const s = document.querySelector('[data-pres="auto"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, '-1'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  let toSecond = 0
+  let toThird = 0
+  for (let t = 0; t < 8000 && !toThird; t += 50) {
+    await sleep(50)
+    const c = await counter()
+    if (!toSecond && c.startsWith('2 /')) toSecond = Date.now() - startedPlay
+    if (toSecond && c.startsWith('3 /')) toThird = Date.now() - startedPlay
+  }
+  check('lecture auto « Selon les pages » : la page 1 (1 s) laisse la place à la page 2 au bout d\'environ 1 s', toSecond >= 800 && toSecond <= 2000, String(toSecond))
+  check('lecture auto « Selon les pages » : la page 2 (2 s) reste affichée environ 2 s', toThird - toSecond >= 1700 && toThird - toSecond <= 3000, JSON.stringify({ toSecond, toThird }))
+  await key('Escape')
+  await sleep(400)
+  await gotoPage(0)
+  await setPageSeconds('')
+  await sleep(200)
+  await gotoPage(1)
+  await setPageSeconds('')
+  await sleep(200)
 
   // voix off d'une page : enregistrement (micro fictif des tests), écoute, durée de la page dans la vidéo, voix dans la bande son
   await gotoPage(0)

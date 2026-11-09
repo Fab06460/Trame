@@ -6,7 +6,8 @@ import { PresentationClip } from '@/components/PresentationClip'
 import { PresentationLinks } from '@/components/PresentationLinks'
 import { PresentationVoice } from '@/components/PresentationVoice'
 import { clipElements, withoutClips } from '@/videoClips'
-import { autoSeconds, pageVoice, withoutVoices } from '@/voiceOver'
+import { AUTO_CHOICES, AUTO_PAGES, pageAutoSeconds } from '@/autoPlay'
+import { pageVoice, withoutVoices } from '@/voiceOver'
 import { pageRect } from '@/annotation'
 import { nextPosition, pageAtStep, prevPosition, stepsOf } from '@/builds'
 import { addStroke, INK_COLORS, type InkTool, type Stroke } from '@/annotation'
@@ -15,7 +16,6 @@ import { usePresentation } from '@/store/presentation'
 import { DEFAULT_TRANSITION, TRANSITIONS, TRANSITION_MS, pageTransition, transitionBetween, transitionDirection, transitionLabel, type PageTransition } from '@/transition'
 import { useT } from '@/i18n'
 
-const AUTO_CHOICES = [0, 3, 5, 10, 15]
 /** Plus grand côté d'une image de présentation : au-delà, rien de visible sur un écran, mais beaucoup de mémoire. */
 const MAX_SIDE = 4096
 
@@ -188,7 +188,7 @@ export function PresentationMode(): React.JSX.Element | null {
         // transition de la page d'arrivée (en reculant : celle de la page quittée), voir transitionBetween
         // même page, un clic de plus ou de moins : l'élément apparaît (ou disparaît) en fondu
         const move = prev && prev.index !== index ? transitionBetween(doc, prev.index, index) : prev && prev.step !== step ? ('fade' as const) : null
-        if (prev && move && move !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto > 0), n: ++moves.current, kind: move })
+        if (prev && move && move !== 'none') setLeaving({ ...prev, dir: transitionDirection(prev.index, index, doc.pages.length, auto !== 0), n: ++moves.current, kind: move })
         // la classe de l'image arrivante ne change plus ensuite (un changement relancerait l'animation)
         const entry = { index, step, url, kind: move ?? (prev?.index === index ? prev.kind : pageTransition(doc, index)) }
         shown.current = entry
@@ -211,13 +211,13 @@ export function PresentationMode(): React.JSX.Element | null {
 
   // lecture automatique : les éléments qui apparaissent pas à pas sont montrés d'emblée (personne ne clique)
   useEffect(() => {
-    if (active && auto > 0) usePresentation.getState().go(usePresentation.getState().index, 'end')
+    if (active && auto !== 0) usePresentation.getState().go(usePresentation.getState().index, 'end')
   }, [active, auto])
 
   // lecture automatique (boucle)
   useEffect(() => {
     if (!active || !doc || auto === 0 || paused) return
-    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1, 'end'), autoSeconds(doc, doc.pages[index], auto) * 1000)
+    const t = setTimeout(() => usePresentation.getState().go(index + 1 >= doc.pages.length ? 0 : index + 1, 'end'), pageAutoSeconds(doc, doc.pages[index], auto) * 1000)
     return () => clearTimeout(t)
   }, [active, doc, auto, paused, index])
 
@@ -346,7 +346,7 @@ export function PresentationMode(): React.JSX.Element | null {
             {t('pres.auto')}
             <select data-pres="auto" value={auto} onChange={(e) => { setAuto(Number(e.target.value)); setPaused(false); e.currentTarget.blur() }}>
               {AUTO_CHOICES.map((s) => (
-                <option key={s} value={s}>{s === 0 ? t('pres.auto.none') : t('pres.auto.seconds', { s })}</option>
+                <option key={s} value={s}>{s === 0 ? t('pres.auto.none') : s === AUTO_PAGES ? t('pres.auto.pages') : t('pres.auto.seconds', { s })}</option>
               ))}
             </select>
           </label>
