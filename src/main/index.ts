@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, net, screen, session, shell, systemPreferences, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, nativeTheme, net, screen, session, shell, systemPreferences, type MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'fs/promises'
@@ -105,7 +105,7 @@ function createWindow(): void {
     minWidth: 760,
     minHeight: 420,
     title: 'Trame',
-    backgroundColor: '#1e1f24',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1f24' : '#eef0f5',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     // Windows et Linux : pas de barre de menus Electron en permanence (Alt la montre) ; l'application a sa propre barre d'outils
     autoHideMenuBar: process.platform !== 'darwin',

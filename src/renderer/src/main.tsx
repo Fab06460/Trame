@@ -3,7 +3,10 @@ import App from './App'
 import { SpeakerView } from './components/SpeakerView'
 import { loadFonts } from './fonts'
 import { loadInstalledFonts } from './store/fonts'
+import { startTheme } from './store/theme'
 import './styles.css'
+
+startTheme()
 
 // les polices ajoutées en ligne sont prêtes avant le premier affichage (sinon le texte serait mesuré avec une police de remplacement)
 Promise.all([loadFonts(), loadInstalledFonts()]).then(() =>

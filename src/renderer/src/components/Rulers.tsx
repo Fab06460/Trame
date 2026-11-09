@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { rulerTicks } from '@/rulerMath'
 import { selectPage, useEditor } from '@/store/editor'
+import { useTheme } from '@/store/theme'
 import { useView } from '@/store/view'
 import type { Guide } from '@/types'
 import { useT } from '@/i18n'
@@ -8,7 +9,12 @@ import { useT } from '@/i18n'
 /** Épaisseur des règles, en pixels écran. */
 export const RULER = 22
 
-const COLORS = { bg: '#272830', page: '#3a3c4a', tick: '#8b8d9c', text: '#c9cad6', cursor: '#7c5cff' }
+/** Couleurs des règles : celles du thème en cours, lues dans la feuille de style (le dessin est fait à la main dans un canvas). */
+function rulerColors(): { bg: string; page: string; tick: string; text: string; cursor: string } {
+  const css = getComputedStyle(document.documentElement)
+  const v = (name: string): string => css.getPropertyValue(name).trim()
+  return { bg: v('--panel'), page: v('--ruler-page'), tick: v('--ruler-tick'), text: v('--ruler-text'), cursor: v('--accent') }
+}
 
 /**
  * Règles graduées (en pixels de design) et repères d'alignement.
@@ -27,6 +33,7 @@ export function Rulers(): React.JSX.Element {
   const docW = useView((v) => v.docW)
   const docH = useView((v) => v.docH)
   const settings = useView((v) => v.settings)
+  const theme = useTheme((s) => s.theme)
   const guides = useEditor((s) => selectPage(s).guides)
 
   const scale = fit * zoom
@@ -65,6 +72,7 @@ export function Rulers(): React.JSX.Element {
   useEffect(() => {
     if (!settings.rulers) return
     const dpr = window.devicePixelRatio || 1
+    const COLORS = rulerColors()
     const draw = (canvas: HTMLCanvasElement | null, horizontal: boolean): void => {
       if (!canvas) return
       const length = horizontal ? viewW : viewH
@@ -108,7 +116,7 @@ export function Rulers(): React.JSX.Element {
     // la règle de gauche est dessinée à plat puis tournée par CSS : on trace donc la graduation « horizontalement »
     draw(topRef.current, true)
     draw(leftRef.current, false)
-  }, [settings.rulers, viewW, viewH, offX, offY, scale, docW, docH, pointer])
+  }, [settings.rulers, viewW, viewH, offX, offY, scale, docW, docH, pointer, theme])
 
   /** Position de design (arrondie au pixel) sous le pointeur, selon l'orientation du repère. */
   const toDesign = (e: { clientX: number; clientY: number }, orientation: Guide['orientation']): number => {

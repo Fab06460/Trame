@@ -3,6 +3,8 @@ import { LOCALES } from '@shared/i18n'
 import { recapHidden, setRecapHidden } from '@/store/timingRecap'
 import { useLocale, useT } from '@/i18n'
 import { useSettingsDialog } from '@/store/settingsDialog'
+import { useTheme } from '@/store/theme'
+import { THEME_MODES, type ThemeMode } from '@/theme'
 import { useUpdate } from '@/store/update'
 import { useView, type ViewSettings } from '@/store/view'
 import type { SpellUiState } from '../../../preload'
@@ -29,6 +31,7 @@ function Dialog(): React.JSX.Element {
   const locale = useLocale((s) => s.locale)
   const view = useView((s) => s.settings)
   const update = useUpdate((s) => s.state)
+  const themeMode = useTheme((s) => s.mode)
   const [reopen, setReopen] = useState<boolean | null>(null)
   const [spell, setSpell] = useState<SpellUiState | null>(null)
   const [recapOff, setRecapOff] = useState(recapHidden)
@@ -65,6 +68,14 @@ function Dialog(): React.JSX.Element {
             <select data-field="language" value={locale} aria-label={t('lang.title')} onChange={(e) => useLocale.getState().setLocale(e.target.value)}>
               {LOCALES.map((l) => (
                 <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="settings-line" title={t('settings.theme')}>
+            <span>{t('settings.theme')}</span>
+            <select data-field="theme" value={themeMode} aria-label={t('settings.theme')} onChange={(e) => useTheme.getState().setMode(e.target.value as ThemeMode)}>
+              {THEME_MODES.map((m) => (
+                <option key={m} value={m}>{t(`settings.theme.${m}`)}</option>
               ))}
             </select>
           </label>
