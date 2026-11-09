@@ -16,7 +16,9 @@ export function htmlLabels(): HtmlLabels {
     goPage: t('pres.link.page', { n: '{n}' }),
     mute: t('html.voice.mute'),
     unmute: t('html.voice.unmute'),
-    replay: t('html.voice.replay')
+    replay: t('html.voice.replay'),
+    play: t('html.auto.play'),
+    pause: t('html.auto.pause')
   }
 }
 

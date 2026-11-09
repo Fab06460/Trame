@@ -1030,6 +1030,8 @@ export const es: Catalog = {
   'html.voice.mute': 'Silenciar la voz en off',
   'html.voice.unmute': 'Activar la voz en off',
   'html.voice.replay': 'Volver a escuchar la voz de la página (R)',
+  'html.auto.play': "Iniciar el avance automático (P)",
+  'html.auto.pause': "Detener el avance automático (P)",
   'html.clips.size': 'Tamaño estimado del archivo: {size}',
   'html.clips.without': 'Sin ellos, los clips quedan como imágenes fijas (su vista previa) y las páginas, mudas.',
   'html.clips.big': 'Un archivo tan grande puede ser rechazado por un correo o un servicio para compartir, y se abre despacio.',

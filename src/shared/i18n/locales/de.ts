@@ -1030,6 +1030,8 @@ export const de: Catalog = {
   'html.voice.mute': 'Sprecherstimme stummschalten',
   'html.voice.unmute': 'Sprecherstimme einschalten',
   'html.voice.replay': 'Stimme dieser Seite erneut abspielen (R)',
+  'html.auto.play': "Automatischen Seitenwechsel starten (P)",
+  'html.auto.pause': "Automatischen Seitenwechsel anhalten (P)",
   'html.clips.size': 'Geschätzte Dateigröße: {size}',
   'html.clips.without': 'Ohne sie bleiben Clips Standbilder (ihre Vorschau) und die Seiten stumm.',
   'html.clips.big': 'Eine so große Datei wird von E-Mail- oder Freigabediensten möglicherweise abgelehnt und öffnet sich langsam.',

@@ -1030,6 +1030,8 @@ export const en: Catalog = {
   'html.voice.mute': 'Mute the voice-over',
   'html.voice.unmute': 'Unmute the voice-over',
   'html.voice.replay': 'Replay this page\'s voice (R)',
+  'html.auto.play': "Start automatic advance (P)",
+  'html.auto.pause': "Pause automatic advance (P)",
   'html.clips.size': 'Estimated file size: {size}',
   'html.clips.without': 'Without them, clips stay still images (their preview) and pages are silent.',
   'html.clips.big': 'A file this large may be refused by an email service or a sharing service, and opens slowly.',

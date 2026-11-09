@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildPresentationHtml, clipPayloads, clipsHtmlSize, clipVideos, inlineSvg, linkZones, prefixIds, voicePayloads, voicesHtmlSize, type HtmlLabels } from './htmlExport'
 
-const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}', mute: 'Couper', unmute: 'Rétablir', replay: 'Réécouter' }
+const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}', mute: 'Couper', unmute: 'Rétablir', replay: 'Réécouter', play: 'Lancer', pause: 'Pause' }
 const svg = (id: string): string => `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><title>Doc</title><defs><linearGradient id="${id}"/></defs><rect fill="url(#${id})"/></svg>\n`
 
 describe('présentation web', () => {
@@ -157,6 +157,23 @@ describe('voix off dans la présentation web', () => {
     expect(plain).not.toContain('id="mute"')
     expect(plain).not.toContain('media-src')
     expect(plain).not.toContain('"vo"')
+  })
+  it('le lecteur reste du JavaScript valide', () => {
+    expect(() => new Function(/<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
+  })
+})
+
+describe('lecture automatique dans la présentation web', () => {
+  const base = { title: 't', width: 1920, height: 1080, transitions: ['none', 'none'] as never, fonts: '', labels }
+  const html = buildPresentationHtml({ ...base, slides: ['<svg/>', '<svg/>'], seconds: [4, 7.5] })
+  it('le fichier porte la durée de chaque page et un bouton de lecture, arrêté au départ', () => {
+    const data = JSON.parse(/<script type="application\/json" id="data">(.*?)<\/script>/.exec(html)![1])
+    expect(data.au).toEqual([4, 7.5])
+    expect(html).toContain('id="auto" aria-pressed="false"')
+  })
+  it('pas de bouton pour une page seule ni sans durées', () => {
+    expect(buildPresentationHtml({ ...base, slides: ['<svg/>'], transitions: ['none'], seconds: [4] })).not.toContain('id="auto"')
+    expect(buildPresentationHtml({ ...base, slides: ['<svg/>', '<svg/>'] })).not.toContain('id="auto"')
   })
   it('le lecteur reste du JavaScript valide', () => {
     expect(() => new Function(/<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()

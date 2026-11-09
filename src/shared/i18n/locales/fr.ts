@@ -1031,6 +1031,8 @@ export const fr = {
   'html.voice.mute': 'Couper la voix off',
   'html.voice.unmute': 'Rétablir la voix off',
   'html.voice.replay': 'Réécouter la voix de la page (R)',
+  'html.auto.play': "Lancer le défilement automatique (P)",
+  'html.auto.pause': "Arrêter le défilement automatique (P)",
   'html.clips.size': 'Taille estimée du fichier : {size}',
   'html.clips.without': 'Sans eux, les clips restent des images fixes (leur aperçu) et les pages sont muettes.',
   'html.clips.big': 'Un fichier aussi gros peut être refusé par une messagerie ou un service de partage, et s\'ouvre lentement.',

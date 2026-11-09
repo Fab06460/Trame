@@ -4,6 +4,7 @@ import { pageTransition, type PageTransition } from '@/transition'
 import { pageLinks } from '@/links'
 import { clipElements, clipRange, clipSpeed, clipVolume } from '@/videoClips'
 import { pageVoice, VOICE_DELAY } from '@/voiceOver'
+import { AUTO_PAGES, pageAutoSeconds } from '@/autoPlay'
 import type { TrameDocument, TramePage } from '@/types'
 
 /** Textes de l'interface du fichier, dans la langue de l'éditeur au moment de l'export. */
@@ -22,6 +23,9 @@ export interface HtmlLabels {
   mute: string
   unmute: string
   replay: string
+  /** bouton de lecture automatique : lancer, mettre en pause */
+  play: string
+  pause: string
 }
 
 export interface PresentationInput {
@@ -40,6 +44,8 @@ export interface PresentationInput {
   /** octets (en base64) des voix off par identifiant, et l'identifiant de la voix de chaque page (null = page muette) ; absent = aucune voix jouée */
   voices?: Record<string, ClipPayload>
   voiceIds?: Array<string | null>
+  /** secondes passées sur chaque page en lecture automatique ; absent = pas de bouton de lecture automatique */
+  seconds?: number[]
 }
 
 /** Un clip ou une voix embarqué dans le fichier : type de média et octets en base64. */
@@ -132,6 +138,11 @@ function enterClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function
   if(!arm(v)||v.hasAttribute('data-manual'))return;
   var p=v.play();if(p&&p.catch)p.catch(function(){v.controls=true;v.classList.add('on')});
 })}
+var playing=false,pt=0;
+var auto=document.getElementById('auto');
+function autoUi(){if(!auto)return;auto.textContent=playing?'\u23F8':'\u25B6';auto.setAttribute('aria-label',playing?D.pause:D.play);auto.title=playing?D.pause:D.play;auto.setAttribute('aria-pressed',playing?'true':'false')}
+function schedule(){clearTimeout(pt);if(!playing||cur<0)return;if(cur>=N-1){playing=false;autoUi();return}pt=setTimeout(function(){go(1)},D.au[cur]*1000)}
+function toggleAuto(){if(!auto)return;playing=!playing;if(playing&&cur>=N-1)show(0);autoUi();schedule()}
 var aud=null,vt=0,muted=false,blocked=false;
 var mute=document.getElementById('mute'),replay=document.getElementById('replay');
 function voiceUi(){
@@ -172,6 +183,7 @@ function show(to,instant){
   count.textContent=label(to);live.textContent=label(to);
   prev.disabled=to===0;next.disabled=to===N-1;
   try{history.replaceState(null,'','#'+(to+1))}catch(e){}
+  schedule();
 }
 function go(d){show(cur+d)}
 function fs(){var d=document,e=d.documentElement;if(d.fullscreenElement){d.exitFullscreen()}else if(e.requestFullscreen){e.requestFullscreen().catch(function(){})}}
@@ -184,6 +196,7 @@ document.addEventListener('keydown',function(e){
   else if(k==='Home')show(0);else if(k==='End')show(N-1);
   else if(k==='f'||k==='F')fs();
   else if(k==='r'||k==='R')again();
+  else if(k==='p'||k==='P')toggleAuto();
   else h=false;
   if(h)e.preventDefault();
 });
@@ -194,6 +207,7 @@ stage.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.tou
 stage.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){go(dx<0?1:-1);e.preventDefault()}},{passive:false});
 prev.onclick=function(){go(-1)};next.onclick=function(){go(1)};
 document.getElementById('full').onclick=fs;
+if(auto){auto.onclick=toggleAuto;autoUi()}
 if(mute){mute.onclick=function(){muted=!muted;if(muted)stopVoice();else startVoice(false);voiceUi()};replay.onclick=again}
 var idle;function wake(){document.body.classList.remove('idle');clearTimeout(idle);idle=setTimeout(function(){document.body.classList.add('idle')},3000)}
 ['mousemove','keydown','touchstart'].forEach(function(n){document.addEventListener(n,wake,{passive:true})});wake();
@@ -208,7 +222,8 @@ export function buildPresentationHtml(input: PresentationInput): string {
   const { labels: l } = input
   const voices = Object.entries(input.voices ?? {})
   const withVoices = voices.length > 0 && !!input.voiceIds
-  const data = { tr: input.transitions, page: l.page, ...(withVoices ? { vo: input.voiceIds, vd: VOICE_DELAY, mute: l.mute, unmute: l.unmute } : {}) }
+  const withAuto = !!input.seconds && input.slides.length > 1
+  const data = { tr: input.transitions, page: l.page, ...(withAuto ? { au: input.seconds, play: l.play, pause: l.pause } : {}), ...(withVoices ? { vo: input.voiceIds, vd: VOICE_DELAY, mute: l.mute, unmute: l.unmute } : {}) }
   const clips = Object.entries(input.clips ?? {})
   const media = clips.length || withVoices ? ' media-src blob:;' : ''
   return (
@@ -221,7 +236,7 @@ export function buildPresentationHtml(input: PresentationInput): string {
     input.slides.map((svg, i) => `<section class="slide" aria-label="${escXml(l.page.replace('{page}', String(i + 1)).replace('{total}', String(input.slides.length)))}">${svg}</section>`).join('\n') +
     `\n</div></div>\n` +
     `<div id="help">${escXml(l.help)}</div>\n` +
-    `<div id="bar"><button id="prev" aria-label="${escXml(l.previous)}">←</button><span id="count"></span><button id="next" aria-label="${escXml(l.next)}">→</button>${withVoices ? `<button id="mute" aria-pressed="false" aria-label="${escXml(l.mute)}">\u{1F50A}</button><button id="replay" aria-label="${escXml(l.replay)}" title="${escXml(l.replay)}">↻</button>` : ''}<button id="full" aria-label="${escXml(l.fullscreen)}">⛶</button></div>\n` +
+    `<div id="bar"><button id="prev" aria-label="${escXml(l.previous)}">←</button><span id="count"></span><button id="next" aria-label="${escXml(l.next)}">→</button>${withAuto ? `<button id="auto" aria-pressed="false" aria-label="${escXml(l.play)}" title="${escXml(l.play)}">▶</button>` : ''}${withVoices ? `<button id="mute" aria-pressed="false" aria-label="${escXml(l.mute)}">\u{1F50A}</button><button id="replay" aria-label="${escXml(l.replay)}" title="${escXml(l.replay)}">↻</button>` : ''}<button id="full" aria-label="${escXml(l.fullscreen)}">⛶</button></div>\n` +
     `<div id="live" class="sr" aria-live="polite"></div>\n` +
     `<noscript>${escXml(l.noScript)}</noscript>\n` +
     clips.map(([id, c]) => `<script type="text/plain" data-clip-data="${escXml(id)}" data-mime="${escXml(c.mime)}">${c.data}</script>\n`).join('') +
@@ -321,6 +336,7 @@ export async function documentToHtml(doc: TrameDocument, labels: HtmlLabels, opt
     transitions: doc.pages.map((_, i) => pageTransition(doc, i)),
     fonts: await fontFaces(doc.pages),
     labels,
+    seconds: doc.pages.map((p) => pageAutoSeconds(options.voices ? doc : { voices: undefined }, p, AUTO_PAGES)),
     ...(clips && Object.keys(clips).length ? { clips } : {}),
     ...(voices && Object.keys(voices).length ? { voices, voiceIds: doc.pages.map((p) => (pageVoice(doc, p) ? p.voice!.id : null)) } : {})
   })
