@@ -38,7 +38,7 @@ describe('présentation web', () => {
   })
   it('les données du lecteur ne peuvent pas fermer le script', () => {
     const evil = buildPresentationHtml({ title: 't', width: 1, height: 1, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels: { ...labels, page: '</script><b>{page}' } })
-    expect(evil.match(/<\/script>/g)).toHaveLength(2) // données + lecteur, rien de plus
+    expect(evil.match(/<\/script>/g)).toHaveLength(3) // classe js + données + lecteur, rien de plus
     expect(evil).toContain('\\u003c/script>')
   })
   it('transitions résolues par page dans les données', () => {
@@ -46,7 +46,7 @@ describe('présentation web', () => {
     expect(JSON.parse(m[1])).toEqual({ tr: ['fade', 'slide'], page: 'Page {page} sur {total}' })
   })
   it('le lecteur est du JavaScript valide', () => {
-    const code = /<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1]
+    const code = /<script>(?!document\.documentElement)([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1]
     expect(() => new Function(code)).not.toThrow()
   })
 })
@@ -122,9 +122,9 @@ describe('clips vidéo dans la présentation web', () => {
     expect(plain).not.toContain('type="text/plain"')
   })
   it('le lecteur reste du JavaScript valide, et le texte des clips ne referme aucun script', () => {
-    const code = /<script>([\s\S]*)<\/script>\s*<\/body>/.exec(withClips)![1]
+    const code = /<script>(?!document\.documentElement)([\s\S]*)<\/script>\s*<\/body>/.exec(withClips)![1]
     expect(() => new Function(code)).not.toThrow()
-    expect(withClips.match(/<\/script>/g)).toHaveLength(3) // clip + données + lecteur
+    expect(withClips.match(/<\/script>/g)).toHaveLength(4) // classe js + clip + données + lecteur
   })
 })
 
@@ -159,7 +159,7 @@ describe('voix off dans la présentation web', () => {
     expect(plain).not.toContain('"vo"')
   })
   it('le lecteur reste du JavaScript valide', () => {
-    expect(() => new Function(/<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
+    expect(() => new Function(/<script>(?!document\.documentElement)([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
   })
 })
 
@@ -176,6 +176,16 @@ describe('lecture automatique dans la présentation web', () => {
     expect(buildPresentationHtml({ ...base, slides: ['<svg/>', '<svg/>'] })).not.toContain('id="auto"')
   })
   it('le lecteur reste du JavaScript valide', () => {
-    expect(() => new Function(/<script>([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
+    expect(() => new Function(/<script>(?!document\.documentElement)([\s\S]*)<\/script>\s*<\/body>/.exec(html)![1])).not.toThrow()
+  })
+})
+
+describe('aperçu sans JavaScript (Fichiers sur iPhone)', () => {
+  const html = buildPresentationHtml({ title: 't', width: 1920, height: 1080, slides: ['<svg/>', '<svg/>'], transitions: ['none', 'none'], fonts: '', labels })
+  it('sans script, les pages s\'empilent : le mode une page à la fois n\'est activé que par la classe js', () => {
+    expect(html).toContain("<script>document.documentElement.className='js'</script>")
+    expect(html).toContain('html.js .slide{position:absolute;inset:0;display:none')
+    expect(html).toContain('html:not(.js) #bar')
+    expect(html.indexOf('<noscript>')).toBeLessThan(html.indexOf('id="stage"'))
   })
 })

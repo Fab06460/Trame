@@ -73,11 +73,15 @@ const jsonForScript = (v: unknown): string => JSON.stringify(v).replace(/</g, '\
 const STYLE = `
 :root{color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#0e0f12;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
-#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
-#frame{position:relative;aspect-ratio:var(--w)/var(--h);width:min(100vw,calc(100vh*var(--w)/var(--h)));max-height:100vh;overflow:hidden}
-.slide{position:absolute;inset:0;display:none}
-.slide.on{display:block}
+html,body{margin:0;background:#0e0f12;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#frame{width:100%}
+.slide{position:relative;aspect-ratio:var(--w)/var(--h);margin:0 0 12px}
+html:not(.js) #bar,html:not(.js) #help{display:none}
+html.js,html.js body{height:100%;overflow:hidden}
+html.js #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+html.js #frame{position:relative;aspect-ratio:var(--w)/var(--h);width:min(100vw,calc(100vh*var(--w)/var(--h)));max-height:100vh;overflow:hidden}
+html.js .slide{position:absolute;inset:0;display:none;margin:0}
+html.js .slide.on{display:block}
 .slide svg{display:block;width:100%;height:100%}
 #bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(30,31,36,.85);font-size:13px;transition:opacity .3s}
 body.idle #bar{opacity:0;pointer-events:none}
@@ -95,7 +99,7 @@ body.idle #bar{opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){#bar button.attn{animation:none;background:rgba(255,255,255,.3)}}
 .lk:hover,.lk:focus-visible{outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-noscript{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+noscript{display:block;padding:14px 16px;text-align:center;font-size:14px;background:#1e1f24}
 `
 
 /** Lecteur : navigation clavier, clic, balayage tactile, plein écran, lien direct (#3), transitions comme dans l'éditeur. */
@@ -230,15 +234,15 @@ export function buildPresentationHtml(input: PresentationInput): string {
     `<!doctype html>\n<html lang="${escXml(l.lang)}">\n<head>\n<meta charset="utf-8">\n` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">\n` +
     `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:;${media} font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">\n` +
-    `<title>${escXml(input.title)}</title>\n<style>${input.fonts}${STYLE}</style>\n</head>\n` +
+    `<title>${escXml(input.title)}</title>\n<script>document.documentElement.className='js'</script>\n<style>${input.fonts}${STYLE}</style>\n</head>\n` +
     `<body style="--w:${input.width};--h:${input.height}">\n` +
+    `<noscript>${escXml(l.noScript)}</noscript>\n` +
     `<div id="stage"><div id="frame" role="group" aria-roledescription="carousel" aria-label="${escXml(input.title)}">\n` +
     input.slides.map((svg, i) => `<section class="slide" aria-label="${escXml(l.page.replace('{page}', String(i + 1)).replace('{total}', String(input.slides.length)))}">${svg}</section>`).join('\n') +
     `\n</div></div>\n` +
     `<div id="help">${escXml(l.help)}</div>\n` +
     `<div id="bar"><button id="prev" aria-label="${escXml(l.previous)}">←</button><span id="count"></span><button id="next" aria-label="${escXml(l.next)}">→</button>${withAuto ? `<button id="auto" aria-pressed="false" aria-label="${escXml(l.play)}" title="${escXml(l.play)}">▶</button>` : ''}${withVoices ? `<button id="mute" aria-pressed="false" aria-label="${escXml(l.mute)}">\u{1F50A}</button><button id="replay" aria-label="${escXml(l.replay)}" title="${escXml(l.replay)}">↻</button>` : ''}<button id="full" aria-label="${escXml(l.fullscreen)}">⛶</button></div>\n` +
     `<div id="live" class="sr" aria-live="polite"></div>\n` +
-    `<noscript>${escXml(l.noScript)}</noscript>\n` +
     clips.map(([id, c]) => `<script type="text/plain" data-clip-data="${escXml(id)}" data-mime="${escXml(c.mime)}">${c.data}</script>\n`).join('') +
     (withVoices ? voices.map(([id, c]) => `<script type="text/plain" data-voice-data="${escXml(id)}" data-mime="${escXml(c.mime)}">${c.data}</script>\n`).join('') : '') +
     `<script type="application/json" id="data">${jsonForScript(data)}</script>\n` +

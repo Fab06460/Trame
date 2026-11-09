@@ -1023,7 +1023,7 @@ export const en: Catalog = {
   'html.next': 'Next page',
   'html.fullscreen': 'Full screen (F)',
   'html.help': 'Arrows: change page · F: full screen',
-  'html.noscript': 'This presentation needs JavaScript to display.',
+  'html.noscript': 'This preview doesn\'t run JavaScript, so the pages are listed one below the other. To step through them, with voice and videos, open the file in a browser (Safari, Chrome…).',
   'html.clips.hint': 'This document contains video clips or voice-overs. So that the presentation stays one self-contained file, they are placed inside it: the file grows by as much.',
   'html.clips.include': 'Include the video clips ({count})',
   'html.voices.include': 'Include the voice-overs ({count})',

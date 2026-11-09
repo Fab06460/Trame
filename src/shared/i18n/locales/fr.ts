@@ -1024,7 +1024,7 @@ export const fr = {
   'html.next': 'Page suivante',
   'html.fullscreen': 'Plein écran (F)',
   'html.help': 'Flèches : changer de page · F : plein écran',
-  'html.noscript': 'Cette présentation a besoin de JavaScript pour s\'afficher.',
+  'html.noscript': 'Cet aperçu n\'exécute pas JavaScript : les pages sont affichées l\'une sous l\'autre. Pour les faire défiler, avec la voix et les vidéos, ouvrez le fichier dans un navigateur (Safari, Chrome…).',
   'html.clips.hint': 'Ce document contient des clips vidéo ou des voix off. Pour que la présentation reste un seul fichier autonome, ils sont placés dans le fichier : il grossit d\'autant.',
   'html.clips.include': 'Inclure les clips vidéo ({count})',
   'html.voices.include': 'Inclure la voix off ({count})',

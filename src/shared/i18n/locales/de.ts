@@ -1023,7 +1023,7 @@ export const de: Catalog = {
   'html.next': 'Nächste Seite',
   'html.fullscreen': 'Vollbild (F)',
   'html.help': 'Pfeiltasten: Seite wechseln · F: Vollbild',
-  'html.noscript': 'Diese Präsentation benötigt JavaScript zur Anzeige.',
+  'html.noscript': 'Diese Vorschau führt kein JavaScript aus, die Seiten stehen daher untereinander. Zum Blättern, mit Stimme und Videos, öffnen Sie die Datei in einem Browser (Safari, Chrome …).',
   'html.clips.hint': 'Dieses Dokument enthält Videoclips oder Sprecherstimmen. Damit die Präsentation eine einzige eigenständige Datei bleibt, werden sie in die Datei eingebettet: Sie wird entsprechend größer.',
   'html.clips.include': 'Videoclips einbeziehen ({count})',
   'html.voices.include': 'Sprecherstimmen einbeziehen ({count})',

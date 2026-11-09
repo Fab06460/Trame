@@ -1023,7 +1023,7 @@ export const es: Catalog = {
   'html.next': 'Página siguiente',
   'html.fullscreen': 'Pantalla completa (F)',
   'html.help': 'Flechas: cambiar de página · F: pantalla completa',
-  'html.noscript': 'Esta presentación necesita JavaScript para mostrarse.',
+  'html.noscript': 'Esta vista previa no ejecuta JavaScript, por eso las páginas aparecen una bajo otra. Para pasarlas, con voz y vídeos, abra el archivo en un navegador (Safari, Chrome…).',
   'html.clips.hint': 'Este documento contiene clips de vídeo o voces en off. Para que la presentación siga siendo un único archivo autónomo, se incluyen en él: el archivo crece otro tanto.',
   'html.clips.include': 'Incluir los clips de vídeo ({count})',
   'html.voices.include': 'Incluir las voces en off ({count})',
