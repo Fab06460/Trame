@@ -60,7 +60,7 @@ export function HtmlExportDialog(): React.JSX.Element | null {
         {message && <div className="warn" role="status" data-html-message>{message}</div>}
         <div className="row end">
           <button data-action="html-close" onClick={close} disabled={busy}>{t('common.cancel')}</button>
-          <button className="primary" data-action="html-export" onClick={() => void run()} disabled={busy}>{t('print.export')}</button>
+          <button className="primary" data-action="html-export" onClick={() => void run()} disabled={busy}>{t('export.button')}</button>
         </div>
       </div>
     </div>
