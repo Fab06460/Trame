@@ -1023,6 +1023,11 @@ export const en: Catalog = {
   'html.fullscreen': 'Full screen (F)',
   'html.help': 'Arrows: change page · F: full screen',
   'html.noscript': 'This presentation needs JavaScript to display.',
+  'html.clips.hint': 'This document contains video clips. So that the presentation stays one self-contained file, they are placed inside it: the file grows by as much.',
+  'html.clips.include': 'Include the video clips ({count})',
+  'html.clips.size': 'Estimated file size: {size}',
+  'html.clips.without': 'Without the clips, each clip stays a still image (its preview).',
+  'html.clips.big': 'A file this large may be refused by an email service or a sharing service, and opens slowly.',
   // Présentation web
   'export.html': 'Web presentation (.html)',
   // Publipostage : planches du commerce

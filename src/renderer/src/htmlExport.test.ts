@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPresentationHtml, inlineSvg, linkZones, prefixIds, type HtmlLabels } from './htmlExport'
+import { buildPresentationHtml, clipPayloads, clipsHtmlSize, clipVideos, inlineSvg, linkZones, prefixIds, type HtmlLabels } from './htmlExport'
 
 const labels: HtmlLabels = { lang: 'fr', page: 'Page {page} sur {total}', previous: 'Précédente', next: 'Suivante', fullscreen: 'Plein écran', help: 'Aide', noScript: 'JS requis', goPage: 'Aller à la page {n}' }
 const svg = (id: string): string => `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><title>Doc</title><defs><linearGradient id="${id}"/></defs><rect fill="url(#${id})"/></svg>\n`
@@ -73,5 +73,57 @@ describe('linkZones', () => {
   it('le lecteur gère le clic sur une zone', () => {
     const html = buildPresentationHtml({ title: 't', width: 1, height: 1, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels })
     expect(html).toContain("closest('a.lk')")
+  })
+})
+
+describe('clips vidéo dans la présentation web', () => {
+  const clip = (id: string, extra: object = {}) => ({ id: 'el' + id, type: 'image', x: 192, y: 108, width: 960, height: 540, rotation: 0, opacity: 1, src: 'data:image/jpeg;base64,AA==', video: { id, duration: 10, ...extra } })
+  const page = (elements: object[]) => ({ id: 'a', background: '#fff', elements }) as never
+  const doc = (clips: Record<string, string>) => ({ width: 1920, height: 1080, clips, pages: [] as never[] })
+  const mp4 = 'data:video/mp4;base64,AAAAIGZ0eXA='
+
+  it('pose un lecteur à la place du clip, en pourcentages, avec ses réglages en attributs', () => {
+    const html = clipVideos(doc({ k1: mp4 }), page([clip('k1', { loop: true, manual: true, muted: true, volume: 0.5, start: 2, end: 8, speed: 2 })]))
+    expect(html).toContain('left:10%;top:10%;width:50%;height:50%')
+    expect(html).toContain('data-clip="k1" data-start="2" data-end="8" data-speed="2" data-vol="0.5" data-loop data-manual data-muted')
+    expect(html).toContain('preload="none"')
+  })
+  it('sans montage : tout le clip, vitesse et volume normaux, lecture automatique sans boucle', () => {
+    const html = clipVideos(doc({ k1: mp4 }), page([clip('k1')]))
+    expect(html).toContain('data-start="0" data-end="10" data-speed="1" data-vol="1"')
+    expect(html).not.toMatch(/data-(loop|manual|muted)/)
+  })
+  it('garde la rotation, l\'opacité et la description', () => {
+    const html = clipVideos(doc({ k1: mp4 }), page([{ ...clip('k1'), rotation: 15, opacity: 0.5, alt: 'Une "démo" <1>' }]))
+    expect(html).toContain('--o:0.5;transform:rotate(15deg)')
+    expect(html).toContain('aria-label="Une &quot;démo&quot; &lt;1&gt;"')
+  })
+  it('ignore un clip masqué, sans octets, ou une simple image', () => {
+    expect(clipVideos(doc({ k1: mp4 }), page([{ ...clip('k1'), hidden: true }, clip('absent'), { ...clip('k1'), video: undefined }]))).toBe('')
+  })
+  it('les octets ne sont écrits qu\'une fois par clip, avec leur type', () => {
+    const d = { ...doc({ k1: mp4, k2: 'data:video/webm;base64,GkXf', k3: mp4 }), pages: [page([clip('k1'), clip('k2')]), page([clip('k1')])] }
+    expect(clipPayloads(d as never)).toEqual({ k1: { mime: 'video/mp4', data: 'AAAAIGZ0eXA=' }, k2: { mime: 'video/webm', data: 'GkXf' } })
+    expect(clipsHtmlSize(d as never)).toBe('AAAAIGZ0eXA='.length + 'GkXf'.length)
+  })
+  it('refuse un clip dont le type n\'est pas une vidéo', () => {
+    const d = { ...doc({ k1: 'data:text/html;base64,PHNjcmlwdD4=' }), pages: [page([clip('k1')])] }
+    expect(clipPayloads(d as never)).toEqual({})
+  })
+  const withClips = buildPresentationHtml({ title: 't', width: 1920, height: 1080, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels, clips: { k1: { mime: 'video/mp4', data: 'AAAAIGZ0eXA=' } } })
+  it('le fichier porte les octets, lisibles sans réseau : seule la source locale est ajoutée à la politique de sécurité', () => {
+    expect(withClips).toContain('<script type="text/plain" data-clip-data="k1" data-mime="video/mp4">AAAAIGZ0eXA=</script>')
+    expect(withClips).toContain("default-src 'none'; img-src data:; media-src blob:;")
+    expect(withClips).not.toMatch(/<script[^>]+src=/)
+  })
+  it('sans clip, le fichier est inchangé : pas de source vidéo autorisée', () => {
+    const plain = buildPresentationHtml({ title: 't', width: 1, height: 1, slides: ['<svg/>'], transitions: ['none'], fonts: '', labels })
+    expect(plain).not.toContain('media-src')
+    expect(plain).not.toContain('type="text/plain"')
+  })
+  it('le lecteur reste du JavaScript valide, et le texte des clips ne referme aucun script', () => {
+    const code = /<script>([\s\S]*)<\/script>\s*<\/body>/.exec(withClips)![1]
+    expect(() => new Function(code)).not.toThrow()
+    expect(withClips.match(/<\/script>/g)).toHaveLength(3) // clip + données + lecteur
   })
 })

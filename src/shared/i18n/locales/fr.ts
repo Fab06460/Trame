@@ -1024,6 +1024,11 @@ export const fr = {
   'html.fullscreen': 'Plein écran (F)',
   'html.help': 'Flèches : changer de page · F : plein écran',
   'html.noscript': 'Cette présentation a besoin de JavaScript pour s\'afficher.',
+  'html.clips.hint': 'Ce document contient des clips vidéo. Pour que la présentation reste un seul fichier autonome, ils sont placés dans le fichier : il grossit d\'autant.',
+  'html.clips.include': 'Inclure les clips vidéo ({count})',
+  'html.clips.size': 'Taille estimée du fichier : {size}',
+  'html.clips.without': 'Sans les clips, chaque clip reste une image fixe (son aperçu).',
+  'html.clips.big': 'Un fichier aussi gros peut être refusé par une messagerie ou un service de partage, et s\'ouvre lentement.',
   // Présentation web
   'export.html': 'Présentation web (.html)',
   // Publipostage : planches du commerce

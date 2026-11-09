@@ -1272,12 +1272,12 @@ ipcMain.handle('video:pick', async (): Promise<VideoPick> => {
   }
 })
 
-/** Octets d'un fichier vidéo : seuls .mp4 et .webm, jusqu'à 2 Go ; le nom est celui proposé dans la boîte d'enregistrement. */
+/** Octets d'un fichier de l'export : vidéo (.mp4, .webm) ou présentation web (.html), jusqu'à 2 Go ; le nom est celui proposé dans la boîte d'enregistrement. */
 const MAX_BINARY_EXPORT = 2 * 1024 * 1024 * 1024
 ipcMain.handle('export:save-bytes', async (_e, bytes: unknown, name: unknown) => {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_BINARY_EXPORT || typeof name !== 'string') return null
   const ext = name.split('.').pop()?.toLowerCase()
-  if (ext !== 'mp4' && ext !== 'webm') return null
+  if (ext !== 'mp4' && ext !== 'webm' && ext !== 'html') return null
   if (TEST_EXPORT_DIR) {
     const path = join(TEST_EXPORT_DIR, basename(name))
     await writeFile(path, bytes)

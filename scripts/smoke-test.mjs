@@ -3476,7 +3476,7 @@ try {
   await clickSel('[data-action="video-cancel"]')
   await sleep(1500)
   check('vidéo : « Arrêter » ferme la boîte sans rien enregistrer', (await nBrand('[data-video-dialog]')) === 0 && !existsSync(videoFile))
-  // sécurité : le processus principal n'écrit que des .mp4 / .webm
+  // sécurité : le processus principal n'écrit que des .mp4 / .webm / .html
   check('vidéo : un autre type de fichier ou un contenu vide est refusé par le processus principal', (await run(`Promise.all([window.trame.saveExportBytes(new Uint8Array([1, 2, 3]), 'x.exe'), window.trame.saveExportBytes(new Uint8Array(0), 'x.mp4'), window.trame.saveExportBytes(new Uint8Array([1]), '../x.sh')]).then(r => r.every(v => v === null))`)) === true && !existsSync(join(exportsDir, 'x.exe')))
   // musique de fond : fichier illisible refusé, WAV choisi, volume, fondu, boucle ; relecture de la piste son du MP4
   const sineWav = (seconds, rate = 44100, hz = 440, amp = 0.8) => {
@@ -3592,6 +3592,31 @@ try {
   check('clip : la vidéo exportée dure pages − 1 + 3 s et le son du clip est dans la bande son', Math.abs(clipMeta.d - expectedTotal) < 0.4 && clipMeta.clip > 0.05, JSON.stringify(clipMeta))
   const clipFrames = await run(`(async () => { const bin = atob(${clipB64}); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(new Blob([a], { type: 'video/mp4' })); await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('illisible')); setTimeout(() => rej(new Error('délai')), 15000) }); const grab = async (t) => { v.currentTime = t; await new Promise((res) => (v.onseeked = res)); const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; const x = c.getContext('2d'); x.drawImage(v, 0, 0); return x.getImageData(0, 0, c.width, c.height).data }; const f1 = await grab(0.6); const f2 = await grab(2.4); let diff = 0; for (let i = 0; i < f1.length; i += 4) if (Math.abs(f1[i] - f2[i]) + Math.abs(f1[i + 1] - f2[i + 1]) + Math.abs(f1[i + 2] - f2[i + 2]) > 90) diff++; v.src = ''; return diff / (f1.length / 4) })().catch(e => -1)`)
   check('clip : l\'image du clip change au fil de la vidéo (le clip joue vraiment dans la vidéo exportée)', clipFrames > 0.01, String(clipFrames))
+  // présentation web (HTML) : le document porte un clip, une fenêtre propose de l'embarquer
+  const htmlFile = join(exportsDir, 'Sans titre.html')
+  await rm(htmlFile, { force: true })
+  await exportVia('html')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 1, 8000)
+  check('présentation web : avec un clip, une fenêtre s\'ouvre (case « Inclure les clips » cochée, taille annoncée)', (await nBrand('[data-html-dialog]')) === 1 && (await run(`document.querySelector('[data-field="htmlClips"]').checked`)) === true && /Mo/.test(await run(`document.querySelector('[data-html-size]').innerText`)) && Number(await run(`document.querySelector('[data-html-size]').dataset.htmlSize`)) > 1000)
+  await clickSel('[data-action="html-export"]')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 0 && existsSync(htmlFile), 30000)
+  await sleep(500)
+  const clipHtml = existsSync(htmlFile) ? await readFile(htmlFile, 'utf-8') : ''
+  const clipSource = (await readFile(join(exportsDir, 'pick-video.mp4'))).toString('base64')
+  const htmlParts = { video: clipHtml.includes('<video class="clip"'), data: clipHtml.includes('data-clip-data='), bytes: clipHtml.includes(`>${clipSource}</script>`), trim: clipHtml.includes('data-start="1" data-end="2.5" data-speed="0.5"') }
+  check('présentation web : la fenêtre se ferme, le fichier contient un lecteur par clip et ses octets exacts', Object.values(htmlParts).every(Boolean), JSON.stringify(htmlParts) + ' ' + (clipHtml.match(/<video[^>]*>/)?.[0] ?? 'aucun <video>'))
+  check('présentation web : la politique de sécurité n\'ouvre que les sources locales pour la vidéo', clipHtml.includes("default-src 'none'; img-src data:; media-src blob:;") && !/<script[^>]+src=/.test(clipHtml))
+  await rm(htmlFile, { force: true })
+  await exportVia('html')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 1, 8000)
+  await clickSel('[data-field="htmlClips"]')
+  await sleep(200)
+  check('présentation web : case décochée, la fenêtre annonce que les clips restent des images', /image fixe/.test(await run(`document.querySelector('[data-html-size]').innerText`)))
+  await clickSel('[data-action="html-export"]')
+  await waitFor(async () => (await nBrand('[data-html-dialog]')) === 0 && existsSync(htmlFile), 30000)
+  const bareHtml = existsSync(htmlFile) ? await readFile(htmlFile, 'utf-8') : ''
+  check('présentation web : sans les clips, le fichier n\'en contient aucun (comme avant)', bareHtml.startsWith('<!doctype html>') && !bareHtml.includes('<video') && !bareHtml.includes('data-clip-data=') && !bareHtml.includes('media-src') && clipHtml.length > bareHtml.length + 1000)
+  await rm(htmlFile, { force: true })
   // nettoyage : l'élément est supprimé
   await selectClip()
   await run(`[...document.querySelectorAll('.panel button.danger')].find(b => /Supprimer/.test(b.innerText))?.click()`)

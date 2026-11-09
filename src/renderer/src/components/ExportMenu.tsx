@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { fileSafeName } from '@/docName'
 import { renderPage } from '@/exportPages'
 import { pageFileName } from '@/pageExport'
-import { documentToHtml } from '@/htmlExport'
+import { exportHtml, hasHtmlClips } from '@/htmlActions'
 import { exportPdf } from '@/pdfExport'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPptx } from '@/pptxExport'
@@ -13,8 +13,9 @@ import { useVideoExport } from '@/store/videoExport'
 import { useMailMerge } from '@/store/mailMerge'
 import { usePrintDialog } from '@/store/printDialog'
 import { useHandoutDialog } from '@/store/handoutDialog'
+import { useHtmlDialog } from '@/store/htmlDialog'
 import { usePdfIssues } from '@/store/pdfIssues'
-import { t, useLocale, useT } from '@/i18n'
+import { t, useT } from '@/i18n'
 import { useDismiss } from './useDismiss'
 
 async function exportImage(type: 'image/png' | 'image/jpeg'): Promise<void> {
@@ -39,20 +40,9 @@ async function exportSvg(): Promise<void> {
 
 async function exportHtmlFile(): Promise<void> {
   const { doc } = useEditor.getState()
-  const html = await documentToHtml(doc, {
-    lang: useLocale.getState().locale,
-    page: t('html.page', { page: '{page}', total: '{total}' }),
-    previous: t('html.previous'),
-    next: t('html.next'),
-    fullscreen: t('html.fullscreen'),
-    help: t('html.help'),
-    noScript: t('html.noscript'),
-    goPage: t('pres.link.page', { n: '{n}' })
-  })
-  const bytes = new TextEncoder().encode(html)
-  let bin = ''
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-  await window.trame.saveExport(`data:text/html;base64,${btoa(bin)}`, `${fileSafeName(doc.name)}.html`)
+  // des clips : la fenêtre propose de les embarquer (le fichier grossit) ; sinon l'export part directement
+  if (hasHtmlClips(doc)) useHtmlDialog.getState().setOpen(true)
+  else await exportHtml(doc, false)
 }
 
 async function exportPdfFile(): Promise<void> {
