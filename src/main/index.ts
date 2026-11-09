@@ -32,6 +32,7 @@ import {
   sanitizeMeta, type PackEntry, type TemplateMeta
 } from './userTemplates'
 import { parseRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+import { DEFAULT_APP_SETTINGS, lastDocumentToReopen, parseAppSettings, parseLastDocument, type AppSettings } from './appSettings'
 import { registerAiHandlers } from './aiIpc'
 
 const recentsFile = (): string => join(app.getPath('userData'), 'recent-projects.json')
@@ -129,6 +130,7 @@ function createWindow(): void {
   win.on('enter-full-screen', () => fullscreenGuard.onEnter())
   win.webContents.on('did-start-loading', () => {
     fileInbox.onRendererGone()
+    startupDone = false
     // rechargement voulu de la page : le travail non enregistré est perdu comme avant, sa copie n'a plus d'objet. Après un plantage de la page, on la garde pour la proposer.
     if (!rendererCrashed) void clearRecovery(app.getPath('userData'), SESSION_ID).catch(() => {})
   })
@@ -141,6 +143,7 @@ function createWindow(): void {
   win.on('closed', () => {
     mainWindow = null
     fileInbox.onRendererGone()
+    startupDone = false
     closeGuard.onClosed()
     // fermeture normale (enregistré, ignoré ou rien à enregistrer) : la copie de secours n'a plus d'objet
     void clearRecovery(app.getPath('userData'), SESSION_ID).catch(() => {})
@@ -659,6 +662,7 @@ ipcMain.handle('clipboard:read', async () => {
 
 ipcMain.on('app:state', (_e, state: { dirty: boolean; path?: string }) => {
   closeGuard.setDirty(state.dirty)
+  noteLastDocument(typeof state.path === 'string' && state.path ? state.path : null)
   // macOS : point dans le bouton de fermeture et icône du document dans la barre de titre
   mainWindow?.setDocumentEdited(state.dirty)
   mainWindow?.setRepresentedFilename(state.path ?? '')
@@ -1390,7 +1394,57 @@ ipcMain.handle('i18n:set', (_e, code: unknown) => {
   applySpellSettings() // la langue « automatique » suit celle de l'application
 })
 // Le renderer écoute désormais : on lui remet le fichier reçu pendant le démarrage, s'il y en a un
-ipcMain.handle('app:renderer-ready', () => fileInbox.onRendererReady())
+// Réglages généraux (voir appSettings.ts) et document en cours à la fermeture, rouvert au lancement s'il existe encore.
+const appSettingsFile = (): string => join(app.getPath('userData'), 'app-settings.json')
+const lastDocumentFile = (): string => join(app.getPath('userData'), 'last-document.json')
+let appSettings: AppSettings = { ...DEFAULT_APP_SETTINGS }
+let lastDocument: string | null = null
+/** Vrai une fois le démarrage du renderer réglé : avant, son document vide ne doit pas effacer le dernier document. */
+let startupDone = false
+const appSettingsLoaded = (async (): Promise<void> => {
+  await app.whenReady()
+  appSettings = parseAppSettings(await readFile(appSettingsFile(), 'utf-8').catch(() => null), TEST_EXPORT_DIR ? { reopenLast: false } : DEFAULT_APP_SETTINGS)
+  lastDocument = parseLastDocument(await readFile(lastDocumentFile(), 'utf-8').catch(() => null))
+})()
+
+function noteLastDocument(path: string | null): void {
+  if (!startupDone || path === lastDocument) return
+  lastDocument = path
+  void writeFile(lastDocumentFile(), JSON.stringify({ path }), 'utf-8').catch(() => {})
+}
+
+ipcMain.handle('settings:get', async () => {
+  await appSettingsLoaded
+  return appSettings
+})
+ipcMain.handle('settings:set', async (_e, raw: unknown) => {
+  await appSettingsLoaded
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  appSettings = parseAppSettings({ reopenLast: o.reopenLast ?? appSettings.reopenLast })
+  await writeFile(appSettingsFile(), JSON.stringify(appSettings), 'utf-8').catch(() => {})
+  return appSettings
+})
+
+/** Le dernier document, lu pour être rouvert : il doit encore être dans la liste des projets récents (le renderer ne choisit pas les fichiers lus) et exister. */
+async function readLastDocument(path: string): Promise<{ path: string; json: string } | null> {
+  if (!(await loadRecents()).some((r) => r.path === path)) return null
+  try {
+    const json = await readFile(path, 'utf-8')
+    await noteRecent(path)
+    return { path, json }
+  } catch {
+    return null // disparu entre-temps : on démarre sur un document vide
+  }
+}
+
+ipcMain.handle('app:renderer-ready', async () => {
+  await appSettingsLoaded
+  const waiting = fileInbox.onRendererReady()
+  const target = lastDocumentToReopen(appSettings, lastDocument, waiting !== null)
+  const reopened = target ? await readLastDocument(target) : null
+  startupDone = true
+  return waiting ?? reopened
+})
 
 registerAiHandlers()
 

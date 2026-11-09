@@ -1791,7 +1791,16 @@ export const en: Catalog = {
   'cloud.insert': 'Insert',
   // Réglages (langue, version, mises à jour)
   'settings.label': 'Settings',
-  'settings.title': 'Language, version and updates',
+  'settings.title': 'Application settings (⌘,)',
+  'settings.dialog.title': 'Settings',
+  'settings.section.general': 'General',
+  'settings.section.view': 'Canvas display',
+  'settings.section.spell': 'Spell checking',
+  'settings.section.presentation': 'Presentation',
+  'settings.section.updates': 'Version and updates',
+  'settings.reopenLast': 'Reopen the previous session\'s document at launch',
+  'settings.reopenLast.hint': 'If the file was moved or deleted in the meantime, the application starts on an empty document. A file opened from the system (double-click) always takes priority.',
+  'settings.timingRecap': 'Show the time summary after a presentation',
   'settings.updateAvailable': 'an update is available',
   // Bibliothèque d'icônes
   'sidebar.icons': 'Icons',

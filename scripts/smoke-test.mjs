@@ -282,6 +282,72 @@ async function coldStartTest() {
   }
 }
 
+/** Relance l'application avec des fichiers de réglages préparés : rouvre-t-elle le document de la session précédente ? */
+async function reopenLastTest() {
+  const waitFor = async (fn, ms = 6000) => { for (let t = 0; t < ms; t += 200) { if (await fn()) return true; await sleep(200) } return false }
+  const docJson = JSON.stringify({ version: 2, name: 'Rouvert', width: 200, height: 100, pages: [{ id: 'p', background: '#fff', elements: [] }] })
+  const launch = async (name, { setting, file, recent = true, last = true, remove = false }) => {
+    const dir = join(tmp, 'reopen', name)
+    const userData = join(dir, 'data')
+    const path = join(dir, 'reouverture.trame')
+    await mkdir(userData, { recursive: true })
+    await writeFile(path, docJson)
+    if (recent) await writeFile(join(userData, 'recent-projects.json'), JSON.stringify([{ path, openedAt: Date.now() }]))
+    if (last) await writeFile(join(userData, 'last-document.json'), JSON.stringify({ path }))
+    if (setting !== undefined) await writeFile(join(userData, 'app-settings.json'), JSON.stringify({ reopenLast: setting }))
+    if (remove) await rm(path)
+    const p2 = port + 600 + Math.floor(Math.random() * 90)
+    const child = spawn(electronPath, [root, `--remote-debugging-port=${p2}`, `--user-data-dir=${userData}`, '--disable-renderer-backgrounding'], { env: { ...env, TRAME_TEST_EXPORT_DIR: join(dir, 'exports') }, stdio: 'ignore' })
+    const ws = await connect(p2)
+    let n = 0
+    const evaluate = (expression) =>
+      new Promise((resolve) => {
+        const i = ++n + 1000
+        const onMsg = (m) => {
+          const d = JSON.parse(m.data)
+          if (d.id === i) { ws.removeEventListener('message', onMsg); resolve(d.result?.result?.value) }
+        }
+        ws.addEventListener('message', onMsg)
+        ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }))
+      })
+    const title = async (wanted) => {
+      let t = ''
+      for (let i = 0; i < 40; i++) {
+        await sleep(250)
+        t = (await evaluate('document.title')) ?? ''
+        if (t.startsWith(wanted)) break
+      }
+      return t
+    }
+    return { child, ws, evaluate, title, userData, path, stop: async () => { ws.close(); child.kill(); await sleep(500) } }
+  }
+  try {
+    const a = await launch('a', { setting: true })
+    const titleA = await a.title('reouverture')
+    check('relance : le document de la session précédente est rouvert (réglage activé)', titleA.startsWith('reouverture'), titleA)
+    await a.evaluate(`window.trame.setState({ dirty: false, path: undefined })`) // « Nouveau » : le document en cours n'a plus de fichier
+    check('relance : le fichier du document en cours est mémorisé, et oublié quand on passe à un document sans fichier', await waitFor(async () => !existsSync(join(a.userData, 'last-document.json')) ? false : JSON.parse(readFileSync(join(a.userData, 'last-document.json'), 'utf-8')).path === null))
+    await a.stop()
+
+    const b = await launch('b', { setting: true, remove: true })
+    const titleB = await b.title('reouverture')
+    check('relance : si le fichier a disparu, l\'application démarre sur un document vide, sans message', titleB.startsWith('Sans titre'), titleB)
+    await b.stop()
+
+    const c = await launch('c', { setting: false })
+    const titleC = await c.title('reouverture')
+    check('relance : réglage coupé, l\'application démarre sur un document vide', titleC.startsWith('Sans titre'), titleC)
+    await c.stop()
+
+    const d = await launch('d', { setting: true, recent: false })
+    const titleD = await d.title('reouverture')
+    check('relance : un fichier absent de la liste des projets récents n\'est jamais rouvert (le chemin enregistré n\'est pas digne de confiance)', titleD.startsWith('Sans titre'), titleD)
+    await d.stop()
+  } catch (err) {
+    check('relance : réouverture du dernier document', false, String(err))
+  }
+}
+
 try {
   const ws = await connect()
   let id = 0
@@ -1948,14 +2014,37 @@ try {
   // réglages : bouton fixe au bas de la colonne d'icônes (hors du contenu qui défile), fenêtre avec la langue et la version
   const settingsGeo = await run(`(() => { const b = document.querySelector('[data-action="settings-open"]'); if (!b) return null; const r = b.getBoundingClientRect(); const rev = document.querySelector('.side-tab[data-tab="review"]').getBoundingClientRect(); return { inRail: !!b.closest('.side-rail'), inContent: !!b.closest('.side-content'), below: r.top >= rev.bottom, oldFooter: !!document.querySelector('.sidebar-footer, .sidebar-version') } })()`)
   check("réglages : le bouton est dans la colonne d'icônes (pas dans le contenu qui défile), sous les onglets, et l'ancien pied a disparu", !!settingsGeo && settingsGeo.inRail && !settingsGeo.inContent && settingsGeo.below && !settingsGeo.oldFooter, JSON.stringify(settingsGeo))
-  check('réglages : la fenêtre est fermée au départ', (await nBrand('[data-settings-popup]')) === 0)
+  check('réglages : la fenêtre est fermée au départ', (await nBrand('[data-settings-dialog]')) === 0)
   await clickSel('[data-action="settings-open"]')
   await sleep(300)
-  check('réglages : la fenêtre propose la langue et la version, entièrement visible', (await nBrand('[data-settings-popup] [data-field="language"]')) === 1 && (await run(`document.querySelector('[data-settings-popup] [data-action="update-open"]')?.innerText ?? ''`)).includes(appVersion) && (await run(`(() => { const r = document.querySelector('[data-settings-popup]').getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })()`)) === true)
+  check('réglages : la fenêtre propose la langue et la version, entièrement visible', (await nBrand('[data-settings-dialog] [data-field="language"]')) === 1 && (await run(`document.querySelector('[data-settings-dialog] [data-action="update-open"]')?.innerText ?? ''`)).includes(appVersion) && (await run(`(() => { const r = document.querySelector('[data-settings-dialog] .settings-dialog').getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })()`)) === true)
   if (process.env.SMOKE_SETTINGS_SHOT) await writeFile(process.env.SMOKE_SETTINGS_SHOT, Buffer.from((await cdp('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
   await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
   await sleep(200)
-  check('réglages : Échap ferme la fenêtre', (await nBrand('[data-settings-popup]')) === 0)
+  check('réglages : Échap ferme la fenêtre', (await nBrand('[data-settings-dialog]')) === 0)
+  // fenêtre de réglages généraux : ⌘, l'ouvre et la ferme, les réglages s'enregistrent tout de suite
+  const cmdComma = () => run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', metaKey: true, bubbles: true }))`)
+  await cmdComma()
+  await sleep(300)
+  check('réglages : ⌘, ouvre la fenêtre', (await nBrand('[data-settings-dialog]')) === 1)
+  check('réglages : les réglages généraux sont réunis (rouvrir, règles, repères, aimantation, correcteur, récapitulatif)', (await run(`['reopenLast', 'view-rulers', 'view-guides', 'view-snap', 'settingsSpellEnabled', 'timingRecap', 'language'].every((f) => !!document.querySelector('[data-settings-dialog] [data-field="' + f + '"]'))`)) === true)
+  check('réglages : en mode test, « rouvrir le dernier document » est décoché par défaut', await waitFor(async () => (await run(`document.querySelector('[data-field="reopenLast"]').disabled`)) === false) && (await run(`document.querySelector('[data-field="reopenLast"]').checked`)) === false)
+  await clickSel('[data-field="reopenLast"]')
+  check('réglages : « rouvrir le dernier document » est enregistré côté système', await waitFor(async () => (await run(`window.trame.getAppSettings().then((s) => s.reopenLast)`)) === true))
+  await clickSel('[data-field="reopenLast"]')
+  check('réglages : et se décoche de même', await waitFor(async () => (await run(`window.trame.getAppSettings().then((s) => s.reopenLast)`)) === false))
+  const rulersBefore = await run(`JSON.parse(localStorage.getItem('trame.view') ?? '{}').rulers ?? true`)
+  await clickSel('[data-field="view-rulers"]')
+  await sleep(200)
+  check('réglages : « Règles » agit sur l\'affichage et est mémorisé', (await run(`JSON.parse(localStorage.getItem('trame.view')).rulers`)) === !rulersBefore)
+  await clickSel('[data-field="view-rulers"]')
+  await clickSel('[data-field="timingRecap"]')
+  check('réglages : le récapitulatif des temps se masque (préférence de cet ordinateur)', (await run(`localStorage.getItem('trame.timingRecap')`)) === 'off')
+  await clickSel('[data-field="timingRecap"]')
+  check('réglages : et se réaffiche', (await run(`localStorage.getItem('trame.timingRecap')`)) === null)
+  await cmdComma()
+  await sleep(200)
+  check('réglages : ⌘, la referme', (await nBrand('[data-settings-dialog]')) === 0)
   await clickSel('[data-action="settings-open"]')
   await sleep(250)
   await clickSel('[data-action="update-open"]')
@@ -4453,7 +4542,7 @@ try {
   await key('Escape')
   await setLanguage('fr')
   check('langue : retour au français (document inchangé : aucune modification déclenchée)', (await uiText()).includes('Enregistrer') && !(await run(`document.title`)).includes('•'))
-  await run(`(() => { if (document.querySelector('[data-settings-popup]')) document.querySelector('[data-action="settings-open"]').click() })()`) // referme la fenêtre « Réglages »
+  await run(`(() => { document.querySelector('[data-action="settings-close"]')?.click() })()`) // referme la fenêtre « Réglages »
 
   // sortie avec modifications non enregistrées (régression : l'appli restait ouverte sans fenêtre)
   if (process.platform === 'darwin') {
@@ -4477,6 +4566,7 @@ try {
   }
   ws.close()
   await coldStartTest()
+  await reopenLastTest()
 } catch (err) {
   check('exécution du test', false, String(err))
 } finally {

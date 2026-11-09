@@ -1792,7 +1792,16 @@ export const fr = {
   'cloud.insert': 'Insérer',
   // Réglages (langue, version, mises à jour)
   'settings.label': 'Réglages',
-  'settings.title': 'Langue, version et mises à jour',
+  'settings.title': 'Réglages de l\'application (⌘,)',
+  'settings.dialog.title': 'Réglages',
+  'settings.section.general': 'Général',
+  'settings.section.view': 'Affichage du canevas',
+  'settings.section.spell': 'Correction orthographique',
+  'settings.section.presentation': 'Présentation',
+  'settings.section.updates': 'Version et mises à jour',
+  'settings.reopenLast': 'Rouvrir au lancement le document de la session précédente',
+  'settings.reopenLast.hint': 'Si le fichier a été déplacé ou supprimé entre-temps, l\'application démarre sur un document vide. Un fichier ouvert depuis le système (double-clic) passe toujours avant.',
+  'settings.timingRecap': 'Afficher le récapitulatif des temps après une présentation',
   'settings.updateAvailable': 'une mise à jour est proposée',
   // Bibliothèque d'icônes
   'sidebar.icons': 'Icônes',

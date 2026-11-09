@@ -1791,7 +1791,16 @@ export const de: Catalog = {
   'cloud.insert': 'Einfügen',
   // Réglages (langue, version, mises à jour)
   'settings.label': 'Einstellungen',
-  'settings.title': 'Sprache, Version und Updates',
+  'settings.title': 'Einstellungen der Anwendung (⌘,)',
+  'settings.dialog.title': 'Einstellungen',
+  'settings.section.general': 'Allgemein',
+  'settings.section.view': 'Anzeige der Arbeitsfläche',
+  'settings.section.spell': 'Rechtschreibprüfung',
+  'settings.section.presentation': 'Präsentation',
+  'settings.section.updates': 'Version und Updates',
+  'settings.reopenLast': 'Beim Start das Dokument der letzten Sitzung wieder öffnen',
+  'settings.reopenLast.hint': 'Wurde die Datei inzwischen verschoben oder gelöscht, startet die Anwendung mit einem leeren Dokument. Eine vom System geöffnete Datei (Doppelklick) hat immer Vorrang.',
+  'settings.timingRecap': 'Zeitübersicht nach einer Präsentation anzeigen',
   'settings.updateAvailable': 'ein Update ist verfügbar',
   // Bibliothèque d'icônes
   'sidebar.icons': 'Symbole',

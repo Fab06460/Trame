@@ -124,6 +124,9 @@ const api = {
   /** Mots mal orthographiés parmi ceux-ci, avec quelques suggestions (correcteur du système ; rien ne quitte l'ordinateur). */
   spellCheck: (words: string[]): Array<{ word: string; suggestions: string[] } | null> =>
     words.map((w) => (webFrame.isWordMisspelled(w) ? { word: w, suggestions: webFrame.getWordSuggestions(w).slice(0, 5) } : null)),
+  /** Réglages généraux de l'application (rouvrir le dernier document au lancement). */
+  getAppSettings: (): Promise<{ reopenLast: boolean }> => ipcRenderer.invoke('settings:get'),
+  setAppSettings: (patch: { reopenLast?: boolean }): Promise<{ reopenLast: boolean }> => ipcRenderer.invoke('settings:set', patch),
   spellState: (): Promise<SpellUiState> => ipcRenderer.invoke('spell:state'),
   setSpell: (patch: { enabled?: boolean; language?: string }): Promise<SpellUiState> => ipcRenderer.invoke('spell:set', patch),
   spellDictionary: (): Promise<string[]> => ipcRenderer.invoke('spell:dictionary'),

@@ -21,6 +21,8 @@ import { StyleMatchDialog } from '@/components/StyleMatchDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { HandoutDialog } from '@/components/HandoutDialog'
 import { HtmlExportDialog } from '@/components/HtmlExportDialog'
+import { SettingsDialog } from '@/components/SettingsDialog'
+import { useSettingsDialog } from '@/store/settingsDialog'
 import { TimingRecapDialog } from '@/components/TimingRecapDialog'
 import { usePrintDialog } from '@/store/printDialog'
 import { VersionsDialog } from '@/components/VersionsDialog'
@@ -64,6 +66,12 @@ export default function App(): React.JSX.Element {
       if ((e.key === 'F5' || ((e.metaKey || e.ctrlKey) && e.shiftKey && k === 'p')) && !usePresentation.getState().active) {
         e.preventDefault()
         usePresentation.getState().start()
+        return
+      }
+      // ⌘, : réglages de l'application
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === ',' && !usePresentation.getState().active) {
+        e.preventDefault()
+        useSettingsDialog.getState().setOpen(!useSettingsDialog.getState().open)
         return
       }
       // raccourcis fichier : actifs même pendant la saisie de texte
@@ -219,6 +227,7 @@ export default function App(): React.JSX.Element {
       <PrintDialog />
       <HandoutDialog />
       <HtmlExportDialog />
+      <SettingsDialog />
       <TimingRecapDialog />
       <PdfToolsDialog />
       <WordCloudDialog />
