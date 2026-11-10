@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useT } from '@/i18n'
 import { importPptxFile } from '@/pptxImport/actions'
+import { importDocumentFile } from '@/outlineImport/actions'
 import { startPdfImport } from '@/pdfImport/actions'
 import { usePdfTools } from '@/store/pdfTools'
 import { useDismiss } from './useDismiss'
@@ -32,6 +33,10 @@ export function ImportMenu(): React.JSX.Element {
           <button role="menuitem" data-import="pptx" onClick={() => choose(importPptxFile)}>
             <strong>{t('import.pptx')}</strong>
             <span>{t('import.pptx.desc')}</span>
+          </button>
+          <button role="menuitem" data-import="document" onClick={() => choose(importDocumentFile)}>
+            <strong>{t('import.document')}</strong>
+            <span>{t('import.document.desc')}</span>
           </button>
           <button role="menuitem" data-import="pdf-tools" onClick={() => choose(async () => usePdfTools.getState().setOpen(true))}>
             <strong>{t('pdft.menu')}</strong>

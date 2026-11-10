@@ -4,6 +4,7 @@ import { useLayout } from '@/store/layout'
 import { fitStep, type FitState } from '@/toolbarFit'
 import { DropMenu } from './DropMenu'
 import { importPptxFile } from '@/pptxImport/actions'
+import { importDocumentFile } from '@/outlineImport/actions'
 import { startPdfImport } from '@/pdfImport/actions'
 import { useEditor } from '@/store/editor'
 import { insertImage } from '@/clipboardActions'
@@ -80,6 +81,7 @@ export function Toolbar(): React.JSX.Element {
               { key: 'open', label: t('toolbar.open.dots'), hint: shortcut('⌘O'), onSelect: openProject },
               { key: 'import-pdf', label: t('toolbar.importPdf'), onSelect: startPdfImport },
               { key: 'import-pptx', label: t('toolbar.importPptx'), onSelect: importPptxFile },
+              { key: 'import-document', label: t('toolbar.importDocument'), onSelect: importDocumentFile },
               { key: 'pdf-tools', label: t('pdft.menu'), onSelect: () => usePdfTools.getState().setOpen(true) },
               { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
               { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) },

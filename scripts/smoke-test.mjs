@@ -1354,6 +1354,66 @@ try {
   check('aller-retour : rectangle et image au même endroit', Math.abs(rtBox[0] - 124) < 8 && Math.abs(rtBox[2] - 255) < 8 && isRed(rtImg), JSON.stringify([rtBox, rtImg]))
   await rm(join(tmp, 'exports', 'dialog-info.txt'), { force: true })
 
+  // import d'un document texte (Markdown, Word) : fenêtre d'options avec résultat en direct, images voisines, notes, import
+  {
+    const png1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
+    await writeFile(join(exportsDir, 'schema.png'), png1)
+    const md = ['---', 'title: Cours de maths', '---', '', '# Les fractions', '', 'Une fraction représente une part.', '', '## Définition', '', '- numérateur', '- dénominateur', '', '## Exemple', '',
+      '![schéma](schema.png)', '![distant](https://exemple.fr/x.png)', '', '| a | b |', '|---|---|', '| 1 | 2 |', '', '# Les racines', '', '1. première', '2. deuxième', ''].join('\n')
+    await rm(join(exportsDir, 'pick-import.docx'), { force: true })
+    await writeFile(join(exportsDir, 'pick-import.md'), md)
+    await reloadApp()
+    await sleep(500)
+    await importVia('document')
+    for (let i = 0; i < 40 && !(await nBrand('[data-outline-import]')); i++) await sleep(250)
+    const setOutlineSel = (field, value) => run(`(() => { const s = document.querySelector('[data-field="${field}"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(value)}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+    const resultPages = () => run(`document.querySelector('[data-outline-result]')?.dataset.outlineResult ?? ''`)
+    check('import de document : le menu Importer ouvre la fenêtre d\'options pour le fichier Markdown', (await nBrand('[data-outline-import]')) === 1 && (await run(`document.querySelector('[data-outline-name]')?.innerText ?? ''`)).includes('pick-import'))
+    check('import de document : le niveau conseillé donne 5 pages (couverture, 4 titres) et le résultat est montré', (await resultPages()) === '5' && (await run(`document.querySelector('[data-field="outlineLevel"]')?.value`)) === '2')
+    check('import de document : l\'image distante et le tableau sont signalés, l\'image voisine est reprise', (await nBrand('[data-outline-note="images"]')) === 1 && (await nBrand('[data-outline-note="tables"]')) === 1 && (await nBrand('[data-field="outlineImages"]')) === 1)
+    await setOutlineSel('outlineLevel', '1')
+    await sleep(300)
+    check('import de document : changer le niveau de découpe met le résultat à jour tout de suite', (await resultPages()) === '3')
+    await setOutlineSel('outlineTheme', 'dark')
+    await sleep(200)
+    await clickSel('[data-action="outline-import"]')
+    for (let i = 0; i < 60 && (await nBrand('.page-item')) !== 3; i++) await sleep(250)
+    check('import de document : le document importé a 3 pages et la fenêtre est fermée', (await nBrand('.page-item')) === 3 && (await nBrand('[data-outline-import]')) === 0)
+    check('import de document : la première page est la couverture du document', (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).includes('Cours de maths'))
+    check('import de document : le nom du document est celui du fichier', (await run(`document.querySelector('.doc-name')?.value ?? ''`)) === 'pick-import')
+
+    // fichier Word fabriqué ici : deux titres, un paragraphe, une puce
+    const { default: JSZip } = await import('jszip')
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+    const wp = (t, style) => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}</w:pPr><w:r><w:t>${t}</w:t></w:r></w:p>`
+    const zip = new JSZip()
+    zip.file('word/document.xml', `<w:document ${W}><w:body>${wp('Chapitre A', 'Titre1')}${wp('Du texte pour A.')}${wp('Chapitre B', 'Titre1')}${wp('Du texte pour B.')}</w:body></w:document>`)
+    zip.file('word/styles.xml', `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Titre1"><w:name w:val="heading 1"/></w:style></w:styles>`)
+    await rm(join(exportsDir, 'pick-import.md'), { force: true })
+    await writeFile(join(exportsDir, 'pick-import.docx'), await zip.generateAsync({ type: 'nodebuffer' }))
+    await reloadApp()
+    await sleep(500)
+    await importVia('document')
+    for (let i = 0; i < 40 && !(await nBrand('[data-outline-import]')); i++) await sleep(250)
+    check('import de document : un fichier Word donne une page par titre', (await resultPages()) === '2')
+    await clickSel('[data-action="outline-import"]')
+    for (let i = 0; i < 60 && (await nBrand('.page-item')) !== 2; i++) await sleep(250)
+    check('import de document : le fichier Word est importé (2 pages, texte repris)', (await nBrand('.page-item')) === 2 && (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).includes('Chapitre A'))
+
+    // un fichier sans texte : la fenêtre le dit et l'import est refusé ; Échap la ferme sans rien changer
+    await rm(join(exportsDir, 'pick-import.docx'), { force: true })
+    await writeFile(join(exportsDir, 'pick-import.txt'), '   \n\n')
+    await reloadApp()
+    await sleep(500)
+    await importVia('document')
+    for (let i = 0; i < 40 && !(await nBrand('[data-outline-import]')); i++) await sleep(250)
+    check('import de document : un fichier vide est signalé et l\'import est désactivé', (await nBrand('[data-outline-empty]')) === 1 && (await run(`document.querySelector('[data-action="outline-import"]')?.disabled`)) === true)
+    await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
+    await sleep(250)
+    check('import de document : Échap ferme la fenêtre sans toucher au document', (await nBrand('[data-outline-import]')) === 0 && (await nBrand('.page-item')) === 1)
+    await rm(join(exportsDir, 'pick-import.txt'), { force: true })
+  }
+
   // photos en ligne : recherche (faux serveur Openverse), insertion, repli sur la miniature, pagination, erreurs, crédits
   await reloadApp()
   await sleep(500)
@@ -4408,13 +4468,13 @@ try {
   check('un clic ailleurs ferme le menu', (await nBrand('[role="menu"]')) === 0)
   check('choisir une entrée ferme le menu et lance l\'export', await (async () => { const pngs = () => readdirSync(zipDir).filter((f) => /^Sans titre-page-?\d\.png$/.test(f)); for (const f of pngs()) await rm(join(zipDir, f), { force: true }); await exportVia('png'); for (let i = 0; i < 40 && pngs().length === 0; i++) await sleep(250); return pngs().length === 1 && (await nBrand('[role="menu"]')) === 0 })())
 
-  // menu « Importer ▾ » : un seul bouton, deux entrées, fermeture par Échap et clic ailleurs
+  // menu « Importer ▾ » : un seul bouton, quatre entrées, fermeture par Échap et clic ailleurs
   const importButtons = await run(`[...document.querySelectorAll('header.toolbar button')].filter(b => /^Import/.test(b.textContent.trim())).map(b => b.textContent.trim())`)
   check('la barre d\'outils n\'a plus qu\'un seul bouton d\'import (« Importer ▾ »)', importButtons.length === 1 && importButtons[0].startsWith('Importer'), JSON.stringify(importButtons))
   await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Importer'))?.click()`)
   await sleep(250)
   check('menu Importer : aucune légende ne dépasse du conteneur', (await popupOverflow()) === '', await popupOverflow())
-  check('le menu propose PDF, PowerPoint et les outils PDF', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.import).join()`)) === 'pdf,pptx,pdf-tools' && (await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Importer')).getAttribute('aria-expanded')`)) === 'true')
+  check('le menu propose PDF, PowerPoint, document texte et les outils PDF', (await run(`[...document.querySelectorAll('[role="menuitem"]')].map(b => b.dataset.import).join()`)) === 'pdf,pptx,document,pdf-tools' && (await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Importer')).getAttribute('aria-expanded')`)) === 'true')
   await escKey()
   check('Échap ferme le menu d\'import', (await nBrand('[role="menu"]')) === 0)
   await run(`[...document.querySelectorAll('header.toolbar button')].find(b => b.textContent.trim().startsWith('Importer'))?.click()`)

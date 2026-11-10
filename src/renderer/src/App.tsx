@@ -7,6 +7,7 @@ import { PageStrip } from '@/components/PageStrip'
 import { Sidebar } from '@/components/Sidebar'
 import { Properties } from '@/components/Properties'
 import { PdfImportDialog } from '@/components/PdfImportDialog'
+import { OutlineImportDialog } from '@/components/OutlineImportDialog'
 import { FindPanel } from '@/components/FindPanel'
 import { useFind } from '@/store/find'
 import { PresentationMode } from '@/components/PresentationMode'
@@ -239,6 +240,7 @@ export default function App(): React.JSX.Element {
     <div className="app">
       <Toolbar />
       <PdfImportDialog />
+      <OutlineImportDialog />
       <FontCatalogDialog />
       <ExportPagesDialog />
       <MailMergeDialog />

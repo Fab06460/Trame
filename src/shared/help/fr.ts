@@ -88,6 +88,25 @@ export const fr: HelpContent = {
       ]
     },
     {
+      id: 'import',
+      group: 'create',
+      title: 'Importer un document Word, Markdown ou texte',
+      keywords: 'docx md txt word plan cours diapositives importer markdown titres',
+      body: [
+        { p: 'Un cours rédigé dans Word, des notes en Markdown ou un fichier texte deviennent des **diapositives** : menu **Importer → « Document Word, Markdown ou texte… »**.' },
+        {
+          steps: [
+            'Choisissez le fichier (`.docx`, `.md`, `.markdown` ou `.txt`).',
+            'Dans la fenêtre : le **niveau de titre** qui démarre une page (le nombre de pages et leurs titres se mettent à jour tout de suite), le **style** clair ou sombre, et la reprise des **images**.',
+            '« Importer » crée un nouveau document (une confirmation vous est demandée si le document courant est modifié).'
+          ]
+        },
+        { p: '**Repris** : les titres (styles « Titre 1 » à « Titre 9 » de Word, `#` en Markdown), les listes à puces et numérotées avec leurs niveaux, les paragraphes, les images, les tableaux (une ligne de texte par rangée) et les sauts de page (`---` en Markdown). Un texte trop long continue sur des pages « (suite) ».' },
+        { p: '**Pas repris** : la mise en forme du texte (gras, couleurs, liens), les en-têtes et pieds de page, les notes de bas de page et les zones de texte de Word. Les images d\'un fichier Markdown sont lues dans **le dossier du fichier** ; une image en ligne (`https://…`) n\'est pas téléchargée : Trame reste hors ligne.' },
+        { tip: 'Tout est ensuite modifiable comme n\'importe quel texte. Un fichier LibreOffice (`.odt`) : enregistrez-le d\'abord en `.docx`.' }
+      ]
+    },
+    {
       id: 'templates',
       group: 'create',
       title: 'Modèles, marque et mise en page',

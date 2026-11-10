@@ -96,6 +96,9 @@ const api = {
   saveCustomFont: (id: string, name: string, category: string, variants: Record<string, string>): Promise<{ ok: true; font: InstalledFont } | FontsFailure> => ipcRenderer.invoke('fonts:save-custom', id, name, category, variants),
   pickCsv: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('csv:pick'),
   pickPptx: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('pptx:pick'),
+  /** Import d'un document texte : choix du fichier (Word, Markdown ou texte brut), puis lecture d'une image citée par un fichier Markdown (dans son dossier seulement ; data URL ou null). */
+  pickDocument: (): Promise<{ name: string; ext: 'docx' | 'md' | 'txt'; bytes: Uint8Array } | null> => ipcRenderer.invoke('outline:pick'),
+  readDocumentImage: (ref: string): Promise<string | null> => ipcRenderer.invoke('outline:image', ref),
   pickImage: (): Promise<string | null> => ipcRenderer.invoke('image:pick'),
   /** Publipostage : choix du dossier des images (null si annulé), puis lecture de fichiers de ce dossier par leur nom (data URL, ou null si illisible). */
   pickMergeImageFolder: (): Promise<{ name: string; files: string[] } | null> => ipcRenderer.invoke('mergeimages:pick'),
@@ -192,7 +195,7 @@ const api = {
   readClipboard: (): Promise<
     { kind: 'elements'; json: string } | { kind: 'image'; dataUrl: string } | { kind: 'text'; text: string } | null
   > => ipcRenderer.invoke('clipboard:read'),
-  askUnsaved: (name: string, action: 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'): Promise<'save' | 'discard' | 'cancel'> =>
+  askUnsaved: (name: string, action: 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'importDocument' | 'template'): Promise<'save' | 'discard' | 'cancel'> =>
     ipcRenderer.invoke('dialog:unsaved', name, action),
   /** Boîte d'information native (un bouton OK). */
   showInfo: (message: string, detail: string): Promise<void> => ipcRenderer.invoke('dialog:info', message, detail),

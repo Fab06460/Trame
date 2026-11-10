@@ -5,6 +5,7 @@ import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile
 import { randomUUID } from 'crypto'
 import { homedir, tmpdir } from 'os'
 import { basename, dirname, sep } from 'path'
+import { DOCUMENT_IMAGE_MIME, MAX_DOCUMENT_IMAGE_BYTES, resolveDocumentImage } from './outlineImage'
 import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
 import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
@@ -604,7 +605,7 @@ ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, conf
   return response === 0
 })
 
-const UNSAVED_ACTIONS = ['close', 'new', 'open', 'importPdf', 'importPptx', 'template'] as const
+const UNSAVED_ACTIONS = ['close', 'new', 'open', 'importPdf', 'importPptx', 'importDocument', 'template'] as const
 ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
   if (!(UNSAVED_ACTIONS as readonly string[]).includes(action)) return 'cancel'
   const win = BrowserWindow.fromWebContents(e.sender)!
@@ -1131,6 +1132,54 @@ ipcMain.on('speaker:close', (e) => {
 ipcMain.handle('pdf:pick', () => pickImportFile('pdf', 'PDF'))
 ipcMain.handle('pptx:pick', () => pickImportFile('pptx', 'PowerPoint'))
 ipcMain.handle('csv:pick', () => pickImportFile('csv', tm('main.filter.csv')))
+
+// Import d'un document texte (Word, Markdown, texte brut). Le fichier est lu ici. Un fichier Markdown peut citer des images voisines
+// (`![](img/schema.png)`) : elles ne se lisent que dans le dossier du dernier fichier choisi et ses sous-dossiers (`resolveDocumentImage`),
+// jamais ailleurs sur le disque, même si l'interface en demandait un autre chemin.
+let documentDir: string | null = null
+const DOCUMENT_EXTENSIONS = ['docx', 'md', 'markdown', 'txt']
+ipcMain.handle('outline:pick', async (): Promise<{ name: string; ext: 'docx' | 'md' | 'txt'; bytes: Uint8Array } | null> => {
+  let path: string | null = null
+  if (TEST_EXPORT_DIR) {
+    // tests de bout en bout : le fichier pick-import.docx, .md ou .txt du dossier de test tient lieu de choix
+    for (const ext of ['docx', 'md', 'txt']) {
+      const candidate = join(TEST_EXPORT_DIR, `pick-import.${ext}`)
+      if (await stat(candidate).catch(() => null)) {
+        path = candidate
+        break
+      }
+    }
+  } else {
+    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: tm('main.filter.documents'), extensions: DOCUMENT_EXTENSIONS }] })
+    if (!res.canceled && res.filePaths[0]) path = res.filePaths[0]
+  }
+  if (!path) return null
+  if ((await stat(path)).size > MAX_IMPORT_BYTES) {
+    dialog.showErrorBox(tm('main.import.tooBig.title'), tm('main.import.tooBig'))
+    return null
+  }
+  const raw = (path.split('.').pop() ?? '').toLowerCase()
+  const ext = raw === 'docx' ? 'docx' : raw === 'txt' ? 'txt' : 'md'
+  documentDir = dirname(path)
+  return { name: basename(path).replace(/\.[^.]+$/, ''), ext, bytes: new Uint8Array(await readFile(path)) }
+})
+
+ipcMain.handle('outline:image', async (_e, ref: unknown): Promise<string | null> => {
+  if (typeof ref !== 'string' || !documentDir) return null
+  const found = resolveDocumentImage(documentDir, ref)
+  if (!found) return null
+  try {
+    // un lien symbolique ne doit pas faire sortir du dossier du document
+    const real = await realpath(found.path)
+    const root = await realpath(documentDir)
+    if (real !== root && !real.startsWith(root + sep)) return null
+    if ((await stat(real)).size > MAX_DOCUMENT_IMAGE_BYTES) return null
+    const mime = DOCUMENT_IMAGE_MIME[real.split('.').pop()?.toLowerCase() ?? ''] ?? found.mime
+    return `data:${mime};base64,${(await readFile(real)).toString('base64')}`
+  } catch {
+    return null
+  }
+})
 
 ipcMain.handle('image:pick', async () => {
   // tests de bout en bout : l'image « choisie » est le fichier pick-image.png du dossier de test (aucun dialogue natif)

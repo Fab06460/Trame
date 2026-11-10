@@ -707,3 +707,7 @@ button.danger { color: var(--danger); }
 [data-formula-panel] textarea { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; }
 [data-formula-panel] .warn code { font-size: 11px; word-break: break-word; }
 .formula-palette button.overlined { text-decoration: overline; }
+
+/* import d'un document texte */
+.outline-import { gap: 10px; }
+.outline-pages { margin: 6px 0 0; padding-left: 22px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }

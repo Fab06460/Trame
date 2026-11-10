@@ -9,7 +9,7 @@ import { parseDocument, useEditor } from '@/store/editor'
 import type { TrameDocument } from '@/types'
 
 /** Ce que l'utilisateur s'apprête à faire (le processus principal traduit la question, voir `unsaved.action.*`). */
-export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'template'
+export type UnsavedAction = 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'importDocument' | 'template'
 
 /**
  * Contenu du fichier `.trame` : polices utilisées incorporées, sources PDF et clips inutilisés retirés. `keepClips: false` (copies de
