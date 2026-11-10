@@ -11,17 +11,24 @@ interface Props {
   max?: number
   step?: number
   suffix?: string
+  /**
+   * Applique la valeur dès qu'elle est valide (pendant la frappe, ou aux flèches du champ) : le résultat se voit tout de suite. `first` est vrai
+   * pour le premier changement depuis l'entrée dans le champ (c'est lui qui crée le cran d'historique), faux ensuite.
+   */
+  onLive?: (value: number, first: boolean) => void
 }
 
 const show = (v: number): string => String(Math.round(v * 100) / 100)
 
 /**
  * Champ numérique qui n'applique la valeur qu'à la validation (Entrée ou sortie du champ) : un seul cran d'historique par
- * modification, et la frappe « 1 », « 10 », « 100 » ne déplace pas l'élément à chaque chiffre. Échap annule.
+ * modification, et la frappe « 1 », « 10 », « 100 » ne déplace pas l'élément à chaque chiffre. Échap annule. Avec `onLive`, une valeur valide
+ * (dans les bornes) s'applique tout de suite, en un seul cran d'historique pour toute la modification.
  */
-export function NumberField({ label, field, value, onCommit, disabled, min, max, step = 1, suffix }: Props): React.JSX.Element {
+export function NumberField({ label, field, value, onCommit, onLive, disabled, min, max, step = 1, suffix }: Props): React.JSX.Element {
   const [draft, setDraft] = useState(show(value))
   const focused = useRef(false)
+  const liveStarted = useRef(false)
 
   // la valeur change de l'extérieur (glisser sur le canvas, annuler…) : on suit, sauf pendant la saisie
   useEffect(() => {
@@ -48,8 +55,18 @@ export function NumberField({ label, field, value, onCommit, disabled, min, max,
           value={draft}
           disabled={disabled}
           step={step}
-          onFocus={() => (focused.current = true)}
-          onChange={(e) => setDraft(e.target.value)}
+          onFocus={() => {
+            focused.current = true
+            liveStarted.current = false
+          }}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            if (!onLive) return
+            const n = Number(e.target.value.replace(',', '.'))
+            if (e.target.value.trim() === '' || !Number.isFinite(n) || n < (min ?? -Infinity) || n > (max ?? Infinity) || Math.abs(n - value) < 1e-9) return
+            onLive(n, !liveStarted.current)
+            liveStarted.current = true
+          }}
           onBlur={() => {
             focused.current = false
             commit()

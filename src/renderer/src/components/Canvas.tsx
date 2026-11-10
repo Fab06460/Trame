@@ -260,6 +260,13 @@ export function Canvas(): React.JSX.Element {
       if (target) select([target])
     },
     onTap: () => select([el.id]),
+    // le pointeur annonce qu'on peut déplacer l'élément (pas s'il est verrouillé, ni pendant l'outil main ou un commentaire)
+    onMouseEnter: (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!spaceDown && !adding && !positionLocked(el, enforced)) e.target.getStage()!.container().style.cursor = 'move'
+    },
+    onMouseLeave: (e: Konva.KonvaEventObject<MouseEvent>) => {
+      e.target.getStage()!.container().style.cursor = ''
+    },
     // double-clic : sur un membre de groupe, on entre dans le groupe (ce membre seul est sélectionné) ; sur une image seule, on la recadre ;
     // un texte s'ouvre en saisie, voir plus bas
     onDblClick: () => {

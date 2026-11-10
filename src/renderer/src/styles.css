@@ -84,8 +84,8 @@ button.danger { color: var(--danger); }
 .panel input[type='number'], .panel select { background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px; font: inherit; }
 .row { display: flex; gap: 6px; flex-wrap: wrap; }
 .text-editor {
-  position: absolute; margin: 0; padding: 0; border: 1px dashed var(--accent); background: transparent;
-  resize: none; outline: none; overflow: hidden; line-height: 1; transform-origin: top left;
+  position: absolute; margin: 0; padding: 0; border: 1px dashed var(--accent); background: rgba(124, 92, 255, 0.1); cursor: text; caret-color: var(--accent);
+  resize: none; outline: 2px solid var(--accent); outline-offset: 2px; overflow: hidden; line-height: 1; transform-origin: top left;
 }
 .center { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
 .page-strip {

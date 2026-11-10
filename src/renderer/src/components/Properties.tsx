@@ -294,7 +294,7 @@ export function Properties(): React.JSX.Element {
               })()}
             </div>
           )}
-          <NumberField label={t('prop.size')} field="fontSize" value={el.fontSize ?? 32} min={8} max={400} suffix="px" onCommit={(v) => updateElement(el.id, { fontSize: v })} />
+          <NumberField label={t('prop.size')} field="fontSize" value={el.fontSize ?? 32} min={8} max={400} suffix="px" onCommit={(v) => updateElement(el.id, { fontSize: v })} onLive={(v, first) => updateElement(el.id, { fontSize: v }, first)} />
           <div className="row">
             <button
               className={el.fontStyle?.includes('bold') ? 'active' : ''}
