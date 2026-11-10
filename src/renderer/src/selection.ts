@@ -62,7 +62,7 @@ export function tabTarget(els: TrameElement[], selectedIds: string[], dir: 1 | -
 
 /** Tous les éléments visibles du même type que `ref` ; rien pour un graphique ou un QR code (leurs éléments forment un tout). */
 export function sameTypeIds(els: TrameElement[], ref: TrameElement): string[] {
-  const whole = (e: TrameElement): boolean => !!e.chart || !!e.qr || (!!e.groupId && els.some((o) => o.groupId === e.groupId && (!!o.chart || !!o.qr)))
+  const whole = (e: TrameElement): boolean => !!e.chart || !!e.qr || !!e.formula || (!!e.groupId && els.some((o) => o.groupId === e.groupId && (!!o.chart || !!o.qr)))
   if (whole(ref)) return []
   return els.filter((e) => !e.hidden && e.type === ref.type && !whole(e)).map((e) => e.id)
 }

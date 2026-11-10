@@ -132,6 +132,8 @@ export interface TrameElement {
   chart?: ChartSpec
   /** premier élément (le fond) d'un QR code : porte son contenu, le dessin des modules (le chemin qui suit) est régénéré à partir de lui */
   qr?: QrSpec
+  /** élément « chemin » qui dessine une formule : porte son code LaTeX, le tracé est régénéré à partir de lui (`formula.ts`) */
+  formula?: FormulaSpec
   /** liste à puces ou numérotée : chaque paragraphe reçoit un marqueur, les lignes suivantes sont en retrait */
   list?: ListKind
   /** texte sur plusieurs colonnes (2 à 4, absent = une seule) : le texte coule de colonne en colonne, équilibrées ; la largeur de l'élément est celle de l'ensemble */
@@ -255,6 +257,16 @@ export interface QrSpec {
   dark: string
   /** couleur du fond et de la marge (claire) */
   light: string
+}
+
+/** Formule mathématique liée à son code : le document garde cette description, le tracé vectoriel (`TrameElement.path`) est régénéré (`formula.ts`). */
+export interface FormulaSpec {
+  /** code LaTeX (mode mathématique, sans les `$`) */
+  latex: string
+  /** `true` : formule « hors texte » (grandes sommes, fractions à taille pleine) ; `false` : compacte, comme au milieu d'une phrase */
+  display: boolean
+  /** taille de la lettre « m » en pixels du document (1 em) ; la largeur et la hauteur de l'élément en découlent */
+  size: number
 }
 
 /** Tableau du publipostage (champs « {{colonne}} » des textes), enregistré avec le document. */

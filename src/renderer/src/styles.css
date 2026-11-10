@@ -700,3 +700,10 @@ button.danger { color: var(--danger); }
 .tour-bubble h4 { margin: 0; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--strong); }
 .tour-bubble p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
 .tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+
+/* formules mathématiques : palette de symboles */
+.formula-palette { display: flex; flex-wrap: wrap; gap: 3px; }
+.formula-palette button { min-width: 30px; padding: 3px 6px; font-size: 13px; line-height: 1.2; }
+[data-formula-panel] textarea { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; }
+[data-formula-panel] .warn code { font-size: 11px; word-break: break-word; }
+.formula-palette button.overlined { text-decoration: overline; }

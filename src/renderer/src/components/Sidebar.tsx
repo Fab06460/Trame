@@ -29,6 +29,7 @@ import { SideIcon } from './SideIcons'
 import { imagesMissingAlt } from '@/altCheck'
 import { CHART_KINDS, insertChart } from '@/chartActions'
 import { insertQr } from '@/qrActions'
+import { insertFormula } from '@/formulaActions'
 import { useSignature } from '@/store/signature'
 import { clipResultMessage, insertClipFromFile } from '@/clipActions'
 import { SpellPanel } from '@/components/SpellPanel'
@@ -258,6 +259,11 @@ export function Sidebar(): React.JSX.Element {
           <section>
             <h3>{t('qr.section')}</h3>
             <button data-action="qr-insert" title={t('qr.insert.title')} onClick={insertQr}>{t('qr.insert')}</button>
+          </section>
+
+          <section>
+            <h3>{t('formula.section')}</h3>
+            <button data-action="formula-insert" title={t('formula.insert.title')} onClick={insertFormula}>{t('formula.insert')}</button>
           </section>
 
           <section>

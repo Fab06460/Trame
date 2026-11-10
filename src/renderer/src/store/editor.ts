@@ -14,6 +14,7 @@ import { sanitizeChart } from '@/chart'
 import { sanitizeBuild } from '@/builds'
 import { sanitizeLink, withoutLinksToPage } from '@/links'
 import { sanitizeQr } from '@/qr'
+import { sanitizeFormula } from '@/formula'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
 import { sanitizeClips } from '@/videoClips'
@@ -122,6 +123,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeImageField(e)
       sanitizeChart(e)
       sanitizeQr(e)
+      sanitizeFormula(e)
       sanitizeAlt(e)
       sanitizeDecorative(e)
       if (e.locked !== true) delete e.locked

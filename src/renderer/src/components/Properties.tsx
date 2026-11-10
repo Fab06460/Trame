@@ -1,6 +1,7 @@
 import { AppearancePanel } from '@/components/AppearancePanel'
 import { COLUMN_GAP, columnGapOf, columnsOf } from '@/columnStyle'
 import { isFlipExempt } from '@/flip'
+import { FormulaPanel } from '@/components/FormulaPanel'
 import { sameTypeIds } from '@/selection'
 import { TransitionPanel } from './TransitionPanel'
 import { PageDurationPanel } from './PageDurationPanel'
@@ -189,6 +190,8 @@ export function Properties(): React.JSX.Element {
     <aside className="panel">
       <TemplateBanner />
       <h3>{t(`prop.type.${el.type}`)}</h3>
+
+      {el.formula && <FormulaPanel key={el.id} el={el} />}
 
       {el.type === 'image' && (el.video ? <ClipPanel el={el} /> : <ImagePanel el={el} />)}
 

@@ -51,9 +51,9 @@ export function mirrorGradient(g: Gradient, axis: FlipAxis): Gradient {
   return { ...g, angle: ((a % 360) + 360) % 360 }
 }
 
-/** Graphiques et QR codes (groupes dont un élément porte la description) : leur miroir casserait la lecture, ils restent tels quels. */
+/** Formules, graphiques et QR codes (groupes dont un élément porte la description) : leur miroir casserait la lecture, ils restent tels quels. */
 export function isFlipExempt(e: TrameElement, all: TrameElement[]): boolean {
-  if (e.chart || e.qr) return true
+  if (e.chart || e.qr || e.formula) return true
   return !!e.groupId && all.some((o) => o.groupId === e.groupId && (o.chart || o.qr))
 }
 
