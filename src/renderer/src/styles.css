@@ -5,12 +5,12 @@
   --text: #e8e9ee;
   --muted: #9a9cab;
   --accent: #7c5cff;
-  --field: var(--field);
+  --field: #1b1c21;
   --field-hover: #26272e;
-  --control: var(--control);
-  --control-hover: var(--control-hover);
+  --control: #31333f;
+  --control-hover: #3b3d4b;
   --canvas: #15161a;
-  --icon: var(--icon);
+  --icon: #cfd0dc;
   --strong: #fff;
   --soft: rgba(255, 255, 255, 0.06);
   --danger: #ff7b7b;
