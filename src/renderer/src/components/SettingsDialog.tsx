@@ -3,6 +3,7 @@ import { LOCALES } from '@shared/i18n'
 import { recapHidden, setRecapHidden } from '@/store/timingRecap'
 import { useLocale, useT } from '@/i18n'
 import { useSettingsDialog } from '@/store/settingsDialog'
+import { useSpell } from '@/store/spell'
 import { useTheme } from '@/store/theme'
 import { THEME_MODES, type ThemeMode } from '@/theme'
 import { useUpdate } from '@/store/update'
@@ -108,11 +109,11 @@ function Dialog(): React.JSX.Element {
           <section data-settings-spell>
             <h4>{t('settings.section.spell')}</h4>
             <label className="check">
-              <input type="checkbox" data-field="settingsSpellEnabled" checked={spell.enabled} onChange={(e) => void window.trame.setSpell({ enabled: e.target.checked }).then(setSpell)} /> {t('spell.enabled')}
+              <input type="checkbox" data-field="settingsSpellEnabled" checked={spell.enabled} onChange={(e) => void window.trame.setSpell({ enabled: e.target.checked }).then((s) => { setSpell(s); useSpell.getState().setEnabled(s.enabled) })} /> {t('spell.enabled')}
             </label>
             <label className="settings-line">
               <span>{t('spell.language')}</span>
-              <select data-field="settingsSpellLanguage" value={spell.language} disabled={spell.systemManaged || !spell.enabled} onChange={(e) => void window.trame.setSpell({ language: e.target.value }).then(setSpell)}>
+              <select data-field="settingsSpellLanguage" value={spell.language} disabled={spell.systemManaged || !spell.enabled} onChange={(e) => void window.trame.setSpell({ language: e.target.value }).then((s) => { setSpell(s); useSpell.getState().bump() })}>
                 <option value="auto">{t('spell.language.auto')}</option>
                 {spell.languages.map((l) => (
                   <option key={l} value={l}>{SPELL_NAMES[l] ?? l}</option>

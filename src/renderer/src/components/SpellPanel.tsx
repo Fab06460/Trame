@@ -1,45 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { contextAround, findMisspellings, replaceWord, type Misspelling } from '@/spelling'
+import { useCallback, useEffect, useState } from 'react'
+import { contextAround, replaceWord } from '@/spelling'
+import { issueCount, type Issue, type Occurrence } from '@/spellScan'
 import { useEditor } from '@/store/editor'
 import { useSpell } from '@/store/spell'
 import { useT } from '@/i18n'
 import type { SpellUiState } from '../../../preload'
 
-interface Occurrence {
-  pageId: string
-  pageNumber: number
-  elementId: string
-  text: string
-  spans: Misspelling[]
-  span: Misspelling
-}
-
-interface Issue {
-  word: string
-  suggestions: string[]
-  occurrences: Occurrence[]
-}
-
 const LANGUAGE_NAMES: Record<string, string> = { fr: 'Français', en: 'English', de: 'Deutsch', es: 'Español' }
-
-/** Les fautes possibles de tout le document, regroupées par mot, dans l'ordre des pages. */
-function scan(doc: ReturnType<typeof useEditor.getState>['doc'], ignored: readonly string[]): Issue[] {
-  const meta = new Map<string, { pageId: string; pageNumber: number; elementId: string; text: string }>()
-  doc.pages.forEach((page, i) => {
-    for (const el of page.elements) if (el.type === 'text' && !el.hidden && el.text?.trim()) meta.set(`${page.id}:${el.id}`, { pageId: page.id, pageNumber: i + 1, elementId: el.id, text: el.text })
-  })
-  const found = findMisspellings([...meta].map(([key, m]) => ({ key, text: m.text })), (words) => window.trame.spellCheck(words), new Set(ignored))
-  const issues = new Map<string, Issue>()
-  for (const [key, spans] of found) {
-    const m = meta.get(key)!
-    for (const span of spans) {
-      const issue = issues.get(span.word) ?? { word: span.word, suggestions: span.suggestions, occurrences: [] }
-      issue.occurrences.push({ ...m, spans, span })
-      issues.set(span.word, issue)
-    }
-  }
-  return [...issues.values()]
-}
 
 /**
  * Onglet « Orthographe » : les fautes possibles de tout le document (correcteur du système, rien ne quitte l'ordinateur). Un clic sur une
@@ -47,11 +14,10 @@ function scan(doc: ReturnType<typeof useEditor.getState>['doc'], ignored: readon
  */
 export function SpellPanel(): React.JSX.Element {
   const t = useT()
-  const doc = useEditor((s) => s.doc)
   const ignored = useSpell((s) => s.ignored)
+  const issues = useSpell((s) => s.issues)
   const [state, setState] = useState<SpellUiState | null>(null)
   const [dictionary, setDictionary] = useState<string[]>([])
-  const [issues, setIssues] = useState<Issue[] | null>(null)
   const [cursor, setCursor] = useState<Record<string, number>>({})
   const [note, setNote] = useState('')
 
@@ -61,18 +27,7 @@ export function SpellPanel(): React.JSX.Element {
     refreshDictionary()
   }, [refreshDictionary])
 
-  // le document change souvent (déplacements, frappe) : on attend une pause avant de relire tous les textes
-  const enabled = state?.enabled ?? false
-  useEffect(() => {
-    if (!enabled) {
-      setIssues(null)
-      return
-    }
-    const timer = setTimeout(() => setIssues(scan(doc, ignored)), 350)
-    return () => clearTimeout(timer)
-  }, [doc, ignored, enabled, dictionary])
-
-  const total = useMemo(() => issues?.reduce((n, i) => n + i.occurrences.length, 0) ?? 0, [issues])
+  const total = issueCount(issues)
 
   const correct = (issue: Issue, replacement: string): void => {
     const byElement = new Map<string, Occurrence>()
@@ -91,8 +46,13 @@ export function SpellPanel(): React.JSX.Element {
     await window.trame.addSpellWord(word)
     useSpell.getState().ignore(word) // au cas où le système ne tienne pas compte du dictionnaire tout de suite
     refreshDictionary()
+    useSpell.getState().bump()
   }
-  const change = async (patch: { enabled?: boolean; language?: string }): Promise<void> => setState(await window.trame.setSpell(patch))
+  const change = async (patch: { enabled?: boolean; language?: string }): Promise<void> => {
+    const next = await window.trame.setSpell(patch)
+    setState(next)
+    useSpell.getState().setEnabled(next.enabled)
+  }
 
   return (
     <div className="spell-panel" data-spell-panel>
@@ -168,7 +128,7 @@ export function SpellPanel(): React.JSX.Element {
               {dictionary.map((w) => (
                 <li key={w} data-spell-dict-word={w}>
                   <span>{w}</span>
-                  <button className="link" data-spell-dict-remove={w} aria-label={t('spell.dictionary.remove', { word: w })} title={t('spell.dictionary.remove', { word: w })} onClick={() => void window.trame.removeSpellWord(w).then(refreshDictionary)}>×</button>
+                  <button className="link" data-spell-dict-remove={w} aria-label={t('spell.dictionary.remove', { word: w })} title={t('spell.dictionary.remove', { word: w })} onClick={() => void window.trame.removeSpellWord(w).then(() => { refreshDictionary(); useSpell.getState().bump() })}>×</button>
                 </li>
               ))}
             </ul>

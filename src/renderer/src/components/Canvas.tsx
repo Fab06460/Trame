@@ -15,6 +15,8 @@ import { columnGapOf, columnsOf } from '@/columnStyle'
 import { patchListText } from '@/listText'
 import { contentLocked, isEnforced, positionLocked } from '@/protection'
 import { useFonts } from '@/store/fonts'
+import { useSpell } from '@/store/spell'
+import { marksByElement } from '@/spellScan'
 import { useEditedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
@@ -81,6 +83,8 @@ export function Canvas(): React.JSX.Element {
   const enforced = useEditor((s) => isEnforced(s.doc, s.templateUnlocked))
   // une police ajoutée ou retirée : les textes sont recréés (Konva ne remesure pas un texte dont la police vient d'arriver)
   const fontsVersion = useFonts((s) => s.version)
+  const spellIssues = useSpell((s) => s.issues)
+  const spellMarks = useMemo(() => marksByElement(spellIssues), [spellIssues])
   const doc = useEditor((s) => s.doc)
   const page = useEditor(selectPage)
   const selectedIds = useEditor((s) => s.selectedIds)
@@ -483,6 +487,7 @@ export function Canvas(): React.JSX.Element {
                   fontStyle={el.fontStyle}
                   align={el.align}
                   fill={el.fill}
+                  trameSpell={spellMarks[el.id]}
                   trameList={el.list}
                   trameColumns={columnsOf(el)}
                   trameColumnGap={columnGapOf(el)}

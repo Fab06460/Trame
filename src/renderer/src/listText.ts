@@ -2,6 +2,7 @@ import Konva from 'konva'
 import type { SceneContext } from 'konva/lib/Context'
 import { columnRows, columnWidth } from '@/columnStyle'
 import { listIndent, markersFor } from '@/listStyle'
+import { lineStarts, marksOnLine, wavePoints, type SpellMarks } from '@/spellMarks'
 import type { ListKind } from '@/types'
 
 /** Marqueur d'une liste : posé sur la ligne `line` du texte, dans la colonne de retrait. */
@@ -114,9 +115,49 @@ export function patchListText(node: Konva.Text): void {
     marker.destroy()
   }
 
+  /**
+   * Fautes d'orthographe (attribut `trameSpell`, posé par le canevas de l'éditeur) : une ligne ondulée rouge sous chaque mot, tracée au même
+   * endroit que le texte (mêmes lignes, même alignement, même interlettrage). `all` = toutes les lignes de la mise en page, `part` = celles dessinées, dont la première est la ligne
+   * `firstLine` de la mise en page complète ; `width` = largeur de mise en page de ces lignes. Rien n'est tracé hors de l'éditeur (export, miniatures).
+   */
+  const drawSpellMarks = (ctx: SceneContext, all: typeof n.textArr, part: typeof n.textArr, firstLine: number, width: number): void => {
+    const spell = n.getAttr('trameSpell') as SpellMarks | undefined
+    if (!spell?.marks.length || spell.text.length !== n.text().length || spell.text.toLowerCase() !== n.text().toLowerCase()) return
+    const starts = lineStarts(spell.text, all.map((l) => l.text))
+    const fontSize = n.fontSize()
+    const lineHeightPx = n.lineHeight() * fontSize
+    const metrics = n.measureSize('M')
+    const ascent = metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent
+    const descent = metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent
+    const baseline = (ascent - descent) / 2 + lineHeightPx / 2
+    const unit = 1 / Math.max(0.05, n.getAbsoluteScale().x) // un pixel d'écran, en unités du document
+    ctx.save()
+    ctx.setAttr('strokeStyle', '#e5484d')
+    ctx.setAttr('lineWidth', 1.3 * unit)
+    ctx.setAttr('lineJoin', 'round')
+    part.forEach((line, k) => {
+      const from = starts[firstLine + k]
+      if (from < 0) return
+      const x0 = n.align() === 'right' ? width - line.width : n.align() === 'center' ? (width - line.width) / 2 : 0
+      const y = baseline + k * lineHeightPx + Math.round(fontSize / 4) + fontSize / 15 + 2 * unit
+      for (const m of marksOnLine(spell.marks, from, line.text.length)) {
+        const a = x0 + (m.start ? (n as never as { _getTextWidth: (t: string) => number })._getTextWidth(line.text.slice(0, m.start)) : 0)
+        const b = x0 + (n as never as { _getTextWidth: (t: string) => number })._getTextWidth(line.text.slice(0, m.end))
+        ctx.beginPath()
+        wavePoints(a, b, y, 2.6 * unit, 1.1 * unit).forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)))
+        ctx.stroke()
+      }
+    })
+    ctx.restore()
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(n as any)._sceneFunc = (ctx: SceneContext): void => {
-    if (plain()) return draw(ctx)
+    if (plain()) {
+      draw(ctx)
+      drawSpellMarks(ctx, n.textArr, n.textArr, 0, n.getWidth())
+      return
+    }
     const all = n.textArr
     const rows = n.columnRows ?? all.length
     const count = columnCount()
@@ -129,7 +170,10 @@ export function patchListText(node: Konva.Text): void {
       ctx.translate(indent(), 0)
       n.textArr = part
       try {
-        withBodyWidth(() => draw(ctx))
+        withBodyWidth(() => {
+          draw(ctx)
+          drawSpellMarks(ctx, all, part, c * rows, bodyWidth())
+        })
       } finally {
         n.textArr = all
       }

@@ -3494,6 +3494,8 @@ try {
   }
   await gotoPage(0)
   await typeSpellText('Bonjuor tout le monde, bonjuor encore')
+  await waitFor(async () => (await nBrand('[data-side-alert="spell"]')) === 1, 5000)
+  check('orthographe : une pastille jaune apparaît sur l\'onglet dès qu\'il y a des fautes possibles (panneau fermé)', (await nBrand('.sidebar .tabs button[data-tab="spell"] [data-side-alert="spell"]')) === 1)
   await clickSel('.sidebar .tabs button[data-tab="spell"]')
   await waitFor(async () => (await nBrand('[data-spell-item="Bonjuor"]')) === 1)
   check('orthographe : « Bonjuor » est signalé, avec « Bonjour » parmi les suggestions', (await nBrand('[data-spell-item="Bonjuor"] [data-spell-suggestion="Bonjour"]')) === 1, await run(`[...document.querySelectorAll('[data-spell-item]')].map(i => i.dataset.spellItem).join(',')`))
@@ -3527,6 +3529,8 @@ try {
   await clickSel('[data-field="spellEnabled"]')
   await waitFor(async () => (await nBrand('[data-spell-off]')) === 1)
   check('orthographe : désactivé, la liste disparaît et le panneau le dit', (await nBrand('[data-spell-item]')) === 0 && (await run(`window.trame.spellState()`)).enabled === false)
+  await waitFor(async () => (await nBrand('[data-side-alert="spell"]')) === 0, 5000)
+  check('orthographe : désactivé, la pastille de l\'onglet disparaît', (await nBrand('[data-side-alert="spell"]')) === 0)
   await clickSel('[data-action="spell-enable"]')
   await waitFor(async () => (await nBrand('[data-spell-off]')) === 0)
   check('orthographe : réactivé, le correcteur est de nouveau actif', (await run(`window.trame.spellState()`)).enabled === true)

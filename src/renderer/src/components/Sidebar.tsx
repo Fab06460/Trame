@@ -32,6 +32,8 @@ import { insertQr } from '@/qrActions'
 import { useSignature } from '@/store/signature'
 import { clipResultMessage, insertClipFromFile } from '@/clipActions'
 import { SpellPanel } from '@/components/SpellPanel'
+import { issueCount } from '@/spellScan'
+import { useSpell } from '@/store/spell'
 
 
 /** Colonne d'onglets : trois groupes séparés par un filet (le projet, la création, le document). */
@@ -60,6 +62,7 @@ export function Sidebar(): React.JSX.Element {
   const missingAlt = useEditor((s) => imagesMissingAlt(s.doc).length)
   const a11yIssues = useEditor((s) => accessibilityIssues(s.doc).length)
   const openComments = useEditor((s) => openCount(s.doc))
+  const spellIssues = useSpell((s) => issueCount(s.issues))
 
   const refreshRecents = useCallback((): void => {
     window.trame.listRecents().then(setRecents, () => setRecents([]))
@@ -117,12 +120,13 @@ export function Sidebar(): React.JSX.Element {
                 tabIndex={tab === x.id ? 0 : -1}
                 className={`side-tab${tab === x.id ? ' active' : ''}`}
                 data-tab={x.id}
-                title={x.id === 'ai' && missingAlt > 0 ? `${t(x.label)} · ${t('altAudit.missing', { count: missingAlt })}` : x.id === 'a11y' && a11yIssues > 0 ? `${t(x.label)} · ${t('a11y.summary', { count: a11yIssues })}` : x.id === 'review' && openComments > 0 ? `${t(x.label)} · ${t('review.summary.open', { count: openComments })}` : t(x.label)}
+                title={x.id === 'ai' && missingAlt > 0 ? `${t(x.label)} · ${t('altAudit.missing', { count: missingAlt })}` : x.id === 'a11y' && a11yIssues > 0 ? `${t(x.label)} · ${t('a11y.summary', { count: a11yIssues })}` : x.id === 'review' && openComments > 0 ? `${t(x.label)} · ${t('review.summary.open', { count: openComments })}` : x.id === 'spell' && spellIssues > 0 ? `${t(x.label)} · ${t('spell.count', { count: spellIssues })}` : t(x.label)}
                 onClick={() => setTab(x.id)}
               >
                 <SideIcon tab={x.id} />
                 {x.id === 'ai' && missingAlt > 0 && <span className="side-dot" data-side-alert="ai" aria-hidden="true" />}
                 {x.id === 'a11y' && a11yIssues > 0 && <span className="side-dot" data-side-alert="a11y" aria-hidden="true" />}
+                {x.id === 'spell' && spellIssues > 0 && <span className="side-dot" data-side-alert="spell" aria-hidden="true" />}
                 {x.id === 'review' && openComments > 0 && <span className="side-dot" data-side-alert="review" aria-hidden="true" />}
                 <span className="side-label">{t(x.label)}</span>
               </button>

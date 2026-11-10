@@ -22,6 +22,7 @@ import { PrintDialog } from '@/components/PrintDialog'
 import { HandoutDialog } from '@/components/HandoutDialog'
 import { HtmlExportDialog } from '@/components/HtmlExportDialog'
 import { SettingsDialog } from '@/components/SettingsDialog'
+import { SpellWatcher } from '@/components/SpellWatcher'
 import { useSettingsDialog } from '@/store/settingsDialog'
 import { TimingRecapDialog } from '@/components/TimingRecapDialog'
 import { usePrintDialog } from '@/store/printDialog'
@@ -228,6 +229,7 @@ export default function App(): React.JSX.Element {
       <HandoutDialog />
       <HtmlExportDialog />
       <SettingsDialog />
+      <SpellWatcher />
       <TimingRecapDialog />
       <PdfToolsDialog />
       <WordCloudDialog />
