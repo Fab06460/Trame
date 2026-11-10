@@ -22,6 +22,9 @@ import { PrintDialog } from '@/components/PrintDialog'
 import { HandoutDialog } from '@/components/HandoutDialog'
 import { HtmlExportDialog } from '@/components/HtmlExportDialog'
 import { SettingsDialog } from '@/components/SettingsDialog'
+import { HelpDialog } from '@/components/HelpDialog'
+import { Tour } from '@/components/Tour'
+import { useHelp } from '@/store/help'
 import { SpellWatcher } from '@/components/SpellWatcher'
 import { useSettingsDialog } from '@/store/settingsDialog'
 import { TimingRecapDialog } from '@/components/TimingRecapDialog'
@@ -75,6 +78,14 @@ export default function App(): React.JSX.Element {
         useSettingsDialog.getState().setOpen(!useSettingsDialog.getState().open)
         return
       }
+      // F1 : l'aide
+      if (e.key === 'F1' && !e.metaKey && !e.ctrlKey && !e.altKey && !usePresentation.getState().active) {
+        e.preventDefault()
+        const h = useHelp.getState()
+        if (h.open) h.setOpen(false)
+        else h.show()
+        return
+      }
       // raccourcis fichier : actifs même pendant la saisie de texte
       if ((e.metaKey || e.ctrlKey) && ['s', 'o', 'n', 'p'].includes(k)) {
         e.preventDefault()
@@ -103,6 +114,12 @@ export default function App(): React.JSX.Element {
         return
       }
       if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes((t as HTMLInputElement).type))) return
+      // ? : l'aide (hors saisie)
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !usePresentation.getState().active) {
+        e.preventDefault()
+        useHelp.getState().show()
+        return
+      }
       const s = useEditor.getState()
       const mod = e.metaKey || e.ctrlKey
       if (mod && e.key.toLowerCase() === 'z') {
@@ -229,6 +246,8 @@ export default function App(): React.JSX.Element {
       <HandoutDialog />
       <HtmlExportDialog />
       <SettingsDialog />
+      <HelpDialog />
+      <Tour />
       <SpellWatcher />
       <TimingRecapDialog />
       <PdfToolsDialog />

@@ -665,3 +665,36 @@ button.danger { color: var(--danger); }
 .presentation-clip { position: absolute; z-index: 3; object-fit: fill; background: transparent; }
 .presentation-link { position: absolute; z-index: 4; cursor: pointer; border-radius: 4px; }
 .presentation-link:hover { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.35); }
+
+/* aide intégrée et visite guidée */
+.side-settings { display: flex; flex-direction: column; }
+.help-dialog { width: min(920px, calc(100vw - 32px)); height: min(640px, calc(100vh - 48px)); gap: 10px; }
+.help-head { display: flex; align-items: center; gap: 12px; }
+.help-head h3 { white-space: nowrap; }
+.help-head .text-field { flex: 1; min-width: 0; }
+.help-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 230px 1fr; gap: 16px; }
+.help-nav { overflow: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 6px; border-right: 1px solid var(--border); }
+.help-nav h4 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.help-nav h4:first-child { margin-top: 0; }
+.help-nav-item { text-align: left; background: transparent; border: 0; border-radius: 6px; padding: 6px 8px; font-size: 13px; color: var(--text); }
+.help-nav-item:hover:not(:disabled) { background: var(--control-hover); }
+.help-nav-item.active { background: rgba(124, 92, 255, 0.22); color: var(--accent-text); }
+.help-article { overflow: auto; padding-right: 8px; font-size: 13px; line-height: 1.55; user-select: text; }
+.help-article h2 { margin: 0 0 10px; font-size: 18px; }
+.help-article p { margin: 0 0 10px; }
+.help-article code { background: var(--field); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+.help-steps { margin: 0 0 10px; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.help-tip { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--soft); border-radius: 0 6px 6px 0; }
+.help-keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 10px; align-items: baseline; }
+.help-keys dt, .help-keys dd { margin: 0; }
+.help-keys kbd { font: inherit; font-size: 12px; background: var(--field); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+.help-foot { display: flex; align-items: center; gap: 10px; }
+.help-foot .spacer, .tour-foot .spacer { flex: 1; }
+@media (max-width: 640px) { .help-body { grid-template-columns: 1fr; } .help-nav { border-right: 0; max-height: 120px; } }
+.tour-layer { position: fixed; inset: 0; z-index: 80; }
+.tour-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.tour-spot { position: absolute; border-radius: 8px; border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); pointer-events: none; }
+.tour-bubble { position: absolute; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+.tour-bubble h4 { margin: 0; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--strong); }
+.tour-bubble p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }

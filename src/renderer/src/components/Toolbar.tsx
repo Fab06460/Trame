@@ -118,7 +118,7 @@ export function Toolbar(): React.JSX.Element {
       )}
       <span className="spacer" />
       {tier < 3 && <DocName />}
-      <button onClick={() => usePresentation.getState().start()} title={t('toolbar.present.title')} aria-label={t('toolbar.present')}>{tier < 4 ? `▶ ${t('toolbar.present')}` : '▶'}</button>
+      <button data-tour="present" onClick={() => usePresentation.getState().start()} title={t('toolbar.present.title')} aria-label={t('toolbar.present')}>{tier < 4 ? `▶ ${t('toolbar.present')}` : '▶'}</button>
       <ExportMenu />
       <PanelToggle side="right" />
     </header>

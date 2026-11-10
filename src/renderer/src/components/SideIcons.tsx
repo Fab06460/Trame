@@ -77,7 +77,18 @@ export function SideIcon({ tab }: { tab: SidebarTab }): React.JSX.Element {
   )
 }
 
-/** Roue crantée du bouton « Réglages » : même grille 24 × 24 et même trait que les onglets. */
+/** Point d'interrogation du bouton « Aide ». */
+export function HelpIcon(): React.JSX.Element {
+  return (
+    <svg className="side-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9.6 9.6a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2 1-1.2 1.8" />
+      <circle cx="12" cy="16.9" r="0.6" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** Roue crantée du bouton « Réglages " : même grille 24 × 24 et même trait que les onglets. */
 export function SettingsIcon(): React.JSX.Element {
   return (
     <svg className="side-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">

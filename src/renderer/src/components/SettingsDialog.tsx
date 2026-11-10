@@ -7,6 +7,8 @@ import { useSpell } from '@/store/spell'
 import { useTheme } from '@/store/theme'
 import { THEME_MODES, type ThemeMode } from '@/theme'
 import { useUpdate } from '@/store/update'
+import { useHelp } from '@/store/help'
+import { useTour } from '@/store/tour'
 import { diagnosticText, feedbackUrl, type FeedbackInfo } from '@shared/feedback'
 import { useView, type ViewSettings } from '@/store/view'
 import type { SpellUiState } from '../../../preload'
@@ -175,6 +177,10 @@ function Dialog(): React.JSX.Element {
 
         <section>
           <h4>{t('settings.section.feedback')}</h4>
+          <div className="row">
+            <button data-action="settings-help" onClick={() => { close(); useHelp.getState().show() }}>{t('help.open')}</button>
+            <button data-action="settings-tour" onClick={() => { close(); useTour.getState().start() }}>{t('help.tour')}</button>
+          </div>
           <div className="row">
             <button data-action="feedback-open" onClick={() => void openFeedback(locale)}>{t('settings.feedback.open')}</button>
             <button data-action="feedback-copy" title={t('settings.feedback.copy.title')} onClick={() => void copyDiagnostic(locale).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })}>

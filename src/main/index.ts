@@ -1496,7 +1496,7 @@ ipcMain.handle('update:set-auto', (_e, auto: unknown) => getUpdater().setAuto(au
 /** Version, système et architecture pour le formulaire de retours (voir `src/shared/feedback.ts`). */
 ipcMain.handle('app:system-info', () => {
   const name = process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux'
-  return { version: app.getVersion(), system: `${name} ${process.getSystemVersion()}`, arch: process.arch }
+  return { version: app.getVersion(), system: `${name} ${process.getSystemVersion()}`, arch: process.arch, automated: Boolean(TEST_EXPORT_DIR) }
 })
 ipcMain.handle('update:open-page', async () => {
   const r = updateRepo()

@@ -205,8 +205,8 @@ const api = {
     ipcRenderer.on('app:before-close', listener)
     return () => ipcRenderer.removeListener('app:before-close', listener)
   },
-  /** Version, système et architecture (formulaire de retours des testeurs). */
-  getSystemInfo: (): Promise<{ version: string; system: string; arch: string }> => ipcRenderer.invoke('app:system-info'),
+  /** Version, système et architecture (formulaire de retours des testeurs) ; `automated` : lancé par les tests de bout en bout (pas de visite guidée). */
+  getSystemInfo: (): Promise<{ version: string; system: string; arch: string; automated: boolean }> => ipcRenderer.invoke('app:system-info'),
   /** Mises à jour automatiques (voir `src/main/updater.ts`) : état courant, vérifier, télécharger, installer (redémarre l'application). */
   getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke('update:get'),
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke('update:check'),
