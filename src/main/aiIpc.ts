@@ -16,7 +16,10 @@ const TEST_MODE = !!process.env.TRAME_TEST_EXPORT_DIR
 const systemBox: SecretBox = {
   // Linux sans trousseau (gnome-libsecret, kwallet…) : Electron chiffre alors avec une clé en clair (« basic_text »), ce qui ne protège rien.
   // Dans ce cas on refuse de rien écrire sur le disque (les identifiants restent en mémoire jusqu'à la fermeture).
-  available: async () => (await safeStorage.isAsyncEncryptionAvailable()) && !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text'),
+  // macOS et Windows : le chiffrement du système est toujours là, et on ne le « teste » surtout pas : sur macOS, y toucher ouvre la boîte
+  // de dialogue du trousseau (« Trame veut utiliser vos informations confidentielles… »). Elle n'apparaît ainsi qu'au moment où l'on
+  // chiffre ou déchiffre vraiment un identifiant, jamais pour quelqu'un qui n'a pas configuré de service d'IA.
+  available: () => process.platform !== 'linux' || (safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend() !== 'basic_text'),
   encrypt: (text) => safeStorage.encryptString(text),
   decrypt: (data) => safeStorage.decryptString(data)
 }

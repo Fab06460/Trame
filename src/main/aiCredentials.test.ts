@@ -69,4 +69,53 @@ describe('identifiants des services d’images IA', () => {
     const other: SecretBox = { ...box(), decrypt: () => { throw new Error('autre session') } }
     expect(await createCredentialStore(file, other).get('openai')).toBeNull()
   })
+
+  it('sans fichier d’identifiants, le chiffrement du système n’est jamais sollicité pour lire l’état', async () => {
+    const calls = { available: 0, decrypt: 0, encrypt: 0 }
+    const spy: SecretBox = { available: () => (calls.available++, true), encrypt: (t) => (calls.encrypt++, Buffer.from(t)), decrypt: (b) => (calls.decrypt++, b.toString()) }
+    const s = createCredentialStore(join(dir, 'absent.json'), spy)
+    await s.status()
+    await s.get('cloudflare')
+    expect(calls.decrypt).toBe(0)
+    expect(calls.encrypt).toBe(0)
+  })
+
+  it('plusieurs panneaux qui demandent l’état en même temps ne déchiffrent qu’une fois', async () => {
+    const file = join(dir, 'ai.json')
+    await createCredentialStore(file, box()).set('cloudflare', { account: 'a'.repeat(32), token: 'jeton' })
+    let decrypts = 0
+    let availables = 0
+    const base = box()
+    const spy: SecretBox = { available: () => (availables++, true), encrypt: base.encrypt, decrypt: (b) => (decrypts++, base.decrypt(b)) }
+    const s = createCredentialStore(file, spy)
+    const [x, y, z] = await Promise.all([s.status(), s.status(), s.get('cloudflare')])
+    expect(x.providers.find((p) => p.id === 'cloudflare')!.configured).toBe(true) // même la demande simultanée voit le résultat final
+    expect(y.providers.find((p) => p.id === 'cloudflare')!.configured).toBe(true)
+    expect(z).toEqual({ account: 'a'.repeat(32), token: 'jeton' })
+    await s.status()
+    expect(decrypts).toBe(2) // deux champs, une seule lecture
+    expect(availables).toBe(1) // la réponse est gardée pour la session
+  })
+
+  it('dès que le déchiffrement échoue (accès refusé), on n’insiste pas pour les autres services', async () => {
+    const file = join(dir, 'ai.json')
+    const w = createCredentialStore(file, box())
+    await w.set('cloudflare', { account: 'a'.repeat(32), token: 'jeton' })
+    await w.set('openai', { key: 'sk-secret' })
+    let decrypts = 0
+    const denied: SecretBox = { ...box(), decrypt: () => (decrypts++, (() => { throw new Error('refusé') })()) }
+    const s = createCredentialStore(file, denied)
+    expect((await s.status()).providers.every((p) => !p.configured)).toBe(true)
+    expect(decrypts).toBe(1)
+  })
+
+  it('un chiffrement qui échoue à l’écriture garde les identifiants en mémoire et le signale', async () => {
+    const file = join(dir, 'ai.json')
+    const broken: SecretBox = { ...box(), encrypt: () => { throw new Error('trousseau refusé') } }
+    const s = createCredentialStore(file, broken)
+    expect(await s.set('openai', { key: 'sk-secret' })).toEqual({ ok: true })
+    expect(await s.get('openai')).toEqual({ key: 'sk-secret' })
+    expect((await s.status()).persistent).toBe(false)
+    await expect(readFile(file)).rejects.toThrow()
+  })
 })
