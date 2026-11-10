@@ -2035,6 +2035,15 @@ try {
   await setTheme('dark'); await sleep(200)
   const dark = JSON.parse(await themeState())
   check('réglages : « Apparence » passe l\'interface en clair puis en sombre (couleurs et choix mémorisés)', light.theme === 'light' && dark.theme === 'dark' && light.bg !== dark.bg && light.stored === 'light' && dark.stored === 'dark', JSON.stringify({ light, dark }))
+  // retours des testeurs : le formulaire s'ouvre avec la version et le système déjà remplis ; le diagnostic se copie sans contenu de document
+  await rm(join(exportsDir, 'opened-link.txt'), { force: true })
+  await clickSel('[data-settings-dialog] [data-action="feedback-open"]')
+  await waitFor(async () => existsSync(join(exportsDir, 'opened-link.txt')))
+  const feedbackLink = existsSync(join(exportsDir, 'opened-link.txt')) ? await readFile(join(exportsDir, 'opened-link.txt'), 'utf-8') : ''
+  let feedbackUrlOk = false
+  try { const u = new URL(feedbackLink); feedbackUrlOk = u.hostname === 'docs.google.com' && u.searchParams.get('entry.796230494') === appVersion && /^(macOS|Windows|Linux) /.test(u.searchParams.get('entry.1922881712') ?? '') && !!u.searchParams.get('entry.148499426') } catch {}
+  check('retours : « Signaler un problème » ouvre le formulaire avec version, système et langue préremplis', feedbackUrlOk, String(feedbackLink))
+  check('retours : « Copier les informations de diagnostic » est proposé', (await nBrand('[data-settings-dialog] [data-action="feedback-copy"]')) === 1)
   await setTheme('auto')
   if (process.env.SMOKE_SETTINGS_SHOT) await writeFile(process.env.SMOKE_SETTINGS_SHOT, Buffer.from((await cdp('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
   await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)

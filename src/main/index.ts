@@ -1493,6 +1493,11 @@ ipcMain.handle('update:check', () => getUpdater().check())
 ipcMain.handle('update:download', () => getUpdater().download())
 ipcMain.handle('update:install', () => getUpdater().install())
 ipcMain.handle('update:set-auto', (_e, auto: unknown) => getUpdater().setAuto(auto === true))
+/** Version, système et architecture pour le formulaire de retours (voir `src/shared/feedback.ts`). */
+ipcMain.handle('app:system-info', () => {
+  const name = process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux'
+  return { version: app.getVersion(), system: `${name} ${process.getSystemVersion()}`, arch: process.arch }
+})
 ipcMain.handle('update:open-page', async () => {
   const r = updateRepo()
   if (r) await shell.openExternal(releasesUrl(r.owner, r.repo))

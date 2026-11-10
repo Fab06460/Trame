@@ -7,6 +7,7 @@ import { useSpell } from '@/store/spell'
 import { useTheme } from '@/store/theme'
 import { THEME_MODES, type ThemeMode } from '@/theme'
 import { useUpdate } from '@/store/update'
+import { diagnosticText, feedbackUrl, type FeedbackInfo } from '@shared/feedback'
 import { useView, type ViewSettings } from '@/store/view'
 import type { SpellUiState } from '../../../preload'
 
@@ -27,6 +28,19 @@ export function SettingsDialog(): React.JSX.Element | null {
   return open ? <Dialog /> : null
 }
 
+async function feedbackInfo(language: string): Promise<FeedbackInfo & { arch: string; screen: string }> {
+  const sys = await window.trame.getSystemInfo()
+  return { ...sys, language, screen: `${window.screen.width}×${window.screen.height} @${window.devicePixelRatio}x` }
+}
+
+async function openFeedback(language: string): Promise<void> {
+  await window.trame.openLink(feedbackUrl(await feedbackInfo(language)))
+}
+
+async function copyDiagnostic(language: string): Promise<void> {
+  await navigator.clipboard.writeText(diagnosticText(await feedbackInfo(language))).catch(() => {})
+}
+
 function Dialog(): React.JSX.Element {
   const t = useT()
   const locale = useLocale((s) => s.locale)
@@ -36,6 +50,7 @@ function Dialog(): React.JSX.Element {
   const [reopen, setReopen] = useState<boolean | null>(null)
   const [spell, setSpell] = useState<SpellUiState | null>(null)
   const [recapOff, setRecapOff] = useState(recapHidden)
+  const [copied, setCopied] = useState(false)
   const close = (): void => useSettingsDialog.getState().setOpen(false)
 
   useEffect(() => {
@@ -157,6 +172,17 @@ function Dialog(): React.JSX.Element {
             </button>
           </section>
         )}
+
+        <section>
+          <h4>{t('settings.section.feedback')}</h4>
+          <div className="row">
+            <button data-action="feedback-open" onClick={() => void openFeedback(locale)}>{t('settings.feedback.open')}</button>
+            <button data-action="feedback-copy" title={t('settings.feedback.copy.title')} onClick={() => void copyDiagnostic(locale).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })}>
+              {copied ? `✓ ${t('settings.feedback.copied')}` : t('settings.feedback.copy')}
+            </button>
+          </div>
+          <p className="hint">{t('settings.feedback.hint')}</p>
+        </section>
 
         <div className="row end">
           <button className="primary" data-action="settings-close" onClick={close}>{t('common.close')}</button>
