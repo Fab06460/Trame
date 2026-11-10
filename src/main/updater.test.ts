@@ -60,6 +60,17 @@ describe('createUpdater', () => {
     expect(engine.autoInstallOnAppQuit).toBe(false)
   })
 
+  it('une mise à jour téléchargée sur clic s\'installe à la fermeture, même après « Plus tard »', async () => {
+    const s = setup()
+    s.engine.emit('update-available', { version: '2.0.0' })
+    await s.flush()
+    expect(s.engine.autoInstallOnAppQuit).toBe(false) // pas encore téléchargée : rien à installer
+    await s.u.download()
+    expect(s.u.state()).toMatchObject({ phase: 'ready' })
+    expect(s.engine.autoInstallOnAppQuit).toBe(true)
+    expect(s.engine.installs).toBe(0) // rien n'est relancé sans clic
+  })
+
   it('au lancement : vérifie si c\'est activé et si la dernière vérification date', async () => {
     const a = setup()
     await a.u.init()

@@ -67,7 +67,12 @@ export function createUpdater(deps: UpdaterDeps): {
   })
   e.on('update-not-available', () => void touch().then(() => set({ phase: 'none', version: undefined })))
   e.on('download-progress', (p: { percent?: number }) => set({ phase: 'downloading', percent: Math.max(0, Math.min(100, Math.round(Number(p?.percent) || 0))) }))
-  e.on('update-downloaded', () => set({ phase: 'ready', percent: 100 }))
+  e.on('update-downloaded', () => {
+    // le téléchargement a été demandé par un clic : si l'utilisateur répond « Plus tard », la mise à jour s'installe à la fermeture de
+    // l'application (la relance ouvre alors la nouvelle version). Avant tout téléchargement, rien ne s'installe jamais tout seul.
+    e.autoInstallOnAppQuit = true
+    set({ phase: 'ready', percent: 100 })
+  })
   e.on('error', (err: unknown) => {
     if (st.phase === 'checking' && !userInitiated) {
       // vérification automatique sans réseau, ou dépôt injoignable : on ne dérange pas
