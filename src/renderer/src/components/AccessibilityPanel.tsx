@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { InfoTip } from './InfoTip'
+import { SpeechSection } from './SpeechSection'
 import { accessibilityIssues, contrastFix, unverifiedTexts, type A11yIssue } from '@/accessibility'
 import { imagesMissingAlt } from '@/altCheck'
 import { COLOR_VISIONS, easyReadingPatch, type ColorVision } from '@/readability'
@@ -167,6 +168,8 @@ export function AccessibilityPanel(): React.JSX.Element {
         <button data-a11y-easy onClick={applyEasy}>{t('a11y.easy.apply')}</button>
         {easyNote && <p className="hint" role="status" data-a11y-easy-note>{easyNote}</p>}
       </section>
+
+      <SpeechSection />
 
       <section data-a11y="vision">
         <h4>{t('a11y.vision.h')}<InfoTip>{t('a11y.vision.hint')}</InfoTip></h4>

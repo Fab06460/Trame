@@ -216,6 +216,7 @@ export const fr: HelpContent = {
       keywords: 'contraste daltonisme dyslexie lecture facilitée ordre de lecture alt',
       body: [
         { p: 'L\'onglet **Accès** contrôle le **contraste** des textes (avec correction en un clic), leur taille, leur **ordre de lecture** et les images sans description. La **lecture facilitée** (polices Atkinson Hyperlegible, Lexend ou OpenDyslexic, interligne 1,5, lettres espacées) s\'applique à la sélection, à la page ou au document.' },
+        { p: 'La **lecture à voix haute** lit la sélection, la page ou tout le document avec une voix de votre ordinateur (sans connexion, rien n\'est envoyé). Les textes sont lus de haut en bas, puis de gauche à droite ; choisissez la voix de la langue du document, réglez la vitesse, mettez en pause ou arrêtez à tout moment. Si aucune voix n\'est proposée, ajoutez-en une dans les réglages du système.' },
         { p: 'La **simulation de la vision des couleurs** (protanopie, deutéranopie, tritanopie, niveaux de gris) change seulement l\'affichage à l\'écran, jamais le document.' }
       ]
     },

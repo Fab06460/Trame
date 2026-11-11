@@ -1895,6 +1895,70 @@ try {
   check('accessibilité : la simulation applique un filtre au canevas, jamais au reste de l\'interface', (await run(`document.querySelector('.canvas-wrap').style.filter`)).includes('trame-cv-deuteranopia') && (await run(`document.querySelector('.sidebar').style.filter`)) === '')
   await setSel('a11yVision', 'none')
 
+  // lecture à voix haute : un faux moteur de synthèse remplace celui du système (rien n'est dit pendant les tests) ; il est installé avant
+  // que le panneau ne charge les voix
+  await run(`(() => {
+    window.__spoken = []; window.__calls = []; window.__hold = false
+    const voice = (name, lang, voiceURI) => ({ name, lang, voiceURI, localService: true, default: false })
+    const fake = {
+      getVoices: () => [voice('Test voice', 'en-US', 'test-en'), voice('Voix test', 'fr-FR', 'test-fr')],
+      speak(u) { window.__spoken.push({ text: u.text, rate: u.rate, lang: u.lang }); if (!window.__hold) setTimeout(() => u.onend && u.onend({}), 30) },
+      cancel() { window.__calls.push('cancel') }, pause() { window.__calls.push('pause') }, resume() { window.__calls.push('resume') },
+      addEventListener() {}, removeEventListener() {}
+    }
+    Object.defineProperty(window, 'speechSynthesis', { value: fake, configurable: true })
+  })()`)
+  await clickSel('.side-rail [data-tab="elements"]')
+  await sleep(250)
+  await clickSel('.side-rail [data-tab="a11y"]')
+  await sleep(350)
+  check('lecture : la section propose les voix, celles de la langue de l\'interface d\'abord', (await nBrand('[data-a11y="speech"]')) === 1 && (await run(`[...document.querySelectorAll('[data-field="speechVoice"] option')].map(o => o.value).join()`)) === ',test-fr,test-en')
+  await clickSel('[data-action="speech-play"]')
+  for (let i = 0; i < 40 && (await run(`window.__spoken.length`)) < 1; i++) await sleep(100)
+  await sleep(300)
+  const spoke = await run(`JSON.stringify(window.__spoken)`)
+  check('lecture : la page est lue avec la voix de la langue (fr-FR) à vitesse normale', (await run(`window.__spoken.length`)) === 1 && /texte/i.test(await run(`window.__spoken[0].text`)) && (await run(`window.__spoken[0].lang`)) === 'fr-FR' && (await run(`window.__spoken[0].rate`)) === 1, spoke)
+  check('lecture : la lecture finie, le bouton « Lire » revient', (await nBrand('[data-action="speech-play"]')) === 1 && (await nBrand('[data-speech-status]')) === 0)
+  await run(`(() => { const i = document.querySelector('[data-field="speechRate"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '1.4'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await setSel('speechVoice', 'test-en')
+  await sleep(150)
+  await clickSel('[data-action="speech-play"]')
+  for (let i = 0; i < 40 && (await run(`window.__spoken.length`)) < 2; i++) await sleep(100)
+  check('lecture : voix et vitesse choisies sont appliquées', (await run(`window.__spoken.at(-1).lang`)) === 'en-US' && Math.abs((await run(`window.__spoken.at(-1).rate`)) - 1.4) < 0.001) // `rate` est un flottant simple précision
+  check('lecture : voix et vitesse sont mémorisées', (await run(`localStorage.getItem('trame.speech')`)).includes('"voiceUri":"test-en"') && (await run(`localStorage.getItem('trame.speech')`)).includes('"rate":1.4'))
+  // pause, reprise, arrêt (le faux moteur ne termine plus les morceaux)
+  await run(`window.__hold = true`)
+  await sleep(200)
+  await clickSel('[data-action="speech-play"]')
+  for (let i = 0; i < 40 && (await nBrand('[data-speech-status="playing"]')) === 0; i++) await sleep(100)
+  check('lecture : l\'état indique la page et le texte en cours', (await run(`document.querySelector('[data-speech-status]')?.innerText ?? ''`)).includes('Page 1 — texte 1 sur 1'))
+  await clickSel('[data-action="speech-pause"]')
+  await sleep(150)
+  check('lecture : « Pause » met le moteur en pause et propose « Reprendre »', (await run(`window.__calls.includes('pause')`)) === true && (await nBrand('[data-action="speech-resume"]')) === 1 && (await nBrand('[data-speech-status="paused"]')) === 1)
+  await clickSel('[data-action="speech-resume"]')
+  await sleep(150)
+  check('lecture : « Reprendre » relance le moteur', (await run(`window.__calls.includes('resume')`)) === true && (await nBrand('[data-speech-status="playing"]')) === 1)
+  await clickSel('[data-action="speech-stop"]')
+  await sleep(150)
+  check('lecture : « Arrêter » annule le moteur et revient à « Lire »', (await run(`window.__calls.includes('cancel')`)) === true && (await nBrand('[data-action="speech-play"]')) === 1 && (await nBrand('[data-speech-status]')) === 0)
+  await run(`window.__hold = false`)
+  // la lecture d'une page sélectionne le texte lu : la portée « sélection » le lit, et ne lit rien quand rien n'est sélectionné
+  await setSel('speechScope', 'selection')
+  const spokenBefore = await run(`window.__spoken.length`)
+  await clickSel('[data-action="speech-play"]')
+  for (let i = 0; i < 40 && (await run(`window.__spoken.length`)) === spokenBefore; i++) await sleep(100)
+  check('lecture : la sélection (le texte lu à l\'instant) est lue', (await run(`window.__spoken.length`)) === spokenBefore + 1)
+  await sleep(300)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  await clickSel('[data-action="speech-play"]')
+  await sleep(250)
+  check('lecture : sans texte sélectionné, « Aucun texte à lire » et rien n\'est dit', (await nBrand('[data-speech-message="empty"]')) === 1 && (await run(`window.__spoken.length`)) === spokenBefore + 1)
+  await setSel('speechScope', 'page')
+  await setSel('speechVoice', '')
+  await run(`(() => { const i = document.querySelector('[data-field="speechRate"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '1'); i.dispatchEvent(new Event('input', { bubbles: true })); delete window.speechSynthesis })()`)
+
   // graphiques et tableaux : insertion d'exemple, réglages, CSV, tableau, export PDF sans repli en image
   await reloadApp()
   await sleep(500)

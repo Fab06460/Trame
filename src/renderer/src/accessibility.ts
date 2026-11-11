@@ -104,7 +104,7 @@ export type A11yIssue =
   | { kind: 'order'; pageId: string; pageIndex: number; elementIds: string[] }
 
 /** Texte visible et non vide : le seul à contrôler. */
-const readable = (e: TrameElement): boolean => e.type === 'text' && !e.hidden && !!e.text?.trim() && e.opacity > 0
+export const readable = (e: TrameElement): boolean => e.type === 'text' && !e.hidden && !!e.text?.trim() && e.opacity > 0
 
 /**
  * Taille minimale lisible : en présentation (page plus large que haute), 2,2 % de la hauteur de la page (24 px sur 1 080) ; sur une
