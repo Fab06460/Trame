@@ -2,25 +2,25 @@
 
 Confrontation de [`FEATURES.md`](../FEATURES.md) (fonctionnalités de Canva) à l'état de Trame et à son prérequis **100 % hors-ligne** (aucun compte, aucun serveur, aucune requête réseau : voir `README.md`). `FEATURES.md` reste la source de référence et n'est pas modifié ; ce document est le plan de travail qui en découle.
 
-Date de l'analyse : 26/10/2026 (Trame 0.1.0).
+Date de l'analyse : 26/10/2026 (Trame 0.1.0). Tableaux et statuts remis à jour le 11/11/2026 (Trame 0.8.0).
 
 ## Résumé
 
 | Statut | Lignes de FEATURES.md |
 | --- | ---: |
-| ✅ Fait | 2 |
-| 🟡 Partiel | 6 |
-| ⬜ À faire | 6 |
-| 🔶 À faire, lourd | 1 |
+| ✅ Fait | 6 |
+| 🟡 Partiel | 10 |
+| ⬜ À faire | 0 |
+| 🔶 À faire, lourd | 0 |
 | 🚫 Écarté (IA) | 2 |
 | ⛔ Hors-ligne impossible | 3 |
-| **Total** | **20** |
+| **Total** | **21** |
 
 **Légende.** ✅ Fait · 🟡 Partiel (une partie existe) · ⬜ À faire, compatible hors-ligne · 🔶 À faire, compatible hors-ligne mais **lourd** (chantier de la taille d'un produit) · 🚫 **Écarté par décision** (IA locale : trop complexe pour le gain, 26/10/2026) · ⛔ Impossible hors-ligne (la fonctionnalité *est* un service en ligne).
 
 **Règle de tri** : une fonctionnalité est dite compatible hors-ligne si, une fois l'application installée, elle fonctionne sans réseau et sans compte. Un modèle d'IA **embarqué** dans l'application respecte ce critère mais a un coût (taille de l'installateur, licence, qualité) ; un modèle **téléchargé après coup** ne le respecte pas strictement.
 
-## 1. Les 20 lignes de FEATURES.md
+## 1. Les lignes de FEATURES.md
 
 
 ### 1. Éditeur principal et interface
@@ -28,7 +28,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
 | Glisser-déposer | ✅ Fait | Déplacement, redimensionnement, rotation, sélection multiple au lasso, groupes, alignement/répartition, calques, pages, annuler/rétablir, zoom, copier-coller. Règles, repères et aimantation sont faits ; il manque : dépôt de fichiers depuis le Finder. | E7 |
-| Bibliothèque de modèles | 🟡 Partiel | 32 modèles intégrés (dont 4 de publipostage) + modèles personnels (enregistrer, renommer, masquer, remplacer, **échanger par pack .tramepack**) + modèles personnels (enregistrer, renommer, masquer, remplacer). « Des millions » est impossible hors-ligne (hébergement), mais une collection embarquée plus large et des packs de modèles échangeables par fichier le sont. | C2 |
+| Bibliothèque de modèles | 🟡 Partiel | 32 modèles intégrés (dont 4 de publipostage) + modèles personnels (enregistrer, renommer, masquer, remplacer, **échanger par pack .tramepack**). « Des millions » est impossible hors-ligne (hébergement), mais une collection embarquée plus large et des packs de modèles échangeables par fichier le sont. | C2 |
 | Bibliothèque de médias | 🟡 Partiel | 12 formes vectorielles, 10 polices embarquées, import d'images locales, **recherche de photos libres en ligne (Wikimedia Commons, Openverse, NASA Images, Cleveland Museum of Art)**, **catalogue de polices en ligne (Google Fonts)**. Photos, vidéos, pistes audio « par millions » : impossible hors-ligne. Fait : jeu d'icônes/illustrations à licence ouverte embarqué, bibliothèque locale d'images (un dossier choisi, étiquettes, recherche). Reste : polices supplémentaires hors ligne. | C1, C3, E12 |
 | Magic Resize | 🟡 Partiel | Panneau Page : préréglages ou dimensions libres, case « Adapter le contenu ». Mise à l'échelle uniforme et centrage de la composition, bords conservés (`magicResize.ts`, aucune IA). Reste : une vraie recomposition (réorganiser les blocs pour un format très différent). | E10 |
 
@@ -37,8 +37,8 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
 | Retouche photo | 🟡 Partiel | **Fait** : recadrage (champs et poignées sur le canvas), miroirs, redressement, cadres en forme, filtres, réglages de lumière, flou — tout hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
-| Montage vidéo | 🔶 À faire, lourd | Faisable hors-ligne (lecture native, encodage avec ffmpeg embarqué, enregistrement d'écran natif d'Electron) mais c'est un produit à part entière. Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
-| Effets graphiques | ⬜ À faire | Pas d'ombre, de lueur, de contour ni de dégradé aujourd'hui. Tout est faisable hors-ligne ; en PDF ces effets obligent à une image pour l'élément concerné (voir risques). | E1, E2, E3 |
+| Montage vidéo | 🟡 Partiel | **Fait** : export du document en vidéo MP4/WebM (WebCodecs, sans ffmpeg), clips dans les pages (début, fin, vitesse), musique de fond, voix off par page. **Reste** : coupe au milieu d'un clip, assemblage de plusieurs clips, enregistrement d'écran (V2). Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
+| Effets graphiques | ✅ Fait | Contour, dégradés (formes), ombre portée et lueur ; en PDF l'ombre est une image sous un élément resté vectoriel. Reste : dégradé de fond de page et de texte. | E1, E2, E3 |
 
 ### 3. Intelligence artificielle
 
@@ -56,7 +56,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
 | Kit de marque | 🟡 Partiel | Onglet « Marque » : couleurs, polices et logos enregistrés localement (un kit), couleurs récentes, pipette, couleurs du document (appliquer, ajouter au kit, remplacer partout). Les polices du kit passent en tête du sélecteur de police. Restent : plusieurs kits, proposition dans les sélecteurs de couleur. | C5, E11, E12 |
-| Modèles de marque verrouillés | ⬜ À faire | Éléments verrouillés / éditables dans un modèle, modèles échangés sous forme de fichiers. Faisable ; dépend du verrouillage de calques. | C6, E5 |
+| Modèles de marque verrouillés | ✅ Fait | Éléments figés ou à remplir dans un modèle, modèles échangés par packs `.tramepack`. Aide à la cohérence, pas une sécurité. | C6, E5 |
 | Collaboration en temps réel | ⛔ Hors-ligne impossible | Exige un serveur et du réseau : contraire à l'objectif. Substituts hors-ligne : échange de fichiers `.trame`, packs de modèles, historique de versions local. | — |
 
 ### 5. Outils bureautiques et productivité
@@ -65,7 +65,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0).
 | --- | --- | --- | --- |
 | Import / export PowerPoint | ✅ Fait | Export `.pptx` (objets modifiables) et import `.pptx` (dont les exports de Canva), voir `docs/ARCHITECTURE.md`. | — |
 | Éditeur PDF et documents | 🟡 Partiel | Création de PDF : fait (vectoriel, texte sélectionnable). Restent, tous faisables hors-ligne : fusion/scission/réordonnancement de pages, compression, signature visuelle (**fait**, D4), import de pages PDF comme fonds (**fait**, D3). Modifier le texte d'un PDF arbitraire est un très gros chantier peu fiable : à éviter. | D1, D2, D3, D4 |
-| Présentations et tableurs | 🟡 Partiel | Pages 16:9, un modèle de présentation et un **mode présentation plein écran** (F5). Notes de l'orateur faites (saisie, touche N, PPTX). Transitions faites (fondu, glissement, recouvrement, zoom). Écran de l'orateur fait. Pointeur laser fait. Transition par page faite ; graphiques et tableaux (faisables sans service externe, à partir de données collées ou d'un CSV). | D5, C7 |
+| Présentations et tableurs | 🟡 Partiel | Pages 16:9, un modèle de présentation et un **mode présentation plein écran** (F5). Notes de l'orateur faites (saisie, touche N, PPTX). Transitions faites (fondu, glissement, recouvrement, zoom). Écran de l'orateur fait. Pointeur laser fait. Transition par page faite ; graphiques et tableaux faits (barres, courbe, secteurs, tableau ; données collées ou CSV). Pas de tableur. | D5, C7 |
 | Intégrations | ⛔ Hors-ligne impossible | Slack, Teams, YouTube, Google Photos, planificateurs : des appels réseau par définition. Équivalents hors-ligne : glisser-déposer depuis le Finder, export dans un dossier choisi, feuille de partage du système. | E7, D1 |
 | Canva Offline | ✅ Fait | Satisfait par conception : application de bureau sans compte, sans serveur, polices et ressources embarquées, CSP interdisant toute ressource externe. | — |
 
