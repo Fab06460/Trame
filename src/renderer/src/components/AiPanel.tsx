@@ -4,6 +4,7 @@ import { contentLocked, isEnforced } from '@/protection'
 import { placeResult } from '@/aiEdit'
 import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import { AltAudit } from './AltAudit'
 import { imagesMissingAlt } from '@/altCheck'
 import { aiErrorMessage, useAi, type AiMode, type AiResult } from '@/store/ai'
@@ -257,8 +258,7 @@ export function AiPanel(): React.JSX.Element {
 
           {results.length > 0 && (
             <section>
-              <h3>{t('ai.results')}</h3>
-              <p className="hint">{t('ai.results.hint')}</p>
+              <h3>{t('ai.results')}<InfoTip>{t('ai.results.hint')}</InfoTip></h3>
               <div className="grid photos">
                 {results.map((r) => (
                   <div key={r.id} className="ai-result-card">
@@ -354,8 +354,7 @@ export function AiPanel(): React.JSX.Element {
 
           {drafts.length > 0 && (
             <section data-ai-drafts>
-              <h3>{t('aiw.results')}</h3>
-              <p className="hint">{t('aiw.results.hint')}</p>
+              <h3>{t('aiw.results')}<InfoTip>{t('aiw.results.hint')}</InfoTip></h3>
               {drafts.map((d) => {
                 const source = d.sourceId ? elementsOnPage.find((e) => e.id === d.sourceId) : undefined
                 const locked = !!source && contentLocked(source, enforced)

@@ -12,6 +12,7 @@ import { mmToPx, printSetupOf } from '@/printSetup'
 import { useStyleMatch } from '@/store/styleMatch'
 import { RedactDialog } from './RedactDialog'
 import { useLocale, useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 import { AI_PROVIDERS, MAX_ALT, TRANSLATE_LANGUAGES, providerInfo } from '@shared/ai'
 
@@ -158,7 +159,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       </button>
       {redacting && <RedactDialog el={el} onClose={() => setRedacting(false)} />}
 
-      <h4>{t('alt.label')}</h4>
+      <h4>{t('alt.label')}<InfoTip>{t('alt.hint')}</InfoTip></h4>
       <textarea
         className="text-field"
         data-field="alt"
@@ -171,7 +172,6 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
         onBlur={commitAlt}
         onKeyDown={(e) => e.stopPropagation()}
       />
-      <p className="hint">{t('alt.hint')}</p>
       {!altDraft.trim() && !el.decorative && <p className="warn" data-alt-missing>{t('alt.missing')}</p>}
       {!altDraft.trim() && (
         <label className="check" title={t('alt.decorative.hint')}>
@@ -262,7 +262,7 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
         />
       </label>
 
-      <h4>{t('img.mask')}</h4>
+      <h4>{t('img.mask')}<InfoTip>{t('img.mask.hint')}</InfoTip></h4>
       <div className="mask-grid" data-mask-grid>
         <button className={`mask-cell${el.mask ? '' : ' active'}`} data-mask="none" aria-pressed={!el.mask} title={t('img.mask.none')} onClick={() => updateElement(el.id, { mask: undefined })}>
           <svg viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" fill="currentColor" /></svg>
@@ -275,7 +275,6 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
           </button>
         ))}
       </div>
-      {el.mask && <p className="hint">{t('img.mask.hint')}</p>}
 
       <h4>{t('img.filters')}</h4>
       <div className="presets">

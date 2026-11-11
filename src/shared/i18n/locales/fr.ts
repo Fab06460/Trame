@@ -4,6 +4,7 @@ import type { Message } from '../core'
 export const fr = {
   // Commun, barre d’outils, menus Fichier / Exporter / Importer
   'common.cancel': 'Annuler',
+  'info.label': 'Informations',
   'common.close': 'Fermer',
   'toolbar.file': 'Fichier',
   'toolbar.file.title': 'Nouveau, Ouvrir, Importer, Enregistrer sous',

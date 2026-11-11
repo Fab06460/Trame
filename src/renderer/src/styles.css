@@ -711,3 +711,10 @@ button.danger { color: var(--danger); }
 /* import d'un document texte */
 .outline-import { gap: 10px; }
 .outline-pages { margin: 6px 0 0; padding-left: 22px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+
+/* pastille d'information « i » et sa bulle (remplace les paragraphes d'aide permanents) */
+.info-tip { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; min-width: 15px; padding: 0; margin-left: 6px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); font: italic 700 10px/1 Georgia, 'Times New Roman', serif; text-transform: none; letter-spacing: 0; cursor: help; vertical-align: middle; }
+button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(--accent); border-color: var(--accent); color: #fff; filter: none; }
+.info-tip-bubble { position: fixed; z-index: 200; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 12px; font-weight: 400; line-height: 1.45; text-transform: none; letter-spacing: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); pointer-events: auto; }
+.info-tip-bubble p { margin: 0 0 6px; }
+.info-tip-bubble p:last-child { margin-bottom: 0; }

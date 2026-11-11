@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { InfoTip } from './InfoTip'
 import { accessibilityIssues, contrastFix, unverifiedTexts, type A11yIssue } from '@/accessibility'
 import { imagesMissingAlt } from '@/altCheck'
 import { COLOR_VISIONS, easyReadingPatch, type ColorVision } from '@/readability'
@@ -70,13 +71,12 @@ export function AccessibilityPanel(): React.JSX.Element {
 
   return (
     <>
-      <h3>{t('a11y.title')}</h3>
-      <p className="hint">{t('a11y.intro')}</p>
+      <h3>{t('a11y.title')}<InfoTip>{t('a11y.intro')}</InfoTip></h3>
       <p data-a11y-summary={total} role="status" className={total > 0 ? 'warn' : 'hint'}>{total > 0 ? t('a11y.summary', { count: total }) : t('a11y.ok')}</p>
 
       {contrast.length > 0 && (
         <section data-a11y="contrast">
-          <h4>{t('a11y.contrast.h')}</h4>
+          <h4>{t('a11y.contrast.h')}<InfoTip>{t('a11y.contrast.hint')}</InfoTip></h4>
           <ul className="a11y-list">
             {contrast.map((i) => (
               <li key={i.elementId}>
@@ -91,7 +91,6 @@ export function AccessibilityPanel(): React.JSX.Element {
           {contrast.length > 1 && (
             <button data-a11y-fix-all="contrast" onClick={() => patchAll(contrast.map(fixContrast).filter((c): c is NonNullable<typeof c> => !!c))}>{t('a11y.fixAll', { count: contrast.length })}</button>
           )}
-          <p className="hint">{t('a11y.contrast.hint')}</p>
         </section>
       )}
       {unverified > 0 && <p className="hint" data-a11y-unverified={unverified}>{t('a11y.unverified', { count: unverified })}</p>}
@@ -115,7 +114,7 @@ export function AccessibilityPanel(): React.JSX.Element {
 
       {order.length > 0 && (
         <section data-a11y="order">
-          <h4>{t('a11y.order.h')}</h4>
+          <h4>{t('a11y.order.h')}<InfoTip>{t('a11y.order.hint')}</InfoTip></h4>
           <ul className="a11y-list">
             {order.map((i) => (
               <li key={i.pageId}>
@@ -127,7 +126,6 @@ export function AccessibilityPanel(): React.JSX.Element {
               </li>
             ))}
           </ul>
-          <p className="hint">{t('a11y.order.hint')}</p>
         </section>
       )}
 
@@ -150,8 +148,7 @@ export function AccessibilityPanel(): React.JSX.Element {
       )}
 
       <section data-a11y="easy">
-        <h4>{t('a11y.easy.h')}</h4>
-        <p className="hint">{t('a11y.easy.hint')}</p>
+        <h4>{t('a11y.easy.h')}<InfoTip>{t('a11y.easy.hint')}</InfoTip></h4>
         <label>
           {t('a11y.easy.font')}
           <select data-field="a11yFont" value={font} onChange={(e) => setFont(e.target.value)}>
@@ -172,13 +169,12 @@ export function AccessibilityPanel(): React.JSX.Element {
       </section>
 
       <section data-a11y="vision">
-        <h4>{t('a11y.vision.h')}</h4>
+        <h4>{t('a11y.vision.h')}<InfoTip>{t('a11y.vision.hint')}</InfoTip></h4>
         <select data-field="a11yVision" value={vision} onChange={(e) => useColorVision.getState().setVision(e.target.value as ColorVision)} aria-label={t('a11y.vision.h')}>
           {COLOR_VISIONS.map((v) => (
             <option key={v} value={v}>{t(`a11y.vision.${v}` as MessageKey)}</option>
           ))}
         </select>
-        <p className="hint">{t('a11y.vision.hint')}</p>
       </section>
     </>
   )

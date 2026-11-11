@@ -3,6 +3,7 @@ import type { Catalog } from './fr'
 export const es: Catalog = {
   // Commun, barre d’outils, menus Fichier / Exporter / Importer
   'common.cancel': 'Cancelar',
+  'info.label': 'Información',
   'common.close': 'Cerrar',
   'toolbar.file': 'Archivo',
   'toolbar.file.title': 'Nuevo, Abrir, Importar, Guardar como',
