@@ -9,6 +9,7 @@ import { isEnforced } from '@/protection'
 import { MAX_COLORS } from '@/brandKit'
 import { PageThumb } from './PageThumb'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 
 const COUNT = { min: 3, max: 8, initial: 5 }
 
@@ -92,8 +93,7 @@ function StyleMatch(): React.JSX.Element {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('style.title')} data-style-dialog onKeyDown={(e) => e.stopPropagation()}>
       <div className="modal wide style-dialog">
-        <h3>{t('style.title')}</h3>
-        <p className="hint">{t('style.hint')}</p>
+        <h3>{t('style.title')}<InfoTip>{t('style.hint')}</InfoTip></h3>
         <div className="row style-source">
           {source && <img src={source} alt="" className="style-image" draggable={false} />}
           <button data-action="style-choose" onClick={() => void choose()}>{t('style.choose')}</button>

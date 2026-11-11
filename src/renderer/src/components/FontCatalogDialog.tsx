@@ -4,6 +4,7 @@ import { bytesOfBase64, extraFonts, registerExtraFont, unregisterExtraFont } fro
 import { importFontFiles, type FontImportReport } from '@/fontImport'
 import { useFonts } from '@/store/fonts'
 import { t, useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 
 const CATEGORIES: Array<[string, MessageKey]> = [
@@ -119,8 +120,7 @@ export function FontCatalogDialog(): React.JSX.Element | null {
       <div className="modal wide">
         <h3>{t('font.title')}</h3>
         <section className="font-import" data-font-import>
-          <strong>{t('font.mine')}</strong>
-          <p className="hint">{t('font.mine.hint')}</p>
+          <strong>{t('font.mine')}<InfoTip>{t('font.mine.hint')}</InfoTip></strong>
           <div className="row">
             <select data-field="importCategory" value={importCategory} onChange={(e) => setImportCategory(e.target.value)} aria-label={t('font.fallback.label')} title={t('font.fallback.title')}>
               {CATEGORIES.filter(([v]) => v).map(([v, label]) => (
@@ -152,8 +152,7 @@ export function FontCatalogDialog(): React.JSX.Element | null {
             </div>
           )}
         </section>
-        <h3>{t('font.online')}</h3>
-        <p className="hint">{t('font.online.hint')}</p>
+        <h3>{t('font.online')}<InfoTip>{t('font.online.hint')}</InfoTip></h3>
         {error && (
           <div className="warn" role="status" data-fonts-error={error.error}>
             {messageOf(error)}

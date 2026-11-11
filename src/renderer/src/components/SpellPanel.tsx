@@ -4,6 +4,7 @@ import { issueCount, type Issue, type Occurrence } from '@/spellScan'
 import { useEditor } from '@/store/editor'
 import { useSpell } from '@/store/spell'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { SpellUiState } from '../../../preload'
 
 const LANGUAGE_NAMES: Record<string, string> = { fr: 'Français', en: 'English', de: 'Deutsch', es: 'Español' }
@@ -107,9 +108,12 @@ export function SpellPanel(): React.JSX.Element {
       {state && (
         <details className="spell-settings" data-spell-settings>
           <summary>{t('spell.settings')}</summary>
-          <label className="check">
-            <input type="checkbox" data-field="spellEnabled" checked={state.enabled} onChange={(e) => void change({ enabled: e.target.checked })} /> {t('spell.enabled')}
-          </label>
+          <div className="row">
+            <label className="check">
+              <input type="checkbox" data-field="spellEnabled" checked={state.enabled} onChange={(e) => void change({ enabled: e.target.checked })} /> {t('spell.enabled')}
+            </label>
+            <InfoTip>{t('spell.privacy')}</InfoTip>
+          </div>
           <label>
             {t('spell.language')}
             <select data-field="spellLanguage" value={state.language} disabled={state.systemManaged || !state.enabled} onChange={(e) => void change({ language: e.target.value })}>
@@ -133,7 +137,6 @@ export function SpellPanel(): React.JSX.Element {
               ))}
             </ul>
           )}
-          <p className="hint">{t('spell.privacy')}</p>
         </details>
       )}
     </div>

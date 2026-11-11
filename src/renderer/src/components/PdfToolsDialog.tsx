@@ -7,6 +7,7 @@ import { buildPdf, countPages, MAX_TOOL_PAGES, moveItem, parsePageRanges, partNa
 import { pdfThumb } from '@/pdfThumb'
 import { usePdfTools } from '@/store/pdfTools'
 import { t as translate, useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 
 interface Src {
   id: string
@@ -171,8 +172,7 @@ function Tools({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('pdft.title')} data-pdft-dialog onKeyDown={(e) => e.stopPropagation()}>
       <div className="modal wide pdft">
-        <h3>{t('pdft.title')}</h3>
-        <p className="hint">{t('pdft.hint')}</p>
+        <h3>{t('pdft.title')}<InfoTip>{t('pdft.hint')}</InfoTip></h3>
         <div className="row">
           <button data-action="pdft-add" disabled={busy} onClick={() => void add()}>{t('pdft.add')}</button>
           {sources.map((s) => (

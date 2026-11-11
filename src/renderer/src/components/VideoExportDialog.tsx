@@ -6,6 +6,7 @@ import { DEFAULT_VIDEO, FPS_CHOICES, MAX_SECONDS, MIN_SECONDS, SIZE_CHOICES, tot
 import { useEditor } from '@/store/editor'
 import { useVideoExport } from '@/store/videoExport'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 
 export function VideoExportDialog(): React.JSX.Element | null {
@@ -100,8 +101,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('video.title')} data-video-dialog onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') close() }}>
       <div className="modal wide video-dialog">
-        <h3>{t('video.title')}</h3>
-        <p className="hint">{t('video.hint')}</p>
+        <h3>{t('video.title')}<InfoTip>{t('video.hint')}</InfoTip></h3>
         <div className="video-fields">
           <label>
             {t('video.seconds')}
@@ -141,7 +141,7 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
         {customPages > 0 && <p className="hint" data-video-custom>{t('video.customSeconds', { count: customPages })}</p>}
 
         <fieldset className="video-music" data-video-music disabled={busy}>
-          <legend>{t('video.music')}</legend>
+          <legend>{t('video.music')}<InfoTip>{t('video.music.hint')}</InfoTip></legend>
           {music ? (
             <>
               <p className="hint" data-video-music-name>{t('video.music.info', { name: music.name, duration: clock(music.audio.seconds) })}</p>
@@ -164,7 +164,6 @@ function Dialog({ onClose }: { onClose: () => void }): React.JSX.Element {
                   <input type="checkbox" data-field="videoDuck" checked={options.duckMusic} onChange={(e) => patch({ duckMusic: e.target.checked })} /> {t('video.music.duck')}
                 </label>
               )}
-              <p className="hint">{t('video.music.hint')}</p>
             </>
           ) : (
             <button data-action="video-music-pick" onClick={() => void chooseMusic()}>{t('video.music.pick')}</button>

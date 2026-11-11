@@ -7,6 +7,7 @@ import { compareWithFile } from '@/compareActions'
 import { formatDateTime } from '@/formatDate'
 import { openVersionAsCopy, readVersionDocument, restoreVersion, saveNamedVersion } from '@/versionActions'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { TrameDocument } from '@/types'
 import { PageThumb } from './PageThumb'
 
@@ -115,7 +116,7 @@ export function VersionsDialog(): React.JSX.Element | null {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('versions.title')}>
       <div className="modal wide versions-dialog">
-        <h3>{t('versions.title')}</h3>
+        <h3>{t('versions.title')}<InfoTip>{t('versions.how')}</InfoTip></h3>
         {!filePath ? (
           <>
             <p data-versions-unsaved>{t('versions.unsaved')}</p>
@@ -127,7 +128,6 @@ export function VersionsDialog(): React.JSX.Element | null {
           </>
         ) : (
           <>
-            <p className="hint">{t('versions.how')}</p>
             <div className="row">
               <input
                 type="text"

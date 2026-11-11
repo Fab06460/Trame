@@ -4,6 +4,7 @@ import { MAX_PAGES, outlineToDocument, suggestLevel, type CutLevel, type ImportT
 import { outlineStats } from '@/outlineImport/outline'
 import { useOutlineImport } from '@/store/outlineImport'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 
 /** Titre d'une page importée : son premier texte, abrégé. */
 const pageLabel = (elements: { type: string; text?: string }[]): string => {
@@ -43,7 +44,7 @@ function Dialog(): React.JSX.Element | null {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('outlineImport.title')} data-outline-import onMouseDown={(e) => e.target === e.currentTarget && !busy && close()}>
       <div className="modal wide outline-import">
-        <h3>{t('outlineImport.title')}</h3>
+        <h3>{t('outlineImport.title')}<InfoTip>{t('outlineImport.hint')}</InfoTip></h3>
         <p className="hint" data-outline-name>
           <strong>{pending.name}</strong> · {t('outlineImport.headings', { count: stats.headings })} · {t('outlineImport.items', { count: stats.items })} · {t('outlineImport.images', { count: stats.images })}
         </p>
@@ -83,7 +84,6 @@ function Dialog(): React.JSX.Element | null {
             {result.truncated && <div className="warn" role="status">{t('outlineImport.truncated', { max: MAX_PAGES })}</div>}
             {notes.tables > 0 && <div className="hint" data-outline-note="tables">{t('outlineImport.note.tables', { count: notes.tables })}</div>}
             {notes.skippedImages > 0 && <div className="hint" data-outline-note="images">{t('outlineImport.note.images', { count: notes.skippedImages })}</div>}
-            <p className="hint">{t('outlineImport.hint')}</p>
           </>
         )}
         <div className="row end">

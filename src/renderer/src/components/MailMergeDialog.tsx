@@ -8,6 +8,7 @@ import { exportMerge, pickMergeData } from '@/mailMergeActions'
 import { useEditor } from '@/store/editor'
 import { useMailMerge } from '@/store/mailMerge'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import { PageThumb } from './PageThumb'
 
 /**
@@ -156,11 +157,10 @@ export function MailMergeDialog(): React.JSX.Element | null {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('mm.title')}>
       <div className="modal wide mail-merge">
-        <h3>{t('mm.title')}</h3>
+        <h3>{t('mm.title')}<InfoTip>{t('mm.format')}</InfoTip></h3>
         {!data ? (
           <>
             <p className="hint">{t('mm.intro', { example: '{{prénom}}' })}</p>
-            <p className="hint">{t('mm.format')}</p>
             {message && <div className="warn" role="status" data-mm-message>{message}</div>}
             <div className="row end">
               <button onClick={close}>{t('common.cancel')}</button>
