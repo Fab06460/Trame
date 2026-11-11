@@ -2003,6 +2003,22 @@ try {
   check('OCR : « Insérer » ferme la fenêtre et ajoute le texte corrigé comme calque de texte', (await nBrand('[data-ocr-dialog]')) === 0 && (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Texte corrigé à la main'))`)) === true)
   await rm(join(exportsDir, 'pick-image.png'), { force: true })
 
+  // capture d'écran : la fenêtre (sources, modes, micro) s'ouvre et se ferme ; la prise réelle dépend de l'autorisation du système, vérifiée à la main
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(300)
+  await clickSel('[data-action="capture-open-image"]')
+  for (let i = 0; i < 40 && (await nBrand('[data-capture-dialog]')) === 0; i++) await sleep(250)
+  check('Capture : la fenêtre s\'ouvre en mode « image » (pas de case micro)', (await nBrand('[data-capture-dialog]')) === 1 && (await run(`document.querySelector('[data-field="captureMode"]:checked')?.value`)) === 'image' && (await nBrand('[data-field="captureMic"]')) === 0)
+  for (let i = 0; i < 40 && (await nBrand('[data-capture-source], [data-capture-empty], [data-capture-error]')) === 0; i++) await sleep(250)
+  check('Capture : les écrans et fenêtres sont listés, ou le refus du système expliqué', (await nBrand('[data-capture-source], [data-capture-empty], [data-capture-error]')) > 0)
+  await run(`document.querySelector('[data-field="captureMode"][value="video"]').click()`)
+  await sleep(200)
+  check('Capture : le mode « vidéo » propose d\'enregistrer aussi le micro', (await nBrand('[data-field="captureMic"]')) === 1)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check('Capture : Échap ferme la fenêtre', (await nBrand('[data-capture-dialog]')) === 0)
+
   // graphiques et tableaux : insertion d'exemple, réglages, CSV, tableau, export PDF sans repli en image
   await reloadApp()
   await sleep(500)

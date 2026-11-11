@@ -26,6 +26,7 @@ import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeR
 import { projectFilesFromArgv } from './launchArgs'
 import { isOpenableLink } from '../shared/links'
 import { AUDIO_EXTENSIONS, MAX_AUDIO_BYTES, isAudioFile, type AudioPick } from '../shared/audioFiles'
+import { registerCapture } from './capture'
 import { MAX_CLIP_BYTES, VIDEO_TYPES, isVideoFile, videoMime, type VideoPick } from '../shared/videoFiles'
 import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
 import { contextPlan, dictionariesFor, isDictionaryWord, parseSpellSettings, SPELL_LANGUAGES, type ContextItem, type SpellSettings } from './spellSettings'
@@ -1587,6 +1588,7 @@ app.whenReady().then(() => {
     if (permission === 'media') return callback(((details as { mediaTypes?: string[] }).mediaTypes ?? []).every((m) => m === 'audio'))
     callback(true)
   })
+  registerCapture({ getWindow: () => mainWindow, testMode: Boolean(TEST_EXPORT_DIR) })
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   void initSpellcheck().catch(() => {})
   createWindow()

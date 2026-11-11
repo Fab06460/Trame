@@ -32,6 +32,7 @@ import { insertQr } from '@/qrActions'
 import { insertFormula } from '@/formulaActions'
 import { useSignature } from '@/store/signature'
 import { clipResultMessage, insertClipFromFile } from '@/clipActions'
+import { useCapture } from '@/store/capture'
 import { SpellPanel } from '@/components/SpellPanel'
 import { issueCount } from '@/spellScan'
 import { useSpell } from '@/store/spell'
@@ -280,6 +281,8 @@ export function Sidebar(): React.JSX.Element {
             >
               {t('clip.insert')}
             </button>
+            <button data-action="capture-open-video" title={t('capture.video.title')} onClick={() => useCapture.getState().show('video')}>{t('capture.video')}</button>
+            <button data-action="capture-open-image" title={t('capture.image.title')} onClick={() => useCapture.getState().show('image')}>{t('capture.image')}</button>
           </section>
 
           <section>

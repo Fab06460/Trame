@@ -66,12 +66,17 @@ const seekTo = (v: HTMLVideoElement, time: number): Promise<void> =>
 
 export type ClipResult = 'ok' | 'cancelled' | 'tooBig' | 'unreadable'
 
-/** « Insérer un clip vidéo… » : choisit le fichier, en tire une image d'aperçu, l'embarque dans le document et pose l'aperçu sur la page. */
+/** « Insérer un clip vidéo… » : choisit le fichier puis le place comme un clip (voir `insertClipBytes`). */
 export async function insertClipFromFile(): Promise<ClipResult> {
   const picked = await window.trame.pickVideo()
   if (!picked) return 'cancelled'
   if ('error' in picked) return picked.error
-  const url = URL.createObjectURL(new Blob([picked.bytes.slice()], { type: picked.mime }))
+  return insertClipBytes(picked.bytes, picked.mime)
+}
+
+/** Embarque une vidéo dans le document, en tire une image d'aperçu et pose cet aperçu sur la page (un clip : voir `ClipPanel`). */
+export async function insertClipBytes(bytes: Uint8Array, mime: string): Promise<ClipResult> {
+  const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }))
   try {
     const video = await openVideo(url)
     if (!video.videoWidth || !video.videoHeight || !Number.isFinite(video.duration) || video.duration <= 0) return 'unreadable'
@@ -80,7 +85,7 @@ export async function insertClipFromFile(): Promise<ClipResult> {
     const { doc, insertClip } = useEditor.getState()
     const ratio = Math.min(1, (doc.width * 0.6) / video.videoWidth, (doc.height * 0.6) / video.videoHeight)
     const id = nanoid(10)
-    insertClip(id, `data:${picked.mime};base64,${toBase64(picked.bytes)}`, {
+    insertClip(id, `data:${mime};base64,${toBase64(bytes)}`, {
       type: 'image',
       src: poster,
       width: Math.round(video.videoWidth * ratio),

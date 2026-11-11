@@ -5,3 +5,9 @@ declare module '*/iconData.json' {
   const data: unknown
   export default data
 }
+
+/** Lecture des images (ou du son) d'une piste média : disponible dans Chromium, absente des définitions de TypeScript. */
+declare class MediaStreamTrackProcessor<T extends VideoFrame | AudioData = VideoFrame | AudioData> {
+  constructor(init: { track: MediaStreamTrack })
+  readonly readable: ReadableStream<T>
+}

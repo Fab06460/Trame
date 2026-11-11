@@ -20,6 +20,7 @@ import { SignatureDialog } from '@/components/SignatureDialog'
 import { VideoExportDialog } from '@/components/VideoExportDialog'
 import { StyleMatchDialog } from '@/components/StyleMatchDialog'
 import { OcrDialog } from '@/components/OcrDialog'
+import { CaptureDialog } from '@/components/CaptureDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { HandoutDialog } from '@/components/HandoutDialog'
 import { HtmlExportDialog } from '@/components/HtmlExportDialog'
@@ -259,6 +260,7 @@ export default function App(): React.JSX.Element {
       <VideoExportDialog />
       <StyleMatchDialog />
       <OcrDialog />
+      <CaptureDialog />
       <VersionsDialog />
       <RecoveryDialog />
       <CompareDialog />

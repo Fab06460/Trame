@@ -7,6 +7,7 @@ import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, Ed
 import type { MediaItem } from '../shared/mediaLibrary'
 import type { AudioPick } from '../shared/audioFiles'
 import type { VideoPick } from '../shared/videoFiles'
+import type { CaptureError, CaptureSource, CaptureStill } from '../shared/capture'
 
 /** État du correcteur orthographique tel que l'interface le voit. */
 export interface SpellUiState {
@@ -110,6 +111,23 @@ const api = {
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
   /** Choisit un clip vidéo : le fichier, une raison de refus, ou null si annulé. */
   pickVideo: (): Promise<VideoPick> => ipcRenderer.invoke('video:pick'),
+  /** Capture d'écran : écrans et fenêtres proposés (avec vignette), ou le refus du système. */
+  captureSources: (): Promise<{ sources: CaptureSource[] } | { error: CaptureError }> => ipcRenderer.invoke('capture:sources'),
+  /** Image fixe d'une source ; `hideApp` réduit Trame le temps de la prise. */
+  captureStill: (id: string, hideApp: boolean): Promise<CaptureStill | { error: CaptureError }> => ipcRenderer.invoke('capture:still', id, hideApp),
+  /** Vidéo : désigne la source que getDisplayMedia() doit rendre, puis annonce le début (témoin, raccourci, fenêtre réduite) et la fin de l'enregistrement. */
+  captureArm: (id: string): Promise<boolean> => ipcRenderer.invoke('capture:arm', id),
+  captureStarted: (hideApp: boolean): Promise<boolean> => ipcRenderer.invoke('capture:started', hideApp),
+  captureTick: (label: string): void => ipcRenderer.send('capture:tick', label),
+  captureEnded: (): Promise<void> => ipcRenderer.invoke('capture:ended'),
+  /** Demande d'arrêt venue du témoin de la barre de menus ou du raccourci ; rend la fonction qui se désabonne. */
+  onCaptureStop: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('capture:stop', handler)
+    return () => ipcRenderer.removeListener('capture:stop', handler)
+  },
+  /** Ouvre les réglages « Enregistrement de l'écran » du système (macOS). */
+  captureOpenSettings: (): Promise<boolean> => ipcRenderer.invoke('capture:open-settings'),
   /** Ouvre un lien (adresse web ou de courrier) dans le navigateur du système ; refusé (false) pour tout autre schéma. */
   openLink: (url: string): Promise<boolean> => ipcRenderer.invoke('link:open', url),
   /** Accès au micro pour la voix off : sur macOS le système demande l'autorisation la première fois ; ailleurs le navigateur s'en charge à l'enregistrement. */
