@@ -8,7 +8,8 @@ import { basename, dirname, sep } from 'path'
 import { DOCUMENT_IMAGE_MIME, MAX_DOCUMENT_IMAGE_BYTES, resolveDocumentImage } from './outlineImage'
 import type { InstalledFont, PhotoSearchResult } from '../preload'
 import { ALL_VARIANTS, CATEGORY_LIST, CUSTOM_PREFIX, FONTS_API, FONTS_CDN, MAX_FONT_BYTES, cssFamily, fontFileUrl, isFontFile, isSafeFamilyName, isSafeId, isWoff2, parseCatalog, type CatalogFont, type FontVariant } from './fontCatalog'
-import { COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, OPENVERSE_BASE, commonsUrl, imageMime, isAllowedUrl, parseCommons, parseSearch, searchUrl, type Photo, type PhotoSource } from './photos'
+import { CLEVELAND_BASE, COMMONS_BASE, MAX_IMAGE_BYTES, MAX_THUMB_BYTES, NASA_BASE, OPENVERSE_BASE, clevelandUrl, commonsUrl, imageMime, isAllowedUrl, nasaUrl, parseCleveland, parseCommons, parseNasa, parseSearch, searchUrl, type Photo } from './photos'
+import { PHOTO_SOURCE_NAMES, sourcesFor, type PhotoSource } from '../shared/photoSources'
 import { createCloseGuard } from './closeGuard'
 import { autoUpdater } from 'electron-updater'
 import { createUpdater, testUpdateEngine, type UpdateEngine } from './updater'
@@ -702,9 +703,11 @@ async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv' | 'tramepack', label: 
 // TRAME_OPENVERSE_URL (tests de bout en bout) remplace le serveur et autorise http://127.0.0.1.
 const OPENVERSE = process.env.TRAME_OPENVERSE_URL || OPENVERSE_BASE
 const COMMONS = process.env.TRAME_COMMONS_URL || COMMONS_BASE
+const NASA = process.env.TRAME_NASA_URL || NASA_BASE
+const CLEVELAND = process.env.TRAME_CLEVELAND_URL || CLEVELAND_BASE
 const FONTS_API_URL = process.env.TRAME_FONTS_API_URL || FONTS_API
 const FONTS_CDN_URL = process.env.TRAME_FONTS_CDN_URL || FONTS_CDN
-const ALLOW_LOCAL = !!(process.env.TRAME_OPENVERSE_URL || process.env.TRAME_COMMONS_URL || process.env.TRAME_FONTS_API_URL || process.env.TRAME_FONTS_CDN_URL)
+const ALLOW_LOCAL = !!(process.env.TRAME_OPENVERSE_URL || process.env.TRAME_COMMONS_URL || process.env.TRAME_NASA_URL || process.env.TRAME_CLEVELAND_URL || process.env.TRAME_FONTS_API_URL || process.env.TRAME_FONTS_CDN_URL)
 /** délai d'une recherche : au-delà, on bascule sur la source de secours (réglable pour les tests) */
 const SEARCH_TIMEOUT = Number(process.env.TRAME_PHOTO_TIMEOUT_MS) || 10_000
 let lastPhotos = new Map<string, Photo>()
@@ -760,6 +763,23 @@ async function searchCommons(query: string, page: number): Promise<ReturnType<ty
   return parseCommons(readJson(res), page, ALLOW_LOCAL)
 }
 
+async function searchNasa(query: string, page: number): Promise<ReturnType<typeof parseNasa>> {
+  const res = await download(nasaUrl(NASA, query, page), 2_000_000, 'application/json', SEARCH_TIMEOUT)
+  return parseNasa(readJson(res), page, ALLOW_LOCAL)
+}
+
+async function searchCleveland(query: string, page: number): Promise<ReturnType<typeof parseCleveland>> {
+  const res = await download(clevelandUrl(CLEVELAND, query, page), 2_000_000, 'application/json', SEARCH_TIMEOUT)
+  return parseCleveland(readJson(res), page, ALLOW_LOCAL)
+}
+
+const SEARCHERS: Record<PhotoSource, (query: string, page: number) => Promise<{ photos: Photo[]; page: number; pageCount: number }>> = {
+  commons: searchCommons,
+  openverse: searchOpenverse,
+  nasa: searchNasa,
+  cleveland: searchCleveland
+}
+
 function readJson(res: { bytes: Buffer; contentType: string | null }): unknown {
   try {
     return JSON.parse(res.bytes.toString('utf-8'))
@@ -789,25 +809,26 @@ async function withThumbnails(found: Photo[]): Promise<Extract<PhotoSearchResult
 }
 
 /**
- * Openverse est la source principale ; Wikimedia Commons prend le relais (source « auto ») quand Openverse est lent, en panne ou limite
- * les requêtes — le service principal a connu des pannes (HTTP 500, délais dépassés). Une recherche sans résultat n'est PAS une panne.
+ * Wikimedia Commons est la source principale (source « auto ») ; Openverse prend le relais quand Commons est lent ou en panne — Openverse
+ * a connu de longues pannes (HTTP 500, 504, délais dépassés). NASA Images et le Cleveland Museum of Art sont des fonds thématiques, à
+ * choisir explicitement. Une recherche sans résultat n'est PAS une panne.
  */
 ipcMain.handle('photos:search', async (_e, query: unknown, page: unknown, source: unknown): Promise<PhotoSearchResult> => {
-  if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1, source: 'openverse', fallback: false }
+  const wanted = sourcesFor(source)
+  if (typeof query !== 'string' || !query.trim()) return { ok: true, photos: [], page: 1, pageCount: 1, source: wanted[0], fallback: false }
   const pageNo = typeof page === 'number' ? page : 1
-  const wanted: PhotoSource[] = source === 'openverse' ? ['openverse'] : source === 'commons' ? ['commons'] : ['openverse', 'commons']
   const failures: string[] = []
   let firstError: NetworkError | null = null
   for (const s of wanted) {
     try {
-      const found = s === 'openverse' ? await searchOpenverse(query, pageNo) : await searchCommons(query, pageNo)
+      const found = await SEARCHERS[s](query, pageNo)
       const photos = await withThumbnails(found.photos)
       lastPhotos = new Map([...lastPhotos, ...found.photos.map((p): [string, Photo] => [p.id, p])])
       return { ok: true, photos, page: found.page, pageCount: found.pageCount, source: s, fallback: s !== wanted[0] }
     } catch (err) {
       const e = err instanceof NetworkError ? err : new NetworkError('unavailable', String(err))
       console.error(`[photos:search:${s}]`, e.kind, e.detail)
-      failures.push(`${s === 'openverse' ? 'Openverse' : 'Wikimedia Commons'} : ${e.detail || e.kind}`)
+      failures.push(`${PHOTO_SOURCE_NAMES[s]} : ${e.detail || e.kind}`)
       firstError ??= e
     }
   }

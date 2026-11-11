@@ -125,9 +125,23 @@ const photoServer = createServer((req, res) => {
     if (q === 'refus') { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"detail":"Accès refusé pour test"}') }
     if (q === 'horsligne') return req.socket.destroy()
     if (q === 'toutpanne') { res.writeHead(500); return res.end('Server Error') }
+    if (q === 'lentcommons') return // Commons ne répond jamais : le délai expire, Openverse prend le relais
     const page = (id, index, title, lic) => ({ pageid: id, title: `File:${title}.png`, index, imageinfo: [{ url: `${base}/img/a.png`, thumburl: `${base}/thumb/a.png`, width: 800, height: 400, mime: 'image/png', descriptionurl: `${base}/wiki/${id}`, extmetadata: { ObjectName: { value: title }, Artist: { value: '<a href="x">Cléo &amp; Co</a>' }, LicenseShortName: { value: lic } } }] })
     res.writeHead(200, { 'content-type': 'application/json' })
     return res.end(JSON.stringify({ query: { pages: { 11: page(11, 2, 'Deuxième', 'CC BY-SA 4.0'), 10: page(10, 1, 'Premier', 'CC0'), 12: page(12, 3, 'Interdit', 'CC BY-NC 4.0') } } }))
+  }
+  if (url.pathname === '/search') {
+    // faux NASA Images : deux images et une vidéo (écartée) ; 25 résultats = 2 pages
+    const nasa = (id, title, media = 'image') => ({ data: [{ nasa_id: id, title, media_type: media, secondary_creator: 'NASA/JPL' }], links: [{ href: `${base}/thumb/a.png`, rel: 'preview', render: 'image', width: 640, height: 320 }, { href: `${base}/img/a.png`, rel: 'canonical', render: 'image', width: 800, height: 400 }] })
+    res.writeHead(200, { 'content-type': 'application/json' })
+    const items = url.searchParams.get('page') === '2' ? [nasa('N4', 'Mars')] : [nasa('N1', 'Pleine Lune'), nasa('N2', 'Croissant'), nasa('N3', 'Film', 'video')]
+    return res.end(JSON.stringify({ collection: { items, metadata: { total_hits: 25 } } }))
+  }
+  if (url.pathname === '/api/artworks/') {
+    // faux Cleveland Museum of Art : une œuvre CC0 et une œuvre qui ne l'est pas (écartée)
+    const art = (id, title, license) => ({ id, title, share_license_status: license, url: `${base}/art/${id}`, creators: [{ description: 'Claude Monet (French, 1840–1926)' }], images: { web: { url: `${base}/thumb/a.png`, width: '400', height: '200' }, print: { url: `${base}/img/a.png`, width: '800', height: '400' } } })
+    res.writeHead(200, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify({ info: { total: 2 }, data: [art(501, 'Nymphéas', 'CC0'), art(502, 'Privée', 'Copyrighted')] }))
   }
   if (url.pathname === '/v1/fonts') {
     const font = (id, family, license, category = 'serif') => ({ id, family, subsets: ['latin'], weights: [400, 700], styles: ['normal'], category, license, defSubset: 'latin' })
@@ -196,7 +210,7 @@ const photoServer = createServer((req, res) => {
   res.writeHead(404); res.end()
 })
 await new Promise((r) => photoServer.listen(0, '127.0.0.1', r))
-const env = { ...process.env, TRAME_LANG: 'fr', TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_AI_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_AI_TIMEOUT_MS: '3000', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
+const env = { ...process.env, TRAME_LANG: 'fr', TRAME_TEST_EXPORT_DIR: join(tmp, 'exports'), TRAME_OPENVERSE_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_COMMONS_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_NASA_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_CLEVELAND_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_PHOTO_TIMEOUT_MS: '1500', TRAME_AI_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_AI_TIMEOUT_MS: '3000', TRAME_FONTS_API_URL: `http://127.0.0.1:${photoServer.address().port}`, TRAME_FONTS_CDN_URL: `http://127.0.0.1:${photoServer.address().port}` }
 delete env.ELECTRON_RUN_AS_NODE // sinon Electron démarre comme un simple Node
 const app = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmp, 'data')}`, ...(process.env.SMOKE_THROTTLE ? [] : ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling']), ...(process.env.SMOKE_VERBOSE ? ['--enable-logging=stderr'] : [])], {
   env,
@@ -1424,7 +1438,10 @@ try {
     await cdp('Input.insertText', { text: q })
     await clickSel('[data-action="photo-search"]')
   }
+  const pickSource = async (id) => { await run(`(() => { const s = document.querySelector('[data-field="photoSource"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(id)}); s.dispatchEvent(new Event('change', { bubbles: true })) })()`); await sleep(100) }
   check('aucune requête réseau avant la première recherche', photoRequests.length === 0)
+  check('le choix de source propose Automatique, Commons, Openverse, NASA et Cleveland', (await run(`[...document.querySelectorAll('[data-field="photoSource"] option')].map(o => o.value).join()`)) === 'auto,commons,openverse,nasa,cleveland')
+  await pickSource('openverse')
   await search('montagne')
   for (let i = 0; i < 60 && (await nBrand('[data-photo]')) < 2; i++) await sleep(250)
   check('la recherche affiche 2 photos avec leur licence', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo="a1"] .photo-license').innerText`)) === 'CC BY 4.0')
@@ -1448,25 +1465,52 @@ try {
   await search('limite')
   for (let i = 0; i < 40 && (await nBrand('[data-photo-error]')) === 0; i++) await sleep(250)
   check('limite de requêtes (429) : message dédié', (await run(`document.querySelector('[data-photo-error]')?.dataset.photoError`)) === 'rate-limit')
-  // source de secours : Openverse ne répond pas (délai) → Wikimedia Commons, licences non réutilisables écartées
-  await search('lent')
+  // « Automatique » : Wikimedia Commons d'abord ; s'il ne répond pas (délai), Openverse prend le relais
+  await pickSource('auto')
+  await search('lentcommons')
   for (let i = 0; i < 80 && (await nBrand('[data-photo]')) !== 2; i++) await sleep(250)
-  check('Openverse muet : la recherche bascule sur Wikimedia Commons et le dit', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo-source]')?.innerText ?? ''`)).includes('Wikimedia Commons (Openverse ne répond pas'))
+  check('Commons muet : la recherche bascule sur Openverse et le dit', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo-source]')?.innerText ?? ''`)).includes('Openverse (Wikimedia Commons ne répond pas'))
+  check('les deux sources ont été interrogées, Commons d\'abord avec le filtre « bitmap »', photoRequests.some((r) => r.path === '/w/api.php' && r.query.get('gsrsearch') === 'lentcommons filetype:bitmap') && photoRequests.some((r) => r.path === '/v1/images/' && r.query.get('q') === 'lentcommons'))
+  await search('montagne')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo="commons:10"]')) === 0; i++) await sleep(250)
+  check('Automatique : Commons répond, pas de bascule annoncée', (await nBrand('[data-photo="commons:10"]')) === 1 && !(await run(`document.querySelector('[data-photo-source]').innerText`)).includes('ne répond pas') && (await run(`document.querySelector('[data-photo-source]').innerText`)).includes('Wikimedia Commons'))
   check('Commons : ordre de pertinence, licences affichées, CC BY-NC écartée', (await run(`[...document.querySelectorAll('[data-photo] .photo-license')].map(e => e.innerText).join()`)) === 'CC0 1.0,CC BY-SA 4.0')
-  check('les deux sources ont été interrogées, Commons avec le filtre « bitmap »', photoRequests.some((r) => r.path === '/v1/images/' && r.query.get('q') === 'lent') && photoRequests.some((r) => r.path === '/w/api.php' && r.query.get('gsrsearch') === 'lent filetype:bitmap'))
   await clickSel('[data-photo="commons:10"]')
   let commonsCredit = ''
   for (let i = 0; i < 60 && !commonsCredit; i++) { await sleep(250); commonsCredit = await run(`document.querySelector('.panel [data-field="credit"]')?.innerText ?? ''`) }
   check('photo de Commons insérée avec son crédit (auteur sans HTML, licence)', commonsCredit.includes('« Premier » par Cléo & Co (CC0 1.0)'), commonsCredit)
-  await run(`(() => { const s = document.querySelector('[data-field="photoSource"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'commons'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
-  await search('montagne')
-  for (let i = 0; i < 60 && (await run(`document.querySelector('[data-photo-source]')?.innerText ?? ''`)).includes('ne répond pas'); i++) await sleep(250)
-  check('source choisie explicitement : pas de bascule annoncée', !(await run(`document.querySelector('[data-photo-source]').innerText`)).includes('ne répond pas'))
-  await run(`(() => { const s = document.querySelector('[data-field="photoSource"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'auto'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  // NASA Images : domaine public, crédité à l'auteur, vidéos écartées, pagination
+  await pickSource('nasa')
+  await search('lune')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo="nasa:N1"]')) === 0; i++) await sleep(250) // les 2 photos de Commons déjà affichées ne comptent pas
+  check('NASA : deux images (la vidéo est écartée), « Domaine public », source nommée', (await nBrand('[data-photo]')) === 2 && (await run(`document.querySelector('[data-photo="nasa:N1"] .photo-license').innerText`)) === 'Domaine public' && (await run(`document.querySelector('[data-photo-source]').innerText`)).includes('NASA Images'))
+  const nasaReq = photoRequests.find((r) => r.path === '/search' && r.query.get('q') === 'lune')
+  check('NASA : requête limitée aux images, 20 par page, User-Agent Trame', nasaReq?.query.get('media_type') === 'image' && nasaReq.query.get('page_size') === '20' && nasaReq.ua.startsWith('Trame/'), JSON.stringify([nasaReq?.query.toString(), nasaReq?.ua]))
+  check('NASA : « Plus de résultats » est proposé, puis ajoute la page suivante', (await nBrand('[data-action="photo-more"]')) === 1)
+  await clickSel('[data-action="photo-more"]')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo]')) < 3; i++) await sleep(250)
+  check('NASA : la page 2 s\'ajoute et la pagination s\'arrête', (await nBrand('[data-photo]')) === 3 && (await nBrand('[data-action="photo-more"]')) === 0 && photoRequests.some((r) => r.path === '/search' && r.query.get('page') === '2'))
+  await clickSel('[data-photo="nasa:N1"]')
+  let nasaCredit = ''
+  for (let i = 0; i < 60 && !nasaCredit.includes('NASA'); i++) { await sleep(250); nasaCredit = await run(`document.querySelector('.panel [data-field="credit"]')?.innerText ?? ''`) }
+  check('photo de la NASA insérée avec son crédit', nasaCredit.includes('« Pleine Lune » par NASA/JPL (Domaine public)'), nasaCredit)
+  // Cleveland Museum of Art : œuvres CC0 seulement
+  await pickSource('cleveland')
+  await search('monet')
+  for (let i = 0; i < 60 && (await nBrand('[data-photo]')) !== 1; i++) await sleep(250)
+  check('Cleveland : une œuvre CC0 (l\'autre est écartée), licence « CC0 1.0 »', (await nBrand('[data-photo]')) === 1 && (await run(`document.querySelector('[data-photo="cleveland:501"] .photo-license').innerText`)) === 'CC0 1.0' && (await run(`document.querySelector('[data-photo-source]').innerText`)).includes('Cleveland Museum of Art'))
+  const clevReq = photoRequests.find((r) => r.path === '/api/artworks/' && r.query.get('q') === 'monet')
+  check('Cleveland : requête limitée aux œuvres CC0 avec image', clevReq?.query.get('cc0') === '1' && clevReq.query.get('has_image') === '1')
+  await clickSel('[data-photo="cleveland:501"]')
+  let clevCredit = ''
+  for (let i = 0; i < 60 && !clevCredit.includes('Nymphéas'); i++) { await sleep(250); clevCredit = await run(`document.querySelector('.panel [data-field="credit"]')?.innerText ?? ''`) }
+  check('œuvre de Cleveland insérée avec son crédit (nom de l\'artiste seul)', clevCredit.includes('« Nymphéas » par Claude Monet (CC0 1.0)'), clevCredit)
+  await pickSource('auto')
   await search('toutpanne')
   for (let i = 0; i < 60 && (await nBrand('[data-photo-detail]')) === 0; i++) await sleep(250)
   const bothDown = await run(`document.querySelector('[data-photo-detail]')?.innerText ?? ''`)
   check('les deux sources en panne : le détail nomme les deux', bothDown.includes('Openverse : HTTP 500') && bothDown.includes('Wikimedia Commons : HTTP 500'), bothDown)
+  await pickSource('openverse')
   await search('planteur')
   for (let i = 0; i < 40 && (await nBrand('[data-photo="a1"]')) === 0; i++) await sleep(250) // résultats de CETTE recherche (ceux de la précédente ont d'autres identifiants)
   check('filtre de licences refusé (500) : requête minimale en repli, résultats non réutilisables écartés', (await nBrand('[data-photo]')) === 2 && (await nBrand('[data-photo="nc9"]')) === 0 && photoRequests.some((r) => r.query.get('q') === 'planteur' && !r.query.has('license_type')))

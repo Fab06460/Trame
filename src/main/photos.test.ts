@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE, commonsLicense, commonsUrl, creditOf, parseCommons, stripHtml, imageMime, isAllowedUrl, isReusable, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
+import { sourcesFor, PHOTO_SOURCE_NAMES } from '../shared/photoSources'
+import { PAGE_SIZE, clevelandUrl, commonsLicense, nasaUrl, parseCleveland, parseNasa, commonsUrl, creditOf, parseCommons, stripHtml, imageMime, isAllowedUrl, isReusable, licenseLabel, needsCredit, parseSearch, searchUrl } from './photos'
 
 describe('photos', () => {
   it('adresse de recherche : usage commercial + modification, page et taille bornées', () => {
@@ -137,5 +138,142 @@ describe('Wikimedia Commons', () => {
   it('texte brut des métadonnées', () => {
     expect(stripHtml('<a href="x">Vya &amp; Co</a> &quot;ok&quot;')).toBe('Vya & Co "ok"')
     expect(stripHtml(undefined)).toBe('')
+  })
+})
+
+describe('sources de photos', () => {
+  it('« auto » : Commons puis Openverse ; un service choisi est seul interrogé', () => {
+    expect(sourcesFor('auto')).toEqual(['commons', 'openverse'])
+    expect(sourcesFor(undefined)).toEqual(['commons', 'openverse'])
+    expect(sourcesFor('nope')).toEqual(['commons', 'openverse'])
+    for (const s of ['commons', 'openverse', 'nasa', 'cleveland'] as const) expect(sourcesFor(s)).toEqual([s])
+    expect(PHOTO_SOURCE_NAMES.nasa).toBe('NASA Images')
+  })
+})
+
+describe('NASA Images', () => {
+  const item = (id: string, over: Record<string, unknown> = {}, links?: unknown[]) => ({
+    data: [{ nasa_id: id, title: 'Nearside of the Moon', media_type: 'image', secondary_creator: 'ISRO/NASA/JPL-Caltech', ...over }],
+    links: links ?? [
+      { href: `https://images-assets.nasa.gov/image/${id}/${id}~small.jpg`, rel: 'alternate', render: 'image', width: 640, height: 448 },
+      { href: `https://images-assets.nasa.gov/image/${id}/${id}~thumb.jpg`, rel: 'preview', render: 'image', width: 640, height: 448 },
+      { href: `https://images-assets.nasa.gov/image/${id}/${id}~orig.jpg`, rel: 'canonical', render: 'image', width: 2000, height: 1400 }
+    ]
+  })
+
+  it('adresse : images seulement, 20 par page, page bornée', () => {
+    const u = new URL(nasaUrl('https://images-api.nasa.gov/', ' lune ', 3))
+    expect(u.pathname).toBe('/search')
+    expect(u.searchParams.get('q')).toBe('lune')
+    expect(u.searchParams.get('media_type')).toBe('image')
+    expect(u.searchParams.get('page')).toBe('3')
+    expect(u.searchParams.get('page_size')).toBe(String(PAGE_SIZE))
+    expect(new URL(nasaUrl('https://x.test', 'a', -2)).searchParams.get('page')).toBe('1')
+  })
+
+  it('lit une réponse : original pour l\'insertion, aperçu pour la liste, crédit à l\'auteur, domaine public', () => {
+    const r = parseNasa({ collection: { items: [item('PIA12235')], metadata: { total_hits: 20286 } } }, 1)
+    expect(r.photos).toHaveLength(1)
+    const p = r.photos[0]
+    expect(p.id).toBe('nasa:PIA12235')
+    expect(p.url).toBe('https://images-assets.nasa.gov/image/PIA12235/PIA12235~orig.jpg')
+    expect(p.thumbnailUrl).toBe('https://images-assets.nasa.gov/image/PIA12235/PIA12235~thumb.jpg')
+    expect(p.license).toBe('Domaine public')
+    expect(p.creator).toBe('ISRO/NASA/JPL-Caltech')
+    expect(p.landingUrl).toBe('https://images.nasa.gov/details/PIA12235')
+    expect(p.width).toBe(2000)
+    expect(p.credit).toContain('ISRO/NASA/JPL-Caltech')
+    expect(r.pageCount).toBe(50) // plafonné
+  })
+
+  it('sans auteur : crédité à la NASA ; un original qui n\'est pas une image (tif) retombe sur l\'aperçu', () => {
+    const links = [
+      { href: 'https://images-assets.nasa.gov/image/X/X~thumb.jpg', rel: 'preview', render: 'image' },
+      { href: 'https://images-assets.nasa.gov/image/X/X~orig.tif', rel: 'canonical', render: 'image' }
+    ]
+    const p = parseNasa({ collection: { items: [item('X', { secondary_creator: undefined }, links)], metadata: { total_hits: 1 } } }, 1).photos[0]
+    expect(p.creator).toBe('NASA')
+    expect(p.url).toBe('https://images-assets.nasa.gov/image/X/X~thumb.jpg')
+  })
+
+  it('écarte vidéos, entrées sans identifiant ou sans adresse https ; jamais d\'erreur', () => {
+    const bad = { collection: { items: [item('V', { media_type: 'video' }), item('', {}), item('H', {}, [{ href: 'http://x.test/a.jpg', rel: 'preview', render: 'image' }]), { data: [] }, null, 4] } }
+    expect(parseNasa(bad, 1).photos).toEqual([])
+    for (const v of [null, 4, 'x', {}, { collection: 3 }]) expect(parseNasa(v, 1)).toEqual({ photos: [], page: 1, pageCount: 1 })
+    expect(parseNasa({ collection: { items: [item('L')] } }, 1, true).photos).toHaveLength(1)
+  })
+
+  it('pagination d\'après le nombre total', () => {
+    expect(parseNasa({ collection: { items: [], metadata: { total_hits: 45 } } }, 1).pageCount).toBe(3)
+    expect(parseNasa({ collection: { items: [], metadata: { total_hits: 0 } } }, 1).pageCount).toBe(1)
+  })
+})
+
+describe('Cleveland Museum of Art', () => {
+  const art = (id: number, over: Record<string, unknown> = {}) => ({
+    id, title: 'Water Lilies (Agapanthus)', share_license_status: 'CC0', url: `https://clevelandart.org/art/1960.${id}`,
+    creators: [{ description: 'Claude Monet (French, 1840–1926)' }],
+    images: { web: { url: `https://openaccess-cdn.clevelandart.org/${id}/web.jpg`, width: '1263', height: '871' }, print: { url: `https://openaccess-cdn.clevelandart.org/${id}/print.jpg`, width: '3400', height: '2344' }, full: { url: 'https://x.test/full.tif' } },
+    ...over
+  })
+
+  it('adresse : CC0 avec image, décalage pour la suite', () => {
+    const u = new URL(clevelandUrl('https://openaccess-api.clevelandart.org', ' monet ', 3))
+    expect(u.pathname).toBe('/api/artworks/')
+    expect(u.searchParams.get('q')).toBe('monet')
+    expect(u.searchParams.get('cc0')).toBe('1')
+    expect(u.searchParams.get('has_image')).toBe('1')
+    expect(u.searchParams.get('limit')).toBe(String(PAGE_SIZE))
+    expect(u.searchParams.get('skip')).toBe(String(2 * PAGE_SIZE))
+  })
+
+  it('lit une réponse : image « print » à l\'insertion, « web » dans la liste, auteur sans nationalité ni dates, CC0', () => {
+    const r = parseCleveland({ info: { total: 18 }, data: [art(135382)] }, 1)
+    const p = r.photos[0]
+    expect(p.id).toBe('cleveland:135382')
+    expect(p.url).toBe('https://openaccess-cdn.clevelandart.org/135382/print.jpg')
+    expect(p.thumbnailUrl).toBe('https://openaccess-cdn.clevelandart.org/135382/web.jpg')
+    expect(p.creator).toBe('Claude Monet')
+    expect(p.license).toBe('CC0 1.0')
+    expect(p.landingUrl).toBe('https://clevelandart.org/art/1960.135382')
+    expect(p.width).toBe(3400)
+    expect(p.credit).toBe('« Water Lilies (Agapanthus) » par Claude Monet (CC0 1.0) — https://clevelandart.org/art/1960.135382')
+    expect(r.pageCount).toBe(1)
+    expect(parseCleveland({ info: { total: 41 }, data: [] }, 1).pageCount).toBe(3)
+  })
+
+  it('écarte les œuvres non CC0, sans image ou sans identifiant ; jamais d\'erreur', () => {
+    const bad = { data: [art(1, { share_license_status: 'Copyrighted' }), art(2, { images: null }), art(3, { images: { web: { url: 'http://x.test/a.jpg' } } }), art(0), null, 4] }
+    expect(parseCleveland(bad, 1).photos).toEqual([])
+    for (const v of [null, 4, 'x', {}, { data: 3 }]) expect(parseCleveland(v, 1)).toEqual({ photos: [], page: 1, pageCount: 1 })
+  })
+
+  it('sans « print », la version web sert aussi à l\'insertion', () => {
+    const p = parseCleveland({ data: [art(7, { images: { web: { url: 'https://c.test/w.jpg', width: '10', height: '5' } } })] }, 1).photos[0]
+    expect(p.url).toBe('https://c.test/w.jpg')
+    expect(p.thumbnailUrl).toBe('https://c.test/w.jpg')
+  })
+})
+
+describe('réponses réelles enregistrées (novembre 2026)', () => {
+  it('NASA : la réponse du vrai service donne des photos exploitables', () => {
+    const r = parseNasa(JSON.parse(readFileSync(new URL('./nasa-sample.json', import.meta.url), 'utf-8')), 1)
+    expect(r.photos.length).toBeGreaterThanOrEqual(3)
+    for (const p of r.photos) {
+      expect(p.url).toMatch(/^https:\/\/images-assets\.nasa\.gov\/.+\.(jpg|png)$/)
+      expect(p.thumbnailUrl).toMatch(/~(thumb|small)\.jpg$/)
+      expect(p.title).not.toBe('')
+    }
+    expect(r.pageCount).toBe(50)
+  })
+
+  it('Cleveland : la réponse du vrai service donne des œuvres CC0 avec image', () => {
+    const r = parseCleveland(JSON.parse(readFileSync(new URL('./cleveland-sample.json', import.meta.url), 'utf-8')), 1)
+    expect(r.photos.length).toBeGreaterThanOrEqual(3)
+    for (const p of r.photos) {
+      expect(p.license).toBe('CC0 1.0')
+      expect(p.url).toMatch(/^https:\/\/openaccess-cdn\.clevelandart\.org\/.+\.jpg$/)
+      expect(p.landingUrl).toMatch(/^https:\/\/clevelandart\.org\/art\//)
+    }
   })
 })

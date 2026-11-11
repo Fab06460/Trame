@@ -1,5 +1,7 @@
 import { tm } from './i18n'
-/** Recherche de photos libres (Openverse) : logique pure — adresses, lecture tolérante des réponses, crédits. Le réseau est dans index.ts. */
+import type { PhotoSource } from '../shared/photoSources'
+/** Recherche de photos libres (Wikimedia Commons, Openverse, NASA, Cleveland Museum of Art) : logique pure — adresses, lecture tolérante des réponses, crédits. Le réseau est dans index.ts. */
+export type { PhotoSource }
 
 export const OPENVERSE_BASE = 'https://api.openverse.org'
 /** Les requêtes anonymes sont limitées à 20 résultats par page. */
@@ -8,8 +10,6 @@ export const MAX_QUERY = 100
 /** Taille maximale d'une image téléchargée (octets). */
 export const MAX_IMAGE_BYTES = 30_000_000
 export const MAX_THUMB_BYTES = 2_000_000
-
-export type PhotoSource = 'openverse' | 'commons'
 
 export interface Photo {
   id: string
@@ -104,7 +104,7 @@ export function imageMime(contentType: string | null): 'image/jpeg' | 'image/png
   return t === 'image/jpeg' || t === 'image/png' || t === 'image/webp' || t === 'image/gif' ? t : t === 'image/jpg' ? 'image/jpeg' : null
 }
 
-// --- Wikimedia Commons (source de secours) ---------------------------------------------------------------------------------------
+// --- Wikimedia Commons (source principale) ---------------------------------------------------------------------------------------
 export const COMMONS_BASE = 'https://commons.wikimedia.org'
 
 /**
@@ -165,4 +165,80 @@ export function parseCommons(json: unknown, page: number, allowLocal = false): {
   // la page suivante existe si l'API propose une suite
   const more = !!(o.continue && typeof o.continue === 'object')
   return { photos, page, pageCount: more ? page + 1 : page }
+}
+
+// --- NASA Images (images-api.nasa.gov, sans clé) -----------------------------------------------------------------------------------
+export const NASA_BASE = 'https://images-api.nasa.gov'
+/** L'API de la NASA ne donne pas plus de résultats que cela de façon fiable : au-delà, la pagination s'arrête. */
+const MAX_PAGES = 50
+
+export function nasaUrl(base: string, query: string, page: number): string {
+  const q = new URLSearchParams({ q: query.trim().slice(0, MAX_QUERY), media_type: 'image', page: String(Math.max(1, Math.floor(page))), page_size: String(PAGE_SIZE) })
+  return `${base.replace(/\/+$/, '')}/search?${q}`
+}
+
+const NASA_IMAGE = /\.(jpe?g|png|gif|webp)$/i
+
+/**
+ * Lecture tolérante d'une réponse de la NASA. Le contenu de la NASA n'est en règle générale pas soumis au droit d'auteur (sauf mention
+ * contraire, rare) : il est présenté comme domaine public, crédité à l'auteur indiqué ou à la NASA.
+ */
+export function parseNasa(json: unknown, page: number, allowLocal = false): { photos: Photo[]; page: number; pageCount: number } {
+  const collection = ((json && typeof json === 'object' ? json : {}) as Record<string, unknown>).collection
+  const c = (collection && typeof collection === 'object' ? collection : {}) as Record<string, unknown>
+  const items = Array.isArray(c.items) ? c.items : []
+  const photos: Photo[] = []
+  for (const it of items) {
+    const item = (it && typeof it === 'object' ? it : {}) as Record<string, unknown>
+    const data = (Array.isArray(item.data) && item.data[0] && typeof item.data[0] === 'object' ? item.data[0] : {}) as Record<string, unknown>
+    const links = (Array.isArray(item.links) ? item.links : []).map((l) => (l && typeof l === 'object' ? l : {}) as Record<string, unknown>).filter((l) => l.render === 'image')
+    const nasaId = str(data.nasa_id, 80)
+    // l'original (« canonical ») pour l'insertion, la miniature « preview » (640 px) pour la liste, et de l'une à l'autre en repli
+    const original = str(links.find((l) => l.rel === 'canonical')?.href, 2000)
+    const preview = str(links.find((l) => l.rel === 'preview')?.href, 2000) || str(links.find((l) => l.rel === 'alternate')?.href, 2000)
+    const url = NASA_IMAGE.test(original) ? original : preview
+    const thumbnailUrl = preview || url
+    if (!nasaId || str(data.media_type, 20) !== 'image' || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal)) continue
+    const landing = `https://images.nasa.gov/details/${encodeURIComponent(nasaId)}`
+    const sized = (links.find((l) => l.rel === 'canonical') ?? links[0] ?? {}) as Record<string, unknown>
+    const base = { title: str(data.title, 120), creator: str(data.secondary_creator, 120) || str(data.photographer, 120) || 'NASA', license: tm('photo.publicDomain'), landingUrl: landing }
+    photos.push({ id: `nasa:${nasaId}`, source: 'nasa', ...base, licenseUrl: 'https://www.nasa.gov/nasa-brand-center/images-and-media/', url, thumbnailUrl, width: posInt(sized.width), height: posInt(sized.height), credit: creditOf(base) })
+  }
+  const meta = (c.metadata && typeof c.metadata === 'object' ? c.metadata : {}) as Record<string, unknown>
+  return { photos, page, pageCount: Math.max(1, Math.min(MAX_PAGES, Math.ceil(posInt(meta.total_hits) / PAGE_SIZE))) }
+}
+
+// --- Cleveland Museum of Art, Open Access (openaccess-api.clevelandart.org, sans clé, œuvres sous CC0) -------------------------------
+export const CLEVELAND_BASE = 'https://openaccess-api.clevelandart.org'
+
+export function clevelandUrl(base: string, query: string, page: number): string {
+  const p = Math.max(1, Math.floor(page))
+  const q = new URLSearchParams({ q: query.trim().slice(0, MAX_QUERY), has_image: '1', cc0: '1', limit: String(PAGE_SIZE), skip: String((p - 1) * PAGE_SIZE) })
+  return `${base.replace(/\/+$/, '')}/api/artworks/?${q}`
+}
+
+/** Lecture tolérante d'une réponse de Cleveland : seules les œuvres CC0 avec image sont gardées. */
+export function parseCleveland(json: unknown, page: number, allowLocal = false): { photos: Photo[]; page: number; pageCount: number } {
+  const o = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>
+  const rows = Array.isArray(o.data) ? o.data : []
+  const photos: Photo[] = []
+  for (const r of rows) {
+    const x = (r && typeof r === 'object' ? r : {}) as Record<string, unknown>
+    const images = (x.images && typeof x.images === 'object' ? x.images : {}) as Record<string, { url?: unknown; width?: unknown; height?: unknown } | undefined>
+    const web = str(images.web?.url, 2000)
+    const print = str(images.print?.url, 2000)
+    const thumbnailUrl = web || print
+    const url = print || web
+    const id = typeof x.id === 'number' ? x.id : 0
+    if (!id || str(x.share_license_status, 20) !== 'CC0' || !isAllowedUrl(url, allowLocal) || !isAllowedUrl(thumbnailUrl, allowLocal)) continue
+    const creators = Array.isArray(x.creators) ? x.creators : []
+    // « Claude Monet (French, 1840–1926) » : on ne garde que le nom
+    const creator = str((creators[0] as { description?: unknown } | undefined)?.description, 160).replace(/\s*\(.*$/, '').trim()
+    const landing = str(x.url, 2000)
+    const base = { title: str(x.title, 120), creator, license: 'CC0 1.0', landingUrl: isAllowedUrl(landing, allowLocal) ? landing : '' }
+    const size = images.print ?? images.web
+    photos.push({ id: `cleveland:${id}`, source: 'cleveland', ...base, licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/', url, thumbnailUrl, width: posInt(Number(size?.width)), height: posInt(Number(size?.height)), credit: creditOf(base) })
+  }
+  const info = (o.info && typeof o.info === 'object' ? o.info : {}) as Record<string, unknown>
+  return { photos, page, pageCount: Math.max(1, Math.min(MAX_PAGES, Math.ceil(posInt(info.total) / PAGE_SIZE))) }
 }

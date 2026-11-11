@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { PhotoError, PhotoSourceChoice, PhotoView } from '../../../preload'
+import type { PhotoError, PhotoSource, PhotoSourceChoice, PhotoView } from '../../../preload'
+import { PHOTO_SOURCE_NAMES } from '@shared/photoSources'
 import { insertImage } from '@/clipboardActions'
 import { documentCredits, downscaleImage } from '@/photoImport'
 import { useEditor } from '@/store/editor'
@@ -12,7 +13,7 @@ const MESSAGES: Record<PhotoError, MessageKey> = {
   unavailable: 'photo.err.unavailable'
 }
 
-/** Recherche de photos libres de droits (Openverse). Seule fonction en ligne de Trame : elle ne s'active que sur demande. */
+/** Recherche de photos libres de droits (Wikimedia Commons, Openverse, NASA, Cleveland Museum of Art). Seule fonction en ligne de Trame : elle ne s'active que sur demande. */
 export function PhotosPanel(): React.JSX.Element {
   const t = useT()
   const [query, setQuery] = useState('')
@@ -25,7 +26,7 @@ export function PhotosPanel(): React.JSX.Element {
   const [detail, setDetail] = useState('')
   const [choice, setChoice] = useState<PhotoSourceChoice>('auto')
   /** source qui a réellement répondu (les pages suivantes restent sur elle) et si c'est un repli */
-  const [used, setUsed] = useState<{ source: 'openverse' | 'commons'; fallback: boolean } | null>(null)
+  const [used, setUsed] = useState<{ source: PhotoSource; fallback: boolean } | null>(null)
   const [importing, setImporting] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const doc = useEditor((s) => s.doc)
@@ -97,8 +98,10 @@ export function PhotosPanel(): React.JSX.Element {
           <span>{t('photo.source')}</span>
           <select data-field="photoSource" value={choice} onChange={(e) => setChoice(e.target.value as PhotoSourceChoice)}>
             <option value="auto">{t('photo.source.auto')}</option>
-            <option value="openverse">Openverse</option>
-            <option value="commons">Wikimedia Commons</option>
+            <option value="commons">{PHOTO_SOURCE_NAMES.commons}</option>
+            <option value="openverse">{PHOTO_SOURCE_NAMES.openverse}</option>
+            <option value="nasa">{t('photo.source.nasa')}</option>
+            <option value="cleveland">{t('photo.source.cleveland')}</option>
           </select>
         </label>
         <p className="hint">
@@ -117,8 +120,8 @@ export function PhotosPanel(): React.JSX.Element {
           <h3>{t('photo.results', { query: asked })}</h3>
           {used && (
             <p className="hint" data-photo-source={used.source}>
-              {t('photo.from', { source: used.source === 'openverse' ? 'Openverse' : 'Wikimedia Commons' })}
-              {used.fallback ? t('photo.fallback') : ''}
+              {t('photo.from', { source: PHOTO_SOURCE_NAMES[used.source] })}
+              {used.fallback ? t('photo.fallback', { source: PHOTO_SOURCE_NAMES.commons }) : ''}
             </p>
           )}
           <div className="grid photos">

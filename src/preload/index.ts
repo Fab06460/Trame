@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { UpdateState } from '../shared/update'
+import type { PhotoSource, PhotoSourceChoice } from '../shared/photoSources'
+export type { PhotoSource, PhotoSourceChoice }
 import type { SpeakerCommand, SpeakerState } from '../main/speakerProtocol'
 import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, EditKind, WriteAction } from '../shared/ai'
 import type { MediaItem } from '../shared/mediaLibrary'
@@ -281,7 +283,6 @@ export interface InstalledFont {
 }
 export type FontsFailure = { ok: false; error: 'offline' | 'rate-limit' | 'unavailable'; detail: string }
 
-export type PhotoSourceChoice = 'auto' | 'openverse' | 'commons'
 export type PhotoError = 'offline' | 'rate-limit' | 'unavailable'
 export interface PhotoView {
   id: string
@@ -294,6 +295,6 @@ export interface PhotoView {
   /** miniature (data URL) */
   thumb: string
 }
-export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number; source: 'openverse' | 'commons'; fallback: boolean } | { ok: false; error: PhotoError; detail?: string }
+export type PhotoSearchResult = { ok: true; photos: PhotoView[]; page: number; pageCount: number; source: PhotoSource; fallback: boolean } | { ok: false; error: PhotoError; detail?: string }
 
 export type TrameApi = typeof api

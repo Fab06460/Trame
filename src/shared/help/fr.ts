@@ -82,7 +82,7 @@ export const fr: HelpContent = {
       keywords: 'image photo recadrer flouter pixelliser filtre bibliothèque openverse texte alternatif arrière-plan',
       body: [
         { p: 'Ajoutez une image avec **Ajouter → Image…**, en la déposant sur la page, ou en collant. Le panneau des propriétés propose le **recadrage** (double-clic sur l\'image pour les poignées), le **redressement**, des **cadres en forme** (cercle, étoile, cœur…), les miroirs, les filtres (luminosité, contraste, noir et blanc, sépia, flou), le contour et les ombres.' },
-        { p: 'L\'onglet **Photos** contient **Ma bibliothèque** (choisissez un dossier d\'images de votre ordinateur : rien n\'est copié ni déplacé ; recherche et **étiquettes** à vous) et la recherche de **photos libres de droits** (en ligne, sur demande ; le crédit est conservé).' },
+        { p: 'L\'onglet **Photos** contient **Ma bibliothèque** (choisissez un dossier d\'images de votre ordinateur : rien n\'est copié ni déplacé ; recherche et **étiquettes** à vous) et la recherche de **photos libres de droits** (en ligne, sur demande, chez Wikimedia Commons, Openverse, la NASA ou le Cleveland Museum of Art ; le crédit est conservé).' },
         { p: '**Flouter ou pixelliser une zone** (panneau de l\'image → « Flouter une zone… ») remplace réellement l\'image par une version masquée : ce qui est caché ne peut plus être retrouvé. Un seul « Annuler » rétablit l\'image.' },
         { p: '« **Utiliser comme arrière-plan** » fait couvrir la page par l\'image et la verrouille sous le reste. Pensez au **texte alternatif** des images (onglet « Accès ») : il est repris dans les exports PowerPoint et SVG.' }
       ]
