@@ -6,6 +6,7 @@ import { useEditor, selectPage } from '@/store/editor'
 import { useWordCloud } from '@/store/wordCloud'
 import { cloudElements, DEFAULT_CLOUD_WORDS, layoutCloud, MAX_CLOUD_INPUT, MAX_CLOUD_WORDS, parseCloudInput, readableColors, type PlacedWord } from '@/wordCloud'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 import type { ChartSpec } from '@/types'
 
@@ -111,8 +112,7 @@ function Cloud({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t('cloud.title')} data-cloud-dialog onKeyDown={(e) => e.stopPropagation()}>
       <div className="modal wide cloud-dialog">
-        <h3>{t('cloud.title')}</h3>
-        <p className="hint">{t('cloud.hint')}</p>
+        <h3>{t('cloud.title')}<InfoTip>{t('cloud.hint')}</InfoTip></h3>
         <textarea
           className="text-field"
           data-field="cloudText"

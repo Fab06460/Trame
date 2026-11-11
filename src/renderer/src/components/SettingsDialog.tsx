@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LOCALES } from '@shared/i18n'
 import { recapHidden, setRecapHidden } from '@/store/timingRecap'
 import { useLocale, useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import { useSettingsDialog } from '@/store/settingsDialog'
 import { useSpell } from '@/store/spell'
 import { useTheme } from '@/store/theme'
@@ -97,20 +98,22 @@ function Dialog(): React.JSX.Element {
               ))}
             </select>
           </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              data-field="reopenLast"
-              checked={reopen ?? true}
-              disabled={reopen === null}
-              onChange={(e) => {
-                setReopen(e.target.checked)
-                void window.trame.setAppSettings({ reopenLast: e.target.checked }).then((s) => setReopen(s.reopenLast))
-              }}
-            />{' '}
-            {t('settings.reopenLast')}
-          </label>
-          <p className="hint">{t('settings.reopenLast.hint')}</p>
+          <div className="row">
+            <label className="check">
+              <input
+                type="checkbox"
+                data-field="reopenLast"
+                checked={reopen ?? true}
+                disabled={reopen === null}
+                onChange={(e) => {
+                  setReopen(e.target.checked)
+                  void window.trame.setAppSettings({ reopenLast: e.target.checked }).then((s) => setReopen(s.reopenLast))
+                }}
+              />{' '}
+              {t('settings.reopenLast')}
+            </label>
+            <InfoTip>{t('settings.reopenLast.hint')}</InfoTip>
+          </div>
         </section>
 
         <section>
@@ -176,7 +179,7 @@ function Dialog(): React.JSX.Element {
         )}
 
         <section>
-          <h4>{t('settings.section.feedback')}</h4>
+          <h4>{t('settings.section.feedback')}<InfoTip>{t('settings.feedback.hint')}</InfoTip></h4>
           <div className="row">
             <button data-action="settings-help" onClick={() => { close(); useHelp.getState().show() }}>{t('help.open')}</button>
             <button data-action="settings-tour" onClick={() => { close(); useTour.getState().start() }}>{t('help.tour')}</button>
@@ -187,7 +190,6 @@ function Dialog(): React.JSX.Element {
               {copied ? `✓ ${t('settings.feedback.copied')}` : t('settings.feedback.copy')}
             </button>
           </div>
-          <p className="hint">{t('settings.feedback.hint')}</p>
         </section>
 
         <div className="row end">

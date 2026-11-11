@@ -94,7 +94,7 @@ export function InfoTip({ children }: { children: React.ReactNode }): React.JSX.
             ref={bubble}
             id={id}
             role="tooltip"
-            className="info-tip-bubble"
+            className={pinned ? 'info-tip-bubble pinned' : 'info-tip-bubble'}
             data-info-tip-bubble
             style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, width: W, visibility: pos ? 'visible' : 'hidden' }}
           >

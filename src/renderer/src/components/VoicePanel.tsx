@@ -5,6 +5,7 @@ import { importVoice, startRecording, type Recorder, type VoiceProblem } from '@
 import { MAX_VOICE_SECONDS, pageVoice } from '@/voiceOver'
 import { useEditor, selectPage } from '@/store/editor'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 
 const clock = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -84,7 +85,7 @@ export function VoicePanel(): React.JSX.Element {
 
   return (
     <>
-      <h3>{t('voice.section')}</h3>
+      <h3>{t('voice.section')}<InfoTip>{t('voice.hint')}</InfoTip></h3>
       {recording ? (
         <div data-voice-recording>
           <p className="hint" role="status" data-voice-time>{t('voice.recording', { time: clock(time) })}</p>
@@ -111,7 +112,6 @@ export function VoicePanel(): React.JSX.Element {
         </div>
       )}
       {problem && <p className="warn" role="alert" data-voice-problem>{t(problem.key, { detail: problem.detail ?? '', max: Math.round(MAX_VOICE_SECONDS / 60) })}</p>}
-      <p className="hint">{t('voice.hint')}</p>
     </>
   )
 }

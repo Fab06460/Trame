@@ -3,6 +3,7 @@ import { MAX_QR_TEXT, QR_LEVELS, qrContrastLow, qrMatrix, type QrSpec } from '@/
 import { updateQr } from '@/qrActions'
 import { fieldsIn } from '@/mailMerge'
 import { useT } from '@/i18n'
+import { InfoTip } from './InfoTip'
 import type { MessageKey } from '@shared/i18n'
 import type { TrameElement } from '@/types'
 
@@ -47,7 +48,7 @@ export function QrPanel({ anchor }: { anchor: TrameElement }): React.JSX.Element
 
   return (
     <div data-qr-panel>
-      <h3>{t('qr.panel')}</h3>
+      <h3>{t('qr.panel')}<InfoTip><p>{t('qr.hint')}</p><p>{t('qr.mergeHint', { example: '{{lien}}' })}</p></InfoTip></h3>
       <label>
         {t('qr.text')}
         <textarea
@@ -100,8 +101,6 @@ export function QrPanel({ anchor }: { anchor: TrameElement }): React.JSX.Element
         </div>
       )}
       {fieldsIn(spec.text).length > 0 && <div className="hint" data-qr-fields>{t('qr.fields')}</div>}
-      <p className="hint">{t('qr.hint')}</p>
-      <p className="hint">{t('qr.mergeHint', { example: '{{lien}}' })}</p>
     </div>
   )
 }
