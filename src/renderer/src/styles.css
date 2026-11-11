@@ -719,3 +719,11 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 .info-tip-bubble.pinned { pointer-events: auto; }
 .info-tip-bubble p { margin: 0 0 6px; }
 .info-tip-bubble p:last-child { margin-bottom: 0; }
+
+/* reconnaissance de texte (OCR) */
+.modal.ocr-dialog { width: min(620px, calc(100vw - 32px)); gap: 10px; }
+.ocr-dialog .row { flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.ocr-dialog .row label { display: inline-flex; align-items: center; gap: 8px; }
+.ocr-thumb { max-width: 96px; max-height: 64px; border-radius: 6px; border: 1px solid var(--border); object-fit: contain; background: var(--field); }
+.ocr-dialog progress { width: 100%; accent-color: var(--accent); }
+.ocr-dialog textarea { width: 100%; box-sizing: border-box; resize: vertical; }

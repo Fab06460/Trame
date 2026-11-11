@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { prepareDescribeSource } from '@/aiEdit'
 import { useAi, aiErrorMessage } from '@/store/ai'
 import { useEditor } from '@/store/editor'
+import { useOcr } from '@/store/ocr'
 import { downscaleImage } from '@/photoImport'
 import { SHAPES } from '@/shapes'
 import { useCropMode } from '@/store/crop'
@@ -156,6 +157,9 @@ export function ImagePanel({ el }: { el: TrameElement }): React.JSX.Element {
       </button>
       <button data-action="style-open" title={t('style.open.title')} disabled={!el.src} onClick={() => useStyleMatch.getState().show(el.src ?? null)}>
         {t('style.open')}
+      </button>
+      <button data-action="ocr-open" title={t('ocr.open.title')} disabled={!el.src} onClick={() => useOcr.getState().show(el.id)}>
+        {t('ocr.open')}
       </button>
       {redacting && <RedactDialog el={el} onClose={() => setRedacting(false)} />}
 

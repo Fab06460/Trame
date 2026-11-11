@@ -19,6 +19,7 @@ import { WordCloudDialog } from '@/components/WordCloudDialog'
 import { SignatureDialog } from '@/components/SignatureDialog'
 import { VideoExportDialog } from '@/components/VideoExportDialog'
 import { StyleMatchDialog } from '@/components/StyleMatchDialog'
+import { OcrDialog } from '@/components/OcrDialog'
 import { PrintDialog } from '@/components/PrintDialog'
 import { HandoutDialog } from '@/components/HandoutDialog'
 import { HtmlExportDialog } from '@/components/HtmlExportDialog'
@@ -257,6 +258,7 @@ export default function App(): React.JSX.Element {
       <SignatureDialog />
       <VideoExportDialog />
       <StyleMatchDialog />
+      <OcrDialog />
       <VersionsDialog />
       <RecoveryDialog />
       <CompareDialog />

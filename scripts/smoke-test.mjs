@@ -1959,6 +1959,50 @@ try {
   await setSel('speechVoice', '')
   await run(`(() => { const i = document.querySelector('[data-field="speechRate"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '1'); i.dispatchEvent(new Event('input', { bubbles: true })); delete window.speechSynthesis })()`)
 
+  // reconnaissance de texte (OCR) : le vrai moteur (WebAssembly et données de langue de l'application, sans réseau) lit une image dessinée à la volée
+  await reloadApp()
+  await sleep(500)
+  const ocrPng = await run(`(() => {
+    const c = document.createElement('canvas'); c.width = 900; c.height = 420
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 900, 420); g.fillStyle = '#111'; g.font = '40px Arial'
+    const lines = ['La photosynthèse est le processus par', 'lequel les plantes convertissent la', 'lumière en énergie chimique.', '', 'Elle produit le dioxygène que nous', 'respirons : une idée essentielle.']
+    lines.forEach((l, i) => g.fillText(l, 30, 70 + i * 62))
+    return c.toDataURL('image/png').split(',')[1]
+  })()`)
+  await writeFile(join(exportsDir, 'pick-image.png'), Buffer.from(ocrPng, 'base64'))
+  const requestsBeforeOcr = photoRequests.length
+  await click('header.toolbar button', 'Image')
+  for (let i = 0; i < 40 && (await nBrand('[data-action="ocr-open"]')) === 0; i++) await sleep(250)
+  check('OCR : une image sélectionnée propose « Extraire le texte (OCR) »', (await nBrand('[data-action="ocr-open"]')) === 1)
+  const textsBeforeOcr = await run(`document.querySelectorAll('.page-item.current .thumb img').length`)
+  await clickSel('[data-action="ocr-open"]')
+  for (let i = 0; i < 40 && (await nBrand('[data-ocr-dialog]')) === 0; i++) await sleep(250)
+  check('OCR : la fenêtre s\'ouvre avec les quatre langues, celle de l\'interface (français) choisie', (await nBrand('[data-ocr-dialog]')) === 1 && (await run(`[...document.querySelectorAll('[data-field="ocrLanguage"] option')].map(o => o.value).join()`)) === 'fra,eng,deu,spa' && (await run(`document.querySelector('[data-field="ocrLanguage"]').value`)) === 'fra')
+  for (let i = 0; i < 240 && (await nBrand('[data-field="ocrText"]')) === 0; i++) await sleep(250)
+  const ocrText = await run(`document.querySelector('[data-field="ocrText"]')?.value ?? ''`)
+  check('OCR : le texte de l\'image est reconnu (accents compris), paragraphes recollés', ocrText.includes('La photosynthèse est le processus par lequel les plantes convertissent la lumière en énergie chimique.') && ocrText.includes('dioxygène') && ocrText.split('\n\n').length === 2, ocrText)
+  check('OCR : la confiance du moteur est annoncée et correcte', Number(await run(`document.querySelector('[data-ocr-confidence]')?.dataset.ocrConfidence ?? 0`)) >= 70)
+  await run(`(() => { const c = document.querySelector('[data-field="ocrKeepLines"]'); c.click() })()`)
+  await sleep(300)
+  check('OCR : « Garder les retours à la ligne » conserve les lignes du moteur', (await run(`document.querySelector('[data-field="ocrText"]').value`)).split('\n').length >= 5)
+  await run(`document.querySelector('[data-field="ocrKeepLines"]').click()`)
+  await sleep(200)
+  check('OCR : aucune requête réseau pendant la reconnaissance', photoRequests.length === requestsBeforeOcr)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check('OCR : Échap ferme la fenêtre sans rien insérer', (await nBrand('[data-ocr-dialog]')) === 0 && (await run(`document.querySelectorAll('.page-item.current .thumb img').length`)) === textsBeforeOcr)
+  await clickSel('[data-action="ocr-open"]')
+  for (let i = 0; i < 240 && (await nBrand('[data-field="ocrText"]')) === 0; i++) await sleep(250)
+  await run(`(() => { const t = document.querySelector('[data-field="ocrText"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(t, 'Texte corrigé à la main'); t.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await sleep(150)
+  await clickSel('[data-action="ocr-insert"]')
+  await sleep(500)
+  await clickSel('.sidebar .tabs button[data-tab="layers"]')
+  await sleep(300)
+  check('OCR : « Insérer » ferme la fenêtre et ajoute le texte corrigé comme calque de texte', (await nBrand('[data-ocr-dialog]')) === 0 && (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Texte corrigé à la main'))`)) === true)
+  await rm(join(exportsDir, 'pick-image.png'), { force: true })
+
   // graphiques et tableaux : insertion d'exemple, réglages, CSV, tableau, export PDF sans repli en image
   await reloadApp()
   await sleep(500)
