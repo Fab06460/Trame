@@ -347,6 +347,8 @@ export const de: Catalog = {
   'prop.fillType': 'Fülltyp',
   'prop.fill.solid': 'Einfarbig',
   'prop.fill.gradient': 'Verlauf',
+  'prop.background.all': 'Auf alle Seiten anwenden',
+  'prop.background.all.title': 'Kopiert den Hintergrund dieser Seite (einfarbig oder Verlauf) auf alle anderen Seiten',
   'prop.gradient.type': 'Typ',
   'prop.gradient.linear': 'Linear',
   'prop.gradient.radial': 'Radial',

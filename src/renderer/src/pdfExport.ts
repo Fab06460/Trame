@@ -73,6 +73,11 @@ export async function exportPdf(doc: TrameDocument, options: PdfExportOptions = 
     // le fond couvre le fond perdu ; tout le contenu est décalé de la marge et rogné au fond perdu (un élément qui déborde loin n'atteint pas les traits)
     p.drawRectangle({ x: m - b, y: m - b, width: w + 2 * b, height: h + 2 * b, color: rgb(bg.r, bg.g, bg.b) })
     if (m > 0) p.pushOperators(pushGraphicsState(), concatTransformationMatrix(1, 0, 0, 1, m, m), moveTo(-b, -b), lineTo(w + b, -b), lineTo(w + b, h + b), lineTo(-b, h + b), closePath(), clip(), endPath())
+    // fond en dégradé : un rectangle qui couvre la page et son fond perdu, rempli par un vrai dégradé PDF (la couleur unie est déjà dessous)
+    if (page.backgroundGradient) {
+      const bleedPx = b / PT_PER_PX
+      await ctx.drawElement(p, { id: 'page-bg', type: 'rect', x: -bleedPx, y: -bleedPx, width: doc.width + 2 * bleedPx, height: doc.height + 2 * bleedPx, rotation: 0, opacity: 1, fill: page.background, gradient: page.backgroundGradient })
+    }
     for (const el of page.elements) if (!el.hidden) await ctx.drawElement(p, el) // un calque masqué n'est jamais exporté
     if (m > 0) p.pushOperators(popGraphicsState())
     if (setup.marks) {

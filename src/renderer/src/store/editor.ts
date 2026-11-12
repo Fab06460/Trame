@@ -4,6 +4,7 @@ import { cleanPageTransition, cleanTransition, type PageTransition } from '@/tra
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
+import { sanitizePageGradient, withBackgroundGradient, withBackgroundOf } from '@/pageBackground'
 import { adaptDocument } from '@/magicResize'
 import { registerEmbeddedFonts } from '@/fonts'
 import { sanitizeFrame } from '@/magicResize'
@@ -30,7 +31,7 @@ import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } fro
 import { flipPatches, isFlipExempt, type FlipAxis } from '@/flip'
 import { sameTypeIds, tabTarget } from '@/selection'
 import { sanitizePrintSetup } from '@/printSetup'
-import type { Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
+import type { Gradient, Guide, MergeData, MergeSettings, Protection, TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
 import { sanitizeAiInfo, sanitizeAlt } from '@/aiImage'
 import { sanitizeDecorative } from '@/altCheck'
@@ -98,6 +99,7 @@ export function parseDocument(json: string): TrameDocument {
       else delete page.guides
     }
     sanitizeNotes(page)
+    sanitizePageGradient(page)
     sanitizeComments(page, doc.width, doc.height)
     {
       const t = cleanPageTransition(page.transition)
@@ -238,6 +240,10 @@ interface EditorState {
   pasteElements: (elements: TrameElement[]) => void
   moveLayer: (dir: 'up' | 'down' | 'top' | 'bottom') => void
   setBackground: (color: string) => void
+  /** Dégradé de fond de la page courante (`undefined` : retour à un fond uni de la première couleur). */
+  setBackgroundGradient: (gradient: Gradient | undefined) => void
+  /** Recopie le fond (couleur ou dégradé) de la page courante sur toutes les autres pages. */
+  applyBackgroundToAll: () => void
   /** Modifie les repères de la page courante. `commit=false` pour un geste continu (après un `beginChange`). */
   updateGuides: (f: (guides: Guide[]) => Guide[], commit?: boolean) => void
   /** Notes de l'orateur de la page courante ; `commit` ouvre un cran d'historique (une seule fois par séance de frappe). */
@@ -950,7 +956,16 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     setBackground: (background) =>
-      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, background })), dirty: true }),
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...withBackgroundGradient(p, undefined), background })), dirty: true }),
+
+    setBackgroundGradient: (gradient) => set({ ...snapshot(), doc: mapPage((p) => withBackgroundGradient(p, gradient)), dirty: true }),
+
+    applyBackgroundToAll: () =>
+      set((s) => {
+        const current = selectPage(s)
+        const pages = s.doc.pages.map((p) => (p.id === current.id ? p : withBackgroundOf(p, current)))
+        return { ...snapshot(), doc: { ...s.doc, pages }, dirty: true }
+      }),
 
     setSize: (width, height) =>
       set((s) => ({ ...snapshot(), doc: { ...s.doc, width, height }, dirty: true })),

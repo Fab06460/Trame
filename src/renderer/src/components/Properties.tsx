@@ -19,6 +19,7 @@ import { ImagePanel } from './ImagePanel'
 import { ClipPanel } from './ClipPanel'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
+import { PageBackground } from './PageBackground'
 import { PageSize } from './PageSize'
 import { PrintSetupPanel } from './PrintSetupPanel'
 import { ProtectionControls, TemplateBanner } from './TemplatePanel'
@@ -55,11 +56,7 @@ export function Properties(): React.JSX.Element {
         <h3>{t('prop.page')}</h3>
         <PageSize />
         <PrintSetupPanel />
-        <label>
-          {t('prop.background')}
-          <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
-        </label>
-        <KitSwatches current={page.background} onPick={setBackground} />
+        <PageBackground />
         <TransitionPanel />
         <PageDurationPanel />
         <VoicePanel />

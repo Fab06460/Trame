@@ -1,3 +1,4 @@
+import { backgroundColors } from '@/pageBackground'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /**
@@ -67,9 +68,9 @@ function covers(shape: TrameElement, cx: number, cy: number): boolean {
  * sous le texte et qui recouvrent son centre (opacité comprise). Une image qui le recouvre, ou une forme pivotée, rend le fond
  * inconnu (rien n'est affirmé). Un dégradé donne deux couleurs : le contraste doit tenir avec les deux.
  */
-export function backdropOf(page: Pick<TramePage, 'background' | 'elements'>, text: TrameElement): Backdrop {
-  const base = parseHex(page.background) ?? WHITE
-  let colors: Rgb[] = [base]
+export function backdropOf(page: Pick<TramePage, 'background' | 'backgroundGradient' | 'elements'>, text: TrameElement): Backdrop {
+  // un fond en dégradé donne deux couleurs possibles, comme une forme en dégradé
+  let colors: Rgb[] = backgroundColors(page).map((c) => parseHex(c) ?? WHITE)
   const cx = text.x + text.width / 2
   const cy = text.y + text.height / 2
   const at = page.elements.indexOf(text)

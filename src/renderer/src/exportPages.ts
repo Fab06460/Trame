@@ -91,7 +91,7 @@ export async function renderPage(
   const stage = new Konva.Stage({ container, width: doc.width, height: doc.height })
   const layer = new Konva.Layer()
   stage.add(layer)
-  layer.add(new Konva.Rect({ width: doc.width, height: doc.height, fill: page.background }))
+  layer.add(new Konva.Rect({ width: doc.width, height: doc.height, fill: page.background, ...konvaGradientProps(page.backgroundGradient, doc.width, doc.height) }))
 
   for (const e of page.elements) {
     if (e.hidden) continue // un calque masqué n'est jamais exporté

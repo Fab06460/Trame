@@ -1,3 +1,4 @@
+import { sameBackground, withBackgroundOf } from '@/pageBackground'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 /**
@@ -99,7 +100,7 @@ export function diffDocuments(mine: TrameDocument, other: TrameDocument): DocDif
       continue
     }
     common++
-    if (page.background !== t.background) changes.push({ id: `pb:${page.id}`, kind: 'page-background', pageId: page.id })
+    if (!sameBackground(page, t)) changes.push({ id: `pb:${page.id}`, kind: 'page-background', pageId: page.id })
     if ((page.notes ?? '') !== (t.notes ?? '')) changes.push({ id: `pn:${page.id}`, kind: 'page-notes', pageId: page.id })
     const mineEls = new Map(page.elements.map((e) => [e.id, e]))
     const theirEls = new Map(t.elements.map((e) => [e.id, e]))
@@ -155,7 +156,7 @@ export function applyChanges(mine: TrameDocument, other: TrameDocument, selected
   for (const c of picked) {
     const t = theirPage(c.pageId)
     if (!t || !pages.some((p) => p.id === c.pageId)) continue
-    if (c.kind === 'page-background') mapPage(c.pageId, (p) => ({ ...p, background: t.background }))
+    if (c.kind === 'page-background') mapPage(c.pageId, (p) => withBackgroundOf(p, t))
     else if (c.kind === 'page-notes')
       mapPage(c.pageId, (p) => {
         const { notes: _old, ...rest } = p

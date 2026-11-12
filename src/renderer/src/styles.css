@@ -752,3 +752,6 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 /* kits de marque */
 .kit-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .kit-row select, .kit-row input[type="text"] { flex: 1 1 120px; min-width: 0; }
+
+/* le panneau défile : sans cela un groupe de boutons à coins arrondis (overflow masqué) se laisse écraser à zéro quand la colonne est longue */
+.panel .seg { flex: none; }

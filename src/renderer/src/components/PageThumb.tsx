@@ -1,3 +1,4 @@
+import { cssBackground } from '@/pageBackground'
 import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradient'
 import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
@@ -57,7 +58,7 @@ export function PageThumb({
 }): React.JSX.Element {
   const k = Math.min(maxW / width, maxH / height)
   return (
-    <div className="thumb" style={{ width: width * k, height: height * k, background: page.background }}>
+    <div className="thumb" style={{ width: width * k, height: height * k, background: cssBackground(page) }}>
       <div style={{ width, height, transform: `scale(${k})`, transformOrigin: '0 0', position: 'relative' }}>
         {page.elements.filter((e) => !e.hidden).map((e) => {
           const box: React.CSSProperties = {

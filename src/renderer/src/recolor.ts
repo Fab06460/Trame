@@ -49,7 +49,10 @@ export function collectColors(doc: Pick<TrameDocument, 'pages' | 'width' | 'heig
   }
   for (const page of doc.pages) {
     if (!pageIds.has(page.id)) continue
-    add(page.background, doc.width * doc.height)
+    if (page.backgroundGradient) {
+      add(page.backgroundGradient.from, (doc.width * doc.height) / 2)
+      add(page.backgroundGradient.to, (doc.width * doc.height) / 2)
+    } else add(page.background, doc.width * doc.height)
     const generated = generatedGroups(page)
     for (const e of page.elements) if (recolorable(e, generated)) for (const [c, w] of colorsOf(e)) add(c, w)
   }
@@ -138,8 +141,12 @@ export function recolorDoc(doc: TrameDocument, mapping: ReadonlyMap<string, stri
     if (!opts.pageIds.has(page.id)) return page
     const generated = generatedGroups(page)
     let touched = false
-    const background = opts.background ? swap(page.background) : undefined
-    if (background) touched = true
+    const g = page.backgroundGradient
+    const gFrom = opts.background ? swap(g?.from) : undefined
+    const gTo = opts.background ? swap(g?.to) : undefined
+    const gradient = g && (gFrom || gTo) ? { ...g, from: gFrom ?? g.from, to: gTo ?? g.to } : undefined
+    const background = opts.background && !g ? swap(page.background) : undefined
+    if (background || gradient) touched = true
     const elements = page.elements.map((e) => {
       if (!recolorable(e, generated)) return e
       const patch: Partial<TrameElement> = {}
@@ -160,7 +167,7 @@ export function recolorDoc(doc: TrameDocument, mapping: ReadonlyMap<string, stri
       return { ...e, ...allowed } as TrameElement
     })
     if (!touched) return page
-    return keepTextReadable(page, { ...page, background: background ?? page.background, elements })
+    return keepTextReadable(page, { ...page, background: gradient ? gradient.from : (background ?? page.background), ...(gradient ? { backgroundGradient: gradient } : {}), elements })
   })
   return changed === 0 && pages.every((p, i) => p === doc.pages[i]) ? { doc, changed: 0 } : { doc: { ...doc, pages }, changed }
 }

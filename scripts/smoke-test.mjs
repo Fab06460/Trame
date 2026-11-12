@@ -2070,6 +2070,35 @@ try {
   await sleep(300)
   await run(`localStorage.removeItem('trame.recentColors')`) // la pastille cliquée l'a notée parmi les couleurs récentes
 
+  // fond de page en dégradé : réglages, export PNG et PDF, « appliquer à toutes les pages »
+  await reloadApp()
+  await sleep(500)
+  await run(`document.querySelector('[data-page-fill="gradient"]').click()`)
+  await sleep(300)
+  check('Fond dégradé : le choix « Dégradé » montre type, deux couleurs et angle', (await nBrand('[data-field="pageGradType"]')) === 1 && (await nBrand('[data-field="pageGradFrom"]')) === 1 && (await nBrand('[data-field="pageGradTo"]')) === 1 && (await nBrand('[data-field="pageGradAngle"]')) === 1)
+  const setColorInput = (sel, v) => run(`(() => { const i = document.querySelector('${sel}'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '${v}'); i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await setColorInput('[data-field="pageGradFrom"]', '#ff0000')
+  await setColorInput('[data-field="pageGradTo"]', '#0000ff')
+  await setField('pageGradAngle', 90) // vers la droite
+  const gradPng = await exportPng()
+  const left = pngPixel(gradPng, 20, 40)
+  const right = pngPixel(gradPng, 1060, 40)
+  check('Fond dégradé : l\'export PNG va du rouge (gauche) au bleu (droite)', left[0] > 200 && left[2] < 60 && right[2] > 200 && right[0] < 60, JSON.stringify([left, right]))
+  const gradPdf = await exportPdfText()
+  check('Fond dégradé : le PDF contient un vrai dégradé (shading), pas une image', /\/ShadingType 2/.test(gradPdf) || /\/ShadingType 2/.test(lastPdfRaw))
+  await run(`document.querySelector('[data-page-fill="solid"]').click()`)
+  await sleep(300)
+  check('Fond dégradé : « Uni » revient à une couleur unie (la première)', (await nBrand('[data-field="pageGradType"]')) === 0 && (await run(`document.querySelector('.page-item.current .thumb').style.background`)).includes('rgb(255, 0, 0)'))
+  await run(`document.querySelector('[data-page-fill="gradient"]').click()`)
+  await sleep(300)
+  await clickSel('.add-page')
+  await sleep(500)
+  await clickSel('.page-item:first-child')
+  await sleep(300)
+  await clickSel('[data-action="background-all"]')
+  await sleep(400)
+  check('Fond dégradé : « Appliquer à toutes les pages » recopie le dégradé sur les autres pages', (await run(`[...document.querySelectorAll('.page-item .thumb')].every((t) => t.style.background.includes('gradient'))`)) === true && (await nBrand('.page-item')) >= 2)
+
   // graphiques et tableaux : insertion d'exemple, réglages, CSV, tableau, export PDF sans repli en image
   await reloadApp()
   await sleep(500)

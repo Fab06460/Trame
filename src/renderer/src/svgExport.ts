@@ -102,8 +102,8 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<svg xmlns="http://www.w3.org/2000/svg" width="${n(doc.width)}" height="${n(doc.height)}" viewBox="0 0 ${n(doc.width)} ${n(doc.height)}">` +
     `<title>${escXml(doc.name)}</title>` +
-    (defs.length || fonts ? `<defs>${fonts ? `<style>${fonts}</style>` : ''}${defs.join('')}</defs>` : '') +
-    `<rect width="${n(doc.width)}" height="${n(doc.height)}" fill="${escXml(page.background)}"/>` +
+    (defs.length || fonts || page.backgroundGradient ? `<defs>${fonts ? `<style>${fonts}</style>` : ''}${page.backgroundGradient ? gradientDef('page-bg', page.backgroundGradient, doc.width, doc.height) : ''}${defs.join('')}</defs>` : '') +
+    `<rect width="${n(doc.width)}" height="${n(doc.height)}" fill="${page.backgroundGradient ? 'url(#page-bg)' : escXml(page.background)}"/>` +
     body.join('') +
     `</svg>\n`
   )

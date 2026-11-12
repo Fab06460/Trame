@@ -347,6 +347,8 @@ export const es: Catalog = {
   'prop.fillType': 'Tipo de relleno',
   'prop.fill.solid': 'Liso',
   'prop.fill.gradient': 'Degradado',
+  'prop.background.all': 'Aplicar a todas las páginas',
+  'prop.background.all.title': 'Copia el fondo de esta página (liso o degradado) a todas las demás páginas',
   'prop.gradient.type': 'Tipo',
   'prop.gradient.linear': 'Lineal',
   'prop.gradient.radial': 'Radial',

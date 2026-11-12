@@ -421,6 +421,7 @@ export function Canvas(): React.JSX.Element {
               width={doc.width + 2 * bleedPx}
               height={doc.height + 2 * bleedPx}
               fill={page.background}
+              {...konvaGradientProps(page.backgroundGradient, doc.width + 2 * bleedPx, doc.height + 2 * bleedPx)}
               shadowColor="#000"
               shadowBlur={24}
               shadowOpacity={0.35}

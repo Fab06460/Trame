@@ -68,6 +68,7 @@
 - Images : recadrage (champs en %, ou **poignées sur le canvas** : double-clic sur l'image), **redressement** (−45° à 45°), **cadres en forme** (ellipse ou cercle, coins arrondis, étoile, cœur…), miroirs, filtres (luminosité, contraste, saturation, noir et blanc, sépia, flou)
 - Ombres portées et lueurs (l'ombre est une image sous un élément resté vectoriel dans le PDF)
 - Dégradés linéaires et radiaux (formes, rectangles, ellipses), vectoriels dans le PDF
+- **Dégradé de fond de page** (linéaire ou radial, deux couleurs, angle ; « Appliquer à toutes les pages »), vectoriel dans le PDF et le SVG
 - Contour (couleur, épaisseur, tirets) sur formes, images et lettres
 - Typographie : interlettrage, interligne, souligné, barré, majuscules, avec export PDF fidèle
 - Panneau Calques : ordre de superposition par glisser-déposer, masquer, verrouiller (⌘L), renommer

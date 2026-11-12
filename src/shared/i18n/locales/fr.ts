@@ -348,6 +348,8 @@ export const fr = {
   'prop.fillType': 'Type de remplissage',
   'prop.fill.solid': 'Uni',
   'prop.fill.gradient': 'Dégradé',
+  'prop.background.all': 'Appliquer à toutes les pages',
+  'prop.background.all.title': 'Recopie le fond de cette page (uni ou dégradé) sur toutes les autres pages',
   'prop.gradient.type': 'Type',
   'prop.gradient.linear': 'Linéaire',
   'prop.gradient.radial': 'Radial',

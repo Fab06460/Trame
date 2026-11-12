@@ -161,7 +161,7 @@ function place(e: TrameElement, s: number, ox: number, oy: number): TrameElement
   return out
 }
 
-const band = (x: number, y: number, width: number, height: number, fill: string): TrameElement => ({ id: nanoid(8), type: 'rect', x, y, width, height, rotation: 0, opacity: 1, fill })
+const band = (x: number, y: number, width: number, height: number, fill: string, gradient?: TrameElement['gradient']): TrameElement => ({ id: nanoid(8), type: 'rect', x, y, width, height, rotation: 0, opacity: 1, fill, ...(gradient ? { gradient } : {}) })
 
 /**
  * Une page du document placée dans un cadre d'une feuille (le cadre a les proportions de la page) : fond, puis ses éléments visibles
@@ -169,7 +169,7 @@ const band = (x: number, y: number, width: number, height: number, fill: string)
  */
 export function pageInBox(page: TramePage, source: { width: number; height: number }, box: { x: number; y: number; width: number; height: number }): { elements: TrameElement[]; overflow: number } {
   const s = box.width / source.width
-  const elements: TrameElement[] = [band(box.x, box.y, box.width, box.height, page.background)]
+  const elements: TrameElement[] = [band(box.x, box.y, box.width, box.height, page.background, page.backgroundGradient)]
   let overflow = 0
   for (const e of page.elements) {
     if (e.hidden) continue
@@ -219,7 +219,7 @@ export function sheetsFromMerged(merged: TrameDocument, perCard: number, layout:
         const h = merged.height * s
         const ox = cell.x + (cell.width - w) / 2
         const oy = cell.y + (cell.height - h) / 2
-        elements.push(band(ox, oy, w, h, page.background))
+        elements.push(band(ox, oy, w, h, page.background, page.backgroundGradient))
         for (const e of page.elements) {
           if (e.hidden) continue
           const clipped = clipToCard(e, merged.width, merged.height)

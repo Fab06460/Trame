@@ -347,6 +347,8 @@ export const en: Catalog = {
   'prop.fillType': 'Fill type',
   'prop.fill.solid': 'Solid',
   'prop.fill.gradient': 'Gradient',
+  'prop.background.all': 'Apply to all pages',
+  'prop.background.all.title': 'Copies this page\'s background (solid or gradient) to all other pages',
   'prop.gradient.type': 'Type',
   'prop.gradient.linear': 'Linear',
   'prop.gradient.radial': 'Radial',

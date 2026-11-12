@@ -203,7 +203,10 @@ export interface ReviewComment {
 
 export interface TramePage {
   id: string
+  /** couleur de fond ; avec un dégradé (`backgroundGradient`), sa première couleur */
   background: string
+  /** dégradé de fond (absent = fond uni) */
+  backgroundGradient?: Gradient
   /** commentaires de relecture de la page (absents = aucun) ; jamais dessinés dans les exports */
   comments?: ReviewComment[]
   /** repères de la page (absents = aucun) ; jamais dessinés dans les exports */

@@ -1,3 +1,4 @@
+import { gradientPng } from '@/pageBackground'
 import PptxGenJS from 'pptxgenjs'
 import { renderElementImage } from '@/elementImage'
 import { createTextNode } from '@/exportPages'
@@ -67,6 +68,14 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
   for (const [index, page] of doc.pages.entries()) {
     const slide = pptx.addSlide()
     slide.background = { color: hex(page.background) }
+    // PowerPoint n'a pas de dégradé de fond reproduisible ici : le dégradé est posé en image de fond (un objet de fond, pas un rectangle modifiable)
+    if (page.backgroundGradient) {
+      const png = gradientPng(page.backgroundGradient, doc.width, doc.height)
+      if (png) {
+        slide.background = { data: png.replace(/^data:/, '') }
+        rasterized.push({ page: index + 1, reason: 'gradient' })
+      }
+    }
     if (page.notes) slide.addNotes(page.notes)
     const asImage = async (el: TrameElement, reason: PptxExportResult['rasterized'][number]['reason']): Promise<void> => {
       const r = await renderElementImage(el, 'full')

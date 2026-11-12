@@ -91,6 +91,8 @@ Les **retouches d'image** (`crop`, `flipX`, `flipY`, `filters`, éléments `imag
 
 Le **dégradé** (`gradient`, rectangles, ellipses et formes) remplace `fill` tant qu'il est présent ; `fill` est conservé (c'est la couleur retrouvée en revenant à « Uni »). `type` vaut `linear` ou `radial`, `angle` est en degrés CSS (0 = vers le haut, 90 = vers la droite, 180 = vers le bas ; ignoré en radial). À la lecture, un dégradé incomplet ou de type inconnu est retiré et l'élément garde son `fill`. Aucune nouvelle version du format.
 
+Le **fond de page** peut aussi être un dégradé : `backgroundGradient` (même forme que `gradient`) sur la page. `background` reste la **première couleur** du dégradé (les versions qui ignorent ce champ montrent un fond uni de cette couleur) ; à la lecture, un dégradé incomplet est retiré et `background` redevient la première couleur du dégradé valide. Champ optionnel : pas de changement de version.
+
 Le **contour** (`stroke`, `strokeWidth`, `strokeDashed`) existe pour tous les types ; il n'est conservé à la lecture que si la couleur est une chaîne non vide **et** l'épaisseur strictement positive (sinon les trois champs sont retirés). Pour un texte, c'est le contour des lettres.
 
 Les champs de style de texte sont bornés à la lecture (`letterSpacing` −10 à 100, `lineHeight` 0,5 à 4) et les valeurs inattendues retirées ; `underline`, `strike` et `uppercase` ne sont écrits que lorsqu'ils valent `true`. Les indicateurs de calque `locked` et `hidden` ne sont écrits que lorsqu'ils valent `true` ; à la lecture toute autre valeur est ignorée (un `locked: "oui"` ne verrouille rien) et `name` est borné à 80 caractères. Aucune nouvelle version du format.

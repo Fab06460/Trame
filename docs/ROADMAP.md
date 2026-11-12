@@ -38,7 +38,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0). Tableaux et statuts remis à jour 
 | --- | --- | --- | --- |
 | Retouche photo | 🟡 Partiel | **Fait** : recadrage (champs et poignées sur le canvas), miroirs, redressement, cadres en forme, filtres, réglages de lumière, flou — tout hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
 | Montage vidéo | 🟡 Partiel | **Fait** : export du document en vidéo MP4/WebM (WebCodecs, sans ffmpeg), clips dans les pages (début, fin, vitesse), musique de fond, voix off par page. **Reste** : coupe au milieu d'un clip, assemblage de plusieurs clips (l'enregistrement d'écran, V2, est fait). Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
-| Effets graphiques | ✅ Fait | Contour, dégradés (formes), ombre portée et lueur ; en PDF l'ombre est une image sous un élément resté vectoriel. Reste : dégradé de fond de page et de texte. | E1, E2, E3 |
+| Effets graphiques | ✅ Fait | Contour, dégradés (formes), ombre portée et lueur ; en PDF l'ombre est une image sous un élément resté vectoriel. Dégradé de fond de page fait. Reste : dégradé de texte. | E1, E2, E3 |
 
 ### 3. Intelligence artificielle
 
@@ -79,7 +79,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | ID | Fonctionnalité | Effort | Notes | Dépend de |
 | --- | --- | :---: | --- | --- |
 | E1 | Contour (trait) des formes et du texte | S | **Fait.** Formes, images et lettres ; trait centré sur le bord, tirets ; PDF vectoriel (la forme étirée garde un trait d'épaisseur uniforme). | — |
-| E2 | Dégradés (linéaire, radial) pour fonds et formes | M | **Fait** pour les formes, rectangles et ellipses (deux couleurs, linéaire/radial) ; PDF natif (shading). Reste : dégradé de fond de page et de texte. | — |
+| E2 | Dégradés (linéaire, radial) pour fonds et formes | M | **Fait** pour les formes, rectangles et ellipses (deux couleurs, linéaire/radial) ; PDF natif (shading). Dégradé de fond de page fait. Reste : dégradé de texte. | — |
 | E3 | Ombre portée et lueur (formes, texte, images) | M | **Fait.** Décision retenue pour le PDF : l'ombre est une image sous un élément resté vectoriel (le texte reste sélectionnable). | — |
 | E4 | Typographie : espacement des lettres, interligne, souligné, barré, majuscules | M | **Fait.** Konva dessine lettre par lettre avec un interlettrage (pas de crénage) : le PDF fait de même (`Tc`) ; décorations et interligne identiques à Konva, vérifiés par `fidelity` (page 2). Les listes sont E21. | — |
 | E5 | Panneau Calques : verrouiller, masquer, renommer | M | **Fait** (liste, œil, cadenas, renommage, glisser-déposer, ⌘L). Prérequis des modèles de marque verrouillés. | — |
