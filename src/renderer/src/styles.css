@@ -296,7 +296,7 @@ button.danger { color: var(--danger); }
 .modal.wide { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chips button { padding: 3px 10px; font-size: 12px; }
-.font-list { display: flex; flex-direction: column; max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.catalog-list { display: flex; flex-direction: column; max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
 .font-row { display: flex; justify-content: space-between; align-items: center; border: none; border-radius: 0; text-align: left; background: transparent; padding: 6px 10px; }
 .font-row em { font-style: normal; font-size: 11px; color: var(--muted); }
 .font-row.active { background: var(--accent); color: #fff; }

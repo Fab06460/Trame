@@ -142,7 +142,7 @@ export function FontCatalogDialog(): React.JSX.Element | null {
             </div>
           )}
           {mine.length > 0 && (
-            <div className="font-list" data-my-fonts>
+            <div className="catalog-list" data-my-fonts>
               {mine.map((f) => (
                 <div key={f.id} className="font-row" data-my-font={f.id}>
                   <span>{f.name}</span>
@@ -172,7 +172,7 @@ export function FontCatalogDialog(): React.JSX.Element | null {
                 </button>
               ))}
             </div>
-            <div className="font-list" data-font-list>
+            <div className="catalog-list" data-font-list>
               {shown.map((f) => (
                 <button key={f.id} className={`font-row ${selected?.id === f.id ? 'active' : ''}`} data-font={f.id} onClick={() => void preview(f)}>
                   <span>{f.name}</span>
