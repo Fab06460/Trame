@@ -40,6 +40,15 @@ function redDot(): Electron.NativeImage {
   return nativeImage.createFromBitmap(buf, { width: size, height: size })
 }
 
+/**
+ * Session Linux « Wayland » : le système choisit la source dans sa propre fenêtre (« Partager l'écran », portail du bureau) à chaque appel de
+ * `getSources`, et Trame ne peut ni lister les écrans à l'avance ni retrouver une source d'un appel à l'autre. On laisse alors le système
+ * poser la question, une seule fois, au moment de la prise.
+ */
+const portalSession = (): boolean => process.platform === 'linux' && (process.env.XDG_SESSION_TYPE === 'wayland' || Boolean(process.env.WAYLAND_DISPLAY))
+/** Identifiant de source qui désigne « celle que le portail va faire choisir ». */
+const PORTAL = 'portal'
+
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 export function registerCapture({ getWindow, testMode }: Deps): void {
@@ -52,7 +61,7 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
       desktopCapturer
         .getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } })
         .then((sources) => {
-          const source = sources.find((s) => s.id === wanted)
+          const source = wanted === PORTAL ? sources[0] : sources.find((s) => s.id === wanted)
           callback(source ? { video: source } : {})
         })
         .catch(() => callback({}))
@@ -67,6 +76,8 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
       return null
     }
   }
+
+  ipcMain.handle('capture:portal', (): boolean => !testMode && portalSession())
 
   ipcMain.handle('capture:sources', async (): Promise<{ sources: CaptureSource[] } | { error: CaptureError }> => {
     try {
@@ -98,12 +109,13 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
         win!.minimize()
         await sleep(900) // la fin de l'animation du système
       }
+      const portal = id === PORTAL
       const display = screen.getAllDisplays().find((d) => id.startsWith('screen:') && id.split(':')[1] === String(d.id))
       const scale = display?.scaleFactor ?? 1
       const size = display ? { width: Math.round(display.size.width * scale), height: Math.round(display.size.height * scale) } : { width: 3840, height: 2160 }
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: Math.min(size.width, MAX_STILL_SIDE), height: Math.min(size.height, MAX_STILL_SIDE) }, fetchWindowIcons: false })
-      const source = sources.find((s) => s.id === id)
-      if (!source || source.thumbnail.isEmpty()) return { error: screenAccess(testMode) ? 'failed' : 'denied' }
+      const source = portal ? sources[0] : sources.find((s) => s.id === id)
+      if (!source || source.thumbnail.isEmpty()) return { error: portal ? 'cancelled' : screenAccess(testMode) ? 'failed' : 'denied' }
       const { width, height } = source.thumbnail.getSize()
       return { dataUrl: source.thumbnail.toDataURL(), width, height }
     } catch {

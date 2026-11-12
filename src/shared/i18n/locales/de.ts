@@ -1833,6 +1833,7 @@ export const de: Catalog = {
   'capture.err.unsupported': 'Dieser Computer kann kein Video (VP9) kodieren: Aufnahme nicht möglich.',
   'capture.err.micDenied': 'Das Mikrofon ist verweigert: Erlauben Sie Trame in den Datenschutzeinstellungen des Systems oder deaktivieren Sie „Auch das Mikrofon aufnehmen“.',
   'capture.openSettings': 'Einstellungen öffnen',
+  'capture.portal': 'Ihr Desktop wählt den Bildschirm oder das Fenster selbst aus: Beim Start öffnet sich ein Fenster „Bildschirm freigeben“.',
   'capture.err.noMic': 'Es wurde kein Mikrofon gefunden.',
   'clip.insert.title': 'MP4, WebM, MOV (höchstens 50 MB): Der Clip bleibt im Dokument',
   'clip.tooBig': 'Dieser Clip ist zu groß (höchstens 50 MB).',

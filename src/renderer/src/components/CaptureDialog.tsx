@@ -52,6 +52,8 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const [sources, setSources] = useState<CaptureSource[] | null>(null)
   const [error, setError] = useState<MessageKey | null>(null)
   const [denied, setDenied] = useState(false)
+  /** Session Linux « Wayland » : c'est le système qui demande quel écran partager, pas de liste ici. */
+  const [portal, setPortal] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
   const [options, setOptions] = useState(saved)
   const [stage, setStage] = useState<Stage>({ name: 'list' })
@@ -67,6 +69,13 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const load = async (): Promise<void> => {
     setSources(null)
     setError(null)
+    if (await window.trame.capturePortal()) {
+      if (!alive.current) return
+      setPortal(true)
+      setSources([])
+      setPicked('portal')
+      return
+    }
     const res = await window.trame.captureSources()
     if (!alive.current) return
     if ('error' in res) {
@@ -131,10 +140,11 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
     if (!picked) return
     setError(null)
     setStage({ name: 'busy' })
-    const isScreen = sources?.find((s) => s.id === picked)?.kind === 'screen'
+    const isScreen = portal || sources?.find((s) => s.id === picked)?.kind === 'screen'
     const res = await window.trame.captureStill(picked, options.hide && isScreen)
     if (!alive.current) return
     if ('error' in res) {
+      if (res.error === 'cancelled') return setStage({ name: 'list' }) // la personne a fermé la fenêtre de partage du système
       setDenied(res.error === 'denied')
       return fail(res.error === 'denied' ? 'capture.err.denied' : 'capture.err.failed')
     }
@@ -162,7 +172,7 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
       if (!alive.current) return
     }
     if (!(await window.trame.captureArm(picked))) return fail('capture.err.failed')
-    const isScreen = sources?.find((s) => s.id === picked)?.kind === 'screen'
+    const isScreen = portal || sources?.find((s) => s.id === picked)?.kind === 'screen'
     const res = await startScreenRecording(options.mic, () => void finish())
     if (!alive.current) return
     if ('error' in res) {
@@ -226,7 +236,8 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
               <button data-action="capture-refresh" onClick={() => void load()} disabled={stage.name === 'busy'}>{t('capture.refresh')}</button>
             </div>
             {sources === null && <p className="hint" role="status">{t('capture.loading')}</p>}
-            {sources?.length === 0 && !error && <p className="hint" data-capture-empty>{t('capture.none')}</p>}
+            {portal && <p className="hint" data-capture-portal>{t('capture.portal')}</p>}
+            {sources?.length === 0 && !error && !portal && <p className="hint" data-capture-empty>{t('capture.none')}</p>}
             {sources && sources.length > 0 &&
               kinds.map((kind) => {
                 const list = sources.filter((s) => s.kind === kind)

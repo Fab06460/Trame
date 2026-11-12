@@ -1833,6 +1833,7 @@ export const en: Catalog = {
   'capture.err.unsupported': 'This computer cannot encode video (VP9): recording is not possible.',
   'capture.err.micDenied': 'The microphone is denied: allow Trame in the system privacy settings, or untick “Also record the microphone”.',
   'capture.openSettings': 'Open the settings',
+  'capture.portal': 'Your desktop chooses the screen or window itself: a “Share screen” window will open when you start.',
   'capture.err.noMic': 'No microphone was found.',
   'clip.insert.title': 'MP4, WebM, MOV (50 MB at most): the clip is kept in the document',
   'clip.tooBig': 'This clip is too large (50 MB at most).',

@@ -1833,6 +1833,7 @@ export const es: Catalog = {
   'capture.err.unsupported': 'Este ordenador no sabe codificar vídeo (VP9): no es posible grabar.',
   'capture.err.micDenied': 'El micrófono está denegado: autorice Trame en los ajustes de privacidad del sistema o desmarque «Grabar también el micrófono».',
   'capture.openSettings': 'Abrir los ajustes',
+  'capture.portal': 'Su escritorio elige por sí mismo la pantalla o la ventana: al empezar se abrirá una ventana «Compartir pantalla».',
   'capture.err.noMic': 'No se encontró ningún micrófono.',
   'clip.insert.title': 'MP4, WebM, MOV (50 MB como máximo): el clip se guarda en el documento',
   'clip.tooBig': 'Este clip es demasiado grande (50 MB como máximo).',

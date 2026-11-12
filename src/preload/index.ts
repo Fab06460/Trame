@@ -111,6 +111,8 @@ const api = {
     ipcRenderer.invoke('print:html', html, widthPx, heightPx, duplex),
   /** Choisit un clip vidéo : le fichier, une raison de refus, ou null si annulé. */
   pickVideo: (): Promise<VideoPick> => ipcRenderer.invoke('video:pick'),
+  /** Vrai sur une session Linux « Wayland » : le système demande lui-même quel écran partager (pas de liste dans Trame, identifiant de source `portal`). */
+  capturePortal: (): Promise<boolean> => ipcRenderer.invoke('capture:portal'),
   /** Capture d'écran : écrans et fenêtres proposés (avec vignette), ou le refus du système. */
   captureSources: (): Promise<{ sources: CaptureSource[] } | { error: CaptureError }> => ipcRenderer.invoke('capture:sources'),
   /** Image fixe d'une source ; `hideApp` réduit Trame le temps de la prise. */

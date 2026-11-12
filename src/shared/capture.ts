@@ -7,7 +7,7 @@ export interface CaptureSource {
 }
 
 /** Pourquoi une capture n'a pas pu se faire : `denied` quand le système refuse l'accès à l'écran (macOS : Réglages Système → Confidentialité). */
-export type CaptureError = 'denied' | 'failed'
+export type CaptureError = 'denied' | 'failed' | 'cancelled'
 
 /** Une image fixe de l'écran, en PNG, à sa taille réelle. */
 export interface CaptureStill {

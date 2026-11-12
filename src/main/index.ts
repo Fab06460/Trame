@@ -1575,6 +1575,9 @@ ipcMain.handle('update:open-page', async () => {
   return !!r
 })
 
+// Linux : Chromium n'utilise speech-dispatcher (les voix du système, pour la lecture à voix haute) que sur demande ; sans cela la liste des voix reste vide
+if (process.platform === 'linux') app.commandLine.appendSwitch('enable-speech-dispatcher')
+
 // tests de bout en bout : un micro fictif (un signal de test) et aucune question d'autorisation, faute de micro ni de personne devant l'écran
 if (TEST_EXPORT_DIR) {
   app.commandLine.appendSwitch('use-fake-device-for-media-stream')

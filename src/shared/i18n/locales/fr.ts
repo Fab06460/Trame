@@ -1834,6 +1834,7 @@ export const fr = {
   'capture.err.unsupported': 'Cet ordinateur ne sait pas encoder la vidéo (VP9) : l\'enregistrement est impossible.',
   'capture.err.micDenied': 'Le micro est refusé : autorisez Trame dans les réglages de confidentialité du système, ou décochez « Enregistrer aussi le micro ».',
   'capture.openSettings': 'Ouvrir les réglages',
+  'capture.portal': 'Votre bureau choisit lui-même l\'écran ou la fenêtre : une fenêtre « Partager l\'écran » s\'ouvrira au moment de la prise.',
   'capture.err.noMic': 'Aucun micro n\'a été trouvé.',
   'clip.insert.title': 'MP4, WebM, MOV (50 Mo au plus) : le clip est gardé dans le document',
   'clip.tooBig': 'Ce clip est trop gros (50 Mo au plus).',
