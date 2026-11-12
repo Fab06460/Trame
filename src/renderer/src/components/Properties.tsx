@@ -18,6 +18,7 @@ import { FontPicker } from './FontPicker'
 import { ImagePanel } from './ImagePanel'
 import { ClipPanel } from './ClipPanel'
 import { useBrand } from '@/store/brand'
+import { KitSwatches } from './KitSwatches'
 import { PageSize } from './PageSize'
 import { PrintSetupPanel } from './PrintSetupPanel'
 import { ProtectionControls, TemplateBanner } from './TemplatePanel'
@@ -58,6 +59,7 @@ export function Properties(): React.JSX.Element {
           {t('prop.background')}
           <input type="color" value={page.background} onChange={(e) => setBackground(e.target.value)} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
         </label>
+        <KitSwatches current={page.background} onPick={setBackground} />
         <TransitionPanel />
         <PageDurationPanel />
         <VoicePanel />
@@ -270,10 +272,13 @@ export function Properties(): React.JSX.Element {
         </>
       ) : (
         el.type !== 'image' && (
+          <>
           <label>
             {t('prop.color')}
             <input type="color" value={el.fill} onPointerDown={beginChange} onChange={(e) => live({ fill: e.target.value })} onBlur={(e) => useBrand.getState().noteColor(e.target.value)} />
           </label>
+          <KitSwatches current={el.fill} onPick={(c) => updateElement(el.id, { fill: c })} />
+          </>
         )
       )}
 
@@ -444,6 +449,7 @@ export function Properties(): React.JSX.Element {
           ┅
         </button>
       </div>
+      <KitSwatches current={el.stroke} onPick={(c) => updateElement(el.id, { stroke: c, ...((el.strokeWidth ?? 0) > 0 ? {} : { strokeWidth: 2 }) })} />
 
       <h3>{t('prop.shadow')}</h3>
       {(() => {
@@ -465,7 +471,8 @@ export function Properties(): React.JSX.Element {
                   <NumberField label={t('prop.shadow.blur')} field="shadowBlur" value={sh.blur} min={SHADOW_LIMITS.blur.min} max={SHADOW_LIMITS.blur.max} suffix="px" onCommit={(v) => patchShadow({ blur: v })} />
                   <NumberField label={t('prop.shadow.opacity')} field="shadowOpacity" value={Math.round(sh.opacity * 100)} min={0} max={100} suffix="%" onCommit={(v) => patchShadow({ opacity: v / 100 })} />
                 </div>
-                <div className="num-grid">
+<KitSwatches current={sh.color} onPick={(c) => updateElement(el.id, { shadow: { ...sh, color: c } })} />
+                                <div className="num-grid">
                   <NumberField label={t('prop.shadow.x')} field="shadowX" value={sh.offsetX} min={SHADOW_LIMITS.offset.min} max={SHADOW_LIMITS.offset.max} suffix="px" onCommit={(v) => patchShadow({ offsetX: v })} />
                   <NumberField label={t('prop.shadow.y')} field="shadowY" value={sh.offsetY} min={SHADOW_LIMITS.offset.min} max={SHADOW_LIMITS.offset.max} suffix="px" onCommit={(v) => patchShadow({ offsetY: v })} />
                 </div>

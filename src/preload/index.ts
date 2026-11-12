@@ -134,6 +134,10 @@ const api = {
   openLink: (url: string): Promise<boolean> => ipcRenderer.invoke('link:open', url),
   /** Accès au micro pour la voix off : sur macOS le système demande l'autorisation la première fois ; ailleurs le navigateur s'en charge à l'enregistrement. */
   micAccess: (): Promise<'granted' | 'denied'> => ipcRenderer.invoke('mic:access'),
+  /** Kit de marque d'échange (.tramekit) : enregistre le kit sérialisé (boîte d'enregistrement, nom proposé) ; true s'il est écrit. */
+  exportBrandKit: (json: string, name: string): Promise<boolean> => ipcRenderer.invoke('brand:export-kit', json, name),
+  /** Choisit un fichier .tramekit : son contenu brut (à valider côté interface), ou null si annulé. */
+  importBrandKit: (): Promise<string | null> => ipcRenderer.invoke('brand:import-kit'),
   /** Choisit un fichier audio (musique de fond d'une vidéo) : le fichier, une raison de refus, ou null si annulé. */
   pickAudio: (): Promise<AudioPick> => ipcRenderer.invoke('audio:pick'),
   /** Enregistre des octets (vidéo .mp4 ou .webm) : boîte d'enregistrement du système ; chemin choisi, ou null si annulé. */

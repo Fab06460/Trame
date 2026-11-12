@@ -8,8 +8,8 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0). Tableaux et statuts remis à jour 
 
 | Statut | Lignes de FEATURES.md |
 | --- | ---: |
-| ✅ Fait | 6 |
-| 🟡 Partiel | 10 |
+| ✅ Fait | 7 |
+| 🟡 Partiel | 9 |
 | ⬜ À faire | 0 |
 | 🔶 À faire, lourd | 0 |
 | 🚫 Écarté (IA) | 2 |
@@ -55,7 +55,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0). Tableaux et statuts remis à jour 
 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
-| Kit de marque | 🟡 Partiel | Onglet « Marque » : couleurs, polices et logos enregistrés localement (un kit), couleurs récentes, pipette, couleurs du document (appliquer, ajouter au kit, remplacer partout). Les polices du kit passent en tête du sélecteur de police. Restent : plusieurs kits, proposition dans les sélecteurs de couleur. | C5, E11, E12 |
+| Kit de marque | ✅ Fait | Onglet « Marque » : couleurs, polices et logos enregistrés localement (plusieurs kits), couleurs récentes, pipette, couleurs du document (appliquer, ajouter au kit, remplacer partout). Les polices du kit passent en tête du sélecteur de police. **Plusieurs kits** faits (kit actif, export / import `.tramekit`) et couleurs du kit proposées en pastilles sous les sélecteurs de couleur du panneau Propriétés ; reste : kit lié au document, pastilles dans les autres fenêtres de couleur. | C5, E11, E12 |
 | Modèles de marque verrouillés | ✅ Fait | Éléments figés ou à remplir dans un modèle, modèles échangés par packs `.tramepack`. Aide à la cohérence, pas une sécurité. | C6, E5 |
 | Collaboration en temps réel | ⛔ Hors-ligne impossible | Exige un serveur et du réseau : contraire à l'objectif. Substituts hors-ligne : échange de fichiers `.trame`, packs de modèles, historique de versions local. | — |
 
@@ -108,7 +108,7 @@ Effort indicatif : **S** (petit), **M** (moyen), **L** (gros), **XL** (chantier 
 | C2 | Davantage de modèles (CV, flyers, logos, cartes de visite, bannières, affiches) + packs de modèles importables/exportables | M | ✅ **Fait** : 18 modèles ajoutés (CV, lettre, carte de visite recto-verso, flyer A5, invitation, bannière LinkedIn, miniature vidéo, carrousel Instagram, trois affiches, trois logos, menu, planning hebdomadaire, couverture de rapport, lettre d'information), traduits en 4 langues, texte en vrai PDF ; **packs `.tramepack`** : exporter des modèles personnels choisis dans un fichier, importer le pack reçu. Reste : packs de modèles intégrés téléchargeables, modèles avec photos. | — |
 | C3 | Bibliothèque de médias locale (dossier surveillé, étiquettes, recherche) | M | **Fait pour les images** : un dossier choisi (relu à l'ouverture et sur demande, pas surveillé en continu), vignettes, recherche par nom, étiquettes et filtre, insertion en un clic. Restent : plusieurs dossiers, favoris, glisser-déposer, vidéo et audio. | E7 |
 | C4 | Palette depuis une image et recoloriage du design (Style Match simple) | M | **Fait** : fenêtre « Style d'après une image » (3 à 8 couleurs, kit de marque, aperçu avant / après, page ou toutes les pages). Voir `docs/ARCHITECTURE.md`. | E11 |
-| C5 | Kit de marque local : couleurs, logos, polices (plusieurs kits) | M | **Fait pour un kit** (voir `docs/ARCHITECTURE.md`). | E11, E12 |
+| C5 | Kit de marque local : couleurs, logos, polices (plusieurs kits) | M | **Fait** : plusieurs kits (un actif à la fois), échange par fichier `.tramekit`, pastilles sous les sélecteurs de couleur (voir `docs/ARCHITECTURE.md`). | E11, E12 |
 | C6 | Modèles de marque : éléments verrouillés / modifiables | M | **Fait** : éléments figés ou à remplir, modification du modèle, remplacement d'image. Aide à la cohérence, pas une sécurité. | E5, C5 |
 | C7 | Graphiques (barres, courbes, secteurs) et tableaux à partir de données collées ou CSV | L | Nouveau type d'élément : 4 rendus à écrire. | — |
 | C8 | QR codes (adresse web ou texte, correction d'erreurs, couleurs) | S | **Fait** : groupe fond + tracé vectoriel, voir `docs/ARCHITECTURE.md`. **Publipostage fait** : `{{colonne}}` dans le contenu donne un QR code par ligne. Reste : PowerPoint en vrai tracé. | C7 |

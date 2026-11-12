@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { allFonts, FONTS } from '@/fonts'
 import { useFonts } from '@/store/fonts'
-import { MAX_COLORS, MAX_FONTS, MAX_LOGOS } from '@/brandKit'
+import { MAX_COLORS, MAX_FONTS, MAX_KITS, MAX_KIT_NAME, MAX_LOGOS } from '@/brandKit'
+import { InfoTip } from './InfoTip'
 import { applyColor, applyFont, pickScreenColor, placeLogo } from '@/brandActions'
 import { fontName, useBrand } from '@/store/brand'
 import { useT } from '@/i18n'
@@ -40,6 +41,10 @@ export function BrandPanel(): React.JSX.Element {
   const t = useT()
   useFonts((s) => s.version)
   const kit = useBrand((s) => s.kit)
+  const library = useBrand((s) => s.library)
+  const kitName = library.kits.find((k) => k.id === library.active)?.name ?? ''
+  const [naming, setNaming] = useState<null | { mode: 'new' | 'rename'; value: string }>(null)
+  const [note, setNote] = useState<{ text: string; warn: boolean } | null>(null)
   const recent = useBrand((s) => s.recent)
   const brand = useBrand.getState()
   const [color, setColor] = useState('#7c5cff')
@@ -63,11 +68,75 @@ export function BrandPanel(): React.JSX.Element {
 
   const addLogo = async (): Promise<void> => {
     const src = await window.trame.pickImage()
-    if (src) brand.addLogo({ id: crypto.randomUUID(), name: t('brand.logoName', { n: kit.logos.length + 1 }), src })
+    if (src && !brand.addLogo({ id: crypto.randomUUID(), name: t('brand.logoName', { n: kit.logos.length + 1 }), src })) setNote({ text: t('brand.logo.full'), warn: true })
+  }
+
+  const validateName = (): void => {
+    if (!naming) return
+    if (naming.mode === 'new') brand.createKit(naming.value || t('brand.kit.default'))
+    else brand.renameKit(library.active, naming.value)
+    setNaming(null)
+  }
+  const removeKit = async (): Promise<void> => {
+    if (await window.trame.confirm(t('brand.kit.delete.title', { name: kitName }), t('brand.kit.delete.detail'), t('brand.kit.delete'))) brand.deleteKit(library.active)
+  }
+  const importKit = async (): Promise<void> => {
+    const res = await brand.importKit()
+    if (res === null) return
+    setNote(res === false ? { text: t('brand.kit.invalid'), warn: true } : { text: t('brand.kit.imported.ok', { name: res }), warn: false })
+  }
+  const exportKit = async (): Promise<void> => {
+    if (await brand.exportKit()) setNote({ text: t('brand.kit.exported'), warn: false })
   }
 
   return (
     <>
+      <section data-brand-kits>
+        <h3>{t('brand.kit.section')}<InfoTip>{t('brand.kit.hint')}</InfoTip></h3>
+        {naming ? (
+          <div className="kit-row">
+            <input
+              type="text"
+              data-field="brandKitName"
+              autoFocus
+              maxLength={MAX_KIT_NAME}
+              value={naming.value}
+              placeholder={t('brand.kit.name')}
+              aria-label={t('brand.kit.name')}
+              onChange={(e) => setNaming({ ...naming, value: e.target.value })}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') validateName()
+                if (e.key === 'Escape') setNaming(null)
+              }}
+            />
+            <button data-action="brand-kit-name-ok" className="primary" onClick={validateName}>{t(naming.mode === 'new' ? 'brand.kit.create' : 'brand.kit.renameDo')}</button>
+            <button data-action="brand-kit-name-cancel" onClick={() => setNaming(null)}>{t('brand.doc.cancel')}</button>
+          </div>
+        ) : (
+          <>
+            <div className="kit-row">
+              <select data-field="brandKitSelect" value={library.active} aria-label={t('brand.kit.select')} onChange={(e) => brand.selectKit(e.target.value)}>
+                {library.kits.map((k) => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+              <button data-action="brand-kit-new" disabled={library.kits.length >= MAX_KITS} title={library.kits.length >= MAX_KITS ? t('brand.kit.full', { n: MAX_KITS }) : undefined} onClick={() => setNaming({ mode: 'new', value: '' })}>{t('brand.kit.new')}</button>
+            </div>
+            <div className="kit-row">
+              <button data-action="brand-kit-rename" onClick={() => setNaming({ mode: 'rename', value: kitName })}>{t('brand.kit.rename')}</button>
+              <button data-action="brand-kit-duplicate" disabled={library.kits.length >= MAX_KITS} onClick={() => brand.duplicateKit(library.active)}>{t('brand.kit.duplicate')}</button>
+              <button data-action="brand-kit-delete" disabled={library.kits.length <= 1} title={library.kits.length <= 1 ? t('brand.kit.delete.last') : undefined} onClick={() => void removeKit()}>{t('brand.kit.delete')}</button>
+            </div>
+            <div className="kit-row">
+              <button data-action="brand-kit-export" onClick={() => void exportKit()}>{t('brand.kit.export')}</button>
+              <button data-action="brand-kit-import" disabled={library.kits.length >= MAX_KITS} onClick={() => void importKit()}>{t('brand.kit.import')}</button>
+            </div>
+          </>
+        )}
+        {note && <p className={note.warn ? 'warn' : 'hint'} role="status" data-brand-note>{note.text}</p>}
+      </section>
+
       <section>
         <h3>{t('brand.colors')}</h3>
         <div className="swatches">

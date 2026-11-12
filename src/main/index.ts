@@ -282,6 +282,32 @@ ipcMain.handle('brand:save', async (_e, json: unknown) => {
   }
 })
 
+// kit de marque à partager : un fichier .tramekit (JSON validé côté interface, `parseKitFile`)
+ipcMain.handle('brand:export-kit', async (_e, json: unknown, kitName: unknown): Promise<boolean> => {
+  if (typeof json !== 'string' || json.length > MAX_BRAND_BYTES) return false
+  const base = (typeof kitName === 'string' ? kitName : '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || tm('main.kit.defaultName')
+  const name = `${base}.tramekit`
+  let path: string
+  if (TEST_EXPORT_DIR) {
+    path = join(TEST_EXPORT_DIR, name) // mode test (voir export:save)
+  } else {
+    const res = await dialog.showSaveDialog({ defaultPath: name, filters: [{ name: tm('main.kit.filter'), extensions: ['tramekit'] }] })
+    if (res.canceled || !res.filePath) return false
+    path = res.filePath
+  }
+  try {
+    await writeFile(path, json, 'utf-8')
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('brand:import-kit', async (): Promise<string | null> => {
+  const file = await pickImportFile('tramekit', tm('main.kit.filter'))
+  return file ? Buffer.from(file.bytes).toString('utf-8') : null
+})
+
 // signatures enregistrées : un fichier JSON dans le dossier de données ; la validation du contenu est faite par l'interface (signature.ts)
 const signaturesFile = (): string => join(app.getPath('userData'), 'signatures.json')
 const MAX_SIGNATURES_BYTES = 12_000_000
@@ -680,7 +706,7 @@ ipcMain.on('app:close-confirmed', () => {
 const MAX_IMPORT_BYTES = 150_000_000
 
 /** Choix d'un fichier à importer (PDF, PPTX) : retourne son nom (sans extension) et son contenu. */
-async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv' | 'tramepack', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
+async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv' | 'tramepack' | 'tramekit', label: string): Promise<{ name: string; bytes: Uint8Array } | null> {
   let path: string
   if (TEST_EXPORT_DIR) {
     // tests de bout en bout : le fichier pick-import.<ext> du dossier de test tient lieu de choix (aucun dialogue natif)
@@ -695,7 +721,7 @@ async function pickImportFile(ext: 'pdf' | 'pptx' | 'csv' | 'tramepack', label: 
     dialog.showErrorBox(tm('main.import.tooBig.title'), tm('main.import.tooBig'))
     return null
   }
-  return { name: basename(path).replace(/\.(pdf|pptx|csv|tsv|txt|tramepack)$/i, ''), bytes: new Uint8Array(await readFile(path)) }
+  return { name: basename(path).replace(/\.(pdf|pptx|csv|tsv|txt|tramepack|tramekit)$/i, ''), bytes: new Uint8Array(await readFile(path)) }
 }
 
 // --- Photos libres (Openverse) -------------------------------------------------------------------------------------------------

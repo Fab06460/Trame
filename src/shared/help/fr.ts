@@ -114,7 +114,7 @@ export const fr: HelpContent = {
       keywords: 'modèle kit de marque couleurs polices logos magic resize format page personnels packs',
       body: [
         { p: 'L\'onglet **Modèles** propose 32 modèles de départ (CV, affiches, cartes de visite, carrousel, planning, modèles de publipostage…). Enregistrez n\'importe quel design comme **modèle personnel** ; un pack `.tramepack` partage plusieurs modèles dans un seul fichier.' },
-        { p: 'Le **Kit de marque** (onglet « Marque ») garde vos couleurs, polices et logos : ses polices passent en tête du sélecteur. « Couleurs du document » liste celles qu\'il utilise (un clic pour les appliquer, « ⇄ » pour en remplacer une partout). « Style d\'après une image » recolore la page ou le document avec les couleurs d\'une image.' },
+        { p: 'Le **Kit de marque** (onglet « Marque ») garde vos couleurs, polices et logos : ses polices passent en tête du sélecteur et ses couleurs apparaissent en pastilles sous les sélecteurs de couleur. Vous pouvez avoir **plusieurs kits** (un par client, par cours…) : le menu du haut choisit le kit actif, et « Exporter… » / « Importer… » les échangent par un fichier .tramekit. « Couleurs du document » liste celles qu\'il utilise (un clic pour les appliquer, « ⇄ » pour en remplacer une partout). « Style d\'après une image » recolore la page ou le document avec les couleurs d\'une image.' },
         { p: '**Magic Resize** change le format de la page en adaptant le contenu. Des **pages multiples** : ajout, duplication, suppression et réordonnancement par glisser-déposer dans la liste du bas.' }
       ]
     },
