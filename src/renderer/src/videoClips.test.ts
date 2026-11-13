@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipAutoplay, clipElements, clipLength, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
+import { splitClipAt, clipAutoplay, clipElements, clipLength, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
 import type { TrameDocument, TrameElement } from './types'
 
 const MP4 = 'data:video/mp4;base64,AAAA'
@@ -157,5 +157,25 @@ describe('montage : début, fin, vitesse', () => {
     expect(b).toEqual({ id: 'u', duration: 10, end: 3 }) // début hors du clip ignoré, fin valide gardée
     expect(c).toEqual({ id: 'u', duration: 10, start: 5 })
     expect(e).toEqual({ id: 'u', duration: 10 })
+  })
+})
+
+describe('splitClipAt', () => {
+  const base = { id: 'c', duration: 10 }
+  it('coupe en deux morceaux qui se suivent et gardent vitesse, son et boucle', () => {
+    const parts = splitClipAt({ ...base, speed: 2, muted: true, loop: true, volume: 0.5 }, 4)!
+    expect(parts[0]).toEqual({ id: 'c', duration: 10, speed: 2, muted: true, loop: true, volume: 0.5, end: 4 })
+    expect(parts[1]).toEqual({ id: 'c', duration: 10, speed: 2, muted: true, loop: true, volume: 0.5, start: 4 })
+  })
+  it('respecte un montage déjà fait', () => {
+    const parts = splitClipAt({ ...base, start: 2, end: 8 }, 5)!
+    expect(parts[0]).toEqual({ id: 'c', duration: 10, start: 2, end: 5 })
+    expect(parts[1]).toEqual({ id: 'c', duration: 10, start: 5, end: 8 })
+  })
+  it('refuse une coupe trop près des bords ou hors du morceau gardé', () => {
+    expect(splitClipAt(base, 0.1)).toBeNull()
+    expect(splitClipAt(base, 9.9)).toBeNull()
+    expect(splitClipAt({ ...base, start: 2, end: 8 }, 1)).toBeNull()
+    expect(splitClipAt({ ...base, start: 2, end: 8 }, Number.NaN)).toBeNull()
   })
 })

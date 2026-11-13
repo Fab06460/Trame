@@ -1879,6 +1879,8 @@ export const en: Catalog = {
   'clip.startHere.title': 'The clip will start at the time shown in the player',
   'clip.endHere': 'End here',
   'clip.endHere.title': 'The clip will stop at the time shown in the player',
+  'clip.split': 'Cut here',
+  'clip.split.title': 'Cuts the clip at the time shown in the player: two pieces side by side that share the same video (the document does not grow)',
   'clip.rangeReset': 'Whole clip',
   'clip.speed': 'Speed',
   'clip.length': 'Playback: {length}',

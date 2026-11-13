@@ -1879,6 +1879,8 @@ export const de: Catalog = {
   'clip.startHere.title': 'Der Clip beginnt an der im Player angezeigten Stelle',
   'clip.endHere': 'Ende hier',
   'clip.endHere.title': 'Der Clip endet an der im Player angezeigten Stelle',
+  'clip.split': 'Hier schneiden',
+  'clip.split.title': 'Schneidet den Clip an der im Player angezeigten Stelle: zwei Teile nebeneinander, die dasselbe Video nutzen (das Dokument wird nicht größer)',
   'clip.rangeReset': 'Ganzer Clip',
   'clip.speed': 'Geschwindigkeit',
   'clip.length': 'Wiedergabe: {length}',

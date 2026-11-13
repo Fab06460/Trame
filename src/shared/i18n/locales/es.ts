@@ -1879,6 +1879,8 @@ export const es: Catalog = {
   'clip.startHere.title': 'El clip empezará en el instante mostrado en el reproductor',
   'clip.endHere': 'Fin aquí',
   'clip.endHere.title': 'El clip se detendrá en el instante mostrado en el reproductor',
+  'clip.split': 'Cortar aquí',
+  'clip.split.title': 'Corta el clip en el instante mostrado en el reproductor: dos trozos lado a lado que comparten el mismo vídeo (el documento no crece)',
   'clip.rangeReset': 'Todo el clip',
   'clip.speed': 'Velocidad',
   'clip.length': 'Reproducción: {length}',

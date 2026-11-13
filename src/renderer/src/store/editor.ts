@@ -18,7 +18,7 @@ import { sanitizeQr } from '@/qr'
 import { sanitizeFormula } from '@/formula'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
-import { sanitizeClips } from '@/videoClips'
+import { sanitizeClips, splitClipAt } from '@/videoClips'
 import { sanitizeVoices } from '@/voiceOver'
 import { cleanDocName } from '@/docName'
 import { sanitizeColumns } from '@/columnStyle'
@@ -231,6 +231,8 @@ interface EditorState {
   /** Place un élément à l'indice `toIndex` de l'ordre de superposition (0 = tout au fond). */
   reorderElement: (id: string, toIndex: number) => void
   duplicateSelected: () => void
+  /** coupe un clip vidéo à l'instant `at` (secondes du clip d'origine) : l'élément garde le premier morceau, un second élément reçoit la suite ; `false` si la coupe est impossible */
+  splitClip: (id: string, at: number) => boolean
   /**
    * Alt + glisser : laisse derrière une copie de la sélection, à la même place et juste en dessous des originaux
    * (qui restent sélectionnés, et sont ceux que l'on déplace). Un seul cran d'historique, avec le déplacement qui suit.
@@ -751,6 +753,22 @@ export const useEditor = create<EditorState>((set, get) => {
         selectedIds: copies.map((c) => c.id),
         dirty: true
       })
+    },
+
+    splitClip: (id, at) => {
+      const el = selectPage(get()).elements.find((e) => e.id === id)
+      if (!el?.video) return false
+      if (enforcedNow() && el.protect) return false
+      const parts = splitClipAt(el.video, at)
+      if (!parts) return false
+      const second: TrameElement = { ...el, id: nanoid(8), video: parts[1], x: el.x + 30, y: el.y + 30 }
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.flatMap((e) => (e.id === id ? [{ ...e, video: parts[0] }, second] : [e])) })),
+        selectedIds: [second.id],
+        dirty: true
+      })
+      return true
     },
 
     cloneSelectedInPlace: () => {

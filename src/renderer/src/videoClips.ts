@@ -67,6 +67,17 @@ export function withClipSettings(v: VideoClip, patch: { loop?: boolean; muted?: 
   return next
 }
 
+/**
+ * Coupe un clip monté à l'instant `at` (secondes du clip d'origine) : deux réglages qui partagent la même vidéo, le premier jusqu'à `at`,
+ * le second à partir de `at`. Vitesse, son et boucle sont repris par les deux. Rend `null` si `at` laisse moins de `MIN_TRIM` d'un côté.
+ */
+export function splitClipAt(v: VideoClip, at: number): [VideoClip, VideoClip] | null {
+  const { start, end } = clipRange(v)
+  const min = Math.min(MIN_TRIM, v.duration / 2)
+  if (!Number.isFinite(at) || at < start + min || at > end - min) return null
+  return [withClipSettings(v, { end: at }), withClipSettings(v, { start: at })]
+}
+
 /** Retire des `clips` ceux qu'aucun élément ne référence (éléments supprimés) : ils alourdiraient le fichier pour rien. */
 export function pruneClips(doc: TrameDocument): TrameDocument {
   if (!doc.clips) return doc

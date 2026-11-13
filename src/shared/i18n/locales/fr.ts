@@ -1880,6 +1880,8 @@ export const fr = {
   'clip.startHere.title': 'Le clip commencera à l\'instant affiché dans le lecteur',
   'clip.endHere': 'Fin ici',
   'clip.endHere.title': 'Le clip s\'arrêtera à l\'instant affiché dans le lecteur',
+  'clip.split': 'Couper ici',
+  'clip.split.title': 'Coupe le clip à l\'instant affiché dans le lecteur : deux morceaux côte à côte, qui partagent la même vidéo (le document ne grossit pas)',
   'clip.rangeReset': 'Tout le clip',
   'clip.speed': 'Vitesse',
   'clip.length': 'Lecture : {length}',

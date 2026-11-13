@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { captureFrame, clipUrl } from '@/clipActions'
 import { useClipBounds } from '@/clipPlayback'
-import { clipAutoplay, clipLength, clipLoops, clipRange, clipSpeed, clipVolume, MAX_SPEED, MIN_SPEED, withClipSettings } from '@/videoClips'
+import { clipAutoplay, clipLength, clipLoops, clipRange, clipSpeed, clipVolume, MAX_SPEED, MIN_SPEED, splitClipAt, withClipSettings } from '@/videoClips'
 import { useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
 import type { TrameElement, VideoClip } from '@/types'
@@ -25,6 +25,16 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
   const [altDraft, setAltDraft] = useState(el.alt ?? '')
   useEffect(() => setAltDraft(el.alt ?? ''), [el.id, el.alt])
   useClipBounds(player, clip, false)
+  // l'instant affiché dans le lecteur : l'état des boutons « ici » suit la lecture et les déplacements
+  const [now, setNow] = useState(0)
+  useEffect(() => {
+    if (!player) return
+    const update = (): void => setNow(player.currentTime)
+    const events = ['timeupdate', 'seeked', 'loadedmetadata'] as const
+    events.forEach((e) => player.addEventListener(e, update))
+    update()
+    return () => events.forEach((e) => player.removeEventListener(e, update))
+  }, [player])
   if (!clip) return null
   const url = clipUrl(doc, clip.id)
 
@@ -60,6 +70,16 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
         </button>
         <button data-action="clip-range-reset" disabled={!trimmed} onClick={() => setClip({ start: 0, end: clip.duration })}>
           {t('clip.rangeReset')}
+        </button>
+      </div>
+      <div className="row">
+        <button
+          data-action="clip-split"
+          disabled={!player || !splitClipAt(clip, now)}
+          title={t('clip.split.title')}
+          onClick={() => player && useEditor.getState().splitClip(el.id, player.currentTime)}
+        >
+          {t('clip.split')}
         </button>
       </div>
       <label>
