@@ -64,6 +64,20 @@ const seekTo = (v: HTMLVideoElement, time: number): Promise<void> =>
     v.currentTime = time
   })
 
+/** Image d'aperçu d'une vidéo du document à l'instant `time` (JPEG), ou `null` si elle ne se lit pas. */
+export async function clipPosterAt(doc: Pick<TrameDocument, 'clips'>, id: string, time: number): Promise<string | null> {
+  const url = clipUrl(doc, id)
+  if (!url) return null
+  try {
+    const video = await openVideo(url)
+    if (!video.videoWidth || !video.videoHeight) return null
+    await seekTo(video, Math.min(Math.max(0, time), Math.max(0, video.duration - 0.05)))
+    return captureFrame(video)
+  } catch {
+    return null
+  }
+}
+
 export type ClipResult = 'ok' | 'cancelled' | 'tooBig' | 'unreadable'
 
 /** « Insérer un clip vidéo… » : choisit le fichier puis le place comme un clip (voir `insertClipBytes`). */

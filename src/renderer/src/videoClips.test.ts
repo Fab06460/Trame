@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { splitClipAt, clipAutoplay, clipElements, clipLength, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
+import { assembleClips, clipIds, clipLength, clipParts, clipSourceAt, moveClipPart, partAsClip, removeClipPart, splitPartAt, withPartSettings, splitClipAt, clipAutoplay, clipElements, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
 import type { TrameDocument, TrameElement } from './types'
 
 const MP4 = 'data:video/mp4;base64,AAAA'
@@ -177,5 +177,54 @@ describe('splitClipAt', () => {
     expect(splitClipAt(base, 9.9)).toBeNull()
     expect(splitClipAt({ ...base, start: 2, end: 8 }, 1)).toBeNull()
     expect(splitClipAt({ ...base, start: 2, end: 8 }, Number.NaN)).toBeNull()
+  })
+})
+
+describe('séquences de clips', () => {
+  const a = { id: 'a', duration: 10, start: 2, end: 6 } // 4 s
+  const b = { id: 'b', duration: 8, speed: 2 } // 4 s
+  const seq = assembleClips([{ ...a, muted: true, loop: true }, b])!
+  it('assemble : réglages du premier, morceaux à la suite, durée additionnée', () => {
+    expect(seq).toEqual({ id: 'a', duration: 10, start: 2, end: 6, muted: true, loop: true, then: [{ id: 'b', duration: 8, speed: 2 }] })
+    expect(clipLength(seq)).toBe(8)
+    expect(clipIds(seq)).toEqual(['a', 'b'])
+  })
+  it('refuse moins de deux clips ou trop de morceaux', () => {
+    expect(assembleClips([a])).toBeNull()
+    expect(assembleClips(Array.from({ length: 13 }, () => a))).toBeNull()
+  })
+  it('clipSourceAt : le bon morceau, la bonne vidéo, boucle ou arrêt sur la dernière image', () => {
+    const open = { ...seq, loop: undefined } as typeof seq
+    expect(clipSourceAt(open, 1)).toEqual({ id: 'a', time: 3, index: 0 })
+    expect(clipSourceAt(open, 5)).toEqual({ id: 'b', time: 2, index: 1 })
+    expect(clipSourceAt(open, 99)).toMatchObject({ id: 'b', index: 1, time: 7.95 })
+    expect(clipSourceAt(seq, 9)).toEqual({ id: 'a', time: 3, index: 0 })
+  })
+  it('monter, retirer, séparer, couper un morceau', () => {
+    const up = moveClipPart(seq, 1, -1)
+    expect(clipParts(up).map((p) => p.id)).toEqual(['b', 'a'])
+    expect(up.id).toBe('b')
+    expect(up.muted).toBe(true)
+    expect(removeClipPart(seq, 0)).toEqual({ id: 'b', duration: 8, speed: 2, muted: true, loop: true })
+    expect(removeClipPart(removeClipPart(seq, 0), 0)).toEqual(removeClipPart(seq, 0))
+    expect(partAsClip(seq, 1)).toEqual({ id: 'b', duration: 8, speed: 2, muted: true, loop: true })
+    const cut = splitPartAt(seq, 0, 4)!
+    expect(clipParts(cut).map((p) => [p.id, p.start, p.end])).toEqual([['a', 2, 4], ['a', 4, 6], ['b', 0, 8]])
+    expect(splitPartAt(seq, 0, 2.1)).toBeNull()
+    expect(splitClipAt(seq, 4)).toBeNull()
+  })
+  it('réglage du début, de la fin ou de la vitesse d\'un morceau', () => {
+    const r = withPartSettings(seq, 1, { start: 1, speed: 1 })
+    expect(r.then).toEqual([{ id: 'b', duration: 8, start: 1 }])
+    expect(r.start).toBe(2)
+  })
+  it('sanitizeClips : garde les morceaux valides, jette ceux dont la vidéo manque', () => {
+    const doc = { clips: { a: 'data:video/mp4;base64,AAAA', b: 'data:video/mp4;base64,BBBB' }, pages: [{ elements: [{ type: 'image', video: { id: 'a', duration: 5, then: [{ id: 'b', duration: 3, speed: 2, start: 1 }, { id: 'zzz', duration: 3 }, { id: 'b', duration: -1 }] } }] }] }
+    sanitizeClips(doc as never)
+    expect((doc.pages[0].elements[0] as { video: unknown }).video).toEqual({ id: 'a', duration: 5, then: [{ id: 'b', duration: 3, speed: 2, start: 1 }] })
+  })
+  it('pruneClips : garde les vidéos des morceaux assemblés', () => {
+    const d = { width: 1, height: 1, clips: { a: 'x', b: 'y', c: 'z' }, pages: [{ id: 'p', elements: [{ video: seq }] }] } as unknown as TrameDocument
+    expect(Object.keys(pruneClips(d).clips!)).toEqual(['a', 'b'])
   })
 })

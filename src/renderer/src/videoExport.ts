@@ -133,7 +133,15 @@ function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: Cli
   ctx.scale(k, k)
   ctx.translate(el.x, el.y)
   ctx.rotate((el.rotation * Math.PI) / 180)
-  ctx.drawImage(video, 0, 0, el.width, el.height)
+  if (el.video?.then?.length && video.videoWidth && video.videoHeight) {
+    // une séquence : chaque morceau garde ses proportions dans le cadre de l'élément, sur fond noir
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, el.width, el.height)
+    const k = Math.min(el.width / video.videoWidth, el.height / video.videoHeight)
+    const w = video.videoWidth * k
+    const h = video.videoHeight * k
+    ctx.drawImage(video, (el.width - w) / 2, (el.height - h) / 2, w, h)
+  } else ctx.drawImage(video, 0, 0, el.width, el.height)
   ctx.restore()
 }
 
@@ -282,9 +290,9 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
       for (const l of layers) {
         drawLayer(ctx, images.get(`${l.page}:${l.step}`)!, l, width, height)
         for (const c of clipsAt(doc, options, schedule, l, f / options.fps)) {
-          const player = await clipPlayer(l.page, c.el.video!.id)
+          const player = await clipPlayer(l.page, c.id)
           if (!player) continue // clip introuvable ou illisible : son image d'aperçu, déjà dans la page, reste visible
-          const key = `${l.page}:${c.el.video!.id}`
+          const key = `${l.page}:${c.id}`
           if (lastTime.get(key) !== c.time) {
             await seekTo(player, c.time)
             lastTime.set(key, c.time)

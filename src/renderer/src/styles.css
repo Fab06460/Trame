@@ -755,3 +755,9 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 
 /* le panneau défile : sans cela un groupe de boutons à coins arrondis (overflow masqué) se laisse écraser à zéro quand la colonne est longue */
 .panel .seg { flex: none; }
+
+/* séquence de clips : la liste des morceaux dans le panneau du clip */
+.clip-parts { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.clip-parts li { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.clip-parts li > button:first-child { flex: 1 1 auto; text-align: left; }
+.clip-parts li.on > button:first-child { outline: 2px solid var(--accent, #4f46e5); }

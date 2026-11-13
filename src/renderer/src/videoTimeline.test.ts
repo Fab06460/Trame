@@ -301,4 +301,22 @@ describe('clips vidéo', () => {
     const d = withClip(10, {}, { start: 2, end: 8, speed: 2 })
     expect(clipSounds(d, opts({ secondsPerPage: 4 }), scheduleOf(d, opts({ secondsPerPage: 4 })))[0]).toMatchObject({ start: 2, end: 8, speed: 2 })
   })
+
+  it('une séquence de clips : page allongée de la durée totale, vidéo du morceau en cours, un son par morceau', () => {
+    const d = withClip(3, {}, { then: [{ id: 'c-w', duration: 4, speed: 2 }] }) // 3 s puis 2 s
+    const o = opts({ secondsPerPage: 1 })
+    const s = scheduleOf(d, o)
+    expect(s.durations[0]).toBe(5)
+    const l: Layer = { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }
+    expect(clipsAt(d, o, s, l, 1)[0]).toMatchObject({ id: 'c-v', time: 1 })
+    expect(clipsAt(d, o, s, l, 4)[0]).toMatchObject({ id: 'c-w', time: 2 })
+    const sounds = clipSounds(d, o, s)
+    expect(sounds.map((x) => [x.id, x.at, x.speed])).toEqual([['c-v', 0, 1], ['c-w', 3, 2]])
+  })
+  it('une séquence en boucle : ses sons recommencent jusqu\'à la fin de la page', () => {
+    const d = withClip(2, { }, { loop: true, then: [{ id: 'c-w', duration: 1 }] }) // 3 s
+    const o = opts({ secondsPerPage: 7 })
+    const sounds = clipSounds(d, o, scheduleOf(d, o))
+    expect(sounds.map((x) => [x.id, x.at])).toEqual([['c-v', 0], ['c-w', 2], ['c-v', 3], ['c-w', 5], ['c-v', 6]])
+  })
 })

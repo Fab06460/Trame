@@ -88,6 +88,13 @@ describe('clips vidéo dans la présentation web', () => {
     expect(html).toContain('data-clip="k1" data-start="2" data-end="8" data-speed="2" data-vol="0.5" data-loop data-manual data-muted')
     expect(html).toContain('preload="none"')
   })
+  it('une séquence : la liste des morceaux en attribut, les octets de chaque vidéo une fois', () => {
+    const seq = clip('k1', { then: [{ id: 'k2', duration: 4, start: 1, speed: 2 }] })
+    const html = clipVideos(doc({ k1: mp4, k2: mp4 }), page([seq]))
+    expect(html).toContain('data-parts="k1,0,10,1;k2,1,4,2"')
+    expect(clipVideos(doc({ k1: mp4 }), page([seq]))).toBe('') // une vidéo manque : la séquence n'est pas jouée
+    expect(Object.keys(clipPayloads({ clips: { k1: mp4, k2: mp4 }, pages: [page([seq])] } as never)).sort()).toEqual(['k1', 'k2'])
+  })
   it('sans montage : tout le clip, vitesse et volume normaux, lecture automatique sans boucle', () => {
     const html = clipVideos(doc({ k1: mp4 }), page([clip('k1')]))
     expect(html).toContain('data-start="0" data-end="10" data-speed="1" data-vol="1"')

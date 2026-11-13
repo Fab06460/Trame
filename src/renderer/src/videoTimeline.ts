@@ -1,6 +1,6 @@
 import { buildNumbers, pageAtStep, stepsOf } from '@/builds'
 import { pageVoice, VOICE_DELAY, voiceNeed } from '@/voiceOver'
-import { clipElements, clipLength, clipSourceTime, clipRange, clipSpeed } from '@/videoClips'
+import { clipElements, clipLength, clipParts, clipSourceAt } from '@/videoClips'
 import { pageTransition, TRANSITION_MS, type PageTransition } from '@/transition'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -184,6 +184,8 @@ export const layerKeys = (layers: readonly Layer[]): string[] => layers.map((l) 
 /** Un clip à dessiner sur une couche : l'élément et l'instant du clip à montrer. */
 export interface ClipFrame {
   el: TrameElement
+  /** la vidéo à montrer (celle du morceau en cours quand le clip est une séquence) */
+  id: string
   time: number
 }
 
@@ -201,7 +203,8 @@ export function clipsAt(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, sche
     if (!clip) continue
     const elapsed = t - schedule.starts[l.page] - clipStartIn(page, el, schedule.durations[l.page], o.effects)
     if (elapsed < 0) continue
-    out.push({ el, time: clipSourceTime(clip, elapsed) })
+    const at = clipSourceAt(clip, elapsed)
+    out.push({ el, id: at.id, time: at.time })
   }
   return out
 }
@@ -228,7 +231,24 @@ export function clipSounds(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, s
       if (!clip || clip.muted) continue
       const volume = typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1
       if (volume <= 0) continue
-      out.push({ id: clip.id, at: schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects), until: schedule.starts[i] + schedule.durations[i], volume, loop: !!clip.loop, ...clipRange(clip), speed: clipSpeed(clip) })
+      const from = schedule.starts[i] + clipStartIn(p as TramePage, el, schedule.durations[i], o.effects)
+      const until = schedule.starts[i] + schedule.durations[i]
+      const parts = clipParts(clip)
+      if (parts.length === 1) {
+        out.push({ id: clip.id, at: from, until, volume, loop: !!clip.loop, start: parts[0].start, end: parts[0].end, speed: parts[0].speed })
+        continue
+      }
+      // une séquence : un son par morceau, posé à la suite ; en boucle, la séquence entière recommence jusqu'à la fin de la page
+      const cycle = clipLength(clip)
+      for (let at = from, round = 0; at < until && round < 1000; round++, at = from + round * cycle) {
+        let t = at
+        for (const part of parts) {
+          if (t >= until) break
+          out.push({ id: part.id, at: t, until, volume, loop: false, start: part.start, end: part.end, speed: part.speed })
+          t += (part.end - part.start) / part.speed
+        }
+        if (!clip.loop) break
+      }
     }
   })
   return out

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { clipUrl } from '@/clipActions'
-import { useClipBounds } from '@/clipPlayback'
+import { useClipBounds, useClipSequence } from '@/clipPlayback'
 import { clipAutoplay, clipLoops, clipVolume } from '@/videoClips'
 import type { TrameDocument, TrameElement } from '@/types'
 
@@ -22,7 +22,9 @@ export function PresentationClip({ doc, el, rect }: { doc: TrameDocument; el: Tr
     if (clipAutoplay(clip)) void v.play().catch(() => {})
   }, [clip, url])
   // le montage (début, fin, vitesse) et la boucle sont gérés ici plutôt que par l'attribut `loop`, qui ignorerait le début et la fin choisis
-  useClipBounds(node, clip, !!clip && clipLoops(clip))
+  const sequence = !!clip?.then?.length
+  useClipBounds(sequence ? null : node, clip, !!clip && clipLoops(clip))
+  useClipSequence(node, doc, clip, !!clip && clipLoops(clip))
   if (!clip || !url) return null
   const auto = clipAutoplay(clip)
   return (
@@ -45,6 +47,7 @@ export function PresentationClip({ doc, el, rect }: { doc: TrameDocument; el: Tr
         opacity: el.opacity,
         transform: `rotate(${el.rotation}deg)`,
         transformOrigin: '0 0',
+        ...(sequence ? { objectFit: 'contain' as const, background: '#000' } : {}),
         cursor: auto ? undefined : 'pointer'
       }}
       // à lancer soi-même : un clic démarre ou arrête le clip au lieu de passer à la page suivante

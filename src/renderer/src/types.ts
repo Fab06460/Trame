@@ -48,6 +48,15 @@ export interface Gradient {
 export type ListKind = 'bullet' | 'number'
 
 /** Protection d'un élément de modèle : `fixed` = figé, `fill` = à remplir (contenu modifiable, ni déplacé ni supprimé). */
+/** Un morceau d'une séquence de clips (un clip assemblé à la suite du premier) : sa vidéo, le morceau gardé et sa vitesse. */
+export interface ClipPart {
+  id: string
+  duration: number
+  start?: number
+  end?: number
+  speed?: number
+}
+
 /** Réglages de lecture d'un clip vidéo (les octets sont dans `TrameDocument.clips[id]`). */
 export interface VideoClip {
   id: string
@@ -67,6 +76,8 @@ export interface VideoClip {
   end?: number
   /** vitesse de lecture, de 0,25 à 4 (absent = 1) ; le son suit (plus aigu en accéléré) */
   speed?: number
+  /** séquence : les morceaux joués à la suite de celui-ci (`id`, `start`, `end`, `speed` ci-dessus sont ceux du premier) ; son, boucle et lecture automatique valent pour l'ensemble */
+  then?: ClipPart[]
 }
 
 export type Protection = 'fixed' | 'fill'

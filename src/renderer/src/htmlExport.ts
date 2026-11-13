@@ -2,7 +2,7 @@ import { escXml } from '@/svgParts'
 import { fontFaces, pageToSvg } from '@/svgExport'
 import { pageTransition, type PageTransition } from '@/transition'
 import { pageLinks } from '@/links'
-import { clipElements, clipRange, clipSpeed, clipVolume } from '@/videoClips'
+import { clipElements, clipIds, clipParts, clipRange, clipSpeed, clipVolume } from '@/videoClips'
 import { pageVoice, VOICE_DELAY } from '@/voiceOver'
 import { AUTO_PAGES, pageAutoSeconds } from '@/autoPlay'
 import type { TrameDocument, TramePage } from '@/types'
@@ -92,6 +92,7 @@ body.idle #bar{opacity:0;pointer-events:none}
 #help{position:fixed;top:10px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:rgba(30,31,36,.85);font-size:12px;transition:opacity .6s}
 .clip{position:absolute;object-fit:fill;opacity:0;transform-origin:0 0;background:transparent}
 .clip.on{opacity:var(--o,1)}
+.clip[data-parts]{object-fit:contain;background:#000}
 .clip[data-manual]{cursor:pointer}
 .lk{position:absolute;display:block;border-radius:4px}
 #bar button.attn{border-color:#fff;animation:pl 1.2s ease-in-out infinite}
@@ -119,12 +120,21 @@ function srcOf(id){
   var b=atob(s.textContent.trim()),n=b.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=b.charCodeAt(i);
   s.textContent='';return urls[id]=URL.createObjectURL(new Blob([u],{type:s.getAttribute('data-mime')}));
 }
-function range(v){return{s:+v.getAttribute('data-start'),e:+v.getAttribute('data-end')}}
+function parts(v){var d=v.getAttribute('data-parts');if(!d)return[{id:v.getAttribute('data-clip'),s:+v.getAttribute('data-start'),e:+v.getAttribute('data-end'),sp:+v.getAttribute('data-speed')}];
+  return d.split(';').map(function(x){var a=x.split(',');return{id:a[0],s:+a[1],e:+a[2],sp:+a[3]}})}
+function range(v){var p=parts(v)[v._i||0];return{s:p.s,e:p.e}}
+function setPart(v,i,play){
+  var p=parts(v)[i],u=srcOf('c:'+p.id);if(!u)return;v._i=i;
+  var go=function(){v.playbackRate=p.sp;v.currentTime=p.s;if(play){var r=v.play();if(r&&r.catch)r.catch(function(){v.controls=true;v.classList.add('on')})}};
+  if(v.src===u)go();else{v.addEventListener('loadedmetadata',go,{once:true});v.src=u}
+}
+function nextPart(v){var n=parts(v).length,i=v._i||0;
+  if(i<n-1)setPart(v,i+1,true);else if(v.hasAttribute('data-loop'))setPart(v,0,true);else{v.pause();v.currentTime=Math.max(range(v).s,range(v).e-.05)}}
 var raf=0;
 function tick(){raf=0;var any=false;
   if(cur>=0)[].forEach.call(slides[cur].querySelectorAll('video.clip'),function(v){
     if(v.paused||!v.src)return;any=true;var r=range(v);
-    if(v.currentTime>=r.e-.02){if(v.hasAttribute('data-loop'))v.currentTime=r.s;else{v.pause();v.currentTime=Math.max(r.s,r.e-.05)}}
+    if(v.currentTime>=r.e-.02){if(parts(v).length>1)nextPart(v);else if(v.hasAttribute('data-loop'))v.currentTime=r.s;else{v.pause();v.currentTime=Math.max(r.s,r.e-.05)}}
   });
   if(any)raf=requestAnimationFrame(tick);
 }
@@ -134,10 +144,10 @@ function arm(v){
   v.defaultPlaybackRate=v.playbackRate=+v.getAttribute('data-speed');v.preservesPitch=false;
   v.addEventListener('loadedmetadata',function(){if(v.paused)v.currentTime=range(v).s});
   v.addEventListener('play',function(){var r=range(v);if(v.currentTime<r.s-.01||v.currentTime>=r.e-.05)v.currentTime=r.s;v.controls=false;v.classList.add('on');if(!raf)raf=requestAnimationFrame(tick)});
-  v.addEventListener('ended',function(){if(v.hasAttribute('data-loop')){v.currentTime=range(v).s;v.play().catch(function(){})}});
+  v.addEventListener('ended',function(){if(parts(v).length>1)nextPart(v);else if(v.hasAttribute('data-loop')){v.currentTime=range(v).s;v.play().catch(function(){})}});
   return true;
 }
-function leaveClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){v.pause();v.controls=false;v.classList.remove('on');if(v.src)v.currentTime=range(v).s})}
+function leaveClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){v.pause();v.controls=false;v.classList.remove('on');if(v.src){if(v._i)setPart(v,0,false);else v.currentTime=range(v).s}})}
 function enterClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){
   if(!arm(v)||v.hasAttribute('data-manual'))return;
   var p=v.play();if(p&&p.catch)p.catch(function(){v.controls=true;v.classList.add('on')});
@@ -265,7 +275,7 @@ export function linkZones(doc: Pick<TrameDocument, 'pages' | 'width' | 'height'>
 const pct = (v: number): string => Number((v * 100).toFixed(3)).toString()
 
 /** Les clips de la page dont les octets sont dans le document (et non masqués). */
-const pageClips = (doc: Pick<TrameDocument, 'clips'>, page: TramePage) => clipElements(page.elements).filter((e) => !!e.video && !!doc.clips?.[e.video.id])
+const pageClips = (doc: Pick<TrameDocument, 'clips'>, page: TramePage) => clipElements(page.elements).filter((e) => !!e.video && clipIds(e.video).every((id) => !!doc.clips?.[id]))
 
 /**
  * Un lecteur `<video>` par clip, à la place de son image d'aperçu (déjà dans le SVG de la page) et avec ses réglages en attributs. Il n'a pas
@@ -277,7 +287,8 @@ export function clipVideos(doc: Pick<TrameDocument, 'clips' | 'width' | 'height'
       const v = el.video!
       const { start, end } = clipRange(v)
       const style = `left:${pct(el.x / doc.width)}%;top:${pct(el.y / doc.height)}%;width:${pct(el.width / doc.width)}%;height:${pct(el.height / doc.height)}%;--o:${Number(el.opacity.toFixed(3))};${el.rotation ? `transform:rotate(${Number(el.rotation.toFixed(3))}deg)` : ''}`
-      const flags = `${v.loop ? ' data-loop' : ''}${v.manual ? ' data-manual' : ''}${v.muted ? ' data-muted' : ''}`
+      const seq = v.then?.length ? ` data-parts="${clipParts(v).map((p) => `${p.id},${p.start},${p.end},${p.speed}`).map(escXml).join(';')}"` : ''
+      const flags = `${seq}${v.loop ? ' data-loop' : ''}${v.manual ? ' data-manual' : ''}${v.muted ? ' data-muted' : ''}`
       return `<video class="clip" data-clip="${escXml(v.id)}" data-start="${start}" data-end="${end}" data-speed="${clipSpeed(v)}" data-vol="${clipVolume(v)}"${flags} preload="none" playsinline${el.alt ? ` aria-label="${escXml(el.alt)}"` : ' aria-hidden="true"'} style="${style}"></video>`
     })
     .join('')
@@ -288,11 +299,12 @@ export function clipPayloads(doc: Pick<TrameDocument, 'clips' | 'pages'>): Recor
   const out: Record<string, ClipPayload> = {}
   for (const page of doc.pages) {
     for (const el of pageClips(doc, page)) {
-      const id = el.video!.id
-      if (out[id]) continue
-      const url = doc.clips![id]
-      const head = /^data:(video\/[a-z0-9.+-]+);base64,/i.exec(url.slice(0, 100))
-      if (head) out[id] = { mime: head[1].toLowerCase(), data: url.slice(head[0].length) }
+      for (const id of clipIds(el.video!)) {
+        if (out[id]) continue
+        const url = doc.clips![id]
+        const head = /^data:(video\/[a-z0-9.+-]+);base64,/i.exec(url.slice(0, 100))
+        if (head) out[id] = { mime: head[1].toLowerCase(), data: url.slice(head[0].length) }
+      }
     }
   }
   return out

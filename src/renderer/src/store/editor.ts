@@ -18,7 +18,7 @@ import { sanitizeQr } from '@/qr'
 import { sanitizeFormula } from '@/formula'
 import { sanitizeComments, withoutComments } from '@/review'
 import { sanitizeSources } from '@/pdfSources'
-import { sanitizeClips, splitClipAt } from '@/videoClips'
+import { assembleClips, partAsClip, removeClipPart, sanitizeClips, splitClipAt, splitPartAt } from '@/videoClips'
 import { sanitizeVoices } from '@/voiceOver'
 import { cleanDocName } from '@/docName'
 import { sanitizeColumns } from '@/columnStyle'
@@ -233,6 +233,12 @@ interface EditorState {
   duplicateSelected: () => void
   /** coupe un clip vidéo à l'instant `at` (secondes du clip d'origine) : l'élément garde le premier morceau, un second élément reçoit la suite ; `false` si la coupe est impossible */
   splitClip: (id: string, at: number) => boolean
+  /** coupe le morceau `index` d'une séquence de clips en deux morceaux à la suite, à l'instant `at` de sa vidéo */
+  splitClipPart: (id: string, index: number, at: number) => boolean
+  /** met bout à bout les clips sélectionnés (dans l'ordre des calques) en un seul élément ; `false` s'il y en a moins de deux ou trop */
+  assembleSelectedClips: () => boolean
+  /** sort le morceau `index` d'une séquence : il devient un clip à part (avec l'image d'aperçu `poster` si elle est donnée) */
+  separateClipPart: (id: string, index: number, poster?: string) => boolean
   /**
    * Alt + glisser : laisse derrière une copie de la sélection, à la même place et juste en dessous des originaux
    * (qui restent sélectionnés, et sont ceux que l'on déplace). Un seul cran d'historique, avec le déplacement qui suit.
@@ -765,6 +771,50 @@ export const useEditor = create<EditorState>((set, get) => {
       set({
         ...snapshot(),
         doc: mapPage((p) => ({ ...p, elements: p.elements.flatMap((e) => (e.id === id ? [{ ...e, video: parts[0] }, second] : [e])) })),
+        selectedIds: [second.id],
+        dirty: true
+      })
+      return true
+    },
+
+    splitClipPart: (id, index, at) => {
+      const el = selectPage(get()).elements.find((e) => e.id === id)
+      if (!el?.video || (enforcedNow() && el.protect)) return false
+      const video = splitPartAt(el.video, index, at)
+      if (!video) return false
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (e.id === id ? { ...e, video } : e)) })), dirty: true })
+      return true
+    },
+
+    assembleSelectedClips: () => {
+      const enforced = enforcedNow()
+      const clips = selected().filter((e) => e.type === 'image' && !!e.video && !e.hidden && !(enforced && e.protect))
+      if (clips.length < 2) return false
+      const order = selectPage(get()).elements
+      clips.sort((a, b) => order.findIndex((e) => e.id === a.id) - order.findIndex((e) => e.id === b.id))
+      const video = assembleClips(clips.map((e) => e.video!))
+      if (!video) return false
+      const [first, ...others] = clips
+      const gone = new Set(others.map((e) => e.id))
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.filter((e) => !gone.has(e.id)).map((e) => (e.id === first.id ? { ...e, video } : e)) })),
+        selectedIds: [first.id],
+        dirty: true
+      })
+      return true
+    },
+
+    separateClipPart: (id, index, poster) => {
+      const el = selectPage(get()).elements.find((e) => e.id === id)
+      if (!el?.video || (enforcedNow() && el.protect)) return false
+      const alone = partAsClip(el.video, index)
+      const rest = removeClipPart(el.video, index)
+      if (!alone || rest === el.video) return false
+      const second: TrameElement = { ...el, id: nanoid(8), video: alone, x: el.x + 30, y: el.y + 30, ...(poster ? { src: poster } : {}) }
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.flatMap((e) => (e.id === id ? [{ ...e, video: rest }, second] : [e])) })),
         selectedIds: [second.id],
         dirty: true
       })

@@ -173,6 +173,13 @@ export function Properties(): React.JSX.Element {
           </button>
           <button onClick={ungroupSelected} disabled={!grouped}>{t('prop.ungroup')}</button>
         </div>
+        {selection.filter((e) => e.type === 'image' && e.video && !e.hidden).length >= 2 && (
+          <div className="row">
+            <button data-action="clip-assemble" title={t('clip.assemble.title')} onClick={() => useEditor.getState().assembleSelectedClips()}>
+              {t('clip.assemble')}
+            </button>
+          </div>
+        )}
         <PositionPanel />
         {alignButtons}
         {layerButtons}
