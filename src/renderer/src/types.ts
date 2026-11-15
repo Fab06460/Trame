@@ -78,6 +78,8 @@ export interface VideoClip {
   speed?: number
   /** séquence : les morceaux joués à la suite de celui-ci (`id`, `start`, `end`, `speed` ci-dessus sont ceux du premier) ; son, boucle et lecture automatique valent pour l'ensemble */
   then?: ClipPart[]
+  /** séquence : durée (secondes, de 0 à 2) du fondu au noir à chaque raccord entre deux morceaux, moitié sur la fin du premier, moitié sur le début du suivant (absent = coupe franche) */
+  fade?: number
 }
 
 export type Protection = 'fixed' | 'fill'

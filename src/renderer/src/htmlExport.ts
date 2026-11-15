@@ -2,7 +2,7 @@ import { escXml } from '@/svgParts'
 import { fontFaces, pageToSvg } from '@/svgExport'
 import { pageTransition, type PageTransition } from '@/transition'
 import { pageLinks } from '@/links'
-import { clipElements, clipIds, clipParts, clipRange, clipSpeed, clipVolume } from '@/videoClips'
+import { clipElements, clipFade, clipIds, clipParts, clipRange, clipSpeed, clipVolume } from '@/videoClips'
 import { pageVoice, VOICE_DELAY } from '@/voiceOver'
 import { AUTO_PAGES, pageAutoSeconds } from '@/autoPlay'
 import type { TrameDocument, TramePage } from '@/types'
@@ -128,12 +128,17 @@ function setPart(v,i,play){
   var go=function(){v.playbackRate=p.sp;v.currentTime=p.s;if(play){var r=v.play();if(r&&r.catch)r.catch(function(){v.controls=true;v.classList.add('on')})}};
   if(v.src===u)go();else{v.addEventListener('loadedmetadata',go,{once:true});v.src=u}
 }
+function gain(v){var f=+v.getAttribute('data-fade');if(!f)return 1;var ps=parts(v),i=v._i||0,p=ps[i],t=0,g=1,k;
+  for(k=0;k<i;k++)t+=(ps[k].e-ps[k].s)/ps[k].sp;t+=(v.currentTime-p.s)/p.sp;
+  var at=0;for(k=0;k<ps.length-1;k++){var a=(ps[k].e-ps[k].s)/ps[k].sp,b=(ps[k+1].e-ps[k+1].s)/ps[k+1].sp,h=Math.min(f/2,a/2,b/2);at+=a;if(h>0)g=Math.min(g,Math.abs(t-at)/h)}
+  return Math.max(0,Math.min(1,g))}
+function fadeNow(v){if(!v.hasAttribute('data-fade'))return;var g=gain(v);v.style.filter=g<1?'brightness('+g+')':'';v.volume=+v.getAttribute('data-vol')*g}
 function nextPart(v){var n=parts(v).length,i=v._i||0;
   if(i<n-1)setPart(v,i+1,true);else if(v.hasAttribute('data-loop'))setPart(v,0,true);else{v.pause();v.currentTime=Math.max(range(v).s,range(v).e-.05)}}
 var raf=0;
 function tick(){raf=0;var any=false;
   if(cur>=0)[].forEach.call(slides[cur].querySelectorAll('video.clip'),function(v){
-    if(v.paused||!v.src)return;any=true;var r=range(v);
+    if(v.paused||!v.src)return;any=true;var r=range(v);fadeNow(v);
     if(v.currentTime>=r.e-.02){if(parts(v).length>1)nextPart(v);else if(v.hasAttribute('data-loop'))v.currentTime=r.s;else{v.pause();v.currentTime=Math.max(r.s,r.e-.05)}}
   });
   if(any)raf=requestAnimationFrame(tick);
@@ -147,7 +152,7 @@ function arm(v){
   v.addEventListener('ended',function(){if(parts(v).length>1)nextPart(v);else if(v.hasAttribute('data-loop')){v.currentTime=range(v).s;v.play().catch(function(){})}});
   return true;
 }
-function leaveClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){v.pause();v.controls=false;v.classList.remove('on');if(v.src){if(v._i)setPart(v,0,false);else v.currentTime=range(v).s}})}
+function leaveClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){v.pause();v.controls=false;v.classList.remove('on');v.style.filter='';v.volume=+v.getAttribute('data-vol');if(v.src){if(v._i)setPart(v,0,false);else v.currentTime=range(v).s}})}
 function enterClips(s){[].forEach.call(s.querySelectorAll('video.clip'),function(v){
   if(!arm(v)||v.hasAttribute('data-manual'))return;
   var p=v.play();if(p&&p.catch)p.catch(function(){v.controls=true;v.classList.add('on')});
@@ -287,7 +292,8 @@ export function clipVideos(doc: Pick<TrameDocument, 'clips' | 'width' | 'height'
       const v = el.video!
       const { start, end } = clipRange(v)
       const style = `left:${pct(el.x / doc.width)}%;top:${pct(el.y / doc.height)}%;width:${pct(el.width / doc.width)}%;height:${pct(el.height / doc.height)}%;--o:${Number(el.opacity.toFixed(3))};${el.rotation ? `transform:rotate(${Number(el.rotation.toFixed(3))}deg)` : ''}`
-      const seq = v.then?.length ? ` data-parts="${clipParts(v).map((p) => `${p.id},${p.start},${p.end},${p.speed}`).map(escXml).join(';')}"` : ''
+      const fade = clipFade(v)
+      const seq = v.then?.length ? `${fade > 0 ? ` data-fade="${fade}"` : ''} data-parts="${clipParts(v).map((p) => `${p.id},${p.start},${p.end},${p.speed}`).map(escXml).join(';')}"` : ''
       const flags = `${seq}${v.loop ? ' data-loop' : ''}${v.manual ? ' data-manual' : ''}${v.muted ? ' data-muted' : ''}`
       return `<video class="clip" data-clip="${escXml(v.id)}" data-start="${start}" data-end="${end}" data-speed="${clipSpeed(v)}" data-vol="${clipVolume(v)}"${flags} preload="none" playsinline${el.alt ? ` aria-label="${escXml(el.alt)}"` : ' aria-hidden="true"'} style="${style}"></video>`
     })

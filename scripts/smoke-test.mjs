@@ -4076,11 +4076,16 @@ try {
   await clickSel('.sidebar .tabs button[data-tab="elements"]')
   await sleep(300)
   check('assemblage : le panneau liste deux morceaux', (await nBrand('[data-clip-parts] li')) === 2)
+  check('fondu : le réglage est proposé pour une séquence, « Coupe franche » par défaut', (await nBrand('[data-field="clipFade"]')) === 1 && /./.test(await run(`document.querySelector('[data-clip-fade-label]').innerText`)))
+  await typeInto('[data-field="clipFade"]', '1')
+  await sleep(250)
+  check('fondu : la durée choisie est enregistrée et affichée', (await run(`document.querySelector('[data-clip-fade-label]').innerText`)).startsWith('1.0'))
   check('assemblage : la durée de lecture additionne les deux morceaux', /0:0[0-9]\.[0-9]/.test(await run(`document.querySelector('[data-clip-length]').innerText`)))
-  await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
-  await sleep(300)
-  await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
-  await sleep(400)
+  // trois pas à défaire : le fondu, l'assemblage, la coupe
+  for (let k = 0; k < 3; k++) {
+    await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
+    await sleep(300)
+  }
   check('coupe : annuler remet un seul clip', (await layerCount()) === layersBeforeCut)
   await clickSel('.sidebar .tabs button[data-tab="elements"]')
   // présentation : le clip se lance seul

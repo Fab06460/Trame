@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { clipUrl } from '@/clipActions'
-import { clipParts, clipRange, clipSpeed } from '@/videoClips'
+import { clipElapsedAt, clipFade, clipGainAt, clipParts, clipRange, clipSpeed, clipVolume } from '@/videoClips'
 import type { TrameDocument, VideoClip } from '@/types'
 
 /**
@@ -88,8 +88,15 @@ export function useClipSequence(video: HTMLVideoElement | null, doc: Pick<TrameD
       else if (video.currentTime < parts[index].start - 0.01) video.currentTime = parts[index].start
     }
     let raf = 0
+    const fading = clipFade(clip) > 0
     const watch = (): void => {
       if (!video.paused && video.seeking === false && video.currentTime >= parts[index].end - 0.02) next()
+      if (fading) {
+        // fondu au noir aux raccords : l'image s'assombrit et le son baisse avec elle
+        const gain = clipGainAt({ ...clip, loop: undefined }, clipElapsedAt(clip, index, video.currentTime))
+        video.style.filter = gain < 1 ? `brightness(${gain})` : ''
+        video.volume = clipVolume(clip) * gain
+      }
       raf = requestAnimationFrame(watch)
     }
     video.addEventListener('play', onPlay)
@@ -99,6 +106,10 @@ export function useClipSequence(video: HTMLVideoElement | null, doc: Pick<TrameD
       cancelAnimationFrame(raf)
       video.removeEventListener('play', onPlay)
       video.removeEventListener('ended', next)
+      if (fading) {
+        video.style.filter = ''
+        video.volume = clipVolume(clip)
+      }
       if (index !== 0) enter(0, false)
     }
   }, [video, doc, clip, loop])

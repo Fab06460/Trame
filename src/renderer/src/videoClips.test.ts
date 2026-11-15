@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { assembleClips, clipIds, clipLength, clipParts, clipSourceAt, moveClipPart, partAsClip, removeClipPart, splitPartAt, withPartSettings, splitClipAt, clipAutoplay, clipElements, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
-import type { TrameDocument, TrameElement } from './types'
+import { clipFade, clipGainAt, clipElapsedAt, fadeHalves, assembleClips, clipIds, clipLength, clipParts, clipSourceAt, moveClipPart, partAsClip, removeClipPart, splitPartAt, withPartSettings, splitClipAt, clipAutoplay, clipElements, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
+import type { TrameDocument, TrameElement, VideoClip } from './types'
 
 const MP4 = 'data:video/mp4;base64,AAAA'
 const el = (id: string, extra: Partial<TrameElement> = {}): TrameElement => ({ id, type: 'image', x: 0, y: 0, width: 10, height: 10, rotation: 0, opacity: 1, fill: '#000', ...extra })
@@ -226,5 +226,47 @@ describe('séquences de clips', () => {
   it('pruneClips : garde les vidéos des morceaux assemblés', () => {
     const d = { width: 1, height: 1, clips: { a: 'x', b: 'y', c: 'z' }, pages: [{ id: 'p', elements: [{ video: seq }] }] } as unknown as TrameDocument
     expect(Object.keys(pruneClips(d).clips!)).toEqual(['a', 'b'])
+  })
+})
+
+describe('fondu au noir entre les morceaux', () => {
+  const two = (fade?: number) => ({ id: 'a', duration: 4, then: [{ id: 'b', duration: 4 }], ...(fade ? { fade } : {}) }) as never
+  it('sans fondu ou pour un clip seul : toujours 1', () => {
+    expect(clipGainAt(two(), 4)).toBe(1)
+    expect(clipFade({ then: undefined, fade: 1 })).toBe(0)
+    expect(clipGainAt({ id: 'a', duration: 4, fade: 1 } as never, 2)).toBe(1)
+  })
+  it('noir au raccord, rampe linéaire de chaque côté, plein hors du fondu', () => {
+    const v = two(1) // 0,5 s de chaque côté du raccord à 4 s
+    expect(clipGainAt(v, 3)).toBe(1)
+    expect(clipGainAt(v, 3.5)).toBe(1)
+    expect(clipGainAt(v, 3.75)).toBeCloseTo(0.5, 5)
+    expect(clipGainAt(v, 4)).toBe(0)
+    expect(clipGainAt(v, 4.25)).toBeCloseTo(0.5, 5)
+    expect(clipGainAt(v, 6)).toBe(1)
+  })
+  it('le fondu ne dépasse pas la moitié d\'un morceau court', () => {
+    const v = { id: 'a', duration: 10, end: 1, then: [{ id: 'b', duration: 10 }], fade: 2 } as never
+    expect(fadeHalves(v)).toEqual([0.5])
+  })
+  it('conserve la durée du fondu quand on réordonne, la retire pour un morceau seul', () => {
+    const v = { id: 'a', duration: 4, muted: true, fade: 1.5, then: [{ id: 'b', duration: 4 }] } as VideoClip
+    expect(moveClipPart(v, 1, -1).fade).toBe(1.5)
+    expect(withClipSettings(v, { fade: 0 }).fade).toBeUndefined()
+    expect(withClipSettings(v, { fade: 9 }).fade).toBe(2)
+    expect(removeClipPart(v, 1).fade).toBeUndefined()
+    expect(partAsClip(v, 0)!.fade).toBeUndefined()
+  })
+  it('clipElapsedAt : le temps de lecture depuis le début de la séquence', () => {
+    expect(clipElapsedAt({ id: 'a', duration: 4, then: [{ id: 'b', duration: 8, speed: 2, start: 2 }] } as never, 1, 4)).toBe(5)
+  })
+  it('sanitizeClips : durée de fondu bornée, ignorée sans séquence', () => {
+    const doc = { clips: { a: 'data:video/mp4;base64,AAAA', b: 'data:video/mp4;base64,BBBB' }, pages: [{ elements: [
+      { type: 'image', video: { id: 'a', duration: 5, fade: 9, then: [{ id: 'b', duration: 3 }] } },
+      { type: 'image', video: { id: 'a', duration: 5, fade: 1 } }] }] }
+    sanitizeClips(doc as never)
+    const [x, y] = doc.pages[0].elements as Array<{ video: { fade?: number } }>
+    expect(x.video.fade).toBe(2)
+    expect(y.video.fade).toBeUndefined()
   })
 })

@@ -1,6 +1,6 @@
 import { buildNumbers, pageAtStep, stepsOf } from '@/builds'
 import { pageVoice, VOICE_DELAY, voiceNeed } from '@/voiceOver'
-import { clipElements, clipLength, clipParts, clipSourceAt } from '@/videoClips'
+import { clipElements, clipGainAt, clipLength, clipParts, clipSourceAt, fadeHalves } from '@/videoClips'
 import { pageTransition, TRANSITION_MS, type PageTransition } from '@/transition'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
@@ -187,6 +187,8 @@ export interface ClipFrame {
   /** la vidéo à montrer (celle du morceau en cours quand le clip est une séquence) */
   id: string
   time: number
+  /** luminosité de l'image (1 = normale, 0 = noir) : le fondu au noir entre deux morceaux d'une séquence */
+  gain: number
 }
 
 /**
@@ -204,7 +206,7 @@ export function clipsAt(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, sche
     const elapsed = t - schedule.starts[l.page] - clipStartIn(page, el, schedule.durations[l.page], o.effects)
     if (elapsed < 0) continue
     const at = clipSourceAt(clip, elapsed)
-    out.push({ el, id: at.id, time: at.time })
+    out.push({ el, id: at.id, time: at.time, gain: clipGainAt(clip, elapsed) })
   }
   return out
 }
@@ -220,6 +222,9 @@ export interface ClipSound {
   start: number
   end: number
   speed: number
+  /** montée et descente du son (secondes) : le fondu au noir d'une séquence, aux raccords */
+  fadeIn?: number
+  fadeOut?: number
 }
 
 /** Les sons des clips non muets, dans l'ordre des pages. */
@@ -240,11 +245,12 @@ export function clipSounds(doc: Pick<TrameDocument, 'pages'>, o: VideoOptions, s
       }
       // une séquence : un son par morceau, posé à la suite ; en boucle, la séquence entière recommence jusqu'à la fin de la page
       const cycle = clipLength(clip)
+      const halves = fadeHalves(clip)
       for (let at = from, round = 0; at < until && round < 1000; round++, at = from + round * cycle) {
         let t = at
-        for (const part of parts) {
+        for (const [k, part] of parts.entries()) {
           if (t >= until) break
-          out.push({ id: part.id, at: t, until, volume, loop: false, start: part.start, end: part.end, speed: part.speed })
+          out.push({ id: part.id, at: t, until, volume, loop: false, start: part.start, end: part.end, speed: part.speed, fadeIn: halves[k - 1] ?? 0, fadeOut: halves[k] ?? 0 })
           t += (part.end - part.start) / part.speed
         }
         if (!clip.loop) break

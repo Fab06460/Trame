@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { captureFrame, clipPosterAt, clipUrl } from '@/clipActions'
 import { useClipBounds } from '@/clipPlayback'
-import { clipAutoplay, clipLength, clipLoops, clipParts, clipRange, clipSpeed, clipVolume, MAX_SPEED, MIN_SPEED, moveClipPart, partAsClip, removeClipPart, splitClipAt, splitPartAt, withClipSettings, withPartSettings } from '@/videoClips'
+import { clipAutoplay, clipFade, clipLength, clipLoops, clipParts, clipRange, clipSpeed, clipVolume, MAX_FADE, MAX_SPEED, MIN_SPEED, moveClipPart, partAsClip, removeClipPart, splitClipAt, splitPartAt, withClipSettings, withPartSettings } from '@/videoClips'
 import { useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
 import type { TrameElement, VideoClip } from '@/types'
@@ -115,6 +115,12 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
           {t('clip.rangeReset')}
         </button>
       </div>
+      {sequence && (
+        <label title={t('clip.fade.title')}>
+          {t('clip.fade')} <span data-clip-fade-label>{clipFade(clip) > 0 ? `${clipFade(clip).toFixed(1)} s` : t('clip.fade.none')}</span>
+          <input type="range" data-field="clipFade" min={0} max={MAX_FADE} step={0.1} value={clipFade(clip)} onChange={(e) => setClip({ fade: Number(e.target.value) })} />
+        </label>
+      )}
       <div className="row">
         <button
           data-action="clip-split"

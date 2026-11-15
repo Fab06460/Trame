@@ -3,7 +3,7 @@ import { ArrayBufferTarget as WebmTarget, Muxer as WebmMuxer } from 'webm-muxer'
 import { pageAtStep } from '@/builds'
 import { renderPage } from '@/exportPages'
 import { decodeDataUrl } from '@/pdfMath'
-import { addSounds, AUDIO_RATE, decodeAudio, duckTrack, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
+import { addSounds, AUDIO_RATE, decodeAudio, duckTrack, fadeSound, mixTrack, silence, trimSound, type DecodedAudio, type MusicOptions, type SoundEvent } from '@/audioTrack'
 import { clipUrl } from '@/clipActions'
 import { clipSounds, clipsAt, layerKeys, layersAt, scheduleOf, videoSize, voiceSounds, type ClipFrame, type Layer, type VideoOptions } from '@/videoTimeline'
 import type { TrameDocument } from '@/types'
@@ -142,6 +142,12 @@ function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: Cli
     const h = video.videoHeight * k
     ctx.drawImage(video, (el.width - w) / 2, (el.height - h) / 2, w, h)
   } else ctx.drawImage(video, 0, 0, el.width, el.height)
+  if (c.gain < 1) {
+    // fondu au noir entre deux morceaux
+    ctx.globalAlpha = l.alpha * el.opacity * (1 - c.gain)
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, el.width, el.height)
+  }
   ctx.restore()
 }
 
@@ -200,7 +206,7 @@ export async function exportVideo(doc: TrameDocument, options: VideoOptions, onP
         decoded.set(sound.id, parts ? await decodeAudio(parts.bytes).catch(() => null) : null)
       }
       const audio = decoded.get(sound.id)
-      if (audio && audio.channels.length) events.push({ source: trimSound(audio.channels, sound.start, sound.end, sound.speed), at: sound.at, until: sound.until, volume: sound.volume, loop: sound.loop })
+      if (audio && audio.channels.length) events.push({ source: fadeSound(trimSound(audio.channels, sound.start, sound.end, sound.speed), sound.fadeIn ?? 0, sound.fadeOut ?? 0), at: sound.at, until: sound.until, volume: sound.volume, loop: sound.loop })
     }
     // voix off : décodée une fois par enregistrement, placée au début de sa page (un enregistrement illisible est ignoré)
     const voiceAudio = new Map<string, DecodedAudio | null>()

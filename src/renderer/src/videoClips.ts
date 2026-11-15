@@ -28,6 +28,9 @@ export function clipRange(v: Pick<VideoClip, 'duration' | 'start' | 'end'>): { s
   return { start, end }
 }
 
+/** Durée de fondu la plus longue (secondes) entre deux morceaux. */
+export const MAX_FADE = 2
+
 /** Plus de morceaux qu'une séquence n'en garde. */
 export const MAX_PARTS = 12
 
@@ -53,6 +56,46 @@ export const clipIds = (v: Pick<VideoClip, 'id' | 'then'>): string[] => [...new 
 
 const partLength = (p: PartRange): number => (p.end - p.start) / p.speed
 
+/** Durée du fondu au noir entre les morceaux (secondes) : 0 pour un clip seul ou une coupe franche. */
+export const clipFade = (v: Pick<VideoClip, 'then' | 'fade'>): number => (v.then?.length && typeof v.fade === 'number' && Number.isFinite(v.fade) ? clamp(v.fade, 0, MAX_FADE) : 0)
+
+/**
+ * La moitié du fondu de chaque raccord (secondes) : le fondu est centré sur le raccord et ne dépasse jamais la moitié du plus court des deux
+ * morceaux qu'il touche, pour que deux fondus voisins ne se chevauchent pas.
+ */
+export function fadeHalves(v: SequenceLike & Pick<VideoClip, 'fade'>): number[] {
+  const parts = clipParts(v)
+  const half = clipFade({ then: v.then, fade: v.fade }) / 2
+  return parts.slice(1).map((p, j) => Math.min(half, partLength(parts[j]) / 2, partLength(p) / 2))
+}
+
+/**
+ * La luminosité de l'image et du son d'une séquence `elapsed` secondes après le début de sa lecture : 1 hors des raccords, 0 (noir et
+ * silence) au raccord, avec une rampe linéaire de chaque côté. Toujours 1 sans fondu.
+ */
+export function clipGainAt(v: SequenceLike & Pick<VideoClip, 'fade' | 'loop'>, elapsed: number): number {
+  if (clipFade({ then: v.then, fade: v.fade }) <= 0) return 1
+  const parts = clipParts(v)
+  const total = parts.reduce((n, p) => n + partLength(p), 0)
+  const e = v.loop && total > 0 ? elapsed % total : elapsed
+  const halves = fadeHalves(v)
+  let at = 0
+  let gain = 1
+  for (let j = 0; j < halves.length; j++) {
+    at += partLength(parts[j])
+    if (halves[j] > 0) gain = Math.min(gain, Math.min(1, Math.abs(e - at) / halves[j]))
+  }
+  return gain
+}
+
+/** Le temps de lecture d'une séquence (secondes depuis son début) qui correspond à l'instant `time` de la vidéo du morceau `index`. */
+export function clipElapsedAt(v: SequenceLike, index: number, time: number): number {
+  const parts = clipParts(v)
+  const before = parts.slice(0, index).reduce((n, p) => n + partLength(p), 0)
+  const p = parts[index]
+  return p ? before + (time - p.start) / p.speed : 0
+}
+
 /** Durée de lecture du clip monté (secondes) : les morceaux gardés, chacun divisé par sa vitesse, mis bout à bout. */
 export function clipLength(v: SequenceLike): number {
   return clipParts(v).reduce((n, p) => n + partLength(p), 0)
@@ -73,7 +116,7 @@ export function clipSourceTime(v: Pick<VideoClip, 'duration' | 'start' | 'end' |
  * Les réglages d'un clip après modification : valeurs ramenées dans leurs limites (le début reste avant la fin d'au moins `MIN_TRIM`)
  * et seules celles qui s'écartent des valeurs par défaut sont gardées (comme à la lecture d'un fichier).
  */
-export function withClipSettings(v: VideoClip, patch: { loop?: boolean; muted?: boolean; manual?: boolean; volume?: number; start?: number; end?: number; speed?: number }): VideoClip {
+export function withClipSettings(v: VideoClip, patch: { fade?: number; loop?: boolean; muted?: boolean; manual?: boolean; volume?: number; start?: number; end?: number; speed?: number }): VideoClip {
   const next: VideoClip = { id: v.id, duration: v.duration }
   const min = Math.min(MIN_TRIM, v.duration / 2)
   let { start, end } = clipRange(v)
@@ -88,7 +131,11 @@ export function withClipSettings(v: VideoClip, patch: { loop?: boolean; muted?: 
   if (round2(start) > 0) next.start = round2(start)
   if (round2(end) < v.duration) next.end = round2(end)
   if (speed !== 1) next.speed = round2(speed)
-  if (v.then?.length) next.then = v.then
+  if (v.then?.length) {
+    next.then = v.then
+    const fade = clipFade({ then: v.then, fade: patch.fade ?? v.fade })
+    if (fade > 0) next.fade = round2(fade)
+  }
   return next
 }
 
@@ -138,7 +185,11 @@ export function composeClip(base: VideoClip, parts: PartRange[]): VideoClip {
   if (base.muted) out.muted = true
   if (base.manual) out.manual = true
   if (typeof base.volume === 'number' && base.volume < 1) out.volume = base.volume
-  if (rest.length) out.then = rest
+  if (rest.length) {
+    out.then = rest
+    const fade = clipFade({ then: rest, fade: base.fade })
+    if (fade > 0) out.fade = round2(fade)
+  }
   return out
 }
 
@@ -269,7 +320,10 @@ export function sanitizeClips(doc: { clips?: unknown; pages: Array<{ elements: A
           if (typeof r.speed === 'number' && Number.isFinite(r.speed) && r.speed >= MIN_SPEED && r.speed <= MAX_SPEED && r.speed !== 1) part.speed = r.speed
           then.push(part)
         }
-        if (then.length) out.then = then
+        if (then.length) {
+          out.then = then
+          if (typeof v.fade === 'number' && Number.isFinite(v.fade) && v.fade > 0) out.fade = Math.min(MAX_FADE, v.fade)
+        }
       }
       e.video = out
     }

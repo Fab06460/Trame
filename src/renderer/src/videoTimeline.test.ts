@@ -319,4 +319,15 @@ describe('clips vidéo', () => {
     const sounds = clipSounds(d, o, scheduleOf(d, o))
     expect(sounds.map((x) => [x.id, x.at])).toEqual([['c-v', 0], ['c-w', 2], ['c-v', 3], ['c-w', 5], ['c-v', 6]])
   })
+
+  it('séquence avec fondu : luminosité aux raccords et montée/descente du son de chaque morceau', () => {
+    const d = withClip(4, {}, { fade: 1, then: [{ id: 'c-w', duration: 4 }] })
+    const o = opts({ secondsPerPage: 8 })
+    const s = scheduleOf(d, o)
+    const l: Layer = { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }
+    expect(clipsAt(d, o, s, l, 1)[0].gain).toBe(1)
+    expect(clipsAt(d, o, s, l, 4)[0].gain).toBe(0)
+    expect(clipsAt(d, o, s, l, 3.75)[0].gain).toBeCloseTo(0.5, 5)
+    expect(clipSounds(d, o, s).map((x) => [x.id, x.fadeIn, x.fadeOut])).toEqual([['c-v', 0, 0.5], ['c-w', 0.5, 0]])
+  })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addSounds, AUDIO_RATE, DUCK_ATTACK, DUCK_LEVEL, DUCK_RELEASE, duckTrack, FADE_SECONDS, isAudioFile, mixTrack, silence, trimSound } from './audioTrack'
+import { fadeSound, addSounds, AUDIO_RATE, DUCK_ATTACK, DUCK_LEVEL, DUCK_RELEASE, duckTrack, FADE_SECONDS, isAudioFile, mixTrack, silence, trimSound } from './audioTrack'
 
 const ramp = (n: number, v = 1): Float32Array => new Float32Array(n).fill(v)
 
@@ -183,5 +183,21 @@ describe('duckTrack', () => {
     duckTrack(t, [[-1, 0.5], [1.5, 9]])
     expect(at(t, 0.1)).toBeLessThan(1)
     expect(t[0].length).toBe(2 * AUDIO_RATE)
+  })
+})
+
+describe('fadeSound', () => {
+  it('monte au début, descend à la fin, sans toucher la source', () => {
+    const src = [new Float32Array(AUDIO_RATE).fill(1)]
+    const [out] = fadeSound(src, 0.5, 0.25)
+    expect(out[0]).toBe(0)
+    expect(out[Math.round(AUDIO_RATE * 0.25)]).toBeCloseTo(0.5, 2)
+    expect(out[AUDIO_RATE / 2]).toBe(1)
+    expect(out[AUDIO_RATE - 1]).toBe(0)
+    expect(src[0][0]).toBe(1)
+  })
+  it('sans fondu : le même son', () => {
+    const src = [new Float32Array(10).fill(1)]
+    expect(fadeSound(src, 0, 0)[0]).toBe(src[0])
   })
 })

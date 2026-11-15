@@ -117,6 +117,20 @@ export function trimSound(source: readonly Float32Array[], start: number, end: n
   })
 }
 
+/** Le son avec une montée de `fadeIn` secondes au début et une descente de `fadeOut` secondes à la fin (copie : la source n'est pas modifiée). */
+export function fadeSound(source: readonly Float32Array[], fadeIn: number, fadeOut: number): Float32Array[] {
+  if (fadeIn <= 0 && fadeOut <= 0) return [...source]
+  return source.map((channel) => {
+    const out = Float32Array.from(channel)
+    const n = out.length
+    const a = Math.min(n, Math.round(fadeIn * AUDIO_RATE))
+    const b = Math.min(n, Math.round(fadeOut * AUDIO_RATE))
+    for (let i = 0; i < a; i++) out[i] *= i / a
+    for (let i = 0; i < b; i++) out[n - 1 - i] *= i / b
+    return out
+  })
+}
+
 /** Une bande son silencieuse de la durée donnée (deux canaux). */
 export const silence = (seconds: number): [Float32Array, Float32Array] => [new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE))), new Float32Array(Math.max(0, Math.round(seconds * AUDIO_RATE)))]
 
