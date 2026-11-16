@@ -761,3 +761,17 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 .clip-parts li { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .clip-parts li > button:first-child { flex: 1 1 auto; text-align: left; }
 .clip-parts li.on > button:first-child { outline: 2px solid var(--accent, #4f46e5); }
+
+/* frise du clip : vignettes, morceau gardé, poignées et position du lecteur */
+.clip-strip-track { position: relative; height: 56px; border-radius: 6px; overflow: hidden; background: #111; touch-action: none; cursor: pointer; user-select: none; }
+.clip-strip-frames { position: absolute; inset: 0; display: flex; }
+.clip-strip-frames img, .clip-strip-frames span { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; background: #222; }
+.clip-strip-dim { position: absolute; top: 0; bottom: 0; background: rgba(0, 0, 0, 0.62); pointer-events: none; }
+.clip-strip-kept { position: absolute; top: 0; bottom: 0; border-top: 3px solid var(--accent, #4f46e5); border-bottom: 3px solid var(--accent, #4f46e5); pointer-events: none; }
+.clip-strip-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.clip-strip-handle { position: absolute; top: 0; bottom: 0; width: 12px; background: var(--accent, #4f46e5); cursor: ew-resize; border-radius: 3px; }
+.clip-strip-handle.end { margin-left: -12px; }
+.clip-strip-handle:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+.clip-seq { display: flex; gap: 2px; height: 22px; margin: 4px 0; }
+.clip-seq button { min-width: 0; padding: 0; font-size: 11px; border-radius: 4px; overflow: hidden; }
+.clip-seq button[aria-pressed="true"] { outline: 2px solid var(--accent, #4f46e5); }

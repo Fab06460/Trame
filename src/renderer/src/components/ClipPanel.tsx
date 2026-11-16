@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { captureFrame, clipPosterAt, clipUrl } from '@/clipActions'
 import { useClipBounds } from '@/clipPlayback'
 import { clipAutoplay, clipFade, clipLength, clipLoops, clipParts, clipRange, clipSpeed, clipVolume, MAX_FADE, MAX_SPEED, MIN_SPEED, moveClipPart, partAsClip, removeClipPart, splitClipAt, splitPartAt, withClipSettings, withPartSettings } from '@/videoClips'
+import { ClipStrip } from '@/components/ClipStrip'
 import { useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
 import type { TrameElement, VideoClip } from '@/types'
@@ -62,6 +63,15 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
       {url ? <video ref={setPlayer} className="clip-player" data-clip-player src={url} controls preload="metadata" /> : <p className="warn" role="alert">{t('clip.missing')}</p>}
       <p className="hint" data-clip-duration>{t('clip.duration', { duration: clock(view.duration) })}</p>
       {sequence && (
+        <div className="clip-seq" role="group" aria-label={t('clip.seq')} data-clip-seq>
+          {parts.map((p, i) => (
+            <button key={`${i}:${p.id}`} style={{ flex: `${Math.max(0.05, (p.end - p.start) / p.speed)} 1 0` }} aria-pressed={i === index} title={t('clip.seq.part', { n: i + 1 })} onClick={() => setPartIndex(i)}>
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
+      {sequence && (
         <ol className="clip-parts" data-clip-parts>
           {parts.map((p, i) => (
             <li key={`${i}:${p.id}`} className={i === index ? 'on' : undefined}>
@@ -96,6 +106,7 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
           ))}
         </ol>
       )}
+      <ClipStrip doc={doc} id={view.id} duration={view.duration} start={start} end={end} now={now} onSeek={showAt} onChange={setClip} />
       <label>
         {t('clip.start')} <span data-clip-start-label>{clockTenths(start)}</span>
         <input type="range" data-field="clipStart" min={0} max={view.duration} step={0.05} value={start} onChange={(e) => (setClip({ start: Number(e.target.value) }), showAt(Number(e.target.value)))} />
@@ -115,6 +126,15 @@ export function ClipPanel({ el }: { el: TrameElement }): React.JSX.Element | nul
           {t('clip.rangeReset')}
         </button>
       </div>
+      {sequence && (
+        <label title={t('clip.fade.title')}>
+          {t('clip.fade.kind')}
+          <select data-field="clipFadeKind" value={clip.cross ? 'cross' : 'black'} onChange={(e) => setClip({ cross: e.target.value === 'cross' })}>
+            <option value="black">{t('clip.fade.black')}</option>
+            <option value="cross">{t('clip.fade.cross')}</option>
+          </select>
+        </label>
+      )}
       {sequence && (
         <label title={t('clip.fade.title')}>
           {t('clip.fade')} <span data-clip-fade-label>{clipFade(clip) > 0 ? `${clipFade(clip).toFixed(1)} s` : t('clip.fade.none')}</span>

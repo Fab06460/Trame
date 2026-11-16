@@ -330,4 +330,18 @@ describe('clips vidéo', () => {
     expect(clipsAt(d, o, s, l, 3.75)[0].gain).toBeCloseTo(0.5, 5)
     expect(clipSounds(d, o, s).map((x) => [x.id, x.fadeIn, x.fadeOut])).toEqual([['c-v', 0, 0.5], ['c-w', 0.5, 0]])
   })
+
+  it('séquence enchaînée : la page raccourcit du recouvrement, deux images pendant le fondu, sons qui se recouvrent', () => {
+    const d = withClip(4, {}, { fade: 1, cross: true, then: [{ id: 'c-w', duration: 4 }] }) // 4 + 4 − 1 = 7 s
+    const o = opts({ secondsPerPage: 1 })
+    const s = scheduleOf(d, o)
+    expect(s.durations[0]).toBe(7)
+    const l: Layer = { page: 0, step: 0, alpha: 1, tx: 0, scale: 1, shadow: false }
+    expect(clipsAt(d, o, s, l, 1)).toEqual([expect.objectContaining({ id: 'c-v', alpha: 1, gain: 1 })])
+    const mid = clipsAt(d, o, s, l, 3.5)
+    expect(mid.map((c) => [c.id, c.alpha, c.gain])).toEqual([['c-v', 1, 1], ['c-w', 0.5, 1]])
+    expect(mid[1].time).toBeCloseTo(0.5, 5)
+    expect(clipsAt(d, o, s, l, 5).map((c) => c.id)).toEqual(['c-w'])
+    expect(clipSounds(d, o, s).map((x) => [x.id, x.at, x.fadeIn, x.fadeOut])).toEqual([['c-v', 0, 0, 1], ['c-w', 3, 1, 0]])
+  })
 })

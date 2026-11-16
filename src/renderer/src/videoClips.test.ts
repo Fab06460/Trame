@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipFade, clipGainAt, clipElapsedAt, fadeHalves, assembleClips, clipIds, clipLength, clipParts, clipSourceAt, moveClipPart, partAsClip, removeClipPart, splitPartAt, withPartSettings, splitClipAt, clipAutoplay, clipElements, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
+import { clipCrosses, clipLayersAt, clipOverlaps, partStarts, soundFades, clipFade, clipGainAt, clipElapsedAt, fadeHalves, assembleClips, clipIds, clipLength, clipParts, clipSourceAt, moveClipPart, partAsClip, removeClipPart, splitPartAt, withPartSettings, splitClipAt, clipAutoplay, clipElements, clipLoops, clipRange, clipSourceTime, clipSpeed, clipVolume, MAX_CLIP_CHARS, MAX_CLIP_SECONDS, pruneClips, sanitizeClips, withClipSettings, withoutClips } from './videoClips'
 import type { TrameDocument, TrameElement, VideoClip } from './types'
 
 const MP4 = 'data:video/mp4;base64,AAAA'
@@ -268,5 +268,74 @@ describe('fondu au noir entre les morceaux', () => {
     const [x, y] = doc.pages[0].elements as Array<{ video: { fade?: number } }>
     expect(x.video.fade).toBe(2)
     expect(y.video.fade).toBeUndefined()
+  })
+})
+
+describe('fondu enchaîné entre les morceaux', () => {
+  const three = (extra: Record<string, unknown> = {}) => ({ id: 'a', duration: 4, then: [{ id: 'b', duration: 4 }, { id: 'c', duration: 4 }], fade: 1, cross: true, ...extra }) as never
+  it('il faut une séquence, un fondu non nul et le choix « enchaîné »', () => {
+    expect(clipCrosses(three())).toBe(true)
+    expect(clipCrosses(three({ cross: undefined }))).toBe(false)
+    expect(clipCrosses(three({ fade: 0 }))).toBe(false)
+    expect(clipCrosses({ id: 'a', duration: 4, fade: 1, cross: true } as never)).toBe(false)
+  })
+  it('les morceaux se recouvrent de la durée du fondu : la séquence raccourcit d\'autant', () => {
+    expect(clipOverlaps(three())).toEqual([1, 1])
+    expect(partStarts(three())).toEqual([0, 3, 6])
+    expect(clipLength(three())).toBe(10)
+    expect(clipLength(three({ cross: undefined }))).toBe(12)
+    expect(partStarts(three({ cross: undefined }))).toEqual([0, 4, 8])
+  })
+  it('le recouvrement ne dépasse pas la moitié du plus court des deux morceaux', () => {
+    const v = { id: 'a', duration: 10, end: 1, then: [{ id: 'b', duration: 10 }], fade: 2, cross: true } as never
+    expect(clipOverlaps(v)).toEqual([0.5])
+    expect(clipLength(v)).toBe(10.5)
+  })
+  it('une seule image hors des raccords ; pendant un enchaîné la fin qui part puis le début qui arrive', () => {
+    const v = three()
+    expect(clipLayersAt(v, 1)).toEqual([{ id: 'a', time: 1, index: 0, alpha: 1 }])
+    expect(clipLayersAt(v, 3.5)).toEqual([
+      { id: 'a', time: 3.5, index: 0, alpha: 1 },
+      { id: 'b', time: 0.5, index: 1, alpha: 0.5 }
+    ])
+    expect(clipLayersAt(v, 4.2)).toEqual([expect.objectContaining({ id: 'b', index: 1, alpha: 1 })])
+    expect(clipLayersAt(v, 4.2)[0].time).toBeCloseTo(1.2, 5)
+    expect(clipLayersAt(v, 6.25).map((l) => l.id)).toEqual(['b', 'c'])
+  })
+  it('sans enchaîné : toujours une seule image, au noir comme avant', () => {
+    expect(clipLayersAt(three({ cross: undefined }), 3.9)).toEqual([{ id: 'a', time: 3.9, index: 0, alpha: 1 }])
+    expect(clipLayersAt(three({ cross: undefined }), 4.1).map((l) => l.id)).toEqual(['b'])
+  })
+  it('l\'image ne passe pas par le noir', () => {
+    expect(clipGainAt(three(), 3.5)).toBe(1)
+    expect(clipGainAt(three({ cross: undefined }), 4)).toBe(0)
+  })
+  it('s\'arrête sur la dernière image du dernier morceau, recommence en boucle', () => {
+    expect(clipLayersAt(three(), 99)[0]).toMatchObject({ id: 'c', time: 3.95 })
+    expect(clipLayersAt(three({ loop: true }), 10.5)[0]).toMatchObject({ id: 'a', time: 0.5 })
+  })
+  it('le son monte et descend pendant tout le recouvrement (au noir : la moitié du fondu)', () => {
+    expect(soundFades(three())).toEqual([{ in: 0, out: 1 }, { in: 1, out: 1 }, { in: 1, out: 0 }])
+    expect(soundFades(three({ cross: undefined }))).toEqual([{ in: 0, out: 0.5 }, { in: 0.5, out: 0.5 }, { in: 0.5, out: 0 }])
+  })
+  it('clipElapsedAt tient compte du recouvrement', () => {
+    expect(clipElapsedAt(three(), 1, 0)).toBe(3)
+    expect(clipElapsedAt(three(), 2, 2)).toBe(8)
+  })
+  it('le choix suit les réglages, le réordonnancement et se perd pour un morceau seul', () => {
+    const v = { id: 'a', duration: 4, fade: 1, cross: true, then: [{ id: 'b', duration: 4 }] } as VideoClip
+    expect(withClipSettings(v, { loop: true }).cross).toBe(true)
+    expect(withClipSettings(v, { cross: false }).cross).toBeUndefined()
+    expect(moveClipPart(v, 1, -1).cross).toBe(true)
+    expect(removeClipPart(v, 1).cross).toBeUndefined()
+    expect(partAsClip(v, 0)!.cross).toBeUndefined()
+  })
+  it('lecture d\'un fichier : gardé pour une séquence, ignoré pour un clip seul', () => {
+    const seq = raw([{ id: 'e', type: 'image', video: { id: 'a', duration: 4, fade: 1, cross: true, then: [{ id: 'b', duration: 4 }] } }], { a: MP4, b: MP4 })
+    sanitizeClips(seq)
+    expect((seq.pages[0].elements[0].video as VideoClip).cross).toBe(true)
+    const alone = raw([{ id: 'e', type: 'image', video: { id: 'a', duration: 4, fade: 1, cross: true } }], { a: MP4 })
+    sanitizeClips(alone)
+    expect((alone.pages[0].elements[0].video as VideoClip).cross).toBeUndefined()
   })
 })

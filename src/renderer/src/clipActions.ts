@@ -78,6 +78,40 @@ export async function clipPosterAt(doc: Pick<TrameDocument, 'clips'>, id: string
   }
 }
 
+/** Hauteur des vignettes de la frise, en pixels. */
+const THUMB_HEIGHT = 56
+const thumbs = new Map<string, string[]>()
+
+/**
+ * `count` vignettes régulièrement espacées d'une vidéo du document (JPEG), pour la frise du panneau du clip ; `null` si elle ne se lit pas.
+ * Gardées tant que l'application tourne : la frise se redessine à chaque réglage.
+ */
+export async function clipThumbnails(doc: Pick<TrameDocument, 'clips'>, id: string, count: number): Promise<string[] | null> {
+  const url = clipUrl(doc, id)
+  if (!url) return null
+  const key = `${id}:${doc.clips?.[id]?.length ?? 0}:${count}`
+  const known = thumbs.get(key)
+  if (known) return known
+  try {
+    const video = await openVideo(url)
+    if (!video.videoWidth || !video.videoHeight || !Number.isFinite(video.duration)) return null
+    const canvas = document.createElement('canvas')
+    canvas.height = THUMB_HEIGHT
+    canvas.width = Math.max(1, Math.round((video.videoWidth / video.videoHeight) * THUMB_HEIGHT))
+    const ctx = canvas.getContext('2d')!
+    const out: string[] = []
+    for (let i = 0; i < count; i++) {
+      await seekTo(video, Math.min(video.duration - 0.05, ((i + 0.5) / count) * video.duration))
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      out.push(canvas.toDataURL('image/jpeg', 0.6))
+    }
+    thumbs.set(key, out)
+    return out
+  } catch {
+    return null
+  }
+}
+
 export type ClipResult = 'ok' | 'cancelled' | 'tooBig' | 'unreadable'
 
 /** « Insérer un clip vidéo… » : choisit le fichier puis le place comme un clip (voir `insertClipBytes`). */

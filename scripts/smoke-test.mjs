@@ -4150,8 +4150,32 @@ try {
   await sleep(250)
   check('fondu : la durée choisie est enregistrée et affichée', (await run(`document.querySelector('[data-clip-fade-label]').innerText`)).startsWith('1.0'))
   check('assemblage : la durée de lecture additionne les deux morceaux', /0:0[0-9]\.[0-9]/.test(await run(`document.querySelector('[data-clip-length]').innerText`)))
-  // trois pas à défaire : le fondu, l'assemblage, la coupe
-  for (let k = 0; k < 3; k++) {
+  // frise : vignettes de la vidéo, deux poignées, réglage au clavier
+  await waitFor(async () => (await nBrand('[data-clip-strip] .clip-strip-frames img')) >= 8, 20000)
+  check('frise : la frise du clip montre ses vignettes et deux poignées', (await nBrand('[data-clip-strip] .clip-strip-frames img')) >= 8 && (await nBrand('[data-strip-handle]')) === 2)
+  const stripBefore = await run(`document.querySelector('[data-clip-start-label]').innerText`)
+  await run(`(() => { const h = document.querySelector('[data-strip-handle="start"]'); h.focus(); h.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })) })()`)
+  await sleep(300)
+  const stripAfter = await run(`document.querySelector('[data-clip-start-label]').innerText`)
+  check('frise : une flèche sur la poignée de début avance le début de 0,1 s', stripBefore === '0:01.0' && stripAfter === '0:01.1', `${stripBefore} → ${stripAfter}`)
+  const stripRect = await run(`(() => { const r = document.querySelector('[data-clip-strip-track]').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
+  check('frise : la frise a une taille visible', stripRect.w > 100 && stripRect.h > 30, JSON.stringify(stripRect))
+  // enchaîné : les morceaux se recouvrent, la lecture raccourcit
+  const lengthBlack = await run(`document.querySelector('[data-clip-length]').innerText`)
+  await setSelect('[data-field="clipFadeKind"]', 'cross')
+  await sleep(300)
+  const lengthCross = await run(`document.querySelector('[data-clip-length]').innerText`)
+  check('enchaîné : le choix est enregistré et la durée de lecture raccourcit du recouvrement', (await run(`document.querySelector('[data-field="clipFadeKind"]').value`)) === 'cross' && /0:02\.1/.test(lengthCross) && lengthBlack !== lengthCross, `${lengthBlack} → ${lengthCross}`)
+  // présentation : deux lecteurs se relaient, l'un joue
+  await click('header.toolbar button', 'Présenter')
+  await waitFor(async () => (await nBrand('[data-pres-clip]')) === 1, 20000)
+  await sleep(1200)
+  const crossPlay = await run(`(() => { const a = document.querySelector('[data-pres-clip]'); const b = document.querySelector('[data-pres-clip-2]'); return b ? { playing: [a, b].filter((v) => !v.paused).length, opacities: [a, b].map((v) => v.style.opacity) } : null })()`)
+  check('enchaîné : en présentation, deux lecteurs se relaient et l\'un d\'eux joue', !!crossPlay && crossPlay.playing >= 1, JSON.stringify(crossPlay))
+  await key('Escape')
+  await sleep(500)
+  // cinq pas à défaire : le fondu, l'assemblage, la coupe, la poignée et l'enchaîné
+  for (let k = 0; k < 5; k++) {
     await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
     await sleep(300)
   }

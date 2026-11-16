@@ -43,7 +43,7 @@ export interface PartRange {
   speed: number
 }
 
-type SequenceLike = Pick<VideoClip, 'duration' | 'start' | 'end' | 'speed'> & { id?: string; then?: ClipPart[] }
+type SequenceLike = Pick<VideoClip, 'duration' | 'start' | 'end' | 'speed'> & { id?: string; then?: ClipPart[]; fade?: number; cross?: boolean }
 
 /** Les morceaux d'un clip, dans l'ordre : un seul tant qu'aucun autre n'est assemblé à sa suite. */
 export function clipParts(v: SequenceLike): PartRange[] {
@@ -59,6 +59,33 @@ const partLength = (p: PartRange): number => (p.end - p.start) / p.speed
 /** Durée du fondu au noir entre les morceaux (secondes) : 0 pour un clip seul ou une coupe franche. */
 export const clipFade = (v: Pick<VideoClip, 'then' | 'fade'>): number => (v.then?.length && typeof v.fade === 'number' && Number.isFinite(v.fade) ? clamp(v.fade, 0, MAX_FADE) : 0)
 
+/** Les raccords sont-ils des enchaînés (les deux morceaux se recouvrent) ? Il faut une séquence, un fondu non nul et le choix « enchaîné ». */
+export const clipCrosses = (v: Pick<VideoClip, 'then' | 'fade'> & { cross?: boolean }): boolean => v.cross === true && clipFade(v) > 0
+
+/**
+ * Le recouvrement de chaque raccord (secondes) pour un enchaîné, 0 sinon : la durée du fondu, sans dépasser la moitié du plus court des deux
+ * morceaux qu'il touche, pour que les deux recouvrements d'un même morceau (début et fin) ne se chevauchent pas.
+ */
+export function clipOverlaps(v: SequenceLike): number[] {
+  const parts = clipParts(v)
+  const cross = clipCrosses(v)
+  const fade = clipFade(v)
+  return parts.slice(1).map((p, j) => (cross ? Math.min(fade, partLength(parts[j]) / 2, partLength(p) / 2) : 0))
+}
+
+/** L'instant (secondes depuis le début de la lecture) où commence chaque morceau : à la suite du précédent, moins le recouvrement d'un enchaîné. */
+export function partStarts(v: SequenceLike): number[] {
+  const parts = clipParts(v)
+  const over = clipOverlaps(v)
+  const out: number[] = []
+  let at = 0
+  parts.forEach((p, i) => {
+    out.push(at)
+    at += partLength(p) - (over[i] ?? 0)
+  })
+  return out
+}
+
 /**
  * La moitié du fondu de chaque raccord (secondes) : le fondu est centré sur le raccord et ne dépasse jamais la moitié du plus court des deux
  * morceaux qu'il touche, pour que deux fondus voisins ne se chevauchent pas.
@@ -70,11 +97,21 @@ export function fadeHalves(v: SequenceLike & Pick<VideoClip, 'fade'>): number[] 
 }
 
 /**
+ * La montée et la descente du son de chaque morceau (secondes) : au noir, la moitié du fondu de part et d'autre du raccord ; en enchaîné,
+ * le recouvrement entier (le son du morceau qui finit descend pendant que celui du suivant monte).
+ */
+export function soundFades(v: SequenceLike): Array<{ in: number; out: number }> {
+  const n = clipParts(v).length
+  const edge = clipCrosses(v) ? clipOverlaps(v) : fadeHalves(v)
+  return Array.from({ length: n }, (_, k) => ({ in: edge[k - 1] ?? 0, out: edge[k] ?? 0 }))
+}
+
+/**
  * La luminosité de l'image et du son d'une séquence `elapsed` secondes après le début de sa lecture : 1 hors des raccords, 0 (noir et
- * silence) au raccord, avec une rampe linéaire de chaque côté. Toujours 1 sans fondu.
+ * silence) au raccord, avec une rampe linéaire de chaque côté. Toujours 1 sans fondu, et pour un enchaîné (qui ne passe pas par le noir).
  */
 export function clipGainAt(v: SequenceLike & Pick<VideoClip, 'fade' | 'loop'>, elapsed: number): number {
-  if (clipFade({ then: v.then, fade: v.fade }) <= 0) return 1
+  if (clipFade({ then: v.then, fade: v.fade }) <= 0 || clipCrosses(v)) return 1
   const parts = clipParts(v)
   const total = parts.reduce((n, p) => n + partLength(p), 0)
   const e = v.loop && total > 0 ? elapsed % total : elapsed
@@ -90,15 +127,13 @@ export function clipGainAt(v: SequenceLike & Pick<VideoClip, 'fade' | 'loop'>, e
 
 /** Le temps de lecture d'une séquence (secondes depuis son début) qui correspond à l'instant `time` de la vidéo du morceau `index`. */
 export function clipElapsedAt(v: SequenceLike, index: number, time: number): number {
-  const parts = clipParts(v)
-  const before = parts.slice(0, index).reduce((n, p) => n + partLength(p), 0)
-  const p = parts[index]
-  return p ? before + (time - p.start) / p.speed : 0
+  const p = clipParts(v)[index]
+  return p ? partStarts(v)[index] + (time - p.start) / p.speed : 0
 }
 
-/** Durée de lecture du clip monté (secondes) : les morceaux gardés, chacun divisé par sa vitesse, mis bout à bout. */
+/** Durée de lecture du clip monté (secondes) : les morceaux gardés, chacun divisé par sa vitesse, mis bout à bout (moins le recouvrement des enchaînés). */
 export function clipLength(v: SequenceLike): number {
-  return clipParts(v).reduce((n, p) => n + partLength(p), 0)
+  return clipParts(v).reduce((n, p) => n + partLength(p), 0) - clipOverlaps(v).reduce((n, o) => n + o, 0)
 }
 
 /**
@@ -116,7 +151,7 @@ export function clipSourceTime(v: Pick<VideoClip, 'duration' | 'start' | 'end' |
  * Les réglages d'un clip après modification : valeurs ramenées dans leurs limites (le début reste avant la fin d'au moins `MIN_TRIM`)
  * et seules celles qui s'écartent des valeurs par défaut sont gardées (comme à la lecture d'un fichier).
  */
-export function withClipSettings(v: VideoClip, patch: { fade?: number; loop?: boolean; muted?: boolean; manual?: boolean; volume?: number; start?: number; end?: number; speed?: number }): VideoClip {
+export function withClipSettings(v: VideoClip, patch: { fade?: number; cross?: boolean; loop?: boolean; muted?: boolean; manual?: boolean; volume?: number; start?: number; end?: number; speed?: number }): VideoClip {
   const next: VideoClip = { id: v.id, duration: v.duration }
   const min = Math.min(MIN_TRIM, v.duration / 2)
   let { start, end } = clipRange(v)
@@ -135,6 +170,7 @@ export function withClipSettings(v: VideoClip, patch: { fade?: number; loop?: bo
     next.then = v.then
     const fade = clipFade({ then: v.then, fade: patch.fade ?? v.fade })
     if (fade > 0) next.fade = round2(fade)
+    if (patch.cross ?? v.cross) next.cross = true
   }
   return next
 }
@@ -157,16 +193,44 @@ export function splitClipAt(v: VideoClip, at: number): [VideoClip, VideoClip] | 
  */
 export function clipSourceAt(v: SequenceLike & { loop?: boolean }, elapsed: number): { id: string; time: number; index: number } {
   const parts = clipParts(v)
-  const total = parts.reduce((n, p) => n + partLength(p), 0)
-  let e = v.loop && total > 0 ? elapsed % total : elapsed
-  for (let i = 0; i < parts.length; i++) {
-    const p = parts[i]
-    const len = partLength(p)
-    if (e < len) return { id: p.id, time: p.start + e * p.speed, index: i }
-    if (i === parts.length - 1) return { id: p.id, time: Math.max(p.start, p.end - 0.05), index: i }
-    e -= len
-  }
-  return { id: parts[0].id, time: parts[0].start, index: 0 }
+  const starts = partStarts(v)
+  const total = clipLength(v)
+  const e = v.loop && total > 0 ? elapsed % total : elapsed
+  // le morceau en cours est le dernier commencé (en enchaîné, le suivant passe devant dès qu'il commence)
+  let i = 0
+  for (let k = 1; k < parts.length; k++) if (e >= starts[k]) i = k
+  const p = parts[i]
+  const time = p.start + (e - starts[i]) * p.speed
+  return { id: p.id, time: i === parts.length - 1 ? Math.min(time, Math.max(p.start, p.end - 0.05)) : time, index: i }
+}
+
+/** Une image à montrer d'une séquence : la vidéo, l'instant dans cette vidéo, le morceau et son opacité (1 sauf à l'arrivée d'un enchaîné). */
+export interface ClipLayer {
+  id: string
+  time: number
+  index: number
+  alpha: number
+}
+
+/**
+ * Les images à superposer `elapsed` secondes après le début de la lecture, de la plus basse à la plus haute : une seule, sauf pendant un
+ * enchaîné où la fin du morceau qui s'en va est recouverte par le début du suivant, de plus en plus opaque.
+ */
+export function clipLayersAt(v: SequenceLike & { loop?: boolean }, elapsed: number): ClipLayer[] {
+  const top = clipSourceAt(v, elapsed)
+  if (top.index === 0 || !clipCrosses(v)) return [{ ...top, alpha: 1 }]
+  const total = clipLength(v)
+  const e = v.loop && total > 0 ? elapsed % total : elapsed
+  const j = top.index - 1
+  const into = e - partStarts(v)[top.index]
+  const over = clipOverlaps(v)[j]
+  if (over <= 0 || into >= over) return [{ ...top, alpha: 1 }]
+  const p = clipParts(v)[j]
+  const time = Math.min(p.start + (e - partStarts(v)[j]) * p.speed, Math.max(p.start, p.end - 0.05))
+  return [
+    { id: p.id, time, index: j, alpha: 1 },
+    { ...top, alpha: Math.min(1, Math.max(0, into / over)) }
+  ]
 }
 
 const packPart = (p: PartRange): ClipPart => {
@@ -189,6 +253,7 @@ export function composeClip(base: VideoClip, parts: PartRange[]): VideoClip {
     out.then = rest
     const fade = clipFade({ then: rest, fade: base.fade })
     if (fade > 0) out.fade = round2(fade)
+    if (base.cross) out.cross = true
   }
   return out
 }
@@ -323,6 +388,7 @@ export function sanitizeClips(doc: { clips?: unknown; pages: Array<{ elements: A
         if (then.length) {
           out.then = then
           if (typeof v.fade === 'number' && Number.isFinite(v.fade) && v.fade > 0) out.fade = Math.min(MAX_FADE, v.fade)
+          if (v.cross === true) out.cross = true
         }
       }
       e.video = out

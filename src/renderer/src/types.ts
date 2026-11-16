@@ -80,6 +80,8 @@ export interface VideoClip {
   then?: ClipPart[]
   /** séquence : durée (secondes, de 0 à 2) du fondu au noir à chaque raccord entre deux morceaux, moitié sur la fin du premier, moitié sur le début du suivant (absent = coupe franche) */
   fade?: number
+  /** séquence : le raccord est un enchaîné (les deux morceaux se recouvrent pendant `fade` secondes) au lieu d'un fondu au noir ; sans effet sans `fade` */
+  cross?: true
 }
 
 export type Protection = 'fixed' | 'fill'

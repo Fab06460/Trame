@@ -126,7 +126,7 @@ const seekTo = (v: HTMLVideoElement, time: number): Promise<void> =>
 function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: ClipFrame, l: Layer, w: number, h: number, k: number): void {
   const { el } = c
   ctx.save()
-  ctx.globalAlpha = l.alpha * el.opacity
+  ctx.globalAlpha = l.alpha * el.opacity * c.alpha
   ctx.translate(w / 2 + l.tx * w, h / 2)
   ctx.scale(l.scale, l.scale)
   ctx.translate(-w / 2, -h / 2)
@@ -135,8 +135,10 @@ function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: Cli
   ctx.rotate((el.rotation * Math.PI) / 180)
   if (el.video?.then?.length && video.videoWidth && video.videoHeight) {
     // une séquence : chaque morceau garde ses proportions dans le cadre de l'élément, sur fond noir
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, el.width, el.height)
+    if (c.alpha >= 1) {
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, el.width, el.height)
+    }
     const k = Math.min(el.width / video.videoWidth, el.height / video.videoHeight)
     const w = video.videoWidth * k
     const h = video.videoHeight * k
@@ -144,7 +146,7 @@ function drawClip(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, c: Cli
   } else ctx.drawImage(video, 0, 0, el.width, el.height)
   if (c.gain < 1) {
     // fondu au noir entre deux morceaux
-    ctx.globalAlpha = l.alpha * el.opacity * (1 - c.gain)
+    ctx.globalAlpha = l.alpha * el.opacity * c.alpha * (1 - c.gain)
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, el.width, el.height)
   }
