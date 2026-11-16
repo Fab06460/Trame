@@ -113,7 +113,7 @@ Les **notes de l'orateur** (`notes` sur une page) sont du texte libre, jamais de
 | `ellipse` | aucun (dessinée dans la boîte `width × height`)                                    |
 | `text`    | `text`, `fontSize`, `fontFamily`, `fontStyle`, `align`, `letterSpacing`, `lineHeight`, `underline`, `strike`, `uppercase`, `list` (la largeur impose le retour à la ligne ; `height` n'est qu'indicatif) |
 | `image`   | `src` : **data URL base64 complète** (l'image est incorporée au fichier)            |
-| `path`    | `path` : chemin SVG dans un viewBox **100×100**, étiré à `width × height` ; `fill` pour la couleur |
+| `path`    | `path` : chemin SVG dans un viewBox **100×100**, étiré à `width × height` ; `fill` pour la couleur. Un **tracé ouvert** (trait à main levée, surligneur, ligne, flèche) porte `open: true` : il n'est jamais rempli (`fill` ne sert que de repère de couleur), seul son contour est peint (`stroke`, `strokeWidth`, `strokeDashed`) avec des bouts et des angles arrondis. Une ligne droite (`path` de la forme `M x y L x y`) peut avoir `ends: { "start"?: "arrow" \| "dot", "end"?: "arrow" \| "dot" }` : une pointe de flèche ou un rond à chaque bout (calculés à la lecture à partir de l'épaisseur du trait). À la lecture, `open` est retiré d'un élément qui n'est pas un tracé, `ends` d'un tracé qui n'est pas ouvert, et un tracé ouvert sans contour reçoit celui de sa couleur (4 px). Aucune nouvelle version du format. |
 
 ## Historique des versions
 

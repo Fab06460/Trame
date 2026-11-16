@@ -1,5 +1,6 @@
 import { cssBackground } from '@/pageBackground'
 import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradient'
+import { openGeometry } from '@/openPath'
 import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
 import { useEditedImage } from '@/imageRender'
@@ -77,6 +78,15 @@ export function PageThumb({
           const outline: React.CSSProperties = hasStroke(e)
             ? { outline: `${w}px ${e.strokeDashed ? 'dashed' : 'solid'} ${e.stroke}`, outlineOffset: -w / 2 }
             : {}
+          if (e.type === 'path' && e.open) {
+            const g = openGeometry(e)
+            return (
+              <svg key={e.id} viewBox={`0 0 ${e.width} ${e.height}`} style={{ ...box, overflow: 'visible' }}>
+                <path d={g.stroke} fill="none" stroke={e.stroke ?? e.fill} strokeWidth={e.strokeWidth ?? 1} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={e.strokeDashed ? dashPattern(e.strokeWidth ?? 1).join(' ') : undefined} />
+                {g.marks.map((m, i) => <path key={i} d={m} fill={e.stroke ?? e.fill} />)}
+              </svg>
+            )
+          }
           if (e.type === 'path')
             return (
               <svg key={e.id} viewBox="0 0 100 100" preserveAspectRatio="none" style={box}>

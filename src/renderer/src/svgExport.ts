@@ -6,6 +6,7 @@ import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
 import { baselineY, lineOffsetX } from '@/pdfMath'
 import { diagnoseFont, loadFontBytes } from '@/pdfFonts'
+import { openGeometry } from '@/openPath'
 import { hasShadow } from '@/shadowStyle'
 import { scalePath } from '@/strokeStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
@@ -69,6 +70,11 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       parts.push(`<rect width="${n(el.width)}" height="${n(el.height)}"${r > 0 ? ` rx="${n(r)}" ry="${n(r)}"` : ''} fill="${fill}"${stroke}/>`)
     } else if (el.type === 'ellipse') {
       parts.push(`<ellipse cx="${n(el.width / 2)}" cy="${n(el.height / 2)}" rx="${n(el.width / 2)}" ry="${n(el.height / 2)}" fill="${fill}"${stroke}/>`)
+    } else if (el.type === 'path' && el.path && el.open) {
+      // tracé ouvert : contour seul, bouts arrondis ; pointes et ronds des extrémités pleins de la couleur du trait
+      const g = openGeometry(el)
+      parts.push(`<path d="${escXml(g.stroke)}" fill="none" stroke-linecap="round" stroke-linejoin="round"${stroke}/>`)
+      for (const m of g.marks) parts.push(`<path d="${escXml(m)}" fill="${escXml(el.stroke ?? el.fill)}"/>`)
     } else if (el.type === 'path' && el.path) {
       // coordonnées étirées plutôt que `transform: scale` : le contour garde la même épaisseur partout (comme à l'écran)
       const d = scalePath(el.path, el.width / 100, el.height / 100)

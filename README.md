@@ -12,6 +12,7 @@
 - Catalogue de polices en ligne (~1 900 polices libres, installées sur demande, embarquées dans les documents)
 - **Ma bibliothèque** (onglet Photos) : choisissez un dossier d'images de votre ordinateur, Trame les affiche en vignettes (sous-dossiers compris) sans rien copier ni déplacer ; recherche par nom, **étiquettes** à vous (« logo », « équipe »…) avec filtre, un clic insère l'image
 - Recherche de photos libres de droits (Wikimedia Commons, avec Openverse en secours, et au choix la **NASA** (espace, sciences) ou le **Cleveland Museum of Art** (œuvres d'art sous CC0) ; en ligne, sur demande ; la photo est copiée dans le document, crédit conservé)
+- **Dessin** (onglet Éléments → « Dessiner ») : **crayon** à main libre (lissé en courbes), **surligneur** translucide, **ligne** et **flèche** (Maj = angle de 15°, pointe ou rond à chaque bout) ; chaque tracé est un élément que l'on déplace, redimensionne, recolore, met en tirets ou duplique, et qui part dans tous les exports.
 - Import PowerPoint (.pptx) : textes, formes, images, groupes, thème et masque
 - Rechercher et remplacer dans tous les textes (⌘F) : casse, mot entier, accents, un seul ⌘Z pour tout annuler
 - **Texte alternatif des images** (saisi ou proposé par IA), repris dans les exports PowerPoint et SVG ; alerte « image sans description » (⚠ sur les pages, case « image décorative », « Décrire toutes » par IA)

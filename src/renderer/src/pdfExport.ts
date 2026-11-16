@@ -4,11 +4,12 @@ import {
   PDFArray, PDFDict, PDFDocument, PDFEmbeddedPage, PDFFont, PDFHexString, PDFImage, PDFName, PDFNumber, PDFOperator, PDFOperatorNames, PDFPage,
   beginText, concatTransformationMatrix, endText, moveText, popGraphicsState, pushGraphicsState, rgb,
   TextRenderingMode, setCharacterSpacing, setDashPattern, setFillingColor, setFontAndSize, setGraphicsState, setLineWidth,
-  appendBezierCurve, clip, closePath, endPath, lineTo, moveTo, setStrokingColor, setTextRenderingMode
+  appendBezierCurve, clip, closePath, endPath, lineTo, moveTo, setStrokingColor, setTextRenderingMode, LineCapStyle, LineJoinStyle, setLineJoin
 } from 'pdf-lib'
 import { createTextNode, loadImage } from '@/exportPages'
 import { addPdfLinks } from '@/pdfLinks'
 import { renderElementImage } from '@/elementImage'
+import { openGeometry } from '@/openPath'
 import {
   PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, svgPathToSegments, tjAdjustment
 } from '@/pdfMath'
@@ -166,6 +167,14 @@ class ExportContext {
         paintShape(roundedRectPath(el.width, el.height, el.cornerRadius))
       } else if (el.type === 'ellipse') {
         paintShape(ellipsePath(el.width, el.height))
+      } else if (el.type === 'path' && el.path && el.open) {
+        // tracé ouvert : le contour seul, aux bouts et aux angles arrondis ; pointes et ronds des extrémités pleins de la couleur du trait
+        const g = openGeometry(el)
+        if (stroke) {
+          p.pushOperators(setLineJoin(LineJoinStyle.Round))
+          p.drawSvgPath(g.stroke, { x: 0, y: 0, ...border, borderLineCap: LineCapStyle.Round })
+          for (const m of g.marks) p.drawSvgPath(m, { x: 0, y: 0, color: rgb(stroke.r, stroke.g, stroke.b), opacity: el.opacity })
+        }
       } else if (el.type === 'path' && el.path) {
         // Le chemin vit dans un viewBox 100×100. On étire ses COORDONNÉES vers la boîte de l'élément (et non le dessin) : un trait
         // dessiné dans un repère étiré aurait une épaisseur différente en largeur et en hauteur.

@@ -17,6 +17,7 @@ import { NumberField } from './NumberField'
 import { FontPicker } from './FontPicker'
 import { ImagePanel } from './ImagePanel'
 import { ClipPanel } from './ClipPanel'
+import { LinePanel } from './LinePanel'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
 import { PageBackground } from './PageBackground'
@@ -191,6 +192,8 @@ export function Properties(): React.JSX.Element {
 
   // Les champs continus (couleur, curseur) ouvrent un point d'historique au focus
   const live = (patch: Parameters<typeof updateElement>[1]): void => updateElement(el.id, patch, false)
+  // un tracé ouvert (trait à main levée, ligne, flèche) n'a ni remplissage ni dégradé : son panneau règle le trait
+  const open = el.type === 'path' && !!el.open
 
   return (
     <aside className="panel">
@@ -201,7 +204,9 @@ export function Properties(): React.JSX.Element {
 
       {el.type === 'image' && (el.video ? <ClipPanel el={el} /> : <ImagePanel el={el} />)}
 
-      {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') && (
+      {open && <LinePanel el={el} />}
+
+      {!open && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') && (
         <div className="seg" role="group" aria-label={t('prop.fillType')}>
           <button
             data-fill="solid"
@@ -223,7 +228,7 @@ export function Properties(): React.JSX.Element {
         </div>
       )}
 
-      {el.gradient && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') ? (
+      {!open && el.gradient && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') ? (
         <>
           <label>
             {t('prop.gradient.type')}
@@ -275,7 +280,7 @@ export function Properties(): React.JSX.Element {
           )}
         </>
       ) : (
-        el.type !== 'image' && (
+        el.type !== 'image' && !open && (
           <>
           <label>
             {t('prop.color')}
@@ -421,8 +426,8 @@ export function Properties(): React.JSX.Element {
         </label>
       )}
 
-      <h3>{t('prop.stroke')}</h3>
-      <div className="stroke-row">
+      {!open && <h3>{t('prop.stroke')}</h3>}
+      {!open && <div className="stroke-row">
         <input
           type="color"
           data-field="stroke"
@@ -452,8 +457,8 @@ export function Properties(): React.JSX.Element {
         >
           ┅
         </button>
-      </div>
-      <KitSwatches current={el.stroke} onPick={(c) => updateElement(el.id, { stroke: c, ...((el.strokeWidth ?? 0) > 0 ? {} : { strokeWidth: 2 }) })} />
+      </div>}
+      {!open && <KitSwatches current={el.stroke} onPick={(c) => updateElement(el.id, { stroke: c, ...((el.strokeWidth ?? 0) > 0 ? {} : { strokeWidth: 2 }) })} />}
 
       <h3>{t('prop.shadow')}</h3>
       {(() => {

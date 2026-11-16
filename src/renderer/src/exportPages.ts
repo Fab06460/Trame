@@ -1,5 +1,5 @@
 import Konva from 'konva'
-import { pathSceneFunc } from '@/shapes'
+import { openSceneFunc, pathSceneFunc } from '@/shapes'
 import { columnGapOf, columnsOf } from '@/columnStyle'
 import { patchListText } from '@/listText'
 import { konvaGradientProps } from '@/gradient'
@@ -68,6 +68,9 @@ export async function createNode(e: TrameElement, common: Konva.NodeConfig): Pro
         ctx.fillStrokeShape(shape)
       }
     })
+  }
+  if (e.type === 'path' && e.path && e.open) {
+    return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, sceneFunc: openSceneFunc(e.path, e.ends) })
   }
   if (e.type === 'path' && e.path) {
     return new Konva.Shape({ ...common, ...strokeProps(e), ...shadowProps(e), width: e.width, height: e.height, fill: e.fill, trameGradient: e.gradient, trameFillRule: e.fillRule, sceneFunc: pathSceneFunc(e.path) })

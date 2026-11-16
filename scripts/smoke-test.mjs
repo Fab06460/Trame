@@ -369,7 +369,9 @@ try {
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data)
     if (d.id && pending.has(d.id)) pending.get(d.id)(d)
+    if (d.method === 'Debugger.paused') onPaused?.(d.params)
   }
+  let onPaused = null
   // Un échange sans réponse ferait attendre le test indéfiniment sans rien dire : on l'abandonne en nommant la commande.
   const answer = (i, label) =>
     new Promise((resolve, reject) => {
@@ -382,7 +384,22 @@ try {
           pending.set(j, (d) => (clearTimeout(t), r(`la page répond (${JSON.stringify(d.result?.result?.value)}) : réponse perdue`)))
           ws.send(JSON.stringify({ id: j, method: 'Runtime.evaluate', params: { expression: '1+1', returnByValue: true } }))
         })
-        reject(new Error(`CDP sans réponse après 60 s : ${label.slice(0, 300)} — ${probe}`))
+        let where = ''
+        if (probe === 'la page ne répond plus') {
+          // page figée : on l'interrompt pour dire où elle tourne (fonction, ligne et extrait de code autour)
+          const ask = (method, params) => new Promise((r) => { const j = ++id; const t = setTimeout(() => r(null), 5000); pending.set(j, (x) => (clearTimeout(t), r(x))); ws.send(JSON.stringify({ id: j, method, params })) })
+          const paused = new Promise((r) => { onPaused = r; setTimeout(() => r(null), 8000) })
+          await ask('Debugger.enable', {})
+          await ask('Debugger.pause', {})
+          const stop = await paused
+          for (const f of (stop?.callFrames ?? []).slice(0, 5)) {
+            const src = await ask('Debugger.getScriptSource', { scriptId: f.location.scriptId })
+            const line = (src?.result?.scriptSource ?? '').split('\n')[f.location.lineNumber] ?? ''
+            const col = f.location.columnNumber ?? 0
+            where += `\n    ${f.functionName || '(anonyme)'} ${f.url.split('/').pop()}:${f.location.lineNumber + 1}:${col} ⟶ ${line.slice(Math.max(0, col - 120), col + 120)}`
+          }
+        }
+        reject(new Error(`CDP sans réponse après 60 s : ${label.slice(0, 300)} — ${probe}${where}`))
       }, 60000)
       pending.set(i, (d) => {
         clearTimeout(timer)
@@ -867,6 +884,42 @@ try {
   const visiblePx = pngPixel(await exportPng(), 400, 620) // point couvert par le rectangle seul (390–690 × 440–640) : ni l'ellipse (420–660) ni le texte (y 500–580)
   check('calque visible : exporté en PNG (pixel violet)', purple(visiblePx), JSON.stringify(visiblePx))
   check('calque visible : exporté en PDF', (await exportPdfText()).includes(VIOLET_OP))
+  // dessin : crayon puis flèche, posés comme des éléments (un pas d'historique chacun), exportés en PNG et en PDF
+  const drawnCount = () => run(`document.querySelectorAll('.page-item.current .thumb > div > *').length`)
+  const layersBeforeDraw = await drawnCount()
+  await clickSel('.sidebar .tabs button[data-tab="elements"]')
+  await sleep(300)
+  check('dessin : l\'onglet Éléments propose crayon, surligneur, ligne et flèche', (await count('[data-draw-start]')) === 4)
+  await clickSel('[data-draw-start="pencil"]')
+  await sleep(300)
+  check('dessin : la barre de l\'outil apparaît', (await count('[data-draw-bar]')) === 1)
+  await typeInto('[data-field="drawColor"]', '#ff0000')
+  await typeInto('[data-field="drawWidth"]', '24')
+  await sleep(200)
+  await drag([sx(100), sy(900)], [sx(300), sy(1000)], 0, 12)
+  await sleep(300)
+  check('dessin : un trait tracé à la souris devient un élément', (await drawnCount()) === layersBeforeDraw + 1, `${layersBeforeDraw} → ${await drawnCount()}`)
+  const drawnPx = pngPixel(await exportPng(), 200, 950)
+  check('dessin : le trait est dans le PNG exporté (pixel rouge au milieu)', drawnPx[0] > 200 && drawnPx[1] < 60 && drawnPx[2] < 60, JSON.stringify(drawnPx))
+  check('dessin : le trait est dans le PDF (couleur de trait rouge)', (await exportPdfText()).includes('1 0 0 RG'))
+  await clickSel('[data-draw-tool="arrow"]')
+  await sleep(200)
+  check('dessin : la flèche a une pointe à la fin par défaut', (await run(`document.querySelector('[data-field="drawEndEnd"]').value`)) === 'arrow')
+  await drag([sx(600), sy(900)], [sx(900), sy(900)], 0, 8)
+  await sleep(300)
+  check('dessin : la flèche est un second élément', (await drawnCount()) === layersBeforeDraw + 2)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 })
+  await sleep(300)
+  check('dessin : Échap quitte l\'outil', (await count('[data-draw-bar]')) === 0)
+  // deux pas d'historique à défaire : la flèche et le trait
+  for (let k = 0; k < 2; k++) {
+    await run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }))`)
+    await sleep(300)
+  }
+  check('dessin : annuler retire les deux tracés', (await drawnCount()) === layersBeforeDraw, `${await drawnCount()}`)
+  await clickSel('.sidebar .tabs button[data-tab="layers"]')
+  await sleep(300)
   const thumbsBefore = await nThumb()
   await clickSel(`${rowOf('Rectangle')} .layer-flag.eye`)
   await sleep(300)

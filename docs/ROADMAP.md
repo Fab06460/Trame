@@ -37,6 +37,7 @@ Date de l'analyse : 26/10/2026 (Trame 0.1.0). Tableaux et statuts remis à jour 
 | Fonctionnalité | Statut | Analyse | Backlog |
 | --- | --- | --- | --- |
 | Retouche photo | 🟡 Partiel | **Fait** : recadrage (champs et poignées sur le canvas), miroirs, redressement, cadres en forme, filtres, réglages de lumière, flou — tout hors-ligne (canvas). La suppression d'arrière-plan, elle, est **écartée** (IA). | E8, E9 |
+| Outils de dessin | 🟡 Partiel | **Fait** : crayon à main libre, surligneur, ligne et flèche (onglet Éléments → « Dessiner »). **Reste** : la plume (courbes de Bézier à points éditables). | — |
 | Montage vidéo | 🟡 Partiel | **Fait** : export du document en vidéo MP4/WebM (WebCodecs, sans ffmpeg), clips dans les pages (début, fin, vitesse), musique de fond, voix off par page. **Fait aussi** : coupe d'un clip en deux morceaux (« Couper ici »). Assemblage de plusieurs clips à la suite (séquence, coupe franche) fait (l'enregistrement d'écran, V2, est fait). Fondu au noir et fondu enchaîné entre morceaux faits, frise visuelle du clip faite (poignées de début et de fin). **Reste** : déplacer et couper les morceaux sur la frise. Les sous-titres automatiques (reconnaissance vocale = IA) sont écartés. | V1, V2 |
 | Effets graphiques | ✅ Fait | Contour, dégradés (formes et texte), ombre portée et lueur ; en PDF l'ombre est une image sous un élément resté vectoriel. Dégradé de fond de page fait. Dégradé de texte fait. | E1, E2, E3 |
 

@@ -4,6 +4,8 @@ import { useEditor } from '@/store/editor'
 import { BUBBLES } from '@/bubbles'
 import { insertBubble } from '@/bubbleActions'
 import { SHAPES } from '@/shapes'
+import { DRAW_TOOLS } from '@/drawTools'
+import { useDraw } from '@/store/draw'
 import { useWordCloud } from '@/store/wordCloud'
 import { TEMPLATES, previewPage, templateCategory, templateName } from '@/templates'
 import { useT } from '@/i18n'
@@ -225,6 +227,25 @@ export function Sidebar(): React.JSX.Element {
               {SHAPES.map((s) => (
                 <button key={s.id} className="shape" title={t(`shape.${s.id}` as MessageKey)} onClick={() => addElement({ type: 'path', path: s.path })}>
                   <svg viewBox="0 0 100 100"><path d={s.path} fill="currentColor" /></svg>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>{t('draw.menu')}</h3>
+            <div className="chart-kinds">
+              {DRAW_TOOLS.map((id) => (
+                <button
+                  key={id}
+                  data-draw-start={id}
+                  title={t('draw.menu.title')}
+                  onClick={() => {
+                    useEditor.getState().select([])
+                    useDraw.getState().setTool(id)
+                  }}
+                >
+                  {t(`draw.tool.${id}`)}
                 </button>
               ))}
             </div>

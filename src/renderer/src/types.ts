@@ -1,5 +1,12 @@
 import type { PageTransition } from './transition'
 
+/** Extrémité d'une ligne droite : une pointe de flèche ou un rond. */
+export type LineEnd = 'arrow' | 'dot'
+export interface LineEnds {
+  start?: LineEnd
+  end?: LineEnd
+}
+
 export type ElementType = 'rect' | 'ellipse' | 'text' | 'image' | 'path'
 
 /** Ombre portée ou lueur (une lueur est une ombre sans décalage). Flou et décalages en pixels de design ; le décalage reste dans les axes de la page, même si l'élément pivote. */
@@ -159,6 +166,10 @@ export interface TrameElement {
   path?: string
   /** règle de remplissage d'un tracé : `evenodd` (pair-impair : les contours imbriqués percent le fond) ; absent = règle ordinaire (non nul) */
   fillRule?: 'evenodd'
+  /** tracé ouvert (trait à main levée, ligne, flèche) : jamais rempli, seul le contour est peint (`stroke`, `strokeWidth`), avec des bouts et des angles arrondis */
+  open?: true
+  /** ligne droite (`M x y L x y`) : pointe ou rond à chacune de ses extrémités */
+  ends?: LineEnds
   // image
   src?: string
   /** clip vidéo : cet élément image est l'aperçu d'un clip joué en présentation et dans la vidéo exportée ; `id` renvoie à `TrameDocument.clips` */

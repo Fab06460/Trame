@@ -25,6 +25,7 @@ import { sanitizeColumns } from '@/columnStyle'
 import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
+import { sanitizeOpen } from '@/openPath'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
 import { alignDeltas, distributeDeltas, unionBox, boundsOf, type AlignMode } from '@/geometry'
@@ -115,6 +116,7 @@ export function parseDocument(json: string): TrameDocument {
       // indicateurs de calque : seules les valeurs attendues sont retenues (un « locked: "oui" » ne doit rien verrouiller)
       sanitizeTextStyle(e)
       sanitizeStroke(e)
+      sanitizeOpen(e)
       sanitizeGradient(e)
       sanitizeShadow(e)
       sanitizeList(e)

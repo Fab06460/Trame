@@ -1,6 +1,7 @@
 import type Konva from 'konva'
 import { linearGradientLine, radialGradientCircle } from '@/gradient'
-import type { Gradient } from '@/types'
+import { openGeometry } from '@/openPath'
+import type { Gradient, LineEnds } from '@/types'
 
 export interface ShapeDef {
   id: string
@@ -87,6 +88,42 @@ export function pathSceneFunc(d: string) {
     }
     c.restore()
   }
+}
+
+/**
+ * Dessin d'un tracé ouvert (trait à main levée, ligne, flèche) : le contour seul, aux bouts et aux angles arrondis, puis les pointes ou
+ * ronds des extrémités d'une ligne, pleins de la couleur du trait. Comme pour `pathSceneFunc`, l'ombre est celle que Konva a déjà
+ * appliquée au contexte.
+ */
+export function openSceneFunc(d: string, ends: LineEnds | undefined) {
+  return (ctx: Konva.Context, shape: Konva.Shape): void => {
+    const w = shape.width()
+    const h = shape.height()
+    const g = openGeometry({ path: d, open: true, ends, width: w, height: h, strokeWidth: shape.strokeWidth() })
+    const c = ctx._context
+    c.save()
+    if (shape.strokeEnabled() && shape.strokeWidth() > 0) {
+      c.lineWidth = shape.strokeWidth()
+      c.strokeStyle = shape.stroke() as string
+      c.lineCap = 'round'
+      c.lineJoin = 'round'
+      c.setLineDash((shape.dash() as number[] | undefined) ?? [])
+      c.stroke(new Path2D(g.stroke))
+      c.setLineDash([])
+      c.fillStyle = shape.stroke() as string
+      for (const m of g.marks) c.fill(new Path2D(m))
+    }
+    c.restore()
+  }
+}
+
+/** Zone de clic d'un tracé ouvert : sa boîte élargie de quelques pixels, pour qu'un trait fin ou une ligne droite (boîte plate) reste facile à saisir. */
+export const openHitFunc = (ctx: Konva.Context, shape: Konva.Shape): void => {
+  const m = Math.max(8, shape.strokeWidth() / 2 + 4)
+  ctx.beginPath()
+  ctx.rect(-m, -m, shape.width() + 2 * m, shape.height() + 2 * m)
+  ctx.closePath()
+  ctx.fillStrokeShape(shape)
 }
 
 /** Zone de clic = la boîte (le dessin natif ne passe pas par le canvas de détection de Konva). */

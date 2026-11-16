@@ -775,3 +775,9 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 .clip-seq { display: flex; gap: 2px; height: 22px; margin: 4px 0; }
 .clip-seq button { min-width: 0; padding: 0; font-size: 11px; border-radius: 4px; overflow: hidden; }
 .clip-seq button[aria-pressed="true"] { outline: 2px solid var(--accent, #4f46e5); }
+
+/* outil de dessin : barre au-dessus de la page */
+.draw-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 24px); padding: 6px 10px; border-radius: 10px; background: var(--panel, #fff); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); font-size: 13px; }
+.draw-bar label { display: flex; align-items: center; gap: 6px; }
+.draw-bar .draw-width input { width: 110px; }
+.draw-bar output { min-width: 40px; text-align: right; }

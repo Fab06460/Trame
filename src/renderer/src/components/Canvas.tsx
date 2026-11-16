@@ -4,7 +4,7 @@ import { Rulers, ViewOptions } from './Rulers'
 import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
 import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
-import { pathSceneFunc, boxHitFunc } from '@/shapes'
+import { boxHitFunc, openHitFunc, openSceneFunc, pathSceneFunc } from '@/shapes'
 import { useView } from '@/store/view'
 import { dropImages } from '@/imageDrop'
 import { useColorVision } from '@/store/colorVision'
@@ -26,7 +26,12 @@ import { CommentPins } from './CommentPins'
 import { useReview } from '@/store/review'
 import { hitStack, throughTarget } from '@/selection'
 import { useCropMode } from '@/store/crop'
+import { t } from '@/i18n'
+import { useDraw } from '@/store/draw'
+import { isLineTool, type DrawTool } from '@/drawTools'
+import { lineFromPoints, snapAngle, strokeFromPoints, type Pt } from '@/freehand'
 import { CropHandles } from './CropHandles'
+import { DrawBar } from './DrawBar'
 import { mmToPx, printSetupOf, safeBox } from '@/printSetup'
 import type { TrameElement } from '@/types'
 
@@ -99,6 +104,10 @@ export function Canvas(): React.JSX.Element {
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [editing, setEditing] = useState<string | null>(null)
   const cropId = useCropMode((c) => c.id)
+  // dessin : tracé en cours (points de la page) ; l'outil et ses réglages viennent du store
+  const tool = useDraw((d) => d.tool)
+  const drawing = useRef<{ tool: DrawTool; points: Pt[] } | null>(null)
+  const [preview, setPreview] = useState<Pt[] | null>(null)
   const [lasso, setLasso] = useState<Box | null>(null)
   const lassoStart = useRef<{ x: number; y: number; additive: boolean } | null>(null)
   const dragStart = useRef<Record<string, { x: number; y: number }>>({})
@@ -356,6 +365,14 @@ export function Canvas(): React.JSX.Element {
       e.evt.preventDefault()
       return startPan(e.evt.clientX, e.evt.clientY)
     }
+    if (tool) {
+      // un outil de dessin est choisi : le clic commence un tracé, quel que soit l'élément sous le pointeur
+      if (e.evt instanceof MouseEvent && e.evt.button !== 0) return
+      const p = toDesign()
+      drawing.current = { tool, points: [p] }
+      setPreview([p])
+      return
+    }
     if (useReview.getState().adding) {
       // mode « ajouter un commentaire » : le clic pose l'épingle (sur la page ou à côté, ramenée dans la page)
       const p = toDesign()
@@ -368,14 +385,62 @@ export function Canvas(): React.JSX.Element {
     lassoStart.current = { ...toDesign(), additive }
   }
 
-  const moveLasso = (): void => {
+  const moveLasso = (e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>): void => {
+    const d = drawing.current
+    if (d) {
+      const p = toDesign()
+      if (isLineTool(d.tool)) {
+        // une ligne : seulement ses deux bouts ; Maj ramène l'angle à un multiple de 15°
+        const a = d.points[0]
+        d.points = [a, e?.evt.shiftKey ? snapAngle(a, p) : p]
+      } else {
+        const last = d.points[d.points.length - 1]
+        if (Math.hypot(p.x - last.x, p.y - last.y) < 0.6 / scale) return
+        d.points.push(p)
+      }
+      setPreview([...d.points])
+      return
+    }
     const st = lassoStart.current
     if (!st) return
     const p = toDesign()
     setLasso({ x: Math.min(st.x, p.x), y: Math.min(st.y, p.y), width: Math.abs(p.x - st.x), height: Math.abs(p.y - st.y) })
   }
 
+  /** Pose le tracé terminé comme un élément (un seul pas d'historique) ; un clic sans mouvement pose un point avec le crayon, rien avec une ligne. */
+  const commitStroke = (d: { tool: DrawTool; points: Pt[] }): void => {
+    const cfg = useDraw.getState().settings[d.tool]
+    const first = d.points[0]
+    const last = d.points[d.points.length - 1]
+    const drawn = isLineTool(d.tool) ? (Math.hypot(last.x - first.x, last.y - first.y) >= 2 ? lineFromPoints(first, last) : null) : strokeFromPoints(d.points, Math.max(0.6, 1.5 / scale))
+    if (!drawn) return
+    useEditor.getState().addElement({
+      type: 'path',
+      open: true,
+      path: drawn.path,
+      x: drawn.x,
+      y: drawn.y,
+      width: drawn.width,
+      height: drawn.height,
+      fill: cfg.color,
+      stroke: cfg.color,
+      strokeWidth: cfg.width,
+      opacity: cfg.opacity,
+      name: t(`draw.name.${d.tool}`),
+      ...(isLineTool(d.tool) && cfg.ends && (cfg.ends.start || cfg.ends.end) ? { ends: cfg.ends } : {})
+    })
+    // le tracé suivant part d'une page sans sélection : les poignées d'un trait posé ne gênent pas
+    useEditor.getState().select([])
+  }
+
   const endLasso = (): void => {
+    const d = drawing.current
+    if (d) {
+      drawing.current = null
+      setPreview(null)
+      commitStroke(d)
+      return
+    }
     const st = lassoStart.current
     lassoStart.current = null
     if (!st || !lasso) return setLasso(null)
@@ -403,7 +468,7 @@ export function Canvas(): React.JSX.Element {
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
   return (
-    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : adding ? 'crosshair' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
+    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : adding || tool ? 'crosshair' : undefined, touchAction: tool ? 'none' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
       <Stage
         ref={stageRef}
         width={size.w}
@@ -412,6 +477,9 @@ export function Canvas(): React.JSX.Element {
         onMouseMove={moveLasso}
         onMouseUp={endLasso}
         onMouseLeave={endLasso}
+        onTouchStart={tool ? (e) => (e.evt.preventDefault(), startLasso(e as unknown as Konva.KonvaEventObject<MouseEvent>)) : undefined}
+        onTouchMove={tool ? (e) => (e.evt.preventDefault(), moveLasso(e)) : undefined}
+        onTouchEnd={tool ? endLasso : undefined}
       >
         <Layer>
           <Group x={offX} y={offY} scaleX={scale} scaleY={scale}>
@@ -461,6 +529,8 @@ export function Canvas(): React.JSX.Element {
                     }}
                   />
                 )
+              if (el.type === 'path' && el.path && el.open)
+                return <Shape key={el.id} {...p} {...strokeProps(el)} {...shadowProps(el)} width={el.width} height={el.height} sceneFunc={openSceneFunc(el.path, el.ends)} hitFunc={openHitFunc} />
               if (el.type === 'path' && el.path)
                 return (
                   <Shape
@@ -536,6 +606,19 @@ export function Canvas(): React.JSX.Element {
               )
             })}
 
+          {tool && <Rect x={0} y={0} width={size.w} height={size.h} fill="transparent" name="draw-catch" />}
+          {preview && tool && (
+            <Line
+              points={preview.flatMap((p) => [offX + p.x * scale, offY + p.y * scale])}
+              stroke={useDraw.getState().settings[tool].color}
+              strokeWidth={useDraw.getState().settings[tool].width * scale}
+              opacity={useDraw.getState().settings[tool].opacity}
+              lineCap="round"
+              lineJoin="round"
+              tension={isLineTool(tool) ? 0 : 0.35}
+              listening={false}
+            />
+          )}
           {lasso && (
             <Rect
               x={offX + lasso.x * scale}
@@ -570,7 +653,7 @@ export function Canvas(): React.JSX.Element {
             anchorSize={10}
             anchorCornerRadius={5}
             boundBoxFunc={(o, n) => {
-              if (n.width < 10 || n.height < 10) return o
+              if ((n.width < 10 && n.width < o.width) || (n.height < 10 && n.height < o.height)) return o
               // aimantation du redimensionnement : seuls les côtés (un bord à la fois), sans rotation ; les coins gardent les proportions
               const edges = SIDE_EDGES[trRef.current?.getActiveAnchor() ?? '']
               if (!settings.snap || !edges || n.rotation !== 0) {
@@ -586,6 +669,7 @@ export function Canvas(): React.JSX.Element {
         </Layer>
       </Stage>
 
+      <DrawBar />
       <CommentPins offX={offX} offY={offY} scale={scale} />
       <Rulers />
       <ViewOptions />
