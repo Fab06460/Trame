@@ -31,6 +31,8 @@ export function createTextNode(e: TrameElement, extra: Konva.TextConfig = {}): K
     trameColumnGap: columnGapOf(e)
   })
   patchListText(node)
+  // dégradé de texte : étalé sur la zone du texte (largeur de l'élément, hauteur mesurée), comme pour une forme
+  if (e.gradient) node.setAttrs(konvaGradientProps(e.gradient, e.width, node.height()))
   return node
 }
 

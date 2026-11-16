@@ -261,20 +261,18 @@ class ExportContext {
     return true
   }
 
-  private paintGradient(p: PDFPage, el: TrameElement, pathD: string): boolean {
-    const g = el.gradient
-    const segments = g ? svgPathToSegments(pathD) : null
-    if (!g || !segments) return false
+  /** Déclare le dégradé `g` d'une boîte w × h (repère de l'élément) dans les ressources de la page et rend le nom de son ombrage. */
+  private shadingFor(p: PDFPage, g: NonNullable<TrameElement['gradient']>, w: number, h: number): PDFName {
     const c0 = parseColor(g.from)
     const c1 = parseColor(g.to)
     const fn = this.pdf.context.obj({ FunctionType: 2, Domain: [0, 1], C0: [c0.r, c0.g, c0.b], C1: [c1.r, c1.g, c1.b], N: 1 })
     // coordonnées dans le repère local de l'élément (y vers le HAUT) : on inverse y par rapport au repère de l'élément (y vers le bas)
     let shading: PDFDict
     if (g.type === 'radial') {
-      const { cx, cy, r } = radialGradientCircle(el.width, el.height)
+      const { cx, cy, r } = radialGradientCircle(w, h)
       shading = this.pdf.context.obj({ ShadingType: 3, ColorSpace: 'DeviceRGB', Coords: [cx, -cy, 0, cx, -cy, r], Function: fn, Extend: [true, true] }) as PDFDict
     } else {
-      const l = linearGradientLine(el.width, el.height, g.angle)
+      const l = linearGradientLine(w, h, g.angle)
       shading = this.pdf.context.obj({ ShadingType: 2, ColorSpace: 'DeviceRGB', Coords: [l.x0, -l.y0, l.x1, -l.y1], Function: fn, Extend: [true, true] }) as PDFDict
     }
     const resources = p.node.Resources() ?? (p.node.set(PDFName.of('Resources'), this.pdf.context.obj({})), p.node.Resources()!)
@@ -285,7 +283,14 @@ class ExportContext {
     }
     const name = PDFName.of(`Sh${dict.keys().length + 1}`)
     dict.set(name, this.pdf.context.register(shading))
+    return name
+  }
 
+  private paintGradient(p: PDFPage, el: TrameElement, pathD: string): boolean {
+    const g = el.gradient
+    const segments = g ? svgPathToSegments(pathD) : null
+    if (!g || !segments) return false
+    const name = this.shadingFor(p, g, el.width, el.height)
     const flip = concatTransformationMatrix(1, 0, 0, -1, 0, 0)
     const ops = [pushGraphicsState()]
     if (el.opacity < 1) ops.push(setGraphicsState(this.gstate(p, el.opacity)))
@@ -369,25 +374,51 @@ class ExportContext {
     // dans les ressources de la page et on la sélectionne explicitement
     const fontName = p.node.newFontDictionary(pdfFont.name, pdfFont.ref)
     if (el.opacity < 1) p.pushOperators(setGraphicsState(this.gstate(p, el.opacity)))
-    p.pushOperators(beginText(), setFontAndSize(fontName, fontSize), setFillingColor(rgb(color.r, color.g, color.b)))
-    if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
-    // Contour des lettres : remplissage puis trait centré sur le bord des glyphes (même ordre que Konva)
+    // dégradé de texte : les lettres servent de découpe (mode de rendu « clip »), puis l'ombrage est peint dans cette découpe
+    const gradient = el.gradient ? this.shadingFor(p, el.gradient, el.width, node.height()) : null
     const outline = hasStroke(el) ? parseColor(el.stroke) : null
-    if (outline) {
+    const showLines = (): void => {
+      let prev = { x: 0, y: 0 } // Td est relatif à la ligne précédente
+      for (const line of [...lines, ...markerLines]) {
+        const pos = { x: line.x, y: -line.baseline }
+        p.pushOperators(moveText(pos.x - prev.x, pos.y - prev.y), PDFOperator.of(PDFOperatorNames.ShowTextAdjusted, [line.operand]))
+        prev = pos
+      }
+    }
+    const strokeSetup = (): void => {
+      if (!outline) return
       p.pushOperators(
         setStrokingColor(rgb(outline.r, outline.g, outline.b)),
         setLineWidth(el.strokeWidth as number),
-        setTextRenderingMode(TextRenderingMode.FillAndOutline),
         ...(el.strokeDashed ? [setDashPattern(dashPattern(el.strokeWidth as number), 0)] : [])
       )
     }
-    let prev = { x: 0, y: 0 } // Td est relatif à la ligne précédente
-    for (const line of [...lines, ...markerLines]) {
-      const pos = { x: line.x, y: -line.baseline }
-      p.pushOperators(moveText(pos.x - prev.x, pos.y - prev.y), PDFOperator.of(PDFOperatorNames.ShowTextAdjusted, [line.operand]))
-      prev = pos
+    // pdf-lib n'émet l'opérateur Tf que dans drawText : comme on écrit les opérateurs nous-mêmes, on déclare la police
+    // dans les ressources de la page et on la sélectionne explicitement
+    if (gradient) {
+      p.pushOperators(pushGraphicsState(), beginText(), setFontAndSize(fontName, fontSize), setTextRenderingMode(TextRenderingMode.Clip))
+      if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
+      showLines()
+      p.pushOperators(endText(), PDFOperator.of(PDFOperatorNames.ShadingFill, [gradient]), popGraphicsState())
+      if (outline) {
+        // le contour par-dessus le dégradé (même ordre que Konva : remplissage puis trait)
+        p.pushOperators(pushGraphicsState(), beginText(), setFontAndSize(fontName, fontSize), setTextRenderingMode(TextRenderingMode.Outline))
+        strokeSetup()
+        if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
+        showLines()
+        p.pushOperators(endText(), popGraphicsState())
+      }
+    } else {
+      p.pushOperators(beginText(), setFontAndSize(fontName, fontSize), setFillingColor(rgb(color.r, color.g, color.b)))
+      if (spacing !== 0) p.pushOperators(setCharacterSpacing(spacing))
+      // Contour des lettres : remplissage puis trait centré sur le bord des glyphes (même ordre que Konva)
+      if (outline) {
+        strokeSetup()
+        p.pushOperators(setTextRenderingMode(TextRenderingMode.FillAndOutline))
+      }
+      showLines()
+      p.pushOperators(endText())
     }
-    p.pushOperators(endText())
 
     // Soulignement et barré : mêmes position, épaisseur et longueur arrondie que Konva
     if (el.underline || el.strike) {
@@ -395,7 +426,13 @@ class ExportContext {
       for (const line of lines) {
         for (const offset of [el.underline ? g.underlineOffset : null, el.strike ? g.strikeOffset : null]) {
           if (offset === null) continue
-          p.drawRectangle({ x: line.x, y: -(line.baseline + offset) - g.thickness / 2, width: Math.round(line.width), height: g.thickness, color: rgb(color.r, color.g, color.b), borderWidth: 0 })
+          const x = line.x
+          const y = -(line.baseline + offset) - g.thickness / 2
+          const w = Math.round(line.width)
+          if (gradient) {
+            // le trait prend le même dégradé que les lettres : rectangle en découpe, puis ombrage
+            p.pushOperators(pushGraphicsState(), moveTo(x, y), lineTo(x + w, y), lineTo(x + w, y + g.thickness), lineTo(x, y + g.thickness), closePath(), clip(), endPath(), PDFOperator.of(PDFOperatorNames.ShadingFill, [gradient]), popGraphicsState())
+          } else p.drawRectangle({ x, y, width: w, height: g.thickness, color: rgb(color.r, color.g, color.b), borderWidth: 0 })
         }
       }
     }

@@ -119,15 +119,16 @@ export function contrastIssues(doc: Pick<TrameDocument, 'pages'>): A11yIssue[] {
   doc.pages.forEach((page, pageIndex) => {
     for (const e of page.elements) {
       if (!readable(e)) continue
-      const fg = parseHex(e.fill)
-      if (!fg) continue
+      // un texte en dégradé : chacune de ses deux couleurs doit se lire sur le fond
+      const fgs = (e.gradient ? [parseHex(e.gradient.from), parseHex(e.gradient.to)] : [parseHex(e.fill)]).filter((c): c is Rgb => c !== null)
+      if (!fgs.length) continue
       const back = backdropOf(page, e)
       if (!('colors' in back)) continue
       const required = requiredContrast(e)
       // opacité du texte : on le pose sur chaque fond possible
-      const ratios = back.colors.map((bg) => ({ bg, ratio: contrastRatio(over(fg, e.opacity, bg), bg) }))
+      const ratios = fgs.flatMap((fg) => back.colors.map((bg) => ({ fg, bg, ratio: contrastRatio(over(fg, e.opacity, bg), bg) })))
       const worst = ratios.reduce((a, b) => (b.ratio < a.ratio ? b : a))
-      if (worst.ratio + 1e-9 < required) out.push({ kind: 'contrast', pageId: page.id, pageIndex, elementId: e.id, ratio: Math.round(worst.ratio * 100) / 100, required, fg: toHex(fg), bg: toHex(worst.bg) })
+      if (worst.ratio + 1e-9 < required) out.push({ kind: 'contrast', pageId: page.id, pageIndex, elementId: e.id, ratio: Math.round(worst.ratio * 100) / 100, required, fg: toHex(worst.fg), bg: toHex(worst.bg) })
     }
   })
   return out
@@ -211,5 +212,10 @@ export function contrastFix(doc: Pick<TrameDocument, 'pages'>, issue: Extract<A1
   if (!page || !e || !fg) return null
   const back = backdropOf(page, e)
   if (!('colors' in back)) return null
-  return { elementId: e.id, patch: { fill: accessibleColor(fg, back.colors, requiredContrast(e)), ...(e.opacity < 1 ? { opacity: 1 } : {}) } }
+  const fix = (c: Rgb): string => accessibleColor(c, back.colors, requiredContrast(e))
+  const from = e.gradient ? parseHex(e.gradient.from) : null
+  const to = e.gradient ? parseHex(e.gradient.to) : null
+  // un texte en dégradé : les deux couleurs sont corrigées (la première est aussi la couleur de repli `fill`)
+  const gradient = e.gradient && from && to ? { gradient: { ...e.gradient, from: fix(from), to: fix(to) }, fill: fix(from) } : { fill: fix(fg) }
+  return { elementId: e.id, patch: { ...gradient, ...(e.opacity < 1 ? { opacity: 1 } : {}) } }
 }

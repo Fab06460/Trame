@@ -111,6 +111,8 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
       } else if (el.type === 'text') {
         const text = displayText(el)
         if (!text.trim()) continue
+        // PowerPoint ne reçoit pas de dégradé de texte d'ici : le texte devient une image fidèle (non modifiable)
+        if (el.gradient) { await asImage(el, 'gradient'); continue }
         // la hauteur d'un texte est celle que Konva mesure (la hauteur enregistrée n'est qu'indicative)
         // pptxgenjs ne sait pas écrire de colonnes : le texte est exporté sur une seule colonne, de la largeur entière
         const flat = { ...el, columns: undefined, columnGap: undefined }

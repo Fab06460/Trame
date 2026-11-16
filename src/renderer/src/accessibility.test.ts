@@ -88,6 +88,17 @@ describe('contraste', () => {
     const g = el('rect', { width: 400, height: 400, fill: '#000', gradient: { type: 'linear', from: '#000000', to: '#ffffff', angle: 90 } })
     expect(contrastIssues(doc([g, text({ fill: '#000000', x: 10, y: 10 })]))).toHaveLength(1)
   })
+  it('texte en dégradé : les deux couleurs doivent se lire, la correction touche les deux', () => {
+    const grad = { type: 'linear' as const, from: '#000000', to: '#f5f5f5', angle: 90 }
+    const t = text({ fill: '#000000', gradient: grad, x: 10, y: 10 })
+    const d = doc([t])
+    const issues = contrastIssues(d)
+    expect(issues).toHaveLength(1) // le blanc cassé ne se lit pas sur le fond blanc
+    const fix = contrastFix(d, issues[0] as never)!
+    expect(fix.patch.gradient).toBeDefined()
+    expect(contrastIssues(doc([{ ...t, ...fix.patch } as never]))).toEqual([])
+    expect(contrastIssues(doc([text({ fill: '#000000', gradient: { ...grad, to: '#222222' }, x: 10, y: 10 })]))).toEqual([])
+  })
   it('fond inconnu (image), texte masqué, vide ou transparent : rien d\'affirmé', () => {
     const photo = el('image', { width: 400, height: 400, src: 'data:image/png;base64,AA' })
     expect(contrastIssues(doc([photo, text({ fill: '#cccccc', x: 10, y: 10 })]))).toEqual([])

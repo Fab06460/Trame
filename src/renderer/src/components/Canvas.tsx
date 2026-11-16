@@ -500,7 +500,10 @@ export function Canvas(): React.JSX.Element {
                   trameColumns={columnsOf(el)}
                   trameColumnGap={columnGapOf(el)}
                   ref={(n: Konva.Text | null) => {
-                    if (n) patchListText(n)
+                    if (!n) return
+                    patchListText(n)
+                    // dégradé de texte : étalé sur la zone du texte (largeur de l'élément, hauteur mesurée)
+                    n.setAttrs(el.gradient ? konvaGradientProps(el.gradient, el.width, n.height()) : { fillPriority: 'color' })
                   }}
                   onDblClick={() => !contentLocked(el, enforced) && startTextEdit(el.id)}
                   onDblTap={() => !contentLocked(el, enforced) && startTextEdit(el.id)}

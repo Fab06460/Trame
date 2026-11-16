@@ -201,7 +201,7 @@ export function Properties(): React.JSX.Element {
 
       {el.type === 'image' && (el.video ? <ClipPanel el={el} /> : <ImagePanel el={el} />)}
 
-      {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') && (
+      {(el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') && (
         <div className="seg" role="group" aria-label={t('prop.fillType')}>
           <button
             data-fill="solid"
@@ -223,7 +223,7 @@ export function Properties(): React.JSX.Element {
         </div>
       )}
 
-      {el.gradient && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path') ? (
+      {el.gradient && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') ? (
         <>
           <label>
             {t('prop.gradient.type')}

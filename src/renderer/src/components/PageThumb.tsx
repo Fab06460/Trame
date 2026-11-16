@@ -125,7 +125,8 @@ export function PageThumb({
                 style={{
                   ...box,
                   height: 'auto',
-                  color: e.fill,
+                  color: e.gradient ? 'transparent' : e.fill,
+                  ...(e.gradient ? { backgroundImage: cssGradient(e.gradient), WebkitBackgroundClip: 'text', backgroundClip: 'text' } : {}),
                   fontSize: e.fontSize,
                   fontFamily: e.fontFamily,
                   fontWeight: e.fontStyle?.includes('bold') ? 700 : 400,

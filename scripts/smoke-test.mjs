@@ -1002,6 +1002,22 @@ try {
   await sleep(300)
   check('annuler rétablit le dégradé', (await fillMode()) === 'true')
 
+  // dégradé de texte : même panneau que les formes ; PDF : les lettres servent de découpe (Tr 7) puis l'ombrage est peint
+  await reloadApp()
+  await sleep(500)
+  await click('header.toolbar button', 'Texte')
+  await sleep(500)
+  check('texte : le choix Uni / Dégradé est proposé', (await count('.panel [data-fill="gradient"]')) === 1 && (await fillMode()) === 'false')
+  await clickSel('.panel [data-fill="gradient"]')
+  await sleep(400)
+  check('texte : « Dégradé » active les réglages (angle 135°)', (await fillMode()) === 'true' && (await field('gradAngle')) === 135)
+  const textGradPdf = await exportPdfText()
+  check('texte : PDF en lettres vectorielles découpées (7 Tr) et dégradé natif (ShadingType 2, sh)', /\b7 Tr\b/.test(textGradPdf) && /\/ShadingType 2/.test(textGradPdf) && /\/Sh1 sh/.test(textGradPdf), '7Tr:' + /\b7 Tr\b/.test(textGradPdf) + ' sh:' + /\/Sh1 sh/.test(textGradPdf))
+  check('texte : l\'aperçu de la page porte le dégradé', /linear-gradient/.test(await run(`document.querySelector('.page-item.current .thumb div div')?.style.backgroundImage ?? ''`)))
+  await clickSel('.panel [data-fill="solid"]')
+  await sleep(350)
+  check('texte : retour à « Uni » : plus de dégradé dans le PDF', !/\/ShadingType/.test(await exportPdfText()))
+
   // ombre et lueur : panneau → aperçu → PDF (ombre = image sous un élément resté vectoriel)
   await reloadApp()
   await sleep(500)

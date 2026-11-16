@@ -82,7 +82,13 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       parts.push(`<image width="${n(el.width)}" height="${n(el.height)}" preserveAspectRatio="none" href="${escXml(href)}"${el.alt ? `><title>${escXml(el.alt)}</title></image>` : '/>'}`)
       if (stroke) parts.push(`<rect width="${n(el.width)}" height="${n(el.height)}" fill="none"${stroke}/>`)
     } else if (el.type === 'text') {
-      parts.push(textSvg(el))
+      let textFill: string | undefined
+      if (el.gradient) {
+        const gid = uid('g')
+        defs.push(gradientDef(gid, el.gradient, el.width, createTextNode(el).height()))
+        textFill = `url(#${gid})`
+      }
+      parts.push(textSvg(el, textFill))
     }
     if (parts.length === 0) continue
 
@@ -110,7 +116,7 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
 }
 
 /** Texte d'un élément : une ligne SVG par ligne de l'éditeur (retours à la ligne de Konva), marqueurs de liste compris. */
-function textSvg(el: TrameElement): string {
+function textSvg(el: TrameElement, paint?: string): string {
   if (!displayText(el).trim()) return ''
   const node = createTextNode(el)
   const metrics = node.measureSize('M')
@@ -121,7 +127,7 @@ function textSvg(el: TrameElement): string {
   const indent = el.list ? listIndent(el.fontSize) : 0
   const spacing = letterSpacingOf(el)
   // avec un interlettrage, l'éditeur dessine lettre par lettre : ni crénage ni ligatures (le SVG fait de même)
-  const attrs = `${fontAttrs(el)} fill="${escXml(el.fill)}"${spacing !== 0 ? ` letter-spacing="${n(spacing)}" style="font-kerning:none;font-variant-ligatures:none"` : ''}${strokeAttrs(el)} xml:space="preserve"`
+  const attrs = `${fontAttrs(el)} fill="${paint ?? escXml(el.fill)}"${spacing !== 0 ? ` letter-spacing="${n(spacing)}" style="font-kerning:none;font-variant-ligatures:none"` : ''}${strokeAttrs(el)} xml:space="preserve"`
 
   const out: string[] = []
   const cols = columnLayout(el, node.textArr.length)
@@ -142,7 +148,7 @@ function textSvg(el: TrameElement): string {
       if (!l.text) continue
       for (const offset of [el.underline ? g.underlineOffset : null, el.strike ? g.strikeOffset : null]) {
         if (offset === null) continue
-        out.push(`<rect x="${n(l.x)}" y="${n(l.y + offset - g.thickness / 2)}" width="${n(Math.round(l.width))}" height="${n(g.thickness)}" fill="${escXml(el.fill)}"/>`)
+        out.push(`<rect x="${n(l.x)}" y="${n(l.y + offset - g.thickness / 2)}" width="${n(Math.round(l.width))}" height="${n(g.thickness)}" fill="${paint ?? escXml(el.fill)}"/>`)
       }
     }
   }
