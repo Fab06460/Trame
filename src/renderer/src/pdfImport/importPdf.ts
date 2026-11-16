@@ -4,6 +4,9 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { groupLines, groupParagraphs, lineHeightOf, matchFont, type Paragraph, type PdfTextItem } from '@/pdfImport/layout'
 import { MAX_SOURCE_CHARS } from '@/pdfSources'
+import { release } from '@/ocr/engine'
+import type { OcrLanguage } from '@/ocr/languages'
+import { readScannedPage, type ReadBlock } from '@/ocr/scanPage'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -25,6 +28,16 @@ export interface ImportOptions {
   /** PDF d'origine : en mode « page en image », il est conservé dans le document pour que l'export redonne les pages en vectoriel */
   source?: Uint8Array
   onProgress?: (done: number, total: number) => void
+  /** reconnaissance du texte des pages sans texte (pages scannées) : la langue des documents ; absent = ces pages restent des images */
+  ocr?: { language: OcrLanguage }
+  /** arrête l'import (y compris une reconnaissance en cours) : `importPdf` rejette alors avec `ImportCancelled` */
+  signal?: AbortSignal
+}
+
+export class ImportCancelled extends Error {
+  constructor() {
+    super('cancelled')
+  }
 }
 
 export interface ImportReport {
@@ -37,6 +50,9 @@ export interface ImportReport {
   keptAsImage: number
   /** le PDF d'origine est trop volumineux pour être conservé : l'export utilisera l'image de fond */
   sourceDropped: boolean
+  /** pages scannées dont le texte a été reconnu, et paragraphes devenus modifiables */
+  ocrPages: number
+  ocrBlocks: number
 }
 
 const toBase64 = (bytes: Uint8Array): Promise<string> =>
@@ -46,6 +62,17 @@ const toBase64 = (bytes: Uint8Array): Promise<string> =>
     fr.onerror = () => reject(fr.error)
     fr.readAsDataURL(new Blob([bytes as BlobPart]))
   })
+
+/** Le PDF semble-t-il scanné ? Aucun texte sur ses trois premières pages : ce ne sont que des images. */
+export async function looksScanned(pdf: PDFDocumentProxy): Promise<boolean> {
+  for (let n = 1; n <= Math.min(3, pdf.numPages); n++) {
+    const page = await pdf.getPage(n)
+    const content = await page.getTextContent()
+    page.cleanup()
+    if (content.items.some((i) => 'str' in i && i.str.trim())) return false
+  }
+  return true
+}
 
 export async function openPdf(bytes: Uint8Array): Promise<PDFDocumentProxy> {
   return pdfjs.getDocument({ data: bytes.slice(), useSystemFonts: true, fontExtraProperties: true }).promise
@@ -173,6 +200,36 @@ function toElement(p: Paragraph, color: string, measure: CanvasRenderingContext2
   return { el, font, pdfFont: first.font.replace(/^[A-Z]{6}\+/, '') }
 }
 
+/** Un paragraphe lu sur une page scannée en élément texte : le corps, la ligne de base et la largeur sont ceux de l'image. */
+function scanElement(b: ReadBlock, k: number, offset: { x: number; y: number }, measure: CanvasRenderingContext2D): TrameElement {
+  const size = Math.max(6, Math.round((b.fontSize / k) * 2) / 2)
+  const family = '"Inter", sans-serif'
+  measure.font = `${size}px ${family}`
+  const metrics = measure.measureText('M')
+  const ascent = metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent
+  const descent = metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent
+  const lines = b.text.split('\n')
+  // jamais plus étroit que le texte d'origine ni que le même texte dans notre police (sinon retour à la ligne indésirable)
+  const widest = Math.max((b.x1 - b.x0) / k, ...lines.map((l) => measure.measureText(l).width))
+  return {
+    id: nanoid(8),
+    type: 'text',
+    x: b.x0 / k + offset.x,
+    y: b.baseline / k + offset.y - ((ascent - descent) / 2 + (b.lineHeight * size) / 2),
+    width: Math.ceil(widest) + 4,
+    height: b.lineHeight * size * lines.length,
+    rotation: 0,
+    opacity: 1,
+    fill: b.ink,
+    text: b.text,
+    fontSize: size,
+    fontFamily: family,
+    fontStyle: 'normal',
+    align: 'left',
+    ...(b.lineHeight !== 1 ? { lineHeight: b.lineHeight } : {})
+  } as TrameElement
+}
+
 /** Importe un PDF en document Trame : une page Trame par page PDF, la première donne le format. */
 export async function importPdf(pdf: PDFDocumentProxy, name: string, options: ImportOptions): Promise<ImportReport> {
   const total = Math.min(pdf.numPages, options.pages, MAX_IMPORT_PAGES)
@@ -183,6 +240,8 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
   const substituted = new Set<string>()
   let texts = 0
   let kept = 0
+  let ocrPages = 0
+  let ocrBlocks = 0
   const pages: TramePage[] = []
   // conservation du PDF d'origine (annotation vectorielle) : seulement en mode « page en image », où le fond contient déjà le texte
   const sourceId = nanoid(8)
@@ -197,6 +256,7 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
   }
 
   for (let n = 1; n <= total; n++) {
+    if (options.signal?.aborted) throw new ImportCancelled()
     options.onProgress?.(n - 1, total)
     const page = await pdf.getPage(n)
     // une page de format différent est ajustée (sans déformation) et centrée dans le format du document
@@ -209,10 +269,29 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
 
     const elements: TrameElement[] = []
     let background: HTMLCanvasElement
-    if (options.mode === 'editable') {
+    // une page sans aucun texte (scan) : on lit son texte avec l'OCR si on le demande
+    const items = options.mode === 'editable' ? await textItems(page, scale, offset) : []
+    if (options.mode === 'editable' && options.ocr && !items.length) {
+      const scan = await paint(page, scale * k, true)
+      const stop = (): void => void release()
+      options.signal?.addEventListener('abort', stop, { once: true })
+      try {
+        const read = await readScannedPage(scan, options.ocr.language)
+        background = read.background
+        for (const b of read.blocks) elements.push(scanElement(b, k, offset, measure))
+        ocrBlocks += read.blocks.length
+        ocrPages += 1
+        texts += read.blocks.length
+      } catch (err) {
+        if (options.signal?.aborted) throw new ImportCancelled()
+        throw err
+      } finally {
+        options.signal?.removeEventListener('abort', stop)
+      }
+    } else if (options.mode === 'editable') {
       const withText = await paint(page, scale * k, true)
       background = await paint(page, scale * k, false)
-      const paragraphs = groupParagraphs(groupLines(await textItems(page, scale, offset)))
+      const paragraphs = groupParagraphs(groupLines(items))
       let erased = false
       for (const p of paragraphs) {
         const rect: Rect = {
@@ -254,5 +333,5 @@ export async function importPdf(pdf: PDFDocumentProxy, name: string, options: Im
   }
   options.onProgress?.(total, total)
   const doc: TrameDocument = { version: 2, name, width, height, pages, ...(sourceData ? { sources: { [sourceId]: sourceData } } : {}) }
-  return { doc, texts, substitutedFonts: [...substituted].sort(), keptAsImage: kept, sourceDropped }
+  return { doc, texts, substitutedFonts: [...substituted].sort(), keptAsImage: kept, sourceDropped, ocrPages, ocrBlocks }
 }

@@ -5,25 +5,15 @@ import { useEditor } from '@/store/editor'
 import { useOcr } from '@/store/ocr'
 import { insertRecognizedText } from '@/ocr/actions'
 import { release, recognize, type OcrProgress } from '@/ocr/engine'
-import { OCR_LANGUAGES, isOcrLanguage, languageForLocale, type OcrLanguage } from '@/ocr/languages'
+import { OCR_LANGUAGES, isOcrLanguage, languageForLocale, saveOcrLanguage, storedOcrLanguage, type OcrLanguage } from '@/ocr/languages'
 import { prepareImage } from '@/ocr/prepare'
 import { cleanOcrText } from '@/ocr/text'
 import type { TrameElement } from '@/types'
 
-const KEY = 'trame.ocr'
 /** Le nom de chaque langue dans sa propre langue : un nom propre, jamais traduit. */
 const NAMES: Record<OcrLanguage, string> = { fra: 'Français', eng: 'English', deu: 'Deutsch', spa: 'Español' }
 /** En dessous, le texte est probablement à relire de près. */
 const LOW_CONFIDENCE = 70
-
-function storedLanguage(fallback: OcrLanguage): OcrLanguage {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}').language
-    return isOcrLanguage(v) ? v : fallback
-  } catch {
-    return fallback
-  }
-}
 
 type Run = { status: 'running'; progress: OcrProgress } | { status: 'done'; raw: string; confidence: number } | { status: 'error'; detail: string }
 
@@ -39,7 +29,7 @@ export function OcrDialog(): React.JSX.Element | null {
 function Dialog({ image }: { image: TrameElement }): React.JSX.Element {
   const t = useT()
   const locale = useLocale((s) => s.locale)
-  const [language, setLanguage] = useState<OcrLanguage>(() => storedLanguage(languageForLocale(locale)))
+  const [language, setLanguage] = useState<OcrLanguage>(() => storedOcrLanguage(languageForLocale(locale)))
   const [keepLines, setKeepLines] = useState(false)
   const [run, setRun] = useState<Run>({ status: 'running', progress: { phase: 'loading', progress: 0 } })
   const [text, setText] = useState('')
@@ -98,11 +88,7 @@ function Dialog({ image }: { image: TrameElement }): React.JSX.Element {
   }
   const chooseLanguage = (value: string): void => {
     if (!isOcrLanguage(value)) return
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ language: value }))
-    } catch {
-      /* le choix vaut pour cette fenêtre */
-    }
+    saveOcrLanguage(value)
     setLanguage(value)
   }
 

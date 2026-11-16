@@ -15,6 +15,29 @@ export interface OcrProgress {
   progress: number
 }
 
+/** Une ligne reconnue : son texte, son cadre et sa ligne de base (pixels de l'image lue). */
+export interface OcrLine {
+  text: string
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  /** ordonnée de la ligne de base au milieu de la ligne */
+  base: number
+}
+
+/** Un paragraphe reconnu avec sa place dans l'image. */
+export interface OcrParagraph {
+  text: string
+  /** confiance moyenne, de 0 à 100 */
+  confidence: number
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  lines: OcrLine[]
+}
+
 export interface OcrResult {
   text: string
   /** confiance moyenne du moteur, de 0 à 100 */
@@ -57,6 +80,34 @@ export async function release(): Promise<void> {
   const w = current
   current = null
   if (w) await w.worker.then((x) => x.terminate()).catch(() => {})
+}
+
+/** Reconnaît les paragraphes d'une image avec leur place (pour reconstruire une page scannée). */
+export async function recognizeLayout(image: string | HTMLCanvasElement, lang: OcrLanguage, progress?: (p: OcrProgress) => void): Promise<OcrParagraph[]> {
+  clearTimeout(idle)
+  onProgress = progress ?? null
+  try {
+    const worker = await workerFor(lang)
+    const { data } = await worker.recognize(image, {}, { text: true, blocks: true })
+    const out: OcrParagraph[] = []
+    for (const block of data.blocks ?? []) {
+      for (const p of block.paragraphs ?? []) {
+        const lines: OcrLine[] = (p.lines ?? []).map((l) => ({
+          text: l.text ?? '',
+          x0: l.bbox.x0,
+          y0: l.bbox.y0,
+          x1: l.bbox.x1,
+          y1: l.bbox.y1,
+          base: l.baseline ? (l.baseline.y0 + l.baseline.y1) / 2 : l.bbox.y1
+        }))
+        out.push({ text: p.text ?? '', confidence: Math.round(p.confidence ?? 0), x0: p.bbox.x0, y0: p.bbox.y0, x1: p.bbox.x1, y1: p.bbox.y1, lines })
+      }
+    }
+    return out
+  } finally {
+    onProgress = null
+    idle = setTimeout(() => void release(), IDLE_MS)
+  }
 }
 
 /** Reconnaît le texte d'une image (adresse de données ou d'objet, ou canvas). */

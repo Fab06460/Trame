@@ -2037,6 +2037,41 @@ try {
   check('OCR : « Insérer » ferme la fenêtre et ajoute le texte corrigé comme calque de texte', (await nBrand('[data-ocr-dialog]')) === 0 && (await run(`[...document.querySelectorAll('[data-layer-id]')].some(l => l.innerText.includes('Texte corrigé à la main'))`)) === true)
   await rm(join(exportsDir, 'pick-image.png'), { force: true })
 
+  // OCR sur un PDF scanné : une page qui n'est qu'une image devient du texte modifiable (le vrai moteur, hors ligne)
+  {
+    const scanPng = await run(`(() => {
+      const c = document.createElement('canvas'); c.width = 1240; c.height = 1754
+      const g = c.getContext('2d'); g.fillStyle = '#f6f2e7'; g.fillRect(0, 0, 1240, 1754); g.fillStyle = '#16161a'; g.font = '46px Arial'
+      const lines = ['La photosynthèse est le processus par', 'lequel les plantes convertissent la', 'lumière en énergie chimique.']
+      lines.forEach((l, i) => g.fillText(l, 120, 220 + i * 70))
+      return c.toDataURL('image/png').split(',')[1]
+    })()`)
+    const { PDFDocument } = await import('pdf-lib')
+    const scan = await PDFDocument.create()
+    const sp = scan.addPage([595, 842])
+    sp.drawImage(await scan.embedPng(Buffer.from(scanPng, 'base64')), { x: 0, y: 0, width: 595, height: 842 })
+    await writeFile(join(exportsDir, 'pick-import.pdf'), await scan.save())
+    await reloadApp()
+    await sleep(500)
+    await importVia('pdf')
+    for (let i = 0; i < 40 && (await nBrand('.modal')) === 0; i++) await sleep(250)
+    check('PDF scanné : la fenêtre reconnaît un PDF sans texte et propose l\'OCR, case cochée', (await run(`document.querySelector('[data-field="pdfOcr"]')?.checked`)) === true && (await nBrand('[data-field="pdfOcrLanguage"]')) === 1)
+    await rm(join(exportsDir, 'dialog-info.txt'), { force: true })
+    await clickSel('[data-action="pdf-import"]')
+    let ocrInfo = ''
+    for (let i = 0; i < 480 && !ocrInfo; i++) { await sleep(250); ocrInfo = await readFile(join(exportsDir, 'dialog-info.txt'), 'utf-8').catch(() => '') }
+    check('PDF scanné : le résumé annonce le texte reconnu', /Texte reconnu sur 1 page/.test(ocrInfo) && /\d+ bloc/.test(ocrInfo), ocrInfo)
+    check('PDF scanné : la page contient le texte reconnu, modifiable', (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).toLowerCase().includes('photosynth'))
+    // placement : le texte reconnu retombe à l'endroit du scan (x ≈ 120/1240 de la largeur, premier bloc dans le haut de la page)
+    await clickSel('.sidebar .tabs button[data-tab="layers"]')
+    await sleep(250)
+    await run(`[...document.querySelectorAll('[data-layer-id]')].find(l => !l.querySelector('.layer-glyph')?.innerText.includes('▶') && l.innerText.toLowerCase().includes('photosynth'))?.click()`)
+    await sleep(400)
+    const where = await run(`({ x: Number(document.querySelector('.panel input[data-field="x"]')?.value), y: Number(document.querySelector('.panel input[data-field="y"]')?.value) })`)
+    check('PDF scanné : le texte est posé à sa place sur la page (marge gauche ~77 px, haut de page)', where.x > 55 && where.x < 100 && where.y > 70 && where.y < 160, JSON.stringify(where))
+    await rm(join(exportsDir, 'pick-import.pdf'), { force: true })
+  }
+
   // capture d'écran : la fenêtre (sources, modes, micro) s'ouvre et se ferme ; la prise réelle dépend de l'autorisation du système, vérifiée à la main
   await clickSel('.sidebar .tabs button[data-tab="elements"]')
   await sleep(300)

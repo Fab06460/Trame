@@ -15,4 +15,24 @@ export function languageForLocale(locale: string): OcrLanguage {
   return ({ fr: 'fra', en: 'eng', de: 'deu', es: 'spa' } as Record<string, OcrLanguage>)[locale.slice(0, 2).toLowerCase()] ?? 'eng'
 }
 
+const KEY = 'trame.ocr'
+
+/** La langue de reconnaissance choisie la dernière fois (mémorisée sur cet ordinateur), sinon `fallback`. */
+export function storedOcrLanguage(fallback: OcrLanguage): OcrLanguage {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}').language
+    return isOcrLanguage(v) ? v : fallback
+  } catch {
+    return fallback
+  }
+}
+
+export function saveOcrLanguage(language: OcrLanguage): void {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ language }))
+  } catch {
+    /* le choix vaut pour cette fenêtre */
+  }
+}
+
 export const isOcrLanguage = (v: unknown): v is OcrLanguage => OCR_LANGUAGES.includes(v as OcrLanguage)
