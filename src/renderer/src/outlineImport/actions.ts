@@ -3,18 +3,20 @@ import { useOutlineImport } from '@/store/outlineImport'
 import { useEditor } from '@/store/editor'
 import { t } from '@/i18n'
 import { parseDocx } from './docx'
+import { parseOdt } from './odt'
 import { decodeText, measureInBrowser, resolveOutlineImages } from './images'
 import { parseMarkdown } from './markdown'
 import { outlineToDocument, type ImportOptions } from './layout'
 import type { Outline } from './outline'
 
-/** Choisit un fichier Word, Markdown ou texte, le lit, puis ouvre la fenêtre d'options (rien n'est remplacé avant d'avoir confirmé). */
+/** Choisit un fichier Word, LibreOffice, Markdown ou texte, le lit, puis ouvre la fenêtre d'options (rien n'est remplacé avant d'avoir confirmé). */
 export async function importDocumentFile(): Promise<void> {
   const picked = await window.trame.pickDocument()
   if (!picked) return // annuler le sélecteur ne pose aucune question
   try {
     let outline: Outline
     if (picked.ext === 'docx') outline = await parseDocx(picked.bytes)
+    else if (picked.ext === 'odt') outline = await parseOdt(picked.bytes)
     else {
       outline = parseMarkdown(decodeText(picked.bytes), { plain: picked.ext === 'txt' })
       outline = await resolveOutlineImages(outline, { read: (ref) => window.trame.readDocumentImage(ref), measure: measureInBrowser })

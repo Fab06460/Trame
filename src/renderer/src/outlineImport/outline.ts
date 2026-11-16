@@ -1,6 +1,6 @@
 /**
- * Plan d'un document texte (Word, Markdown, texte brut) : une suite de blocs, indépendante du format d'origine. Les lecteurs
- * (`markdown.ts`, `docx.ts`) le produisent, `layout.ts` en fait des pages.
+ * Plan d'un document texte (Word, LibreOffice, Markdown, texte brut) : une suite de blocs, indépendante du format d'origine. Les lecteurs
+ * (`markdown.ts`, `docx.ts`, `odt.ts`) le produisent, `layout.ts` en fait des pages.
  */
 export type OutlineBlock =
   /** titre ; `level` de 1 (le plus haut) à 6 */

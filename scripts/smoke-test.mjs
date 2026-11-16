@@ -1414,6 +1414,24 @@ try {
     for (let i = 0; i < 60 && (await nBrand('.page-item')) !== 2; i++) await sleep(250)
     check('import de document : le fichier Word est importé (2 pages, texte repris)', (await nBrand('.page-item')) === 2 && (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).includes('Chapitre A'))
 
+    // fichier LibreOffice fabriqué ici : deux titres et du texte
+    const O = 'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"'
+    const oh = (t) => `<text:h text:outline-level="1">${t}</text:h>`
+    const op = (t) => `<text:p>${t}</text:p>`
+    const ozip = new JSZip()
+    ozip.file('content.xml', `<office:document-content ${O}><office:body><office:text>${oh('Partie A')}${op('Du texte pour A.')}${oh('Partie B')}${op('Du texte pour B.')}</office:text></office:body></office:document-content>`)
+    await rm(join(exportsDir, 'pick-import.docx'), { force: true })
+    await writeFile(join(exportsDir, 'pick-import.odt'), await ozip.generateAsync({ type: 'nodebuffer' }))
+    await reloadApp()
+    await sleep(500)
+    await importVia('document')
+    for (let i = 0; i < 40 && !(await nBrand('[data-outline-import]')); i++) await sleep(250)
+    check('import de document : un fichier LibreOffice (.odt) donne une page par titre', (await resultPages()) === '2')
+    await clickSel('[data-action="outline-import"]')
+    for (let i = 0; i < 60 && (await nBrand('.page-item')) !== 2; i++) await sleep(250)
+    check('import de document : le fichier LibreOffice est importé (2 pages, texte repris)', (await nBrand('.page-item')) === 2 && (await run(`document.querySelector('.page-item.current .thumb')?.innerText ?? ''`)).includes('Partie'))
+    await rm(join(exportsDir, 'pick-import.odt'), { force: true })
+
     // un fichier sans texte : la fenêtre le dit et l'import est refusé ; Échap la ferme sans rien changer
     await rm(join(exportsDir, 'pick-import.docx'), { force: true })
     await writeFile(join(exportsDir, 'pick-import.txt'), '   \n\n')

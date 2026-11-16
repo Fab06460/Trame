@@ -1185,12 +1185,12 @@ ipcMain.handle('csv:pick', () => pickImportFile('csv', tm('main.filter.csv')))
 // (`![](img/schema.png)`) : elles ne se lisent que dans le dossier du dernier fichier choisi et ses sous-dossiers (`resolveDocumentImage`),
 // jamais ailleurs sur le disque, même si l'interface en demandait un autre chemin.
 let documentDir: string | null = null
-const DOCUMENT_EXTENSIONS = ['docx', 'md', 'markdown', 'txt']
-ipcMain.handle('outline:pick', async (): Promise<{ name: string; ext: 'docx' | 'md' | 'txt'; bytes: Uint8Array } | null> => {
+const DOCUMENT_EXTENSIONS = ['docx', 'odt', 'md', 'markdown', 'txt']
+ipcMain.handle('outline:pick', async (): Promise<{ name: string; ext: 'docx' | 'odt' | 'md' | 'txt'; bytes: Uint8Array } | null> => {
   let path: string | null = null
   if (TEST_EXPORT_DIR) {
-    // tests de bout en bout : le fichier pick-import.docx, .md ou .txt du dossier de test tient lieu de choix
-    for (const ext of ['docx', 'md', 'txt']) {
+    // tests de bout en bout : le fichier pick-import.docx, .odt, .md ou .txt du dossier de test tient lieu de choix
+    for (const ext of ['docx', 'odt', 'md', 'txt']) {
       const candidate = join(TEST_EXPORT_DIR, `pick-import.${ext}`)
       if (await stat(candidate).catch(() => null)) {
         path = candidate
@@ -1207,7 +1207,7 @@ ipcMain.handle('outline:pick', async (): Promise<{ name: string; ext: 'docx' | '
     return null
   }
   const raw = (path.split('.').pop() ?? '').toLowerCase()
-  const ext = raw === 'docx' ? 'docx' : raw === 'txt' ? 'txt' : 'md'
+  const ext = raw === 'docx' ? 'docx' : raw === 'odt' ? 'odt' : raw === 'txt' ? 'txt' : 'md'
   documentDir = dirname(path)
   return { name: basename(path).replace(/\.[^.]+$/, ''), ext, bytes: new Uint8Array(await readFile(path)) }
 })
