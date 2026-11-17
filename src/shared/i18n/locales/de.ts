@@ -1898,6 +1898,8 @@ export const de: Catalog = {
   'draw.end.none': 'Nichts',
   'draw.end.arrow': 'Pfeilspitze',
   'draw.end.dot': 'Punkt',
+  'draw.move': 'Leiste verschieben',
+  'draw.move.title': 'Ziehen, um die Leiste zu verschieben (auch mit den Pfeiltasten); Doppelklick setzt sie in die Mitte zurück',
   'draw.done': 'Fertig',
   'clip.start': 'Anfang',
   'clip.end': 'Ende',

@@ -781,3 +781,7 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 .draw-bar label { display: flex; align-items: center; gap: 6px; }
 .draw-bar .draw-width input { width: 110px; }
 .draw-bar output { min-width: 40px; text-align: right; }
+.draw-bar.placed { transform: none; }
+.draw-grip { cursor: grab; padding: 2px 4px; font-size: 18px; line-height: 1; user-select: none; touch-action: none; border-radius: 4px; }
+.draw-grip:active { cursor: grabbing; }
+.draw-grip:focus-visible { outline: 2px solid var(--accent, #4f46e5); }

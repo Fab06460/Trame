@@ -1899,6 +1899,8 @@ export const fr = {
   'draw.end.none': 'Rien',
   'draw.end.arrow': 'Pointe de flèche',
   'draw.end.dot': 'Rond',
+  'draw.move': 'Déplacer la barre',
+  'draw.move.title': 'Glissez pour déplacer la barre (flèches du clavier aussi) ; double-clic pour la remettre au centre',
   'draw.done': 'Terminer',
   'clip.start': 'Début',
   'clip.end': 'Fin',

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DRAW_TOOLS, WIDTH_LIMITS, isLineTool, type DrawTool } from '@/drawTools'
 import { useDraw } from '@/store/draw'
 import { useT } from '@/i18n'
@@ -14,6 +14,52 @@ export function DrawBar(): React.JSX.Element | null {
   const t = useT()
   const tool = useDraw((d) => d.tool)
   const settings = useDraw((d) => d.settings)
+  const saved = useDraw((d) => d.bar)
+  const root = useRef<HTMLDivElement>(null)
+  /** position pendant un déplacement (enregistrée au lâcher) */
+  const [moving, setMoving] = useState<{ x: number; y: number } | null>(null)
+  const grab = useRef<{ dx: number; dy: number } | null>(null)
+  const pos = moving ?? saved
+
+  /** Ramène une position dans la zone de la page : la barre ne sort jamais complètement de l'écran. */
+  const clamp = (x: number, y: number): { x: number; y: number } => {
+    const bar = root.current
+    const area = bar?.offsetParent?.getBoundingClientRect()
+    if (!bar || !area) return { x, y }
+    return { x: Math.round(Math.min(Math.max(0, x), Math.max(0, area.width - bar.offsetWidth))), y: Math.round(Math.min(Math.max(0, y), Math.max(0, area.height - bar.offsetHeight))) }
+  }
+  /** Position actuelle de la barre dans sa zone (la position par défaut est centrée : on la mesure). */
+  const current = (): { x: number; y: number } => {
+    const r = root.current?.getBoundingClientRect()
+    const area = root.current?.offsetParent?.getBoundingClientRect()
+    return r && area ? { x: Math.round(r.left - area.left), y: Math.round(r.top - area.top) } : { x: 0, y: 0 }
+  }
+  const press = (e: React.PointerEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const area = root.current?.offsetParent?.getBoundingClientRect()
+    const at = current()
+    grab.current = { dx: e.clientX - (area?.left ?? 0) - at.x, dy: e.clientY - (area?.top ?? 0) - at.y }
+    setMoving(at)
+  }
+  const move = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (!grab.current) return
+    const area = root.current?.offsetParent?.getBoundingClientRect()
+    setMoving(clamp(e.clientX - (area?.left ?? 0) - grab.current.dx, e.clientY - (area?.top ?? 0) - grab.current.dy))
+  }
+  const release = (): void => {
+    if (grab.current && moving) useDraw.getState().setBar(moving)
+    grab.current = null
+    setMoving(null)
+  }
+  const nudge = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    const step = e.shiftKey ? 40 : 10
+    const d = e.key === 'ArrowLeft' ? [-step, 0] : e.key === 'ArrowRight' ? [step, 0] : e.key === 'ArrowUp' ? [0, -step] : e.key === 'ArrowDown' ? [0, step] : null
+    if (!d) return
+    e.preventDefault()
+    const at = current()
+    useDraw.getState().setBar(clamp(at.x + d[0], at.y + d[1]))
+  }
   useEffect(() => {
     if (!tool) return
     const onKey = (e: KeyboardEvent): void => {
@@ -28,7 +74,23 @@ export function DrawBar(): React.JSX.Element | null {
   const cfg = settings[tool]
   const { setTool, setColor, setWidth, setEnds } = useDraw.getState()
   return (
-    <div className="draw-bar" role="toolbar" aria-label={t('draw.bar')} data-draw-bar>
+    <div ref={root} className={`draw-bar${pos ? ' placed' : ''}`} style={pos ? { left: pos.x, top: pos.y } : undefined} role="toolbar" aria-label={t('draw.bar')} data-draw-bar>
+      <div
+        className="draw-grip"
+        data-draw-grip
+        role="button"
+        tabIndex={0}
+        title={t('draw.move.title')}
+        aria-label={t('draw.move')}
+        onPointerDown={press}
+        onPointerMove={move}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onDoubleClick={() => useDraw.getState().setBar(null)}
+        onKeyDown={nudge}
+      >
+        ⠿
+      </div>
       <div className="seg" role="group" aria-label={t('draw.tool')}>
         {DRAW_TOOLS.map((id: DrawTool) => (
           <button key={id} data-draw-tool={id} aria-pressed={tool === id} className={tool === id ? 'active' : ''} onClick={() => setTool(id)}>

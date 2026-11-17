@@ -1898,6 +1898,8 @@ export const en: Catalog = {
   'draw.end.none': 'Nothing',
   'draw.end.arrow': 'Arrowhead',
   'draw.end.dot': 'Dot',
+  'draw.move': 'Move the bar',
+  'draw.move.title': 'Drag to move the bar (arrow keys too); double-click to put it back in the centre',
   'draw.done': 'Done',
   'clip.start': 'Start',
   'clip.end': 'End',

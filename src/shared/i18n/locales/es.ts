@@ -1898,6 +1898,8 @@ export const es: Catalog = {
   'draw.end.none': 'Nada',
   'draw.end.arrow': 'Punta de flecha',
   'draw.end.dot': 'Punto',
+  'draw.move': 'Mover la barra',
+  'draw.move.title': 'Arrastre para mover la barra (también con las flechas del teclado); doble clic para volver al centro',
   'draw.done': 'Terminar',
   'clip.start': 'Inicio',
   'clip.end': 'Fin',
