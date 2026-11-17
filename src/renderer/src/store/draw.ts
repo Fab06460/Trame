@@ -23,6 +23,7 @@ interface DrawState {
   setColor: (tool: DrawTool, color: string) => void
   setWidth: (tool: DrawTool, width: number) => void
   setEnds: (tool: DrawTool, ends: LineEnds | undefined) => void
+  setFill: (tool: DrawTool, fill: boolean) => void
 }
 
 const BAR_KEY = 'trame.drawBar'
@@ -53,5 +54,6 @@ export const useDraw = create<DrawState>((set) => ({
   setColor: (tool, color) => set((s) => ({ settings: { ...s.settings, [tool]: { ...s.settings[tool], color } } })),
   setWidth: (tool, width) =>
     set((s) => ({ settings: { ...s.settings, [tool]: { ...s.settings[tool], width: Math.min(WIDTH_LIMITS.max, Math.max(WIDTH_LIMITS.min, Math.round(width))) } } })),
-  setEnds: (tool, ends) => set((s) => ({ settings: { ...s.settings, [tool]: { ...s.settings[tool], ends } } }))
+  setEnds: (tool, ends) => set((s) => ({ settings: { ...s.settings, [tool]: { ...s.settings[tool], ends } } })),
+  setFill: (tool, fill) => set((s) => ({ settings: { ...s.settings, [tool]: { ...s.settings[tool], fill } } }))
 }))

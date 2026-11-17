@@ -18,6 +18,7 @@ import { FontPicker } from './FontPicker'
 import { ImagePanel } from './ImagePanel'
 import { ClipPanel } from './ClipPanel'
 import { LinePanel } from './LinePanel'
+import { PenPanel } from './PenPanel'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
 import { PageBackground } from './PageBackground'
@@ -205,6 +206,8 @@ export function Properties(): React.JSX.Element {
       {el.type === 'image' && (el.video ? <ClipPanel el={el} /> : <ImagePanel el={el} />)}
 
       {open && <LinePanel el={el} />}
+
+      {el.type === 'path' && <PenPanel el={el} />}
 
       {!open && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'path' || el.type === 'text') && (
         <div className="seg" role="group" aria-label={t('prop.fillType')}>

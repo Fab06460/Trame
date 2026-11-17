@@ -32,6 +32,9 @@ import { isLineTool, type DrawTool } from '@/drawTools'
 import { lineFromPoints, snapAngle, strokeFromPoints, type Pt } from '@/freehand'
 import { CropHandles } from './CropHandles'
 import { DrawBar } from './DrawBar'
+import { PenDraftLayer, PenEdit } from './PenLayers'
+import { usePenDraft, usePenEdit } from '@/store/pen'
+import { elementNodes } from '@/pen'
 import { mmToPx, printSetupOf, safeBox } from '@/printSetup'
 import type { TrameElement } from '@/types'
 
@@ -104,6 +107,7 @@ export function Canvas(): React.JSX.Element {
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [editing, setEditing] = useState<string | null>(null)
   const cropId = useCropMode((c) => c.id)
+  const penId = usePenEdit((p) => p.id)
   // dessin : tracé en cours (points de la page) ; l'outil et ses réglages viennent du store
   const tool = useDraw((d) => d.tool)
   const drawing = useRef<{ tool: DrawTool; points: Pt[] } | null>(null)
@@ -233,14 +237,22 @@ export function Canvas(): React.JSX.Element {
     if (cropId && !(selectedIds.length === 1 && selectedIds[0] === cropId)) useCropMode.getState().set(null)
   }, [cropId, selectedIds, page.id])
 
+  // la modification des points s'arrête dès que le tracé n'est plus la seule sélection (ou qu'on change de page) ; un tracé de plume en cours est abandonné
+  useEffect(() => {
+    if (penId && !(selectedIds.length === 1 && selectedIds[0] === penId)) usePenEdit.getState().set(null)
+  }, [penId, selectedIds, page.id])
+  useEffect(() => {
+    usePenDraft.getState().cancel()
+  }, [page.id])
+
   // Attache le transformer au nœud sélectionné
   useEffect(() => {
     const tr = trRef.current
     const stage = stageRef.current
     if (!tr || !stage) return
-    const nodes = editing || cropId ? [] : selectedIds.map((id) => stage.findOne('#' + id)).filter((n): n is Konva.Node => !!n)
+    const nodes = editing || cropId || penId ? [] : selectedIds.map((id) => stage.findOne('#' + id)).filter((n): n is Konva.Node => !!n)
     tr.nodes(nodes)
-  }, [selectedIds, page.elements, editing, page.id, cropId])
+  }, [selectedIds, page.elements, editing, page.id, cropId, penId])
 
   const printSetup = printSetupOf(doc)
   const bleedPx = mmToPx(printSetup.bleedMm)
@@ -252,7 +264,7 @@ export function Canvas(): React.JSX.Element {
     y: el.y,
     rotation: el.rotation,
     opacity: el.opacity,
-    draggable: editing !== el.id && !spaceDown && !positionLocked(el, enforced),
+    draggable: editing !== el.id && penId !== el.id && !spaceDown && !positionLocked(el, enforced),
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
       throughFrom.current = e.evt.metaKey || e.evt.ctrlKey ? selectedIds : null
@@ -281,6 +293,7 @@ export function Canvas(): React.JSX.Element {
     onDblClick: () => {
       if (el.groupId && !(selectedIds.length === 1 && selectedIds[0] === el.id)) selectExact([el.id])
       else if (el.type === 'image' && !positionLocked(el, enforced) && !contentLocked(el, enforced)) useCropMode.getState().set(cropId === el.id ? null : el.id)
+      else if (el.type === 'path' && !positionLocked(el, enforced) && !contentLocked(el, enforced) && elementNodes(el)) usePenEdit.getState().set(penId === el.id ? null : el.id)
     },
     onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => {
       // Alt + glisser : on laisse une copie derrière (un seul cran d'historique pour la copie et le déplacement)
@@ -369,6 +382,7 @@ export function Canvas(): React.JSX.Element {
       // un outil de dessin est choisi : le clic commence un tracé, quel que soit l'élément sous le pointeur
       if (e.evt instanceof MouseEvent && e.evt.button !== 0) return
       const p = toDesign()
+      if (tool === 'pen') return usePenDraft.getState().press(p, 10 / scale)
       drawing.current = { tool, points: [p] }
       setPreview([p])
       return
@@ -386,6 +400,13 @@ export function Canvas(): React.JSX.Element {
   }
 
   const moveLasso = (e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>): void => {
+    if (tool === 'pen') {
+      const p = toDesign()
+      const pd = usePenDraft.getState()
+      if (pd.dragging) pd.drag(p, 3 / scale)
+      pd.hoverAt(p)
+      return
+    }
     const d = drawing.current
     if (d) {
       const p = toDesign()
@@ -434,6 +455,7 @@ export function Canvas(): React.JSX.Element {
   }
 
   const endLasso = (): void => {
+    if (tool === 'pen') return usePenDraft.getState().release()
     const d = drawing.current
     if (d) {
       drawing.current = null
@@ -607,6 +629,11 @@ export function Canvas(): React.JSX.Element {
             })}
 
           {tool && <Rect x={0} y={0} width={size.w} height={size.h} fill="transparent" name="draw-catch" />}
+          {tool === 'pen' && <PenDraftLayer offX={offX} offY={offY} scale={scale} />}
+          {(() => {
+            const pe = penId ? page.elements.find((x) => x.id === penId && x.type === 'path' && !x.hidden) : undefined
+            return pe && selectedIds.length === 1 && selectedIds[0] === pe.id ? <PenEdit el={pe} offX={offX} offY={offY} scale={scale} /> : null
+          })()}
           {preview && tool && (
             <Line
               points={preview.flatMap((p) => [offX + p.x * scale, offY + p.y * scale])}

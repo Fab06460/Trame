@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DRAW_TOOLS, WIDTH_LIMITS, isLineTool, type DrawTool } from '@/drawTools'
 import { useDraw, type BarPlace } from '@/store/draw'
+import { usePenDraft } from '@/store/pen'
 import { useT } from '@/i18n'
 import type { LineEnd } from '@/types'
 
@@ -84,16 +85,31 @@ export function DrawBar(): React.JSX.Element | null {
   useEffect(() => {
     if (!tool) return
     const onKey = (e: KeyboardEvent): void => {
+      const draft = usePenDraft.getState()
+      if (e.key === 'Enter' && tool === 'pen' && draft.nodes.length) {
+        // Entrée termine le tracé de la plume (sauf dans un champ de saisie)
+        if ((e.target as HTMLElement | null)?.closest('input, select, textarea')) return
+        e.preventDefault()
+        e.stopPropagation()
+        draft.finish()
+        return
+      }
       if (e.key !== 'Escape') return
       e.stopPropagation()
-      useDraw.getState().setTool(null)
+      // un tracé de plume en cours : Échap l'abandonne ; un second Échap quitte l'outil
+      if (draft.nodes.length) draft.cancel()
+      else useDraw.getState().setTool(null)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [tool])
+  // changer d'outil (ou le quitter) pose le tracé de la plume qui était en cours
+  useEffect(() => {
+    if (tool !== 'pen') usePenDraft.getState().finish()
+  }, [tool])
   if (!tool) return null
   const cfg = settings[tool]
-  const { setTool, setColor, setWidth, setEnds } = useDraw.getState()
+  const { setTool, setColor, setWidth, setEnds, setFill } = useDraw.getState()
   return (
     <div ref={root} className={`draw-bar${pos ? ' placed' : ''}${vertical ? ' vertical' : ''}`} style={pos ? { left: pos.x, top: pos.y } : undefined} role="toolbar" aria-label={t('draw.bar')} data-draw-bar>
       <div
@@ -114,7 +130,7 @@ export function DrawBar(): React.JSX.Element | null {
       </div>
       <div className="seg" role="group" aria-label={t('draw.tool')}>
         {DRAW_TOOLS.map((id: DrawTool) => (
-          <button key={id} data-draw-tool={id} aria-pressed={tool === id} className={tool === id ? 'active' : ''} onClick={() => setTool(id)}>
+          <button key={id} data-draw-tool={id} title={id === 'pen' ? t('draw.pen.hint') : undefined} aria-pressed={tool === id} className={tool === id ? 'active' : ''} onClick={() => setTool(id)}>
             {t(`draw.tool.${id}`)}
           </button>
         ))}
@@ -125,6 +141,12 @@ export function DrawBar(): React.JSX.Element | null {
         <input type="range" data-field="drawWidth" min={WIDTH_LIMITS.min} max={WIDTH_LIMITS.max} value={cfg.width} onChange={(e) => setWidth(tool, Number(e.target.value))} />
         <output>{cfg.width} px</output>
       </label>
+      {tool === 'pen' && (
+        <label title={t('draw.pen.hint')}>
+          <input type="checkbox" data-field="drawFill" checked={!!cfg.fill} onChange={(e) => setFill(tool, e.target.checked)} />
+          <span>{t('draw.fill')}</span>
+        </label>
+      )}
       {isLineTool(tool) &&
         (['start', 'end'] as const).map((side) => (
           <label key={side}>

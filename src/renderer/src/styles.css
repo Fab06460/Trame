@@ -778,6 +778,7 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 
 /* outil de dessin : barre au-dessus de la page */
 .draw-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100% - 24px); padding: 6px 10px; border-radius: 10px; background: var(--panel, #fff); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); font-size: 13px; }
+.draw-bar .seg { grid-template-columns: repeat(3, 1fr); }
 .draw-bar label { display: flex; align-items: center; gap: 6px; }
 .draw-bar .draw-width input { width: 110px; }
 .draw-bar output { min-width: 40px; text-align: right; }
