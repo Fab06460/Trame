@@ -777,11 +777,16 @@ button.info-tip:hover, button.info-tip[aria-expanded='true'] { background: var(-
 .clip-seq button[aria-pressed="true"] { outline: 2px solid var(--accent, #4f46e5); }
 
 /* outil de dessin : barre au-dessus de la page */
-.draw-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 24px); padding: 6px 10px; border-radius: 10px; background: var(--panel, #fff); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); font-size: 13px; }
+.draw-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100% - 24px); padding: 6px 10px; border-radius: 10px; background: var(--panel, #fff); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); font-size: 13px; }
 .draw-bar label { display: flex; align-items: center; gap: 6px; }
 .draw-bar .draw-width input { width: 110px; }
 .draw-bar output { min-width: 40px; text-align: right; }
 .draw-bar.placed { transform: none; }
+.draw-bar.vertical { flex-direction: column; align-items: stretch; flex-wrap: nowrap; width: 156px; max-height: calc(100% - 20px); overflow-y: auto; }
+.draw-bar.vertical .draw-grip { text-align: center; }
+.draw-bar.vertical label { flex-wrap: wrap; justify-content: space-between; }
+.draw-bar.vertical .draw-width input { width: 100%; }
+.draw-bar.vertical input[type='color'] { width: 100%; }
 .draw-grip { cursor: grab; padding: 2px 4px; font-size: 18px; line-height: 1; user-select: none; touch-action: none; border-radius: 4px; }
 .draw-grip:active { cursor: grabbing; }
 .draw-grip:focus-visible { outline: 2px solid var(--accent, #4f46e5); }
