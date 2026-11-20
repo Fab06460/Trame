@@ -1849,6 +1849,8 @@ export const en: Catalog = {
   'capture.windows': 'Windows',
   'capture.hide': 'Minimize Trame while capturing a screen',
   'capture.mic': 'Also record the microphone',
+  'capture.system': 'Also record the computer\'s sound',
+  'capture.err.noSystemAudio': 'System sound is denied or unavailable. On Mac: System Settings → Privacy & Security → System Audio Recording, allow Trame and restart it; or untick “Also record the computer\'s sound”.',
   'capture.go.image': 'Take the screenshot',
   'capture.go.video': 'Start (3 s)',
   'capture.stop': 'Stop recording',

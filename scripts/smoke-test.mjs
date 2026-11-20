@@ -2247,6 +2247,8 @@ try {
   await run(`document.querySelector('[data-field="captureMode"][value="video"]').click()`)
   await sleep(200)
   check('Capture : le mode « vidéo » propose d\'enregistrer aussi le micro', (await nBrand('[data-field="captureMic"]')) === 1)
+  await sleep(300)
+  check('Capture : « le son de l\'ordinateur » n\'est proposé que là où le système le permet (Windows, macOS 14.2+)', (await nBrand('[data-field="captureSystem"]')) === ((await run(`window.trame.captureSystemAudio()`)) ? 1 : 0))
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
   await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
   await sleep(300)

@@ -1849,6 +1849,8 @@ export const de: Catalog = {
   'capture.windows': 'Fenster',
   'capture.hide': 'Trame bei der Aufnahme eines Bildschirms minimieren',
   'capture.mic': 'Auch das Mikrofon aufnehmen',
+  'capture.system': 'Auch den Ton des Computers aufnehmen',
+  'capture.err.noSystemAudio': 'Der Systemton ist verweigert oder nicht verfügbar. Auf dem Mac: Systemeinstellungen → Datenschutz & Sicherheit → Aufnahme von Systemaudio, Trame erlauben und neu starten; oder „Auch den Ton des Computers aufnehmen“ abwählen.',
   'capture.go.image': 'Bildschirmfoto machen',
   'capture.go.video': 'Starten (3 s)',
   'capture.stop': 'Aufnahme beenden',

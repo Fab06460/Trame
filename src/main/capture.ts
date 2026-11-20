@@ -1,3 +1,4 @@
+import os from 'node:os'
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, nativeImage, screen, session, shell, systemPreferences, Tray } from 'electron'
 import type { CaptureError, CaptureSource, CaptureStill } from '../shared/capture'
 
@@ -13,7 +14,7 @@ interface Deps {
   testMode: boolean
 }
 
-let armed: string | null = null
+let armed: { id: string; system: boolean } | null = null
 let tray: Tray | null = null
 let shortcutOn = false
 let hidden = false
@@ -49,20 +50,29 @@ const portalSession = (): boolean => process.platform === 'linux' && (process.en
 /** Identifiant de source qui désigne « celle que le portail va faire choisir ». */
 const PORTAL = 'portal'
 
+/** Le son de l'ordinateur peut être enregistré avec l'écran : Windows, et macOS 14.2 ou plus (Darwin 23.2). Ailleurs, le système ne le permet pas. */
+function systemAudioSupported(): boolean {
+  if (process.platform === 'win32') return true
+  if (process.platform !== 'darwin') return false
+  const [major, minor] = os.release().split('.').map(Number)
+  return major > 23 || (major === 23 && minor >= 2)
+}
+
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 export function registerCapture({ getWindow, testMode }: Deps): void {
   // getDisplayMedia() côté interface : on répond par la source que la personne a choisie dans la fenêtre de Trame (pas de sélecteur du système)
   session.defaultSession.setDisplayMediaRequestHandler(
     (_request, callback) => {
-      const wanted = armed
+      const request = armed
       armed = null
-      if (!wanted) return callback({})
+      if (!request) return callback({})
+      const wanted = request.id
       desktopCapturer
         .getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } })
         .then((sources) => {
           const source = wanted === PORTAL ? sources[0] : sources.find((s) => s.id === wanted)
-          callback(source ? { video: source } : {})
+          callback(source ? { video: source, ...(request.system && systemAudioSupported() ? { audio: 'loopback' as const } : {}) } : {})
         })
         .catch(() => callback({}))
     },
@@ -129,9 +139,11 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
   })
 
   // vidéo : la source est « armée » juste avant getDisplayMedia()
-  ipcMain.handle('capture:arm', (_e, id: unknown): boolean => {
+  ipcMain.handle('capture:system-audio', (): boolean => systemAudioSupported())
+
+  ipcMain.handle('capture:arm', (_e, id: unknown, system: unknown): boolean => {
     if (typeof id !== 'string' || id.length > 200) return false
-    armed = id
+    armed = { id, system: system === true }
     return true
   })
 

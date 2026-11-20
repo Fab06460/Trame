@@ -1850,6 +1850,8 @@ export const fr = {
   'capture.windows': 'Fenêtres',
   'capture.hide': 'Réduire Trame pendant la capture d\'un écran',
   'capture.mic': 'Enregistrer aussi le micro',
+  'capture.system': 'Enregistrer aussi le son de l\'ordinateur',
+  'capture.err.noSystemAudio': 'Le son du système est refusé ou introuvable. Sur Mac : Réglages Système → Confidentialité et sécurité → Enregistrement du son du système, autorisez Trame puis relancez-la ; ou décochez « Enregistrer aussi le son de l\'ordinateur ».',
   'capture.go.image': 'Prendre la capture',
   'capture.go.video': 'Commencer (3 s)',
   'capture.stop': 'Arrêter l\'enregistrement',

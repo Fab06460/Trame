@@ -14,13 +14,14 @@ const COUNTDOWN = 3
 interface Saved {
   hide: boolean
   mic: boolean
+  system: boolean
 }
 function saved(): Saved {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}')
-    return { hide: v.hide !== false, mic: v.mic === true }
+    return { hide: v.hide !== false, mic: v.mic === true, system: v.system === true }
   } catch {
-    return { hide: true, mic: false }
+    return { hide: true, mic: false, system: false }
   }
 }
 
@@ -37,6 +38,7 @@ const PROBLEMS: Record<RecordProblem, MessageKey> = {
   unsupported: 'capture.err.unsupported',
   micDenied: 'capture.err.micDenied',
   noMic: 'capture.err.noMic',
+  noSystemAudio: 'capture.err.noSystemAudio',
   failed: 'capture.err.failed'
 }
 
@@ -57,6 +59,8 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const [picked, setPicked] = useState<string | null>(null)
   const [options, setOptions] = useState(saved)
   const [stage, setStage] = useState<Stage>({ name: 'list' })
+  /** Le système permet-il d'enregistrer le son de l'ordinateur ? (Windows, macOS 14.2+) */
+  const [systemAudio, setSystemAudio] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [zone, setZone] = useState<Rect | null>(null)
   const recorder = useRef<ScreenRecorder | null>(null)
@@ -67,6 +71,7 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const close = (): void => useCapture.getState().close()
 
   const load = async (): Promise<void> => {
+    void window.trame.captureSystemAudio().then((ok) => alive.current && setSystemAudio(ok))
     setSources(null)
     setError(null)
     if (await window.trame.capturePortal()) {
@@ -171,9 +176,10 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
       await new Promise((r) => setTimeout(r, 1000))
       if (!alive.current) return
     }
-    if (!(await window.trame.captureArm(picked))) return fail('capture.err.failed')
+    const systemOn = options.system && systemAudio
+    if (!(await window.trame.captureArm(picked, systemOn))) return fail('capture.err.failed')
     const isScreen = portal || sources?.find((s) => s.id === picked)?.kind === 'screen'
-    const res = await startScreenRecording(options.mic, () => void finish())
+    const res = await startScreenRecording(options.mic, systemOn, () => void finish())
     if (!alive.current) return
     if ('error' in res) {
       setDenied(res.error === 'denied')
@@ -262,6 +268,11 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
               {mode === 'video' && (
                 <label className="check">
                   <input type="checkbox" data-field="captureMic" checked={options.mic} onChange={(e) => remember({ ...options, mic: e.target.checked })} /> {t('capture.mic')}
+                </label>
+              )}
+              {mode === 'video' && systemAudio && (
+                <label className="check">
+                  <input type="checkbox" data-field="captureSystem" checked={options.system} onChange={(e) => remember({ ...options, system: e.target.checked })} /> {t('capture.system')}
                 </label>
               )}
             </div>

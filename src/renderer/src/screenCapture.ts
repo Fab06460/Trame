@@ -61,7 +61,7 @@ export function cropImage(dataUrl: string, zone: Rect | null): Promise<string> {
   })
 }
 
-export type RecordProblem = 'denied' | 'unsupported' | 'micDenied' | 'noMic' | 'failed'
+export type RecordProblem = 'denied' | 'unsupported' | 'micDenied' | 'noMic' | 'noSystemAudio' | 'failed'
 export interface Finished {
   bytes: Uint8Array
   seconds: number
@@ -90,12 +90,13 @@ async function vp9Supported(width: number, height: number): Promise<boolean> {
 /**
  * Enregistre une source d'écran (déjà « armée » côté principal) en WebM : les images de l'écran, ramenées à `CAPTURE_MAX_SIDE`, sont encodées en
  * VP9 par WebCodecs au fil de l'eau ; le micro, s'il est demandé, en Opus. Le fichier est construit avec sa durée et ses repères de
- * navigation (contrairement à MediaRecorder, dont les WebM ne se déplacent pas), puis rendu à l'arrêt.
+ * navigation (contrairement à MediaRecorder, dont les WebM ne se déplacent pas), puis rendu à l'arrêt. Le son de l'ordinateur (`system`) et le micro
+ * sont mélangés en une seule piste.
  */
-export async function startScreenRecording(mic: boolean, onFull: () => void): Promise<ScreenRecorder | { error: RecordProblem; detail?: string }> {
+export async function startScreenRecording(mic: boolean, system: boolean, onFull: () => void): Promise<ScreenRecorder | { error: RecordProblem; detail?: string }> {
   let display: MediaStream
   try {
-    display = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: CAPTURE_FPS }, audio: false })
+    display = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: CAPTURE_FPS }, audio: system })
   } catch (err) {
     const name = err instanceof DOMException ? err.name : ''
     return name === 'NotAllowedError' || name === 'NotReadableError' ? { error: 'denied' } : { error: 'failed', detail: err instanceof Error ? err.message : String(err) }
@@ -107,6 +108,10 @@ export async function startScreenRecording(mic: boolean, onFull: () => void): Pr
   if (!videoTrack) {
     stopAll(display)
     return { error: 'failed' }
+  }
+  if (system && !display.getAudioTracks().length) {
+    stopAll(display)
+    return { error: 'noSystemAudio' }
   }
   const settings = videoTrack.getSettings()
   const { width, height } = captureSize(settings.width ?? 1280, settings.height ?? 720)
@@ -130,14 +135,32 @@ export async function startScreenRecording(mic: boolean, onFull: () => void): Pr
     }
   }
 
-  // le micro fixe la configuration du son (fréquence, voies) : on lit son premier bloc avant de créer le conteneur
-  const audioReader = micStream ? new MediaStreamTrackProcessor<AudioData>({ track: micStream.getAudioTracks()[0] }).readable.getReader() : null
+  // le son (micro, ordinateur, ou les deux mélangés) fixe la configuration de la piste : on lit son premier bloc avant de créer le conteneur
+  let mixer: AudioContext | null = null
+  let audioTrack: MediaStreamTrack | null = micStream?.getAudioTracks()[0] ?? null
+  if (system) {
+    const systemTrack = display.getAudioTracks()[0]
+    // sans l'autorisation « Enregistrement du son du système » (macOS), la piste est créée mais déjà terminée, sans le dire
+    await new Promise((r) => setTimeout(r, 400))
+    if (systemTrack.readyState === 'ended') {
+      stopAll(display, micStream)
+      return { error: 'noSystemAudio' }
+    }
+    mixer = new AudioContext({ sampleRate: 48000 })
+    await mixer.resume().catch(() => {})
+    const out = mixer.createMediaStreamDestination()
+    mixer.createMediaStreamSource(new MediaStream([systemTrack])).connect(out)
+    if (micStream) mixer.createMediaStreamSource(micStream).connect(out)
+    audioTrack = out.stream.getAudioTracks()[0]
+  }
+  const audioReader = audioTrack ? new MediaStreamTrackProcessor<AudioData>({ track: audioTrack }).readable.getReader() : null
   let firstAudio: AudioData | null = null
   if (audioReader) {
     const first = await Promise.race([audioReader.read(), new Promise<null>((r) => setTimeout(() => r(null), 3000))])
     if (!first || first.done) {
       stopAll(display, micStream)
-      return { error: 'noMic' }
+      void mixer?.close()
+      return { error: mic ? 'noMic' : 'noSystemAudio' }
     }
     firstAudio = first.value
   }
@@ -248,6 +271,7 @@ export async function startScreenRecording(mic: boolean, onFull: () => void): Pr
   const release = (): void => {
     running = false
     stopAll(display, micStream)
+    void mixer?.close().catch(() => {})
   }
   return {
     elapsed: () => (performance.now() - startedAt) / 1000,

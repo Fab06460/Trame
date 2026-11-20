@@ -1849,6 +1849,8 @@ export const es: Catalog = {
   'capture.windows': 'Ventanas',
   'capture.hide': 'Minimizar Trame al capturar una pantalla',
   'capture.mic': 'Grabar también el micrófono',
+  'capture.system': 'Grabar también el sonido del ordenador',
+  'capture.err.noSystemAudio': 'El sonido del sistema está denegado o no disponible. En Mac: Ajustes del Sistema → Privacidad y seguridad → Grabación de audio del sistema, permita Trame y reinícielo; o desmarque «Grabar también el sonido del ordenador».',
   'capture.go.image': 'Hacer la captura',
   'capture.go.video': 'Empezar (3 s)',
   'capture.stop': 'Detener la grabación',

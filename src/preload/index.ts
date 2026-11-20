@@ -118,7 +118,9 @@ const api = {
   /** Image fixe d'une source ; `hideApp` réduit Trame le temps de la prise. */
   captureStill: (id: string, hideApp: boolean): Promise<CaptureStill | { error: CaptureError }> => ipcRenderer.invoke('capture:still', id, hideApp),
   /** Vidéo : désigne la source que getDisplayMedia() doit rendre, puis annonce le début (témoin, raccourci, fenêtre réduite) et la fin de l'enregistrement. */
-  captureArm: (id: string): Promise<boolean> => ipcRenderer.invoke('capture:arm', id),
+  captureArm: (id: string, system = false): Promise<boolean> => ipcRenderer.invoke('capture:arm', id, system),
+  /** Le système permet-il d'enregistrer le son de l'ordinateur avec l'écran ? */
+  captureSystemAudio: (): Promise<boolean> => ipcRenderer.invoke('capture:system-audio'),
   captureStarted: (hideApp: boolean): Promise<boolean> => ipcRenderer.invoke('capture:started', hideApp),
   captureTick: (label: string): void => ipcRenderer.send('capture:tick', label),
   captureEnded: (): Promise<void> => ipcRenderer.invoke('capture:ended'),
