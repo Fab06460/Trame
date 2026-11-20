@@ -15,6 +15,25 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.13.0',
+    fr: [
+      'Enregistrement d\'écran : le son de l\'ordinateur en option (Windows et macOS 14.2 ou plus), mélangé au micro.',
+      'Nouveautés : cette fenêtre vous montre ce qui change après chaque mise à jour (Fichier → Nouveautés… pour la rouvrir).'
+    ],
+    en: [
+      'Screen recording: the computer\'s sound as an option (Windows and macOS 14.2 or later), mixed with the microphone.',
+      'What\'s new: this window shows what changes after each update (File → What\'s new… to open it again).'
+    ],
+    de: [
+      'Bildschirmaufnahme: der Ton des Computers als Option (Windows und macOS ab 14.2), mit dem Mikrofon gemischt.',
+      'Neuigkeiten: Dieses Fenster zeigt nach jeder Aktualisierung, was sich ändert (Datei → Neuigkeiten… zum erneuten Öffnen).'
+    ],
+    es: [
+      'Grabación de pantalla: el sonido del ordenador como opción (Windows y macOS 14.2 o posterior), mezclado con el micrófono.',
+      'Novedades: esta ventana muestra lo que cambia tras cada actualización (Archivo → Novedades… para abrirla de nuevo).'
+    ]
+  },
+  {
     version: '0.12.0',
     fr: [
       'Dessin : crayon à main libre lissé, surligneur, ligne et flèche (pointe ou rond à chaque bout).',
