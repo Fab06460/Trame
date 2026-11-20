@@ -293,6 +293,11 @@ button.danger { color: var(--danger); }
 
 .warn .detail { display: block; margin-top: 6px; font-size: 11px; opacity: 0.85; word-break: break-word; user-select: text; }
 
+.news-list { max-height: min(420px, calc(100vh - 220px)); overflow: auto; margin: 8px 0; padding-right: 4px; }
+.news-list h4 { margin: 12px 0 4px; font-size: 13px; }
+.news-list section:first-child h4 { margin-top: 0; }
+.news-list ul { margin: 0; padding-left: 20px; }
+.news-list li { margin: 3px 0; line-height: 1.4; }
 .modal.wide { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chips button { padding: 3px 10px; font-size: 12px; }

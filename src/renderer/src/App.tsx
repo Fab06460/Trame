@@ -37,6 +37,7 @@ import { RecoveryDialog } from '@/components/RecoveryDialog'
 import { CompareDialog } from '@/components/CompareDialog'
 import { UpdateBanner } from '@/components/UpdateBanner'
 import { UpdateDialog } from '@/components/UpdateDialog'
+import { NewsDialog } from '@/components/NewsDialog'
 import { startUpdateWatch } from '@/updateActions'
 import { checkRecovery, startAutosave } from '@/recoveryActions'
 import { FontCatalogDialog } from '@/components/FontCatalogDialog'
@@ -265,6 +266,7 @@ export default function App(): React.JSX.Element {
       <RecoveryDialog />
       <CompareDialog />
       <UpdateDialog />
+      <NewsDialog />
       <UpdateBanner />
       <FindPanel />
       <PresentationMode />

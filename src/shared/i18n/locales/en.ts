@@ -1381,6 +1381,11 @@ export const en: Catalog = {
   'print.duplex.hint': 'In the print dialog, choose double-sided printing flipping on the SHORT edge if it is not already selected.',
   // Mises à jour
   'update.title': 'Updates',
+  'news.title': "What's new",
+  'news.menu': "What's new…",
+  'news.intro.update': "Trame has been updated: here is what changed since your last version.",
+  'news.intro.all': "What came with each version, from the newest to the oldest.",
+  'news.version': "Version {version}",
   'update.open': 'Updates…',
   'update.open.title': 'Installed version, check for updates',
   'update.footer': 'Trame {version} · updates',

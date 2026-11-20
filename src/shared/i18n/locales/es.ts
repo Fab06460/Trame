@@ -1381,6 +1381,11 @@ export const es: Catalog = {
   'print.duplex.hint': 'En el cuadro de impresión, elija la impresión a doble cara girando por el borde CORTO si no está ya seleccionada.',
   // Mises à jour
   'update.title': 'Actualizaciones',
+  'news.title': "Novedades",
+  'news.menu': "Novedades…",
+  'news.intro.update': "Trame se ha actualizado: esto es lo que cambia desde su última versión.",
+  'news.intro.all': "Lo que trajo cada versión, de la más reciente a la más antigua.",
+  'news.version': "Versión {version}",
   'update.open': 'Actualizaciones…',
   'update.open.title': 'Versión instalada, buscar actualizaciones',
   'update.footer': 'Trame {version} · actualizaciones',

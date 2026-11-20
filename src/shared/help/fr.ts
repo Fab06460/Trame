@@ -242,7 +242,7 @@ export const fr: HelpContent = {
       title: 'Réglages et retours',
       keywords: 'langue apparence thème clair sombre signaler problème bug avis formulaire diagnostic',
       body: [
-        { p: 'Ouvrez les **Réglages** avec ⚙ en bas de la colonne d\'icônes, ou ⌘, : langue, apparence (clair, sombre ou celle du système), rouvrir le dernier document au lancement, règles et repères, correcteur orthographique, version et mises à jour.' },
+        { p: 'Ouvrez les **Réglages** avec ⚙ en bas de la colonne d\'icônes, ou ⌘, : langue, apparence (clair, sombre ou celle du système), rouvrir le dernier document au lancement, règles et repères, correcteur orthographique, version et mises à jour. Après une mise à jour, une fenêtre vous montre **les nouveautés** une fois ; vous pouvez la rouvrir quand vous voulez par Fichier → Nouveautés….' },
         { p: 'Une difficulté, une idée ? **Aide et retours** (dans les Réglages) ouvre un formulaire dans votre navigateur, sans compte, avec la version et le système déjà remplis. « Copier les informations de diagnostic » met ces informations à coller dans le formulaire ; elles ne contiennent jamais le contenu d\'un document.' }
       ]
     },

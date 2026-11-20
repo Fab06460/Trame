@@ -12,6 +12,7 @@ Les mises à jour d'une application installée viennent des **versions GitHub** 
 
 ## À chaque version
 
+0. **Écrire les nouveautés** : ajouter en tête de `NEWS` (`src/shared/news.ts`) une entrée pour la version, en français et en anglais au moins (allemand et espagnol si possible : sinon l'anglais s'affiche). Un test refuse une version de `package.json` sans entrée.
 1. Augmenter `version` dans `package.json` (ex. `0.2.0`), commiter. **Une version plus élevée que l'installée est indispensable** : c'est ce que compare la mise à jour.
 2. Étiqueter et envoyer : `git tag v0.2.0 && git push origin main v0.2.0`. Le workflow `.github/workflows/build.yml` :
    - vérifie que l'étiquette correspond à la version de `package.json` ;

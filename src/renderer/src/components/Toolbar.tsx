@@ -17,6 +17,7 @@ import { usePresentation } from '@/store/presentation'
 import { usePdfTools } from '@/store/pdfTools'
 import { useVersions } from '@/store/versions'
 import { compareWithFile } from '@/compareActions'
+import { showAllNews } from '@/store/news'
 import { useUpdate } from '@/store/update'
 
 export function Toolbar(): React.JSX.Element {
@@ -86,6 +87,7 @@ export function Toolbar(): React.JSX.Element {
               { key: 'save-as', label: t('toolbar.saveAs'), hint: shortcut('⇧⌘S'), onSelect: () => saveProject(true) },
               { key: 'versions', label: t('versions.menu'), onSelect: () => useVersions.getState().setOpen(true) },
               { key: 'compare', label: t('compare.menu'), onSelect: compareWithFile },
+              { key: 'news', label: t('news.menu'), onSelect: () => void window.trame.getSystemInfo().then((i) => showAllNews(i.version)) },
               { key: 'update', label: t('update.open'), onSelect: () => useUpdate.getState().setOpen(true) }
             ]}
           />

@@ -1,0 +1,124 @@
+/**
+ * Les nouveautés de chaque version, montrées après une mise à jour (et à la demande : Fichier → Nouveautés…).
+ *
+ * **À chaque version** : ajouter une entrée en tête de `NEWS` (un test refuse une version de `package.json` sans entrée). Quelques lignes,
+ * ce qu'une personne verra ou pourra faire de nouveau, sans jargon. Le français est la référence ; une langue sans texte retombe sur l'anglais,
+ * puis sur le français.
+ */
+export interface NewsEntry {
+  version: string
+  fr: string[]
+  en: string[]
+  de?: string[]
+  es?: string[]
+}
+
+export const NEWS: readonly NewsEntry[] = [
+  {
+    version: '0.12.0',
+    fr: [
+      'Dessin : crayon à main libre lissé, surligneur, ligne et flèche (pointe ou rond à chaque bout).',
+      'La plume : des courbes de Bézier (points, poignées, fermeture, forme remplie), puis la modification point par point d\'un tracé.',
+      'La barre de dessin se déplace, se met en colonne près d\'un côté et se souvient de sa place.',
+      'Clips : frise visuelle (vignettes, poignées de début et de fin) et fondu enchaîné entre les morceaux d\'une séquence.',
+      'Import PDF : reconnaissance du texte des pages scannées, avec un texte modifiable posé à sa place.'
+    ],
+    en: [
+      'Drawing: smoothed freehand pencil, highlighter, line and arrow (point or dot at each end).',
+      'The pen: Bézier curves (points, handles, closing, filled shape), then point-by-point editing of a path.',
+      'The drawing bar can be moved, turns into a column near a side and remembers its place.',
+      'Clips: visual timeline (thumbnails, start and end handles) and crossfade between the pieces of a sequence.',
+      'PDF import: text recognition on scanned pages, with editable text placed where it belongs.'
+    ],
+    de: [
+      'Zeichnen: geglätteter Freihandstift, Textmarker, Linie und Pfeil (Spitze oder Punkt an jedem Ende).',
+      'Der Zeichenstift: Bézier-Kurven (Punkte, Griffe, Schließen, gefüllte Form) und anschließend Bearbeiten eines Pfads Punkt für Punkt.',
+      'Die Zeichenleiste lässt sich verschieben, wird an einem Rand zur Spalte und merkt sich ihren Platz.',
+      'Clips: visuelle Zeitleiste (Vorschaubilder, Anfangs- und Endgriffe) und Überblendung zwischen den Teilen einer Sequenz.',
+      'PDF-Import: Texterkennung auf gescannten Seiten, mit bearbeitbarem Text an der richtigen Stelle.'
+    ],
+    es: [
+      'Dibujo: lápiz a mano alzada suavizado, resaltador, línea y flecha (punta o círculo en cada extremo).',
+      'La pluma: curvas de Bézier (puntos, tiradores, cierre, forma rellena) y edición de un trazo punto por punto.',
+      'La barra de dibujo se mueve, pasa a columna junto a un lado y recuerda su sitio.',
+      'Clips: línea de tiempo visual (miniaturas, tiradores de inicio y fin) y fundido encadenado entre los fragmentos de una secuencia.',
+      'Importación de PDF: reconocimiento de texto en páginas escaneadas, con texto editable colocado en su sitio.'
+    ]
+  },
+  {
+    version: '0.11.0',
+    fr: [
+      'Clips : « Assembler les clips » met plusieurs clips bout à bout en une séquence ; « Couper ici » scinde un clip en deux.',
+      'Fondu au noir facultatif entre les morceaux d\'une séquence.',
+      'Texte : dégradé de couleur, avec contrôle du contraste.',
+      'Import : les documents LibreOffice (.odt) se lisent comme ceux de Word.'
+    ],
+    en: [
+      'Clips: “Join clips” puts several clips end to end in a sequence; “Split here” cuts a clip in two.',
+      'Optional fade to black between the pieces of a sequence.',
+      'Text: colour gradient, with a contrast check.',
+      'Import: LibreOffice documents (.odt) open like Word ones.'
+    ],
+    de: [
+      'Clips: „Clips zusammenfügen“ reiht mehrere Clips zu einer Sequenz; „Hier teilen“ schneidet einen Clip in zwei.',
+      'Optionale Abblendung auf Schwarz zwischen den Teilen einer Sequenz.',
+      'Text: Farbverlauf, mit Kontrastprüfung.',
+      'Import: LibreOffice-Dokumente (.odt) werden wie Word-Dokumente gelesen.'
+    ],
+    es: [
+      'Clips: «Unir clips» pone varios clips uno tras otro en una secuencia; «Cortar aquí» divide un clip en dos.',
+      'Fundido a negro opcional entre los fragmentos de una secuencia.',
+      'Texto: degradado de color, con comprobación del contraste.',
+      'Importación: los documentos de LibreOffice (.odt) se leen como los de Word.'
+    ]
+  },
+  {
+    version: '0.10.0',
+    fr: [
+      'Dégradé de fond de page (linéaire ou radial), applicable à toutes les pages.',
+      'Kit de marque : plusieurs kits, échange par fichier .tramekit, couleurs du kit sous les sélecteurs de couleur.',
+      'Linux : capture d\'écran sous Wayland et voix du système pour la lecture à voix haute.'
+    ],
+    en: [
+      'Page background gradient (linear or radial), applicable to all pages.',
+      'Brand kit: several kits, exchange through a .tramekit file, kit colours under the colour pickers.',
+      'Linux: screen capture under Wayland and system voices for reading aloud.'
+    ],
+    de: [
+      'Farbverlauf als Seitenhintergrund (linear oder radial), auf alle Seiten anwendbar.',
+      'Markenkit: mehrere Kits, Austausch per .tramekit-Datei, Kitfarben unter den Farbwählern.',
+      'Linux: Bildschirmaufnahme unter Wayland und Systemstimmen zum Vorlesen.'
+    ],
+    es: [
+      'Degradado de fondo de página (lineal o radial), aplicable a todas las páginas.',
+      'Kit de marca: varios kits, intercambio mediante archivo .tramekit, colores del kit bajo los selectores de color.',
+      'Linux: captura de pantalla en Wayland y voces del sistema para la lectura en voz alta.'
+    ]
+  }
+]
+
+/** Les nombres d'une version « 1.2.3 » (ce qui suit un tiret, comme « -beta », est ignoré) ; `null` si elle n'en a pas la forme. */
+export function parseVersion(v: string): [number, number, number] | null {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(v.trim())
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null
+}
+
+/** Négatif si `a` est plus ancienne que `b`, positif si plus récente, 0 si égales ou illisibles. */
+export function compareVersions(a: string, b: string): number {
+  const x = parseVersion(a)
+  const y = parseVersion(b)
+  if (!x || !y) return 0
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]
+  return 0
+}
+
+/** Les entrées après `last` (exclue) et jusqu'à `current` (incluse), de la plus récente à la plus ancienne. */
+export function newsBetween(last: string, current: string, news: readonly NewsEntry[] = NEWS): NewsEntry[] {
+  return news.filter((n) => compareVersions(n.version, last) > 0 && compareVersions(n.version, current) <= 0).sort((a, b) => compareVersions(b.version, a.version))
+}
+
+/** Les lignes d'une entrée dans la langue demandée (repli : anglais, puis français). */
+export function newsLines(entry: NewsEntry, locale: string): string[] {
+  const own = locale === 'fr' || locale === 'en' || locale === 'de' || locale === 'es' ? entry[locale] : undefined
+  return own?.length ? own : entry.en.length ? entry.en : entry.fr
+}

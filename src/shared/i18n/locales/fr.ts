@@ -1382,6 +1382,11 @@ export const fr = {
   'print.duplex.hint': 'Dans la boîte d\'impression, choisissez le recto-verso avec retournement sur le bord COURT si elle ne l\'a pas déjà sélectionné.',
   // Mises à jour
   'update.title': 'Mises à jour',
+  'news.title': "Nouveautés",
+  'news.menu': "Nouveautés…",
+  'news.intro.update': "Trame a été mise à jour : voici ce qui change depuis votre dernière version.",
+  'news.intro.all': "Ce qui est arrivé version après version, de la plus récente à la plus ancienne.",
+  'news.version': "Version {version}",
   'update.open': 'Mises à jour…',
   'update.open.title': 'Version installée, recherche de mises à jour',
   'update.footer': 'Trame {version} · mises à jour',

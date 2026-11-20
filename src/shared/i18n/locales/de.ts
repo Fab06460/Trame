@@ -1381,6 +1381,11 @@ export const de: Catalog = {
   'print.duplex.hint': 'Wählen Sie im Druckdialog den Duplexdruck mit Wenden über die KURZE Kante, falls er nicht schon gewählt ist.',
   // Mises à jour
   'update.title': 'Updates',
+  'news.title': "Neuigkeiten",
+  'news.menu': "Neuigkeiten…",
+  'news.intro.update': "Trame wurde aktualisiert: Das hat sich seit Ihrer letzten Version geändert.",
+  'news.intro.all': "Was jede Version gebracht hat, von der neuesten zur ältesten.",
+  'news.version': "Version {version}",
   'update.open': 'Updates…',
   'update.open.title': 'Installierte Version, nach Updates suchen',
   'update.footer': 'Trame {version} · Updates',
