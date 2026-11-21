@@ -172,6 +172,7 @@ export const fr: HelpContent = {
             ['Vidéo (MP4)', 'le document devient un film, avec transitions, voix off et musique de fond facultative']
           ]
         },
+        { p: 'Dans PowerPoint, les tracés restent de vraies lignes et formes libres, que vous pouvez retoucher. Les **dégradés** et les dessins composés de plusieurs morceaux (formules, QR codes, illustrations) sont posés en **images** : Trame vous prévient à l\'export.' },
         { p: 'La **présentation web** se déplace avec les flèches, un clic ou un balayage ; elle intègre les polices, les clips et les voix off, et propose une lecture automatique (▶ ou touche P). Elle est faite pour un navigateur : sur iPhone, l\'aperçu de l\'app Fichiers montre les pages l\'une sous l\'autre, mais ne peut pas la jouer.' },
         { p: 'La **vidéo** est fabriquée sur votre ordinateur (480p, 720p ou 1080p, 24, 30 ou 60 images par seconde, 20 minutes au plus) ; une barre de progression et un bouton d\'arrêt sont proposés.' }
       ]
