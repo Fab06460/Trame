@@ -302,8 +302,14 @@ export function Sidebar(): React.JSX.Element {
             >
               {t('clip.insert')}
             </button>
-            <button data-action="capture-open-video" title={t('capture.video.title')} onClick={() => useCapture.getState().show('video')}>{t('capture.video')}</button>
-            <button data-action="capture-open-image" title={t('capture.image.title')} onClick={() => useCapture.getState().show('image')}>{t('capture.image')}</button>
+          </section>
+
+          <section>
+            <h3>{t('capture.section')}</h3>
+            <div className="chart-kinds">
+              <button data-action="capture-open-video" title={t('capture.video.title')} onClick={() => useCapture.getState().show('video')}>{t('capture.video')}</button>
+              <button data-action="capture-open-image" title={t('capture.image.title')} onClick={() => useCapture.getState().show('image')}>{t('capture.image')}</button>
+            </div>
           </section>
 
           <section>

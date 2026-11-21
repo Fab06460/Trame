@@ -1839,6 +1839,7 @@ export const fr = {
   'video.clip.name': 'Clip vidéo',
   'clip.section': 'Clip vidéo',
   'clip.insert': 'Insérer un clip vidéo…',
+  'capture.section': 'Écran',
   'capture.video': 'Enregistrer l\'écran…',
   'capture.video.title': 'Enregistre un écran ou une fenêtre en vidéo, avec ou sans micro, et la place dans la page comme un clip',
   'capture.image': 'Capture d\'écran…',

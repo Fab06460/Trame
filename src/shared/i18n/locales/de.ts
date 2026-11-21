@@ -1838,6 +1838,7 @@ export const de: Catalog = {
   'video.clip.name': 'Videoclip',
   'clip.section': 'Videoclip',
   'clip.insert': 'Videoclip einfügen…',
+  'capture.section': 'Bildschirm',
   'capture.video': 'Bildschirm aufnehmen…',
   'capture.video.title': 'Nimmt einen Bildschirm oder ein Fenster als Video auf, mit oder ohne Mikrofon, und legt es als Clip auf die Seite',
   'capture.image': 'Bildschirmfoto…',

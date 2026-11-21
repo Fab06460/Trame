@@ -1838,6 +1838,7 @@ export const es: Catalog = {
   'video.clip.name': 'Clip de vídeo',
   'clip.section': 'Clip de vídeo',
   'clip.insert': 'Insertar un clip de vídeo…',
+  'capture.section': 'Pantalla',
   'capture.video': 'Grabar la pantalla…',
   'capture.video.title': 'Graba una pantalla o una ventana en vídeo, con o sin micrófono, y la coloca en la página como un clip',
   'capture.image': 'Captura de pantalla…',

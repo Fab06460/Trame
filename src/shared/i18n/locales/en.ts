@@ -1838,6 +1838,7 @@ export const en: Catalog = {
   'video.clip.name': 'Video clip',
   'clip.section': 'Video clip',
   'clip.insert': 'Insert a video clip…',
+  'capture.section': 'Screen',
   'capture.video': 'Record the screen…',
   'capture.video.title': 'Records a screen or a window as a video, with or without the microphone, and places it on the page as a clip',
   'capture.image': 'Screenshot…',
