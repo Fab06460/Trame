@@ -13,8 +13,12 @@ import { stripPlaceholderAlt } from '@/pptxAlt'
 import { insertTransition } from '@/pptxTransition'
 import { transitionBetween } from '@/transition'
 import { pptxLink } from '@/links'
+import { lineEndsOf } from '@/openPath'
+import { OPEN_SHAPE_NAME, pptxGeometry, roundOpenLines, straightLine } from '@/pptxPath'
 import type { TrameDocument, TrameElement } from '@/types'
 
+/** Forme libre : la bibliothèque la connaît (`custGeom`, avec `points`) mais ses types ne la listent pas. */
+const CUSTOM_SHAPE = 'custGeom' as unknown as PptxGenJS.ShapeType
 const IN = 1 / 96 // pouces par pixel de design
 const PT = 0.75 // points par pixel de design
 
@@ -100,7 +104,41 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
           ...(round ? { rectRadius: Math.min(el.cornerRadius!, el.width / 2, el.height / 2) * IN } : {})
         })
       } else if (el.type === 'path') {
-        await asImage(el, 'vector')
+        // un tracé devient une forme libre modifiable ; ce que PowerPoint ne reproduirait pas fidèlement reste une image (dégradé, plusieurs
+        // sous-chemins sans la règle pair-impair : PowerPoint ne sait pas distinguer un trou d'un recouvrement, formule, QR code, dessin)
+        const open = el.open === true
+        const geom = el.path && !el.gradient ? pptxGeometry(el.path, el.width, el.height) : null
+        if (!geom || (open ? !hasStroke(el) : geom.subpaths > 1 && el.fillRule !== 'evenodd')) {
+          await asImage(el, el.gradient ? 'gradient' : 'vector')
+          continue
+        }
+        const { x, y } = centredBox(el, el.width, el.height)
+        const ends = open ? lineEndsOf(el) : null
+        const line = open
+          ? {
+              color: hex(el.stroke!), width: el.strokeWidth! * PT, transparency,
+              ...(el.strokeDashed ? { dashType: 'dash' as const } : {}),
+              // pointe pleine ou rond à chaque bout : ce sont des extrémités de ligne PowerPoint, que l'on peut changer ensuite
+              ...(ends?.start ? { beginArrowType: ends.start === 'arrow' ? ('triangle' as const) : ('oval' as const) } : {}),
+              ...(ends?.end ? { endArrowType: ends.end === 'arrow' ? ('triangle' as const) : ('oval' as const) } : {})
+            }
+          : { ...(lineOf(el) ?? { type: 'none' as const }), ...(hasStroke(el) ? { transparency } : {}) }
+        const straight = open ? straightLine(el) : null
+        if (straight) {
+          slide.addShape(pptx.ShapeType.line, {
+            x: straight.x * IN, y: straight.y * IN, w: straight.w * IN, h: straight.h * IN, flipH: straight.flipH, flipV: straight.flipV,
+            objectName: OPEN_SHAPE_NAME, line, shadow: shadowOf(el), ...pptxLink(doc, el)
+          })
+          continue
+        }
+        slide.addShape(CUSTOM_SHAPE, {
+          x: x * IN, y: y * IN, w: el.width * IN, h: el.height * IN, rotate: el.rotation,
+          points: geom.points,
+          ...(open ? { objectName: OPEN_SHAPE_NAME } : { fill: { color: hex(el.fill), transparency } }),
+          line,
+          shadow: shadowOf(el),
+          ...pptxLink(doc, el)
+        })
       } else if (el.type === 'image' && el.src) {
         if (hasStroke(el) || hasShadow(el)) { await asImage(el, 'imageBorder'); continue }
         const mime = decodeDataUrl(el.src)?.mime
@@ -150,7 +188,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
     for (const [i] of doc.pages.entries()) {
       const path = `ppt/slides/slide${i + 1}.xml`
       const file = zip.file(path)
-      if (file) zip.file(path, stripPlaceholderAlt(insertTransition(await file.async('string'), transitionBetween(doc, null, i))))
+      if (file) zip.file(path, roundOpenLines(stripPlaceholderAlt(insertTransition(await file.async('string'), transitionBetween(doc, null, i)))))
     }
     base64 = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' })
   }

@@ -166,7 +166,7 @@ export const fr: HelpContent = {
         {
           keys: [
             ['PDF', 'toutes les pages, texte sélectionnable et dessin vectoriel'],
-            ['PowerPoint (.pptx)', 'textes, formes et images modifiables ailleurs, avec les notes et les transitions'],
+            ['PowerPoint (.pptx)', 'textes, formes, tracés (crayon, lignes, flèches, plume) et images modifiables ailleurs, avec les notes et les transitions'],
             ['PNG, JPG, SVG', 'page courante ou plusieurs pages, jusqu\'à ×3, en archive ZIP ou dans un dossier'],
             ['Présentation web (.html)', 'un seul fichier à ouvrir dans un navigateur, sans Trame ni connexion'],
             ['Vidéo (MP4)', 'le document devient un film, avec transitions, voix off et musique de fond facultative']

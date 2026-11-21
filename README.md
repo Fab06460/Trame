@@ -54,7 +54,7 @@
 - Menu « Exporter » unique : PDF, PowerPoint, PNG, JPG, images de plusieurs pages
 - Export de toutes les pages (ou d'une sélection) en PNG / JPG (jusqu'à ×3) ou en SVG vectoriel, en archive ZIP ou dans un dossier
 - Export SVG de la page courante (textes en vrai texte, polices incorporées) depuis le menu Exporter
-- Export PowerPoint (.pptx) : textes, formes et images modifiables dans PowerPoint, Keynote ou Google Slides
+- Export PowerPoint (.pptx) : textes, formes, **tracés et lignes** (crayon, flèches, plume : formes libres aux points modifiables) et images modifiables dans PowerPoint, Keynote ou Google Slides
 - Import de PDF : texte reconstruit en blocs modifiables, ou pages à annoter (la page d'origine reste vectorielle à l'export) ; **PDF scanné** : reconnaissance du texte (OCR, hors ligne) des pages-images, texte rendu modifiable à sa place
 - **Texte en colonnes** : 2 à 4 colonnes équilibrées dans une même zone de texte (le texte coule de colonne en colonne, la hauteur s'ajuste), espace réglable ; texte vectoriel dans le PDF et le SVG
 - Kit de marque (ses polices passent en tête du sélecteur de police, où chaque nom est affiché dans sa propre police, avec une recherche) : couleurs, polices et logos enregistrés, couleurs récentes, pipette ; **plusieurs kits** (un par client, cours ou association : créer, renommer, dupliquer, supprimer, un kit actif à la fois) à **échanger par fichier `.tramekit`** ; les couleurs du kit actif sont proposées en pastilles sous les sélecteurs de couleur du panneau Propriétés ; **couleurs du document** (celles qu'il utilise, un clic pour les appliquer, « + » pour les garder dans le kit, « ⇄ » pour en remplacer une partout)
