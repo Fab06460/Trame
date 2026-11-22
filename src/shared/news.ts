@@ -15,6 +15,25 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.14.0',
+    fr: [
+      'Export PowerPoint : les lignes, flèches et tracés du dessin (crayon, surligneur, plume) restent des objets modifiables dans PowerPoint, au lieu d\'images.',
+      'Éléments : l\'enregistrement et la capture d\'écran ont leur propre section « Écran ».'
+    ],
+    en: [
+      'PowerPoint export: lines, arrows and drawings (pencil, highlighter, pen) stay editable objects in PowerPoint instead of images.',
+      'Elements: screen recording and screen capture now have their own "Screen" section.'
+    ],
+    de: [
+      'PowerPoint-Export: Linien, Pfeile und Zeichnungen (Stift, Marker, Zeichenfeder) bleiben in PowerPoint bearbeitbare Objekte statt Bilder.',
+      'Elemente: Bildschirmaufnahme und Bildschirmfoto haben jetzt einen eigenen Bereich „Bildschirm“.'
+    ],
+    es: [
+      'Exportación a PowerPoint: las líneas, flechas y trazos del dibujo (lápiz, resaltador, pluma) siguen siendo objetos editables en PowerPoint, en vez de imágenes.',
+      'Elementos: la grabación y la captura de pantalla tienen ahora su propia sección «Pantalla».'
+    ]
+  },
+  {
     version: '0.13.0',
     fr: [
       'Enregistrement d\'écran : le son de l\'ordinateur en option (Windows et macOS 14.2 ou plus), mélangé au micro.',
