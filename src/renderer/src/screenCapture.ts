@@ -75,6 +75,8 @@ export interface ScreenRecorder {
   stop: () => Promise<Finished | { error: 'failed'; detail: string }>
   /** Abandonne sans rien garder. */
   cancel: () => void
+  /** L'image de l'écran à cet instant (JPEG), pour le tutoriel ; `null` tant qu'aucune image n'est arrivée. */
+  snapshot: () => Promise<{ src: string; width: number; height: number } | null>
 }
 
 /** L'encodeur sait-il faire du VP9 à cette taille ? (`false` sur un navigateur sans WebCodecs.) */
@@ -275,6 +277,17 @@ export async function startScreenRecording(mic: boolean, system: boolean, onFull
   }
   return {
     elapsed: () => (performance.now() - startedAt) / 1000,
+    snapshot: async () => {
+      if (!frames) return null
+      const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
+      const src = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(String(r.result))
+        r.onerror = () => reject(r.error)
+        r.readAsDataURL(blob)
+      })
+      return { src, width, height }
+    },
     cancel: () => {
       release()
       try {

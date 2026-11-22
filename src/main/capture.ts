@@ -1,5 +1,6 @@
 import os from 'node:os'
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, nativeImage, screen, session, shell, systemPreferences, Tray } from 'electron'
+import { stopClickTracking } from './clicks'
 import type { CaptureError, CaptureSource, CaptureStill } from '../shared/capture'
 
 /** Raccourci qui arrête l'enregistrement quand la fenêtre de Trame est réduite (le témoin de la barre de menus fait de même). */
@@ -46,7 +47,7 @@ function redDot(): Electron.NativeImage {
  * `getSources`, et Trame ne peut ni lister les écrans à l'avance ni retrouver une source d'un appel à l'autre. On laisse alors le système
  * poser la question, une seule fois, au moment de la prise.
  */
-const portalSession = (): boolean => process.platform === 'linux' && (process.env.XDG_SESSION_TYPE === 'wayland' || Boolean(process.env.WAYLAND_DISPLAY))
+export const portalSession = (): boolean => process.platform === 'linux' && (process.env.XDG_SESSION_TYPE === 'wayland' || Boolean(process.env.WAYLAND_DISPLAY))
 /** Identifiant de source qui désigne « celle que le portail va faire choisir ». */
 const PORTAL = 'portal'
 
@@ -186,6 +187,7 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
 
   ipcMain.handle('capture:ended', (): void => {
     armed = null
+    stopClickTracking()
     if (tray) {
       tray.destroy()
       tray = null

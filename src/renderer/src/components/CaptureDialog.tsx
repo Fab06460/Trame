@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { InfoTip } from './InfoTip'
 import { useT } from '@/i18n'
 import { insertImage } from '@/clipboardActions'
+import { confirmUnsaved } from '@/fileActions'
+import { useEditor } from '@/store/editor'
+import { tutorialDocument, type TutorialStep } from '@/tutorial'
+import { TUTORIAL_MAX_STEPS, type ClickTrackProblem } from '@shared/capture'
 import { clipResultMessage, insertClipBytes } from '@/clipActions'
 import { useCapture } from '@/store/capture'
 import { CAPTURE_MAX_BYTES, clockLabel, cropImage, startScreenRecording, zoneBetween, type Rect, type RecordProblem, type ScreenRecorder } from '@/screenCapture'
@@ -15,13 +19,14 @@ interface Saved {
   hide: boolean
   mic: boolean
   system: boolean
+  tutorial: boolean
 }
 function saved(): Saved {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}')
-    return { hide: v.hide !== false, mic: v.mic === true, system: v.system === true }
+    return { hide: v.hide !== false, mic: v.mic === true, system: v.system === true, tutorial: v.tutorial === true }
   } catch {
-    return { hide: true, mic: false, system: false }
+    return { hide: true, mic: false, system: false, tutorial: false }
   }
 }
 
@@ -32,6 +37,12 @@ type Stage =
   | { name: 'countdown'; left: number }
   | { name: 'recording' }
   | { name: 'saving' }
+
+const CLICK_PROBLEMS: Record<Exclude<ClickTrackProblem, 'window'>, MessageKey> = {
+  portal: 'capture.err.clicksPortal',
+  denied: 'capture.err.clicksDenied',
+  failed: 'capture.err.clicksFailed'
+}
 
 const PROBLEMS: Record<RecordProblem, MessageKey> = {
   denied: 'capture.err.denied',
@@ -66,7 +77,13 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const recorder = useRef<ScreenRecorder | null>(null)
   const alive = useRef(true)
   const stopping = useRef(false)
+  /** Tutoriel : les étapes prises pendant l'enregistrement (une image par clic), et si les clics sont suivis. */
+  const steps = useRef<TutorialStep[]>([])
+  const tracking = useRef(false)
+  const collecting = useRef(false)
 
+  /** Seul un écran entier se suit (pas une fenêtre : sa place sur l'écran n'est pas connue ; pas Wayland). */
+  const canTutorial = !portal && sources?.find((s) => s.id === picked)?.kind === 'screen'
   const busy = stage.name === 'countdown' || stage.name === 'recording' || stage.name === 'saving'
   const close = (): void => useCapture.getState().close()
 
@@ -100,6 +117,7 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
       alive.current = false
       recorder.current?.cancel()
       recorder.current = null
+      void window.trame.captureClicksStop()
     }
   }, [])
 
@@ -121,6 +139,26 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [busy])
+
+  const stopTracking = async (): Promise<void> => {
+    collecting.current = false
+    if (!tracking.current) return
+    tracking.current = false
+    await window.trame.captureClicksStop()
+  }
+
+  // un clic suivi : l'image de l'écran à cet instant devient une étape
+  useEffect(
+    () =>
+      window.trame.onCaptureClick((p) => {
+        const rec = recorder.current
+        if (!collecting.current || !rec || steps.current.length >= TUTORIAL_MAX_STEPS) return
+        void rec.snapshot().then((shot) => {
+          if (shot && collecting.current) steps.current.push({ ...shot, fx: p.fx, fy: p.fy })
+        })
+      }),
+    []
+  )
 
   // arrêt demandé de l'extérieur (témoin de la barre de menus, raccourci) pendant l'enregistrement
   useEffect(() => window.trame.onCaptureStop(() => void finish()), [])
@@ -170,6 +208,16 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   const record = async (): Promise<void> => {
     if (!picked) return
     setError(null)
+    // tutoriel : le suivi des clics démarre avant le compte à rebours (la question du système, si elle vient, est posée à ce moment) ; rien n'est gardé avant le début
+    steps.current = []
+    collecting.current = false
+    const wantTutorial = options.tutorial && canTutorial
+    if (wantTutorial) {
+      const started = await window.trame.captureClicksStart(picked)
+      if (!alive.current) return
+      if (started !== 'ok') return fail(CLICK_PROBLEMS[started === 'window' ? 'failed' : started])
+      tracking.current = true
+    }
     // compte à rebours : le temps de se préparer (et de changer de fenêtre si la fenêtre de Trame ne se réduit pas)
     for (let left = COUNTDOWN; left > 0; left--) {
       setStage({ name: 'countdown', left })
@@ -182,11 +230,13 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
     const res = await startScreenRecording(options.mic, systemOn, () => void finish())
     if (!alive.current) return
     if ('error' in res) {
+      void stopTracking()
       setDenied(res.error === 'denied')
       return fail(PROBLEMS[res.error])
     }
     recorder.current = res
     stopping.current = false
+    collecting.current = tracking.current
     setSeconds(0)
     setStage({ name: 'recording' })
     await window.trame.captureStarted(options.hide && isScreen)
@@ -198,10 +248,24 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
     stopping.current = true
     recorder.current = null
     setStage({ name: 'saving' })
+    const wasTracking = tracking.current
+    await stopTracking()
     const out = await rec.stop()
     await window.trame.captureEnded()
     if (!alive.current) return
     if ('error' in out) return fail('capture.err.failed')
+    if (wasTracking) {
+      const taken = steps.current
+      steps.current = []
+      if (taken.length) {
+        // le tutoriel remplace le document (après confirmation s'il a des modifications), comme un import
+        if (!(await confirmUnsaved('tutorial'))) return setStage({ name: 'list' })
+        useEditor.getState().loadDocument(tutorialDocument(taken, t('capture.tutorial.name'), t('capture.tutorial.step')), undefined)
+        useEditor.setState({ dirty: true })
+        return close()
+      }
+      void window.trame.showInfo(t('capture.title'), t('capture.tutorial.noClicks'))
+    }
     const result = await insertClipBytes(out.bytes, 'video/webm')
     if (!alive.current) return
     const message = clipResultMessage(result)
@@ -268,6 +332,11 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
               {mode === 'video' && (
                 <label className="check">
                   <input type="checkbox" data-field="captureMic" checked={options.mic} onChange={(e) => remember({ ...options, mic: e.target.checked })} /> {t('capture.mic')}
+                </label>
+              )}
+              {mode === 'video' && canTutorial && (
+                <label className="check">
+                  <input type="checkbox" data-field="captureTutorial" checked={options.tutorial} onChange={(e) => remember({ ...options, tutorial: e.target.checked })} /> {t('capture.tutorial')}
                 </label>
               )}
               {mode === 'video' && systemAudio && (

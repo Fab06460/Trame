@@ -7,7 +7,7 @@ import type { AiGenerateResult, AiProviderId, AiSize, AiStatus, AiTextResult, Ed
 import type { MediaItem } from '../shared/mediaLibrary'
 import type { AudioPick } from '../shared/audioFiles'
 import type { VideoPick } from '../shared/videoFiles'
-import type { CaptureError, CaptureSource, CaptureStill } from '../shared/capture'
+import type { CaptureError, CaptureSource, CaptureStill, ClickPoint, ClickTrackProblem } from '../shared/capture'
 
 /** État du correcteur orthographique tel que l'interface le voit. */
 export interface SpellUiState {
@@ -122,6 +122,15 @@ const api = {
   /** Le système permet-il d'enregistrer le son de l'ordinateur avec l'écran ? */
   captureSystemAudio: (): Promise<boolean> => ipcRenderer.invoke('capture:system-audio'),
   captureStarted: (hideApp: boolean): Promise<boolean> => ipcRenderer.invoke('capture:started', hideApp),
+  /** Tutoriel : suit les clics gauches sur l'écran enregistré (`id` = la source) ; `ok`, ou la raison pour laquelle ce n'est pas possible. */
+  captureClicksStart: (id: string): Promise<'ok' | ClickTrackProblem> => ipcRenderer.invoke('capture:clicks-start', id),
+  captureClicksStop: (): Promise<void> => ipcRenderer.invoke('capture:clicks-stop'),
+  /** Un clic suivi (position dans l'écran, en fractions) ; rend la fonction qui se désabonne. */
+  onCaptureClick: (cb: (p: ClickPoint) => void): (() => void) => {
+    const handler = (_e: unknown, p: ClickPoint): void => cb(p)
+    ipcRenderer.on('capture:click', handler)
+    return () => ipcRenderer.removeListener('capture:click', handler)
+  },
   captureTick: (label: string): void => ipcRenderer.send('capture:tick', label),
   captureEnded: (): Promise<void> => ipcRenderer.invoke('capture:ended'),
   /** Demande d'arrêt venue du témoin de la barre de menus ou du raccourci ; rend la fonction qui se désabonne. */
@@ -223,7 +232,7 @@ const api = {
   readClipboard: (): Promise<
     { kind: 'elements'; json: string } | { kind: 'image'; dataUrl: string } | { kind: 'text'; text: string } | null
   > => ipcRenderer.invoke('clipboard:read'),
-  askUnsaved: (name: string, action: 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'importDocument' | 'template'): Promise<'save' | 'discard' | 'cancel'> =>
+  askUnsaved: (name: string, action: 'close' | 'new' | 'open' | 'importPdf' | 'importPptx' | 'importDocument' | 'template' | 'tutorial'): Promise<'save' | 'discard' | 'cancel'> =>
     ipcRenderer.invoke('dialog:unsaved', name, action),
   /** Boîte d'information native (un bouton OK). */
   showInfo: (message: string, detail: string): Promise<void> => ipcRenderer.invoke('dialog:info', message, detail),

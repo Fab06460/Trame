@@ -2258,6 +2258,7 @@ try {
   check('Capture : le mode « vidéo » propose d\'enregistrer aussi le micro', (await nBrand('[data-field="captureMic"]')) === 1)
   await sleep(300)
   check('Capture : « le son de l\'ordinateur » n\'est proposé que là où le système le permet (Windows, macOS 14.2+)', (await nBrand('[data-field="captureSystem"]')) === ((await run(`window.trame.captureSystemAudio()`)) ? 1 : 0))
+  check('Capture : « créer un tutoriel à partir de mes clics » n\'est proposé que pour un écran entier', (await nBrand('[data-field="captureTutorial"]')) === (await run(`document.querySelector('[data-capture-source][aria-pressed="true"]')?.getAttribute('data-capture-source')?.startsWith('screen') ? 1 : 0`)))
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
   await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
   await sleep(300)

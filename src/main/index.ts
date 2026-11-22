@@ -26,7 +26,8 @@ import { MAX_MEDIA_BYTES, MAX_MEDIA_DEPTH, MAX_MEDIA_FILES, isMediaFile, isSafeR
 import { projectFilesFromArgv } from './launchArgs'
 import { isOpenableLink } from '../shared/links'
 import { AUDIO_EXTENSIONS, MAX_AUDIO_BYTES, isAudioFile, type AudioPick } from '../shared/audioFiles'
-import { registerCapture } from './capture'
+import { portalSession, registerCapture } from './capture'
+import { registerClicks, stopClickTracking } from './clicks'
 import { MAX_CLIP_BYTES, VIDEO_TYPES, isVideoFile, videoMime, type VideoPick } from '../shared/videoFiles'
 import { initMainLocale, mainLocale, setMainLocale, tm } from './i18n'
 import { contextPlan, dictionariesFor, isDictionaryWord, parseSpellSettings, SPELL_LANGUAGES, type ContextItem, type SpellSettings } from './spellSettings'
@@ -633,7 +634,7 @@ ipcMain.handle('dialog:confirm', async (e, message: string, detail: string, conf
   return response === 0
 })
 
-const UNSAVED_ACTIONS = ['close', 'new', 'open', 'importPdf', 'importPptx', 'importDocument', 'template'] as const
+const UNSAVED_ACTIONS = ['close', 'new', 'open', 'importPdf', 'importPptx', 'importDocument', 'template', 'tutorial'] as const
 ipcMain.handle('dialog:unsaved', async (e, name: string, action: string) => {
   if (!(UNSAVED_ACTIONS as readonly string[]).includes(action)) return 'cancel'
   const win = BrowserWindow.fromWebContents(e.sender)!
@@ -1618,6 +1619,8 @@ app.whenReady().then(() => {
     callback(true)
   })
   registerCapture({ getWindow: () => mainWindow, testMode: Boolean(TEST_EXPORT_DIR) })
+  registerClicks({ getWindow: () => mainWindow, testMode: Boolean(TEST_EXPORT_DIR), portalSession })
+  app.on('will-quit', stopClickTracking)
   initMainLocale([...app.getPreferredSystemLanguages(), app.getLocale()], FORCED_LANG)
   void initSpellcheck().catch(() => {})
   createWindow()
