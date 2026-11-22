@@ -47,7 +47,7 @@ export interface Combined {
 type Paper = typeof import('paper')
 let scope: paper.PaperScope | null = null
 
-async function paperScope(): Promise<paper.PaperScope> {
+export async function paperScope(): Promise<paper.PaperScope> {
   if (scope) return scope
   const mod = (await import('paper/dist/paper-core.js')) as unknown as { default?: Paper } & Paper
   const lib = (mod.default ?? mod) as unknown as typeof paper
@@ -96,6 +96,14 @@ export async function combineShapes(els: readonly TrameElement[], op: BooleanOp)
   })
   let result: paper.PathItem = items[0]
   for (const next of items.slice(1)) result = result[op](next, { insert: false })
+  return normalizedOutline(s, result)
+}
+
+/**
+ * Un résultat (dans le repère de la page) ramené à un repère 100 × 100 avec sa boîte ; `null` s'il est vide ou plat. Les nombres de la
+ * boîte sont arrondis au millième.
+ */
+export function normalizedOutline(s: paper.PaperScope, result: paper.PathItem): Combined | null {
   const b = result.bounds
   if (!result.pathData || !(b.width > 0.01) || !(b.height > 0.01)) return null
   const normal = result.clone({ insert: false }) as paper.PathItem

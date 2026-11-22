@@ -2282,6 +2282,27 @@ try {
   await sleep(300)
   check('formes : « Unir » remplace les deux formes par un seul tracé, modifiable point par point', boolDone && (await count('[data-pen-panel]')) === 1 && (await count('[data-action^="bool-"]')) === 0, `${await count('.layer')} calque(s)`)
 
+  // texte converti en tracé : les lettres deviennent des contours (un seul élément, plus de texte modifiable)
+  await reloadApp()
+  await sleep(500)
+  await click('header.toolbar button', 'Texte')
+  await sleep(300)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check('texte : un texte sélectionné propose « Convertir en tracé »', (await count('[data-action="text-to-path"]')) === 1)
+  const textPathBefore = await run(`JSON.stringify(document.querySelector('.panel [data-field="width"]')?.value)`)
+  await clickSel('[data-action="text-to-path"]')
+  const textPathDone = await waitFor(async () => (await count('[data-action="text-to-path"]')) === 0 && (await count('.panel [data-field="width"]')) === 1)
+  await sleep(300)
+  check('texte : la conversion remplace le texte par un tracé (plus de police ni de saisie, une seule forme, à la même place)', textPathDone && (await count('.panel [data-field="fontFamily"], .panel [data-prop="font"]')) === 0, textPathBefore)
+  const textPng = await exportPng()
+  if (process.env.SMOKE_TEXTPATH_OUT) await writeFile(process.env.SMOKE_TEXTPATH_OUT, textPng)
+  const textPx = pngReader(textPng)
+  let inkPixels = 0
+  for (let y = 400; y < 700; y += 3) for (let x = 250; x < 850; x += 3) if (textPx(x, y)[0] < 90) inkPixels++
+  check('texte : les lettres converties se dessinent (de l\'encre noire au milieu de la page)', inkPixels > 60, `${inkPixels} pixels`)
+
   // plusieurs kits de marque : créer, séparer les couleurs, pastilles sous les sélecteurs, exporter et importer un fichier .tramekit
   await reloadApp()
   await sleep(500)

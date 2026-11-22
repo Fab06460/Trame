@@ -20,6 +20,7 @@ import { ClipPanel } from './ClipPanel'
 import { LinePanel } from './LinePanel'
 import { PenPanel } from './PenPanel'
 import { BooleanPanel } from './BooleanPanel'
+import { convertibleTexts, convertSelectedTexts } from '@/textPathActions'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
 import { PageBackground } from './PageBackground'
@@ -184,6 +185,13 @@ export function Properties(): React.JSX.Element {
           </div>
         )}
         <BooleanPanel />
+        {convertibleTexts(selection).length > 0 && (
+          <div className="row">
+            <button data-action="text-to-path" title={t('textPath.title.hint')} disabled={protectedSel} onClick={() => void convertSelectedTexts()}>
+              {t('textPath.convertMany')}
+            </button>
+          </div>
+        )}
         <PositionPanel />
         {alignButtons}
         {layerButtons}
@@ -508,6 +516,14 @@ export function Properties(): React.JSX.Element {
           onChange={(e) => live({ opacity: Number(e.target.value) })}
         />
       </label>
+
+      {el.type === 'text' && (
+        <div className="row">
+          <button data-action="text-to-path" title={t('textPath.title.hint')} disabled={protectedSel || !!el.locked} onClick={() => void convertSelectedTexts()}>
+            {t('textPath.convert')}
+          </button>
+        </div>
+      )}
 
       <PositionPanel />
       {alignButtons}

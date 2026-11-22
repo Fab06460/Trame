@@ -219,6 +219,8 @@ interface EditorState {
   insertChart: (elements: TrameElement[]) => void
   /** Remplace la sélection par un seul élément (formes combinées), à la place du plus bas de la pile, en un seul cran d'historique ; `false` si un élément est verrouillé ou protégé. */
   replaceSelection: (element: TrameElement) => boolean
+  /** Remplace des éléments par d'autres, chacun à sa place dans la pile (texte converti en tracé), en un seul cran d'historique ; ceux qui sont verrouillés ou protégés sont laissés (ils ne comptent pas) et le nombre remplacé est rendu. */
+  replaceElements: (changes: Array<{ id: string; element: TrameElement }>) => number
   /** Remplace les éléments du groupe de ce graphique par de nouveaux (même place dans la pile), un seul cran d'historique. */
   replaceChart: (anchorId: string, elements: TrameElement[]) => void
   /** Remet les textes d'une page dans l'ordre donné (les autres éléments gardent leur place : seul l'ordre des textes entre eux change). */
@@ -657,6 +659,23 @@ export const useEditor = create<EditorState>((set, get) => {
       const next = [...rest.slice(0, at), element, ...rest.slice(at)]
       set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: next })), selectedIds: [element.id], dirty: true })
       return true
+    },
+
+    replaceElements: (changes) => {
+      const enforced = enforcedNow()
+      const page = selectPage(get())
+      const wanted = new Map(changes.map((c) => [c.id, c.element]))
+      const done = new Map<string, TrameElement>()
+      const elements = page.elements.map((e) => {
+        const next = wanted.get(e.id)
+        if (!next || positionLocked(e, enforced)) return e
+        done.set(e.id, next)
+        return next
+      })
+      if (!done.size) return 0
+      const selectedIds = get().selectedIds.map((id) => done.get(id)?.id ?? id)
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements })), selectedIds, dirty: true })
+      return done.size
     },
 
     replaceChart: (anchorId, elements) => {
