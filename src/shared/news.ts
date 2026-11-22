@@ -15,6 +15,21 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.15.0',
+    fr: [
+      'Tutoriel automatique : en enregistrant un écran entier, cochez « Créer un tutoriel à partir de mes clics ». Chaque clic devient une page (numéro, titre lu près du clic, image, cercle sur l\'endroit cliqué). Sur Mac, autorisez Trame dans Accessibilité.'
+    ],
+    en: [
+      'Automatic tutorial: when recording a whole screen, tick "Create a tutorial from my clicks". Each click becomes a page (number, title read near the click, image, circle on the clicked spot). On Mac, allow Trame under Accessibility.'
+    ],
+    de: [
+      'Automatische Anleitung: Wenn Sie einen ganzen Bildschirm aufnehmen, aktivieren Sie „Anleitung aus meinen Klicks erstellen“. Jeder Klick wird zu einer Seite (Nummer, neben dem Klick gelesener Titel, Bild, Kreis auf der angeklickten Stelle). Am Mac erlauben Sie Trame unter Bedienungshilfen.'
+    ],
+    es: [
+      'Tutorial automático: al grabar una pantalla completa, marque «Crear un tutorial a partir de mis clics». Cada clic se convierte en una página (número, título leído junto al clic, imagen, círculo en el lugar pulsado). En Mac, autorice Trame en Accesibilidad.'
+    ]
+  },
+  {
     version: '0.14.0',
     fr: [
       'Export PowerPoint : les lignes, flèches et tracés du dessin (crayon, surligneur, plume) restent des objets modifiables dans PowerPoint, au lieu d\'images.',
