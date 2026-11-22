@@ -1,4 +1,5 @@
 import { gradientPng } from '@/pageBackground'
+import { isBlended } from '@/blend'
 import PptxGenJS from 'pptxgenjs'
 import { renderElementImage } from '@/elementImage'
 import { createTextNode } from '@/exportPages'
@@ -27,6 +28,8 @@ export interface PptxExportResult {
   dataUrl: string
   /** éléments exportés en image (PowerPoint ne sait pas les reproduire en objet modifiable) : nombre et causes */
   rasterized: Array<{ page: number; reason: 'gradient' | 'vector' | 'imageBorder' | 'edited' | 'format' }>
+  /** éléments dont le mode de fusion n'est pas repris (PowerPoint n'en a pas) : ils restent des objets, en mode normal */
+  blended: number
 }
 
 const hex = (c: string): string => {
@@ -68,6 +71,7 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
   pptx.title = doc.name
   pptx.company = 'Trame'
   const rasterized: PptxExportResult['rasterized'] = []
+  const blended = doc.pages.reduce((n, pg) => n + pg.elements.filter((e) => !e.hidden && isBlended(e)).length, 0)
 
   for (const [index, page] of doc.pages.entries()) {
     const slide = pptx.addSlide()
@@ -192,5 +196,5 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
     }
     base64 = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' })
   }
-  return { dataUrl: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${base64}`, rasterized }
+  return { dataUrl: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${base64}`, rasterized, blended }
 }

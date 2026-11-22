@@ -56,13 +56,14 @@ async function exportPdfFile(): Promise<void> {
 
 async function exportPptxFile(): Promise<void> {
   const { doc } = useEditor.getState()
-  const { dataUrl, rasterized } = await exportPptx(doc)
+  const { dataUrl, rasterized, blended } = await exportPptx(doc)
   const saved = await window.trame.saveExport(dataUrl, `${fileSafeName(doc.name)}.pptx`)
   // comme pour le PDF : on prévient APRÈS l'enregistrement de ce qui n'est pas resté modifiable dans PowerPoint
   if (saved && rasterized.length) {
     const causes = [...new Set(rasterized.map((r) => t(`pptx.reason.${r.reason}`)))].join(', ')
     await window.trame.showInfo(t('export.pptx.raster.title', { count: rasterized.length }), t('export.pptx.raster.detail', { causes }))
   }
+  if (saved && blended) await window.trame.showInfo(t('export.pptx.blend.title', { count: blended }), t('export.pptx.blend.detail'))
 }
 
 /**

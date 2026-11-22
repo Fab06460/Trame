@@ -2303,6 +2303,28 @@ try {
   for (let y = 400; y < 700; y += 3) for (let x = 250; x < 850; x += 3) if (textPx(x, y)[0] < 90) inkPixels++
   check('texte : les lettres converties se dessinent (de l\'encre noire au milieu de la page)', inkPixels > 60, `${inkPixels} pixels`)
 
+  // modes de fusion : « Produit » sur une ellipse qui recouvre un rectangle de même couleur assombrit le recouvrement
+  await reloadApp()
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle')
+  await sleep(250)
+  await click('header.toolbar button', 'Ellipse')
+  await sleep(300)
+  check('fusion : le panneau propose les seize modes', (await count('.panel select[data-field="blend"] option')) === 16, `${await count('.panel select[data-field="blend"] option')}`)
+  await run(`(() => { const s = document.querySelector('.panel select[data-field="blend"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'multiply'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await sleep(400)
+  const blendPng = await exportPng()
+  const blendCentre = pngPixel(blendPng, 540, 540)
+  const blendCorner = pngPixel(blendPng, 396, 446)
+  // rectangle violet (124, 92, 255) × ellipse orange (255, 122, 89) = (124, 44, 89) en « Produit » ; le coin du rectangle, hors de l'ellipse, reste violet
+  check('fusion : « Produit » mélange l\'ellipse avec le rectangle (image exportée)', Math.abs(blendCentre[0] - 124) <= 2 && Math.abs(blendCentre[1] - 44) <= 2 && Math.abs(blendCentre[2] - 89) <= 2 && purple(blendCorner), JSON.stringify([blendCentre, blendCorner]))
+  const blendPdf = await exportPdfText()
+  check('fusion : le PDF porte le mode (/BM /Multiply)', /\/BM\s*\/Multiply/.test(blendPdf + lastPdfRaw))
+  await run(`(() => { const s = document.querySelector('.panel select[data-field="blend"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'normal'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await sleep(400)
+  const blendNormal = pngPixel(await exportPng(), 540, 540)
+  check('fusion : « Normal » rend l\'ellipse opaque à nouveau (orange)', blendNormal[0] > 240 && Math.abs(blendNormal[1] - 122) <= 3, JSON.stringify(blendNormal))
+
   // plusieurs kits de marque : créer, séparer les couleurs, pastilles sous les sélecteurs, exporter et importer un fichier .tramekit
   await reloadApp()
   await sleep(500)

@@ -27,6 +27,7 @@ import { editedPng } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { hasShadow, shadowMargin } from '@/shadowStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
+import { PDF_BLEND, blendOf, isBlended } from '@/blend'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 interface LoadedFont {
@@ -128,7 +129,19 @@ class ExportContext {
     return page
   }
 
+  /** Un élément, avec son mode de fusion : un état graphique `/BM` posé le temps de son dessin (les états d'opacité qui suivent ne le changent pas). */
   async drawElement(p: PDFPage, el: TrameElement): Promise<void> {
+    if (!isBlended(el)) return this.drawElementBody(p, el)
+    const state = p.node.newExtGState('BM', this.pdf.context.obj({ Type: 'ExtGState', BM: PDF_BLEND[blendOf(el)] }))
+    p.pushOperators(pushGraphicsState(), setGraphicsState(state))
+    try {
+      await this.drawElementBody(p, el)
+    } finally {
+      p.pushOperators(popGraphicsState())
+    }
+  }
+
+  private async drawElementBody(p: PDFPage, el: TrameElement): Promise<void> {
     // 1. Cas rendus ENTIÈREMENT en image, décidés avant toute opération de dessin (pour ne jamais dessiner une ombre deux fois) :
     //    Konva compose l'élément d'un bloc puis applique l'opacité à l'ensemble ; un PDF qui peindrait fond, contour et ombre un par un
     //    avec une transparence mélangerait leurs parties communes (bande plus sombre, ombre visible à travers le fond).

@@ -5,6 +5,7 @@ import { columnLayout, placeLine } from '@/columnStyle'
 import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
 import { baselineY, lineOffsetX } from '@/pdfMath'
+import { blendOf, isBlended } from '@/blend'
 import { diagnoseFont, loadFontBytes } from '@/pdfFonts'
 import { openGeometry } from '@/openPath'
 import { hasShadow } from '@/shadowStyle'
@@ -105,7 +106,7 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       filter = ` filter="url(#${fid})"`
     }
     const transform = `translate(${n(el.x)} ${n(el.y)})${el.rotation ? ` rotate(${n(el.rotation)})` : ''}`
-    const opacity = el.opacity < 1 ? ` opacity="${n(el.opacity)}"` : ''
+    const opacity = (el.opacity < 1 ? ` opacity="${n(el.opacity)}"` : '') + (isBlended(el) ? ` style="mix-blend-mode:${blendOf(el)}"` : '')
     body.push(`<g transform="${transform}"${opacity}${filter}>${parts.join('')}</g>`)
   }
 

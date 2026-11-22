@@ -111,6 +111,8 @@ export interface TrameElement {
   name?: string
   /** protection par le modèle (voir `protection.ts`) ; absent = élément libre */
   protect?: Protection
+  /** mode de fusion avec ce qui est dessous (voir `blend.ts`) ; absent = normal (l'élément recouvre) */
+  blend?: import('./blend').BlendMode
   /** position verrouillée : l'élément ne se déplace, ne se redimensionne, ne pivote et ne se supprime plus */
   locked?: boolean
   /** masqué : ni affiché, ni exporté, ni sélectionnable sur le canvas */

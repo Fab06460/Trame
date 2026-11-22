@@ -3,6 +3,7 @@ import { cssGradient, linearGradientLine, radialGradientCircle } from '@/gradien
 import { openGeometry } from '@/openPath'
 import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
+import { cssBlendOf } from '@/blend'
 import { useEditedImage } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { useEffect, useRef } from 'react'
@@ -69,6 +70,7 @@ export function PageThumb({
             width: e.width,
             height: e.height,
             opacity: e.opacity,
+            mixBlendMode: cssBlendOf(e) as React.CSSProperties['mixBlendMode'],
             transform: `rotate(${e.rotation}deg)`,
             transformOrigin: '0 0',
             filter: cssShadow(e)

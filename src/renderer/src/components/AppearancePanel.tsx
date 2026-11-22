@@ -2,6 +2,8 @@ import { buildChoices, withGroupMates } from '@/builds'
 import { LinkPanel } from '@/components/LinkPanel'
 import { selectPage, useEditor } from '@/store/editor'
 import { useT } from '@/i18n'
+import { BLEND_MODES, blendOf, type BlendMode } from '@/blend'
+import type { MessageKey } from '@shared/i18n'
 
 /**
  * Apparition en présentation : à quel clic chaque élément sélectionné apparaît (0 = dès l'ouverture de la page). Un groupe (graphique,
@@ -17,8 +19,25 @@ export function AppearancePanel(): React.JSX.Element {
   const apply = (n: number): void => {
     useEditor.getState().patchElements(ids.map((elementId) => ({ elementId, patch: { build: n > 0 ? n : undefined } })))
   }
+  const picked = page.elements.filter((e) => selectedIds.includes(e.id))
+  const modes = new Set(picked.map((e) => blendOf(e)))
+  const blend = modes.size === 1 ? [...modes][0] : 'mixed'
+  const applyBlend = (mode: BlendMode): void => {
+    useEditor.getState().patchElements(picked.map((e) => ({ elementId: e.id, patch: { blend: mode === 'normal' ? undefined : mode } })))
+  }
   return (
     <>
+      <h3>{t('blend.section')}</h3>
+      <label>
+        {t('blend.mode')}
+        <select data-field="blend" value={blend} onChange={(e) => applyBlend(e.target.value as BlendMode)}>
+          {blend === 'mixed' && <option value="mixed" disabled>{t('blend.mixed')}</option>}
+          {BLEND_MODES.map((m) => (
+            <option key={m} value={m}>{t(`blend.${m}` as MessageKey)}</option>
+          ))}
+        </select>
+      </label>
+      <p className="hint">{t('blend.hint')}</p>
       <h3>{t('build.section')}</h3>
       <label>
         {t('build.when')}

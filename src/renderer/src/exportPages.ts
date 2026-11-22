@@ -6,6 +6,7 @@ import { konvaGradientProps } from '@/gradient'
 import { editedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
+import { compositeOf } from '@/blend'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
@@ -100,7 +101,7 @@ export async function renderPage(
 
   for (const e of page.elements) {
     if (e.hidden) continue // un calque masqué n'est jamais exporté
-    const node = await createNode(e, { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity })
+    const node = await createNode(e, { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity, globalCompositeOperation: compositeOf(e) })
     if (node) layer.add(node)
   }
 

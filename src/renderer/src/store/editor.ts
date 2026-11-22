@@ -25,6 +25,7 @@ import { sanitizeColumns } from '@/columnStyle'
 import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
+import { sanitizeBlend } from '@/blend'
 import { sanitizeOpen } from '@/openPath'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
@@ -119,6 +120,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeOpen(e)
       sanitizeGradient(e)
       sanitizeShadow(e)
+      sanitizeBlend(e)
       sanitizeList(e)
       sanitizeColumns(e)
       if (e.type !== 'path' || e.fillRule !== 'evenodd') delete e.fillRule

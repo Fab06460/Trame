@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { boundsOf, intersects, snapBox, snapEdges, unionBox, type Box, type ChangedEdges, type SnapLine } from '@/geometry'
+import { compositeOf } from '@/blend'
 import { Rulers, ViewOptions } from './Rulers'
 import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
 import type Konva from 'konva'
@@ -264,6 +265,7 @@ export function Canvas(): React.JSX.Element {
     y: el.y,
     rotation: el.rotation,
     opacity: el.opacity,
+    globalCompositeOperation: compositeOf(el),
     draggable: editing !== el.id && penId !== el.id && !spaceDown && !positionLocked(el, enforced),
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (spaceDown || e.evt.button === 1) return // outil main ou clic molette : on déplace la vue, pas la sélection
