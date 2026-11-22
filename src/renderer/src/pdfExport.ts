@@ -11,7 +11,7 @@ import { addPdfLinks } from '@/pdfLinks'
 import { renderElementImage } from '@/elementImage'
 import { openGeometry } from '@/openPath'
 import {
-  PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, svgPathToSegments, tjAdjustment
+  type Segment, PT_PER_PX, baselineY, decodeDataUrl, ellipsePath, elementMatrix, lineOffsetX, parseColor, roundedRectPath, svgPathToSegments, tjAdjustment
 } from '@/pdfMath'
 import { diagnoseFont, loadFontBytes, type FontChoice } from '@/pdfFonts'
 import { checkText, type TextIssue } from '@/pdfTextCheck'
@@ -28,6 +28,7 @@ import { hasImageEdits } from '@/imageStyle'
 import { hasShadow, shadowMargin } from '@/shadowStyle'
 import { decorationGeometry, displayText, letterSpacingOf } from '@/textStyle'
 import { PDF_BLEND, blendOf, isBlended } from '@/blend'
+import { clipPlan } from '@/clipMask'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 
 interface LoadedFont {
@@ -80,7 +81,9 @@ export async function exportPdf(doc: TrameDocument, options: PdfExportOptions = 
       const bleedPx = b / PT_PER_PX
       await ctx.drawElement(p, { id: 'page-bg', type: 'rect', x: -bleedPx, y: -bleedPx, width: doc.width + 2 * bleedPx, height: doc.height + 2 * bleedPx, rotation: 0, opacity: 1, fill: page.background, gradient: page.backgroundGradient })
     }
-    for (const el of page.elements) if (!el.hidden) await ctx.drawElement(p, el) // un calque masqué n'est jamais exporté
+    const clips = clipPlan(page.elements)
+    // un calque masqué n'est jamais exporté, ni la forme d'un masque d'écrêtage (elle ne fait que découper)
+    for (const el of page.elements) if (!el.hidden && !clips.masks.has(el.id)) await ctx.drawElement(p, el, clips.clips.get(el.id))
     if (m > 0) p.pushOperators(popGraphicsState())
     if (setup.marks) {
       // noir en quadrichromie (« registration ») : les traits apparaissent sur toutes les plaques, filet fin
@@ -129,11 +132,27 @@ class ExportContext {
     return page
   }
 
-  /** Un élément, avec son mode de fusion : un état graphique `/BM` posé le temps de son dessin (les états d'opacité qui suivent ne le changent pas). */
-  async drawElement(p: PDFPage, el: TrameElement): Promise<void> {
-    if (!isBlended(el)) return this.drawElementBody(p, el)
-    const state = p.node.newExtGState('BM', this.pdf.context.obj({ Type: 'ExtGState', BM: PDF_BLEND[blendOf(el)] }))
-    p.pushOperators(pushGraphicsState(), setGraphicsState(state))
+  /**
+   * Un élément, avec son mode de fusion (un état graphique `/BM` posé le temps de son dessin : les états d'opacité qui suivent ne le changent pas)
+   * et son masque d'écrêtage (le contour du masque, dans le repère de la page, devient la zone de découpe).
+   */
+  async drawElement(p: PDFPage, el: TrameElement, cut?: { segments: Segment[]; evenOdd: boolean }): Promise<void> {
+    if (!isBlended(el) && !cut) return this.drawElementBody(p, el)
+    p.pushOperators(pushGraphicsState())
+    if (cut) {
+      const x = (v: number): number => PT_PER_PX * v
+      const y = (v: number): number => this.pageHeight - PT_PER_PX * v
+      const ops: PDFOperator[] = []
+      for (const sg of cut.segments) {
+        if (sg.op === 'M') ops.push(moveTo(x(sg.x), y(sg.y)))
+        else if (sg.op === 'L') ops.push(lineTo(x(sg.x), y(sg.y)))
+        else if (sg.op === 'C') ops.push(appendBezierCurve(x(sg.x1), y(sg.y1), x(sg.x2), y(sg.y2), x(sg.x), y(sg.y)))
+        else ops.push(closePath())
+      }
+      ops.push(cut.evenOdd ? PDFOperator.of(PDFOperatorNames.ClipEvenOdd) : clip(), endPath())
+      p.pushOperators(...ops)
+    }
+    if (isBlended(el)) p.pushOperators(setGraphicsState(p.node.newExtGState('BM', this.pdf.context.obj({ Type: 'ExtGState', BM: PDF_BLEND[blendOf(el)] }))))
     try {
       await this.drawElementBody(p, el)
     } finally {

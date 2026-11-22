@@ -425,6 +425,7 @@ export const es: Catalog = {
   'pptx.reason.imageBorder': 'imagen con contorno o sombra',
   'pptx.reason.edited': 'imagen retocada',
   'pptx.reason.format': 'formato de imagen convertido',
+  'pptx.reason.clip': 'elemento recortado por una máscara',
   // Export PDF : ligne de détail
   'pdf.fallback.line': '• {where}«{text}»: {reason}',
   // Position, image, calques, zoom, format de page, transitions, notes
@@ -1902,6 +1903,13 @@ export const es: Catalog = {
   'blend.luminosity': 'Luminosidad',
   'export.pptx.blend.title': '{count} elemento(s) con modo de fusión',
   'export.pptx.blend.detail': 'PowerPoint no tiene modos de fusión: estos elementos siguen siendo objetos editables, pero se muestran en modo normal.',
+  'mask.title': 'Máscara de recorte',
+  'mask.make': 'Crear máscara',
+  'mask.make.title': 'La forma más alta de la selección recorta los demás elementos: lo que sobresale desaparece. Los elementos forman un grupo; cada uno se puede mover por separado (para encuadrar una imagen en la máscara).',
+  'mask.release': 'Liberar máscara',
+  'mask.release.title': 'La forma vuelve a ser un elemento normal y el grupo ya no se recorta.',
+  'mask.isMask': 'Esta forma es la máscara: recorta los demás elementos del grupo y no se dibuja en las exportaciones.',
+  'mask.locked': 'Un elemento está bloqueado o protegido, o ninguna forma puede servir de máscara (rectángulo, elipse o trazado cerrado).',
   'capture.err.clicksPortal': 'En Wayland el sistema no permite seguir el ratón: desmarque «Crear un tutorial a partir de mis clics».',
   'capture.err.clicksDenied': 'Para seguir sus clics, autorice Trame en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad y vuelva a intentarlo; o desmarque «Crear un tutorial a partir de mis clics».',
   'capture.err.clicksFailed': 'No se pudo iniciar el seguimiento de clics: desmarque «Crear un tutorial a partir de mis clics» para grabar solo el vídeo.',

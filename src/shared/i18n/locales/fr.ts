@@ -426,6 +426,7 @@ export const fr = {
   'pptx.reason.imageBorder': 'image avec contour ou ombre',
   'pptx.reason.edited': 'image retouchée',
   'pptx.reason.format': 'format d\'image converti',
+  'pptx.reason.clip': 'élément découpé par un masque',
   // Export PDF : ligne de détail
   'pdf.fallback.line': '• {where}« {text} » : {reason}',
   // Position, image, calques, zoom, format de page, transitions, notes
@@ -1903,6 +1904,13 @@ export const fr = {
   'blend.luminosity': 'Luminosité',
   'export.pptx.blend.title': '{count} élément(s) avec un mode de fusion',
   'export.pptx.blend.detail': 'PowerPoint n\'a pas de mode de fusion : ces éléments restent des objets modifiables, mais s\'affichent en mode normal.',
+  'mask.title': 'Masque d\'écrêtage',
+  'mask.make': 'Créer un masque',
+  'mask.make.title': 'La forme la plus haute de la sélection découpe les autres éléments : ce qui dépasse disparaît. Les éléments forment un groupe ; chacun reste déplaçable seul (pour cadrer une image dans le masque).',
+  'mask.release': 'Libérer le masque',
+  'mask.release.title': 'La forme redevient un élément ordinaire et le groupe n\'est plus découpé.',
+  'mask.isMask': 'Cette forme est le masque : elle découpe les autres éléments du groupe et n\'est pas dessinée dans les exports.',
+  'mask.locked': 'Un élément est verrouillé ou protégé, ou aucune forme ne peut servir de masque (rectangle, ellipse ou tracé fermé).',
   'capture.err.clicksPortal': 'Sous Wayland, le système interdit de suivre la souris : décochez « Créer un tutoriel à partir de mes clics ».',
   'capture.err.clicksDenied': 'Pour suivre vos clics, autorisez Trame dans Réglages Système → Confidentialité et sécurité → Accessibilité, puis recommencez ; ou décochez « Créer un tutoriel à partir de mes clics ».',
   'capture.err.clicksFailed': 'Le suivi des clics n\'a pas pu démarrer : décochez « Créer un tutoriel à partir de mes clics » pour enregistrer seulement la vidéo.',

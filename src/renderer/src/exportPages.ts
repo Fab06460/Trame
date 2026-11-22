@@ -7,6 +7,8 @@ import { editedImage } from '@/imageRender'
 import { shadowProps } from '@/shadowStyle'
 import { strokeProps } from '@/strokeStyle'
 import { compositeOf } from '@/blend'
+import { clipPlan } from '@/clipMask'
+import { clipPath } from '@/clipKonva'
 import { decorationOf, displayText, letterSpacingOf, lineHeightOf } from '@/textStyle'
 import type { TrameDocument, TrameElement, TramePage } from '@/types'
 import { t } from '@/i18n'
@@ -99,10 +101,17 @@ export async function renderPage(
   stage.add(layer)
   layer.add(new Konva.Rect({ width: doc.width, height: doc.height, fill: page.background, ...konvaGradientProps(page.backgroundGradient, doc.width, doc.height) }))
 
+  const clips = clipPlan(page.elements)
   for (const e of page.elements) {
-    if (e.hidden) continue // un calque masqué n'est jamais exporté
+    if (e.hidden || clips.masks.has(e.id)) continue // un calque masqué n'est jamais exporté, ni la forme d'un masque d'écrêtage
     const node = await createNode(e, { x: e.x, y: e.y, rotation: e.rotation, opacity: e.opacity, globalCompositeOperation: compositeOf(e) })
-    if (node) layer.add(node)
+    if (!node) continue
+    const clip = clips.clips.get(e.id)
+    if (clip) {
+      const holder = new Konva.Group({ clipFunc: (ctx) => clipPath(ctx, clip.segments, clip.evenOdd) })
+      holder.add(node)
+      layer.add(holder)
+    } else layer.add(node)
   }
 
   layer.draw()

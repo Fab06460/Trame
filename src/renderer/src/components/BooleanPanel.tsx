@@ -10,7 +10,8 @@ export function BooleanPanel(): React.JSX.Element | null {
   const selectedIds = useEditor((s) => s.selectedIds)
   // dans l'ordre de la pile : la forme du dessous donne son style et se fait soustraire les suivantes
   const shapes = page.elements.filter((e) => selectedIds.includes(e.id))
-  if (!canCombine(shapes)) return null
+  // une sélection qui contient un masque d'écrêtage se combinerait en perdant le masque : on libère d'abord le masque
+  if (!canCombine(shapes) || shapes.some((e) => e.clip)) return null
 
   const run = async (op: BooleanOp): Promise<void> => {
     try {

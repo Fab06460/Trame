@@ -4,6 +4,7 @@ import { openGeometry } from '@/openPath'
 import { cssShadow } from '@/shadowStyle'
 import { dashPattern, hasStroke } from '@/strokeStyle'
 import { cssBlendOf } from '@/blend'
+import { clipPlan, segmentsData } from '@/clipMask'
 import { useEditedImage } from '@/imageRender'
 import { hasImageEdits } from '@/imageStyle'
 import { useEffect, useRef } from 'react'
@@ -59,10 +60,9 @@ export function PageThumb({
   maxH?: number
 }): React.JSX.Element {
   const k = Math.min(maxW / width, maxH / height)
-  return (
-    <div className="thumb" style={{ width: width * k, height: height * k, background: cssBackground(page) }}>
-      <div style={{ width, height, transform: `scale(${k})`, transformOrigin: '0 0', position: 'relative' }}>
-        {page.elements.filter((e) => !e.hidden).map((e) => {
+  const clips = clipPlan(page.elements)
+  /** L'aperçu d'un élément. */
+  const thumbNode = (e: TrameElement): React.JSX.Element => {
           const box: React.CSSProperties = {
             position: 'absolute',
             left: e.x,
@@ -166,6 +166,21 @@ export function PageThumb({
                 borderRadius: e.type === 'ellipse' ? '50%' : e.cornerRadius
               }}
             />
+          )
+  }
+
+  return (
+    <div className="thumb" style={{ width: width * k, height: height * k, background: cssBackground(page) }}>
+      <div style={{ width, height, transform: `scale(${k})`, transformOrigin: '0 0', position: 'relative' }}>
+        {page.elements.filter((e) => !e.hidden && !clips.masks.has(e.id)).map((e) => {
+          const cut = clips.clips.get(e.id)
+          // découpe par un masque d'écrêtage : un voile de la taille de la page, détouré par le contour du masque (repère de la page)
+          return cut ? (
+            <div key={e.id} style={{ position: 'absolute', left: 0, top: 0, width, height, clipPath: `path(${cut.evenOdd ? "'evenodd', " : ''}'${segmentsData(cut.segments)}')`, mixBlendMode: cssBlendOf(e) as React.CSSProperties['mixBlendMode'] }}>
+              {thumbNode(e)}
+            </div>
+          ) : (
+            thumbNode(e)
           )
         })}
       </div>

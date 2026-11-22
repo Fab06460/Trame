@@ -425,6 +425,7 @@ export const de: Catalog = {
   'pptx.reason.imageBorder': 'Bild mit Kontur oder Schatten',
   'pptx.reason.edited': 'bearbeitetes Bild',
   'pptx.reason.format': 'konvertiertes Bildformat',
+  'pptx.reason.clip': 'von einer Maske beschnittenes Element',
   // Export PDF : ligne de détail
   'pdf.fallback.line': '• {where}„{text}“: {reason}',
   // Position, image, calques, zoom, format de page, transitions, notes
@@ -1902,6 +1903,13 @@ export const de: Catalog = {
   'blend.luminosity': 'Luminanz',
   'export.pptx.blend.title': '{count} Element(e) mit Füllmethode',
   'export.pptx.blend.detail': 'PowerPoint kennt keine Füllmethoden: Diese Elemente bleiben bearbeitbare Objekte, werden aber im Normalmodus angezeigt.',
+  'mask.title': 'Schnittmaske',
+  'mask.make': 'Maske erstellen',
+  'mask.make.title': 'Die oberste Form der Auswahl beschneidet die anderen Elemente: Was übersteht, verschwindet. Die Elemente bilden eine Gruppe; jedes lässt sich weiterhin einzeln verschieben (um ein Bild in der Maske auszurichten).',
+  'mask.release': 'Maske aufheben',
+  'mask.release.title': 'Die Form wird wieder ein gewöhnliches Element und die Gruppe wird nicht mehr beschnitten.',
+  'mask.isMask': 'Diese Form ist die Maske: Sie beschneidet die anderen Elemente der Gruppe und wird in Exporten nicht gezeichnet.',
+  'mask.locked': 'Ein Element ist gesperrt oder geschützt, oder keine Form kann als Maske dienen (Rechteck, Ellipse oder geschlossener Pfad).',
   'capture.err.clicksPortal': 'Unter Wayland erlaubt das System keine Mausverfolgung: Deaktivieren Sie „Anleitung aus meinen Klicks erstellen“.',
   'capture.err.clicksDenied': 'Um Ihre Klicks zu erfassen, erlauben Sie Trame unter Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen und versuchen Sie es erneut; oder deaktivieren Sie „Anleitung aus meinen Klicks erstellen“.',
   'capture.err.clicksFailed': 'Die Klickerfassung konnte nicht starten: Deaktivieren Sie „Anleitung aus meinen Klicks erstellen“, um nur das Video aufzunehmen.',

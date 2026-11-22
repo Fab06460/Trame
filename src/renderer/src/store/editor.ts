@@ -26,6 +26,7 @@ import { sanitizeList } from '@/listStyle'
 import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeBlend } from '@/blend'
+import { canBeMask, sanitizeClip } from '@/clipMask'
 import { sanitizeOpen } from '@/openPath'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
@@ -121,6 +122,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeGradient(e)
       sanitizeShadow(e)
       sanitizeBlend(e)
+      sanitizeClip(e)
       sanitizeList(e)
       sanitizeColumns(e)
       if (e.type !== 'path' || e.fillRule !== 'evenodd') delete e.fillRule
@@ -189,6 +191,10 @@ interface EditorState {
   nudgeSelected: (dx: number, dy: number) => void
   groupSelected: () => void
   ungroupSelected: () => void
+  /** Masque d'écrêtage : la forme la plus haute de la sélection (rectangle, ellipse, tracé fermé) découpe les autres, qui forment avec elle un groupe ; `false` s'il n'y a pas de forme ou si un élément est verrouillé ou protégé. */
+  makeMask: () => boolean
+  /** Libère le masque du groupe de la sélection : la forme redevient un élément ordinaire (le groupe reste) ; rend le nombre de masques libérés. */
+  releaseMask: () => number
   align: (mode: AlignMode) => void
   distribute: (axis: 'h' | 'v') => void
   /** Retourne la sélection comme un miroir (voir `flip.ts`) ; une seule étape d'historique. */
@@ -433,12 +439,49 @@ export const useEditor = create<EditorState>((set, get) => {
           ...p,
           elements: p.elements.map((e) => {
             if (!ids.includes(e.id) || !e.groupId) return e
-            const { groupId: _g, ...rest } = e
+            const { groupId: _g, clip: _c, ...rest } = e // un masque sans groupe n'a plus rien à découper
             return rest
           })
         })),
         dirty: true
       })
+    },
+
+    makeMask: () => {
+      const sel = selected()
+      if (sel.length < 2 || movable().length !== sel.length) return false
+      const page = selectPage(get())
+      // le masque : la forme la plus haute de la pile parmi la sélection
+      const mask = [...page.elements].reverse().find((e) => sel.some((s) => s.id === e.id) && canBeMask(e))
+      if (!mask) return false
+      const ids = new Set(sel.map((e) => e.id))
+      const groupId = nanoid(8)
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (ids.has(e.id) ? { ...e, groupId, ...(e.id === mask.id ? { clip: true as const } : {}) } : e)) })),
+        dirty: true
+      })
+      return true
+    },
+
+    releaseMask: () => {
+      const page = selectPage(get())
+      const groups = new Set(selected().map((e) => e.groupId).filter((g): g is string => !!g))
+      const ids = page.elements.filter((e) => e.clip && e.groupId && groups.has(e.groupId)).map((e) => e.id)
+      if (!ids.length) return 0
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (!ids.includes(e.id)) return e
+            const { clip: _c, ...rest } = e
+            return rest
+          })
+        })),
+        dirty: true
+      })
+      return ids.length
     },
 
     align: (mode) => {

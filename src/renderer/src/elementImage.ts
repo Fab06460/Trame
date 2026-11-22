@@ -2,6 +2,9 @@ import Konva from 'konva'
 import { createNode, createTextNode } from '@/exportPages'
 import { boundsOf } from '@/geometry'
 import { shadowMargin } from '@/shadowStyle'
+import { segmentsBounds } from '@/clipMask'
+import { clipPath } from '@/clipKonva'
+import type { Segment } from '@/pdfMath'
 import type { TrameElement } from '@/types'
 
 /** Résolution (× la taille du design) des rendus en image de repli, pour rester nets en zoom. */
@@ -58,6 +61,34 @@ export async function renderElementImage(el: TrameElement, mode: 'full' | 'shado
   // une ombre nette (flou faible) demande plus de pixels qu'une ombre floue
   const ratio = mode === 'shadow' && (el.shadow?.blur ?? 0) >= 6 ? 2 : FALLBACK_PIXEL_RATIO
   const url = stage.toDataURL({ mimeType: 'image/png', pixelRatio: ratio })
+  stage.destroy()
+  return { url, x, y, w, h }
+}
+
+/**
+ * L'élément rendu en image **déjà découpé par son masque d'écrêtage** : la zone est la boîte du masque (ce qui en sort n'existe pas), l'élément est
+ * dessiné à sa vraie place dans la page. Pour l'export PowerPoint, qui n'a pas de masque d'écrêtage.
+ */
+export async function renderClippedElement(el: TrameElement, clip: { segments: Segment[]; evenOdd: boolean }): Promise<ElementImage | null> {
+  const b = segmentsBounds(clip.segments)
+  if (!b || b.width <= 0 || b.height <= 0) return null
+  const x = Math.floor(b.x)
+  const y = Math.floor(b.y)
+  const w = Math.ceil(b.x + b.width) - x
+  const h = Math.ceil(b.y + b.height) - y
+  const stage = new Konva.Stage({ container: document.createElement('div'), width: w, height: h })
+  const layer = new Konva.Layer()
+  stage.add(layer)
+  const node = await createNode(el, { x: el.x, y: el.y, rotation: el.rotation, opacity: el.opacity })
+  if (!node) {
+    stage.destroy()
+    return null
+  }
+  const holder = new Konva.Group({ x: -x, y: -y, clipFunc: (ctx) => clipPath(ctx, clip.segments, clip.evenOdd) })
+  holder.add(node)
+  layer.add(holder)
+  layer.draw()
+  const url = stage.toDataURL({ mimeType: 'image/png', pixelRatio: FALLBACK_PIXEL_RATIO })
   stage.destroy()
   return { url, x, y, w, h }
 }

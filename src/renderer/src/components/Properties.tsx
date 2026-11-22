@@ -20,6 +20,7 @@ import { ClipPanel } from './ClipPanel'
 import { LinePanel } from './LinePanel'
 import { PenPanel } from './PenPanel'
 import { BooleanPanel } from './BooleanPanel'
+import { MaskPanel } from './MaskPanel'
 import { convertibleTexts, convertSelectedTexts } from '@/textPathActions'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
@@ -185,6 +186,7 @@ export function Properties(): React.JSX.Element {
           </div>
         )}
         <BooleanPanel />
+        <MaskPanel />
         {convertibleTexts(selection).length > 0 && (
           <div className="row">
             <button data-action="text-to-path" title={t('textPath.title.hint')} disabled={protectedSel} onClick={() => void convertSelectedTexts()}>
@@ -516,6 +518,8 @@ export function Properties(): React.JSX.Element {
           onChange={(e) => live({ opacity: Number(e.target.value) })}
         />
       </label>
+
+      <MaskPanel />
 
       {el.type === 'text' && (
         <div className="row">

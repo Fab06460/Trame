@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { boundsOf, intersects, snapBox, snapEdges, unionBox, type Box, type ChangedEdges, type SnapLine } from '@/geometry'
 import { compositeOf } from '@/blend'
+import { clipPlan } from '@/clipMask'
+import { clipPath } from '@/clipKonva'
 import { Rulers, ViewOptions } from './Rulers'
 import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
 import type Konva from 'konva'
@@ -259,6 +261,8 @@ export function Canvas(): React.JSX.Element {
   const bleedPx = mmToPx(printSetup.bleedMm)
   const safe = safeBox(doc, printSetup)
 
+  const clips = useMemo(() => clipPlan(page.elements), [page.elements])
+
   const commonProps = (el: TrameElement): Konva.NodeConfig => ({
     id: el.id,
     x: el.x,
@@ -491,47 +495,11 @@ export function Canvas(): React.JSX.Element {
   const anyLocked = page.elements.some((e) => selectedIds.includes(e.id) && positionLocked(e, enforced))
   const soleText = selectedIds.length === 1 && page.elements.find((e) => e.id === selectedIds[0])?.type === 'text'
 
-  return (
-    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : adding || tool ? 'crosshair' : undefined, touchAction: tool ? 'none' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
-      <Stage
-        ref={stageRef}
-        width={size.w}
-        height={size.h}
-        onMouseDown={startLasso}
-        onMouseMove={moveLasso}
-        onMouseUp={endLasso}
-        onMouseLeave={endLasso}
-        onTouchStart={tool ? (e) => (e.evt.preventDefault(), startLasso(e as unknown as Konva.KonvaEventObject<MouseEvent>)) : undefined}
-        onTouchMove={tool ? (e) => (e.evt.preventDefault(), moveLasso(e)) : undefined}
-        onTouchEnd={tool ? endLasso : undefined}
-      >
-        <Layer>
-          <Group x={offX} y={offY} scaleX={scale} scaleY={scale}>
-            <Rect
-              x={-bleedPx}
-              y={-bleedPx}
-              width={doc.width + 2 * bleedPx}
-              height={doc.height + 2 * bleedPx}
-              fill={page.background}
-              {...konvaGradientProps(page.backgroundGradient, doc.width + 2 * bleedPx, doc.height + 2 * bleedPx)}
-              shadowColor="#000"
-              shadowBlur={24}
-              shadowOpacity={0.35}
-              name="bg"
-            />
-          </Group>
-          <Group
-            x={offX}
-            y={offY}
-            scaleX={scale}
-            scaleY={scale}
-            clipX={-bleedPx}
-            clipY={-bleedPx}
-            clipWidth={doc.width + 2 * bleedPx}
-            clipHeight={doc.height + 2 * bleedPx}
-          >
-            {page.elements.filter((el) => !el.hidden).map((el) => {
-              const p = commonProps(el)
+  /** Le nœud Konva d'un élément ; un masque d'écrêtage s'affiche en contour pointillé (jamais dans les exports) et ne capte les clics que sélectionné. */
+  const elementNode = (shown: TrameElement): React.JSX.Element => {
+    const isMaskShape = clips.masks.has(shown.id)
+    const el: TrameElement = isMaskShape ? { ...shown, fill: 'transparent', gradient: undefined, shadow: undefined, opacity: 1, blend: undefined, stroke: '#7c5cff', strokeWidth: 2 / scale, strokeDashed: true } : shown
+    const p = { ...commonProps(el), ...(isMaskShape ? { listening: selectedIds.includes(el.id) } : {}) }
               if (el.type === 'rect')
                 return <Rect key={el.id} {...p} {...strokeProps(el)} {...shadowProps(el)} {...konvaGradientProps(el.gradient, el.width, el.height)} width={el.width} height={el.height} fill={el.fill} cornerRadius={el.cornerRadius} />
               if (el.type === 'ellipse')
@@ -602,6 +570,57 @@ export function Canvas(): React.JSX.Element {
                   onDblClick={() => !contentLocked(el, enforced) && startTextEdit(el.id)}
                   onDblTap={() => !contentLocked(el, enforced) && startTextEdit(el.id)}
                 />
+              )
+  }
+
+  return (
+    <div ref={wrapRef} className="canvas-wrap" data-guide-count={page.guides?.length ?? 0} style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : adding || tool ? 'crosshair' : undefined, touchAction: tool ? 'none' : undefined, filter: colorVisionFilter(vision) }} data-color-vision={vision === 'none' ? undefined : vision}>
+      <Stage
+        ref={stageRef}
+        width={size.w}
+        height={size.h}
+        onMouseDown={startLasso}
+        onMouseMove={moveLasso}
+        onMouseUp={endLasso}
+        onMouseLeave={endLasso}
+        onTouchStart={tool ? (e) => (e.evt.preventDefault(), startLasso(e as unknown as Konva.KonvaEventObject<MouseEvent>)) : undefined}
+        onTouchMove={tool ? (e) => (e.evt.preventDefault(), moveLasso(e)) : undefined}
+        onTouchEnd={tool ? endLasso : undefined}
+      >
+        <Layer>
+          <Group x={offX} y={offY} scaleX={scale} scaleY={scale}>
+            <Rect
+              x={-bleedPx}
+              y={-bleedPx}
+              width={doc.width + 2 * bleedPx}
+              height={doc.height + 2 * bleedPx}
+              fill={page.background}
+              {...konvaGradientProps(page.backgroundGradient, doc.width + 2 * bleedPx, doc.height + 2 * bleedPx)}
+              shadowColor="#000"
+              shadowBlur={24}
+              shadowOpacity={0.35}
+              name="bg"
+            />
+          </Group>
+          <Group
+            x={offX}
+            y={offY}
+            scaleX={scale}
+            scaleY={scale}
+            clipX={-bleedPx}
+            clipY={-bleedPx}
+            clipWidth={doc.width + 2 * bleedPx}
+            clipHeight={doc.height + 2 * bleedPx}
+          >
+            {page.elements.filter((el) => !el.hidden).map((el) => {
+              const node = elementNode(el)
+              const clip = clips.clips.get(el.id)
+              return clip ? (
+                <Group key={`clip-${el.id}`} clipFunc={(ctx) => clipPath(ctx, clip.segments, clip.evenOdd)}>
+                  {node}
+                </Group>
+              ) : (
+                node
               )
             })}
           </Group>

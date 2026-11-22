@@ -1,7 +1,8 @@
 import { gradientPng } from '@/pageBackground'
 import { isBlended } from '@/blend'
 import PptxGenJS from 'pptxgenjs'
-import { renderElementImage } from '@/elementImage'
+import { renderClippedElement, renderElementImage } from '@/elementImage'
+import { clipPlan } from '@/clipMask'
 import { createTextNode } from '@/exportPages'
 import { hasImageEdits } from '@/imageStyle'
 import { hasShadow } from '@/shadowStyle'
@@ -27,7 +28,7 @@ export interface PptxExportResult {
   /** `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,…` */
   dataUrl: string
   /** éléments exportés en image (PowerPoint ne sait pas les reproduire en objet modifiable) : nombre et causes */
-  rasterized: Array<{ page: number; reason: 'gradient' | 'vector' | 'imageBorder' | 'edited' | 'format' }>
+  rasterized: Array<{ page: number; reason: 'gradient' | 'vector' | 'imageBorder' | 'edited' | 'format' | 'clip' }>
   /** éléments dont le mode de fusion n'est pas repris (PowerPoint n'en a pas) : ils restent des objets, en mode normal */
   blended: number
 }
@@ -92,8 +93,19 @@ export async function exportPptx(doc: TrameDocument): Promise<PptxExportResult> 
       rasterized.push({ page: index + 1, reason })
     }
 
+    const clips = clipPlan(page.elements)
     for (const el of page.elements) {
-      if (el.hidden) continue // un calque masqué n'est jamais exporté
+      if (el.hidden || clips.masks.has(el.id)) continue // un calque masqué n'est jamais exporté, ni la forme d'un masque d'écrêtage
+      const cut = clips.clips.get(el.id)
+      if (cut) {
+        // PowerPoint n'a pas de masque d'écrêtage : l'élément part en image déjà découpée à la forme du masque
+        const r = await renderClippedElement(el, cut)
+        if (r) {
+          slide.addImage({ data: r.url, x: r.x * IN, y: r.y * IN, w: r.w * IN, h: r.h * IN, ...(el.type === 'image' && el.alt ? { altText: el.alt } : {}), ...pptxLink(doc, el) })
+          rasterized.push({ page: index + 1, reason: 'clip' })
+        }
+        continue
+      }
       const transparency = Math.round((1 - el.opacity) * 100)
       if (el.type === 'rect' || el.type === 'ellipse') {
         if (el.gradient) { await asImage(el, 'gradient'); continue }

@@ -6,6 +6,7 @@ import { listIndent } from '@/listStyle'
 import type { ListTextNode } from '@/listText'
 import { baselineY, lineOffsetX } from '@/pdfMath'
 import { blendOf, isBlended } from '@/blend'
+import { clipPlan, segmentsData } from '@/clipMask'
 import { diagnoseFont, loadFontBytes } from '@/pdfFonts'
 import { openGeometry } from '@/openPath'
 import { hasShadow } from '@/shadowStyle'
@@ -55,7 +56,9 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
   let seq = 0
   const uid = (prefix: string): string => `${prefix}${++seq}`
 
+  const clips = clipPlan(page.elements)
   for (const el of page.elements) {
+    if (clips.masks.has(el.id)) continue // la forme d'un masque d'écrêtage ne fait que découper : elle n'est pas dessinée
     if (el.hidden) continue
     const parts: string[] = []
     let fill = escXml(el.fill)
@@ -106,8 +109,17 @@ export async function pageToSvg(doc: Pick<TrameDocument, 'width' | 'height' | 'n
       filter = ` filter="url(#${fid})"`
     }
     const transform = `translate(${n(el.x)} ${n(el.y)})${el.rotation ? ` rotate(${n(el.rotation)})` : ''}`
-    const opacity = (el.opacity < 1 ? ` opacity="${n(el.opacity)}"` : '') + (isBlended(el) ? ` style="mix-blend-mode:${blendOf(el)}"` : '')
-    body.push(`<g transform="${transform}"${opacity}${filter}>${parts.join('')}</g>`)
+    const opacity = el.opacity < 1 ? ` opacity="${n(el.opacity)}"` : ''
+    const blend = isBlended(el) ? ` style="mix-blend-mode:${blendOf(el)}"` : ''
+    const cut = clips.clips.get(el.id)
+    // le mode de fusion se pose sur le groupe le plus extérieur : un groupe découpé est isolé, le mode ne s'y verrait plus
+    const element = `<g transform="${transform}"${opacity}${cut ? '' : blend}${filter}>${parts.join('')}</g>`
+    if (cut) {
+      // découpe : un clipPath dans le repère de la page, appliqué à un groupe qui enveloppe l'élément (son propre repère est donc celui de la page)
+      const cid = uid('c')
+      defs.push(`<clipPath id="${cid}"><path d="${segmentsData(cut.segments)}"${cut.evenOdd ? ' clip-rule="evenodd"' : ''}/></clipPath>`)
+      body.push(`<g clip-path="url(#${cid})"${blend}>${element}</g>`)
+    } else body.push(element)
   }
 
   const fonts = options.embedFonts === false ? '' : await fontFaces([page])

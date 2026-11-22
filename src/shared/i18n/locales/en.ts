@@ -425,6 +425,7 @@ export const en: Catalog = {
   'pptx.reason.imageBorder': 'image with an outline or a shadow',
   'pptx.reason.edited': 'edited image',
   'pptx.reason.format': 'converted image format',
+  'pptx.reason.clip': 'element clipped by a mask',
   // Export PDF : ligne de détail
   'pdf.fallback.line': '• {where}“{text}”: {reason}',
   // Position, image, calques, zoom, format de page, transitions, notes
@@ -1902,6 +1903,13 @@ export const en: Catalog = {
   'blend.luminosity': 'Luminosity',
   'export.pptx.blend.title': '{count} element(s) with a blend mode',
   'export.pptx.blend.detail': 'PowerPoint has no blend modes: these elements stay editable objects but are shown in normal mode.',
+  'mask.title': 'Clipping mask',
+  'mask.make': 'Create mask',
+  'mask.make.title': 'The topmost shape of the selection clips the other elements: whatever sticks out disappears. The elements form a group; each one can still be moved on its own (to frame an image in the mask).',
+  'mask.release': 'Release mask',
+  'mask.release.title': 'The shape becomes an ordinary element again and the group is no longer clipped.',
+  'mask.isMask': 'This shape is the mask: it clips the other elements of the group and is not drawn in exports.',
+  'mask.locked': 'An element is locked or protected, or no shape can serve as a mask (rectangle, ellipse or closed path).',
   'capture.err.clicksPortal': 'On Wayland the system does not allow tracking the mouse: untick "Create a tutorial from my clicks".',
   'capture.err.clicksDenied': 'To track your clicks, allow Trame in System Settings → Privacy & Security → Accessibility, then try again; or untick "Create a tutorial from my clicks".',
   'capture.err.clicksFailed': 'Click tracking could not start: untick "Create a tutorial from my clicks" to record only the video.',
