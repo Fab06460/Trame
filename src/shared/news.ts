@@ -15,6 +15,33 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.16.0',
+    fr: [
+      'Formes : unir, soustraire, intersecter ou exclure des formes (sélectionnez-en deux ou plus) pour dessiner logos et icônes sur mesure.',
+      'Texte : « Convertir en tracé » transforme les lettres en formes, à combiner avec d\'autres formes.',
+      'Fusion : seize modes de fusion (Produit, Superposition, Incrustation…) pour mélanger un élément avec ce qui est dessous.',
+      'Masques d\'écrêtage : une forme découpe les autres éléments de son groupe (une photo dans des lettres, par exemple).'
+    ],
+    en: [
+      'Shapes: unite, subtract, intersect or exclude shapes (select two or more) to draw custom logos and icons.',
+      'Text: "Convert to outlines" turns letters into shapes, to combine with other shapes.',
+      'Blending: sixteen blend modes (Multiply, Screen, Overlay…) to mix an element with what is underneath.',
+      'Clipping masks: a shape clips the other elements of its group (a photo inside letters, for example).'
+    ],
+    de: [
+      'Formen: Formen vereinigen, subtrahieren, schneiden oder ausschließen (zwei oder mehr auswählen), um eigene Logos und Icons zu zeichnen.',
+      'Text: „In Pfade umwandeln“ verwandelt Buchstaben in Formen, die sich mit anderen Formen kombinieren lassen.',
+      'Überblendung: sechzehn Füllmethoden (Multiplizieren, Negativ multiplizieren, Ineinanderkopieren…), um ein Element mit dem Darunterliegenden zu mischen.',
+      'Schnittmasken: Eine Form beschneidet die anderen Elemente ihrer Gruppe (zum Beispiel ein Foto in Buchstaben).'
+    ],
+    es: [
+      'Formas: unir, restar, intersectar o excluir formas (seleccione dos o más) para dibujar logotipos e iconos a medida.',
+      'Texto: «Convertir en trazo» transforma las letras en formas, para combinarlas con otras formas.',
+      'Fusión: dieciséis modos de fusión (Multiplicar, Trama, Superponer…) para mezclar un elemento con lo que hay debajo.',
+      'Máscaras de recorte: una forma recorta los demás elementos de su grupo (una foto dentro de letras, por ejemplo).'
+    ]
+  },
+  {
     version: '0.15.0',
     fr: [
       'Tutoriel automatique : en enregistrant un écran entier, cochez « Créer un tutoriel à partir de mes clics ». Chaque clic devient une page (numéro, titre lu près du clic, image, cercle sur l\'endroit cliqué). Sur Mac, autorisez Trame dans Accessibilité.'
