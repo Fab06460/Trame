@@ -19,6 +19,7 @@ import { ImagePanel } from './ImagePanel'
 import { ClipPanel } from './ClipPanel'
 import { LinePanel } from './LinePanel'
 import { PenPanel } from './PenPanel'
+import { BooleanPanel } from './BooleanPanel'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
 import { PageBackground } from './PageBackground'
@@ -182,6 +183,7 @@ export function Properties(): React.JSX.Element {
             </button>
           </div>
         )}
+        <BooleanPanel />
         <PositionPanel />
         {alignButtons}
         {layerButtons}

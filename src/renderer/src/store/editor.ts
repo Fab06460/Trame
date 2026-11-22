@@ -217,6 +217,8 @@ interface EditorState {
   patchElements: (changes: Array<{ elementId: string; patch: Partial<TrameElement> }>) => { changed: number; skipped: number }
   /** Ajoute les éléments d'un graphique ou d'un tableau (déjà groupés) en haut de la page courante et les sélectionne. */
   insertChart: (elements: TrameElement[]) => void
+  /** Remplace la sélection par un seul élément (formes combinées), à la place du plus bas de la pile, en un seul cran d'historique ; `false` si un élément est verrouillé ou protégé. */
+  replaceSelection: (element: TrameElement) => boolean
   /** Remplace les éléments du groupe de ce graphique par de nouveaux (même place dans la pile), un seul cran d'historique. */
   replaceChart: (anchorId: string, elements: TrameElement[]) => void
   /** Remet les textes d'une page dans l'ordre donné (les autres éléments gardent leur place : seul l'ordre des textes entre eux change). */
@@ -643,6 +645,18 @@ export const useEditor = create<EditorState>((set, get) => {
     insertChart: (elements) => {
       if (!elements.length) return
       set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: [...p.elements, ...elements] })), selectedIds: elements.map((e) => e.id), editRequest: null, dirty: true })
+    },
+
+    replaceSelection: (element) => {
+      const ids = get().selectedIds
+      const sel = selected()
+      if (!sel.length || movable().length !== sel.length) return false
+      const page = selectPage(get())
+      const at = page.elements.findIndex((e) => ids.includes(e.id))
+      const rest = page.elements.filter((e) => !ids.includes(e.id))
+      const next = [...rest.slice(0, at), element, ...rest.slice(at)]
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: next })), selectedIds: [element.id], dirty: true })
+      return true
     },
 
     replaceChart: (anchorId, elements) => {
