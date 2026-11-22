@@ -4,6 +4,9 @@ import { useT } from '@/i18n'
 import { insertImage } from '@/clipboardActions'
 import { confirmUnsaved } from '@/fileActions'
 import { useEditor } from '@/store/editor'
+import { useLocale } from '@/i18n'
+import { languageForLocale, storedOcrLanguage } from '@/ocr/languages'
+import { labelForStep } from '@/tutorialLabel'
 import { tutorialDocument, type TutorialStep } from '@/tutorial'
 import { TUTORIAL_MAX_STEPS, type ClickTrackProblem } from '@shared/capture'
 import { clipResultMessage, insertClipBytes } from '@/clipActions'
@@ -80,6 +83,8 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
   /** Tutoriel : les étapes prises pendant l'enregistrement (une image par clic), et si les clics sont suivis. */
   const steps = useRef<TutorialStep[]>([])
   const tracking = useRef(false)
+  /** Lecture des titres des étapes à l'arrêt (reconnaissance locale du texte près de chaque clic). */
+  const [reading, setReading] = useState<{ done: number; total: number } | null>(null)
   const collecting = useRef(false)
 
   /** Seul un écran entier se suit (pas une fenêtre : sa place sur l'écran n'est pas connue ; pas Wayland). */
@@ -258,6 +263,15 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
       const taken = steps.current
       steps.current = []
       if (taken.length) {
+        // le titre de chaque étape : le texte lu près du clic (la reconnaissance reste locale ; sans résultat sûr, « Étape N »)
+        const language = storedOcrLanguage(languageForLocale(useLocale.getState().locale))
+        setReading({ done: 0, total: taken.length })
+        for (let i = 0; i < taken.length && alive.current; i++) {
+          taken[i].hint = await labelForStep(taken[i], language)
+          setReading({ done: i + 1, total: taken.length })
+        }
+        if (!alive.current) return
+        setReading(null)
         // le tutoriel remplace le document (après confirmation s'il a des modifications), comme un import
         if (!(await confirmUnsaved('tutorial'))) return setStage({ name: 'list' })
         useEditor.getState().loadDocument(tutorialDocument(taken, t('capture.tutorial.name'), t('capture.tutorial.step')), undefined)
@@ -293,7 +307,7 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
                 <p className="hint">{t('capture.recording.hint')}</p>
               </>
             )}
-            {stage.name === 'saving' && <p className="hint">{t('capture.saving')}</p>}
+            {stage.name === 'saving' && <p className="hint">{reading ? t('capture.tutorial.reading', { done: reading.done, total: reading.total }) : t('capture.saving')}</p>}
           </div>
         ) : (
           <>

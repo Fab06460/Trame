@@ -24,6 +24,18 @@ export interface OcrLine {
   y1: number
   /** ordonnée de la ligne de base au milieu de la ligne */
   base: number
+  /** les mots de la ligne, avec leur cadre (absents si le moteur ne les donne pas) */
+  words?: OcrWord[]
+}
+
+/** Un mot reconnu : son texte, son cadre (pixels de l'image lue) et la confiance du moteur (0 à 100). */
+export interface OcrWord {
+  text: string
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  confidence: number
 }
 
 /** Un paragraphe reconnu avec sa place dans l'image. */
@@ -98,7 +110,8 @@ export async function recognizeLayout(image: string | HTMLCanvasElement, lang: O
           y0: l.bbox.y0,
           x1: l.bbox.x1,
           y1: l.bbox.y1,
-          base: l.baseline ? (l.baseline.y0 + l.baseline.y1) / 2 : l.bbox.y1
+          base: l.baseline ? (l.baseline.y0 + l.baseline.y1) / 2 : l.bbox.y1,
+          words: (l.words ?? []).map((w) => ({ text: w.text ?? '', x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1, confidence: Math.round(w.confidence ?? 0) }))
         }))
         out.push({ text: p.text ?? '', confidence: Math.round(p.confidence ?? 0), x0: p.bbox.x0, y0: p.bbox.y0, x1: p.bbox.x1, y1: p.bbox.y1, lines })
       }

@@ -1861,6 +1861,7 @@ export const de: Catalog = {
   'capture.tutorial.step': 'Schritt',
   'capture.tutorial.name': 'Anleitung',
   'capture.tutorial.noClicks': 'Es wurde kein Klick erfasst: Das Video wird als Clip eingefügt.',
+  'capture.tutorial.reading': 'Text der Schritte wird gelesen… {done} von {total}',
   'capture.err.clicksPortal': 'Unter Wayland erlaubt das System keine Mausverfolgung: Deaktivieren Sie „Anleitung aus meinen Klicks erstellen“.',
   'capture.err.clicksDenied': 'Um Ihre Klicks zu erfassen, erlauben Sie Trame unter Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen und versuchen Sie es erneut; oder deaktivieren Sie „Anleitung aus meinen Klicks erstellen“.',
   'capture.err.clicksFailed': 'Die Klickerfassung konnte nicht starten: Deaktivieren Sie „Anleitung aus meinen Klicks erstellen“, um nur das Video aufzunehmen.',

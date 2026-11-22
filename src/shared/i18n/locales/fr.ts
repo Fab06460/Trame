@@ -1862,6 +1862,7 @@ export const fr = {
   'capture.tutorial.step': 'Étape',
   'capture.tutorial.name': 'Tutoriel',
   'capture.tutorial.noClicks': 'Aucun clic n\'a été suivi : la vidéo est insérée comme un clip.',
+  'capture.tutorial.reading': 'Lecture du texte des étapes… {done} sur {total}',
   'capture.err.clicksPortal': 'Sous Wayland, le système interdit de suivre la souris : décochez « Créer un tutoriel à partir de mes clics ».',
   'capture.err.clicksDenied': 'Pour suivre vos clics, autorisez Trame dans Réglages Système → Confidentialité et sécurité → Accessibilité, puis recommencez ; ou décochez « Créer un tutoriel à partir de mes clics ».',
   'capture.err.clicksFailed': 'Le suivi des clics n\'a pas pu démarrer : décochez « Créer un tutoriel à partir de mes clics » pour enregistrer seulement la vidéo.',

@@ -1861,6 +1861,7 @@ export const es: Catalog = {
   'capture.tutorial.step': 'Paso',
   'capture.tutorial.name': 'Tutorial',
   'capture.tutorial.noClicks': 'No se registró ningún clic: el vídeo se inserta como clip.',
+  'capture.tutorial.reading': 'Leyendo el texto de los pasos… {done} de {total}',
   'capture.err.clicksPortal': 'En Wayland el sistema no permite seguir el ratón: desmarque «Crear un tutorial a partir de mis clics».',
   'capture.err.clicksDenied': 'Para seguir sus clics, autorice Trame en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad y vuelva a intentarlo; o desmarque «Crear un tutorial a partir de mis clics».',
   'capture.err.clicksFailed': 'No se pudo iniciar el seguimiento de clics: desmarque «Crear un tutorial a partir de mis clics» para grabar solo el vídeo.',

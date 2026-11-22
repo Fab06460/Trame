@@ -1861,6 +1861,7 @@ export const en: Catalog = {
   'capture.tutorial.step': 'Step',
   'capture.tutorial.name': 'Tutorial',
   'capture.tutorial.noClicks': 'No click was tracked: the video is inserted as a clip.',
+  'capture.tutorial.reading': 'Reading the text of the steps… {done} of {total}',
   'capture.err.clicksPortal': 'On Wayland the system does not allow tracking the mouse: untick "Create a tutorial from my clicks".',
   'capture.err.clicksDenied': 'To track your clicks, allow Trame in System Settings → Privacy & Security → Accessibility, then try again; or untick "Create a tutorial from my clicks".',
   'capture.err.clicksFailed': 'Click tracking could not start: untick "Create a tutorial from my clicks" to record only the video.',
