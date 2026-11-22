@@ -68,6 +68,7 @@
     "appId": "app.trame.editor",
     "productName": "Trame",
     "copyright": "Copyright © 2026 Fabrice Belloncle",
+    "npmRebuild": false,
     "directories": {
       "output": "dist",
       "buildResources": "build"
