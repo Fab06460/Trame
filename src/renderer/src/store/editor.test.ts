@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migrateDocument, parseDocument, selectPage, useEditor } from '@/store/editor'
+import { planStack } from '@/stackLayout'
 
 const S = (): ReturnType<typeof useEditor.getState> => useEditor.getState()
 const els = (): ReturnType<typeof selectPage>['elements'] => selectPage(S()).elements
@@ -840,5 +841,129 @@ describe('voix off d’une page', () => {
     const d = JSON.parse(JSON.stringify(S().doc))
     delete d.voices
     expect(parseDocument(JSON.stringify(d)).pages[0]).not.toHaveProperty('voice')
+  })
+})
+
+describe('piles (auto-layout)', () => {
+  const measure = (e: { width: number; height: number }): { width: number; height: number } => ({ width: e.width, height: e.height })
+  const stackOfThree = (): string[] => {
+    const [a, b, c] = addRects(3)
+    S().select([a, b, c])
+    const plan = planStack(els().filter((e) => [a, b, c].includes(e.id)), 'h', measure as never, () => false)!
+    expect(S().makeStack(plan)).toBe(true)
+    return [a, b, c]
+  }
+
+  it('makeStack groupe les éléments et leur donne les mêmes réglages et un rang', () => {
+    const [a, b, c] = stackOfThree()
+    const m = els().filter((e) => [a, b, c].includes(e.id))
+    expect(new Set(m.map((e) => e.groupId)).size).toBe(1)
+    expect(m.every((e) => e.stack?.dir === 'h')).toBe(true)
+    expect(m.map((e) => e.stackAt)).toEqual([0, 1, 2])
+  })
+
+  it('makeStack est un seul cran d\'historique et se défait', () => {
+    const before = S().past.length
+    stackOfThree()
+    expect(S().past.length).toBe(before + 3 + 1) // trois ajouts, puis la pile
+    S().undo()
+    expect(els().every((e) => !e.stack && !e.groupId)).toBe(true)
+  })
+
+  it('makeStack refuse une sélection qui contient un masque d\'écrêtage', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().makeMask()
+    const plan = planStack(els(), 'v', measure as never, () => false)!
+    expect(S().makeStack(plan)).toBe(false)
+  })
+
+  it('setStack change les réglages de tous les membres', () => {
+    const [a, b, c] = stackOfThree()
+    const group = els().find((e) => e.id === a)!.groupId!
+    S().setStack(group, { gap: 42, align: 'center' })
+    for (const id of [a, b, c]) expect(els().find((e) => e.id === id)!.stack).toMatchObject({ dir: 'h', gap: 42, align: 'center' })
+  })
+
+  it('moveInStack échange deux éléments, sans sortir de la pile', () => {
+    const [a, b, c] = stackOfThree()
+    S().moveInStack(b, -1)
+    const rank = (id: string): number | undefined => els().find((e) => e.id === id)!.stackAt
+    expect([rank(a), rank(b), rank(c)]).toEqual([1, 0, 2])
+    S().moveInStack(b, -1) // déjà le premier : rien ne change
+    expect(rank(b)).toBe(0)
+  })
+
+  it('setStackBackground ne garde qu\'un fond par pile', () => {
+    const [a, b] = stackOfThree()
+    S().setStackBackground(a, true)
+    S().setStackBackground(b, true)
+    expect(els().filter((e) => e.stackBg).map((e) => e.id)).toEqual([b])
+    S().setStackBackground(b, false)
+    expect(els().some((e) => e.stackBg)).toBe(false)
+  })
+
+  it('releaseStack retire les réglages mais garde le groupe et les places', () => {
+    const [a, b, c] = stackOfThree()
+    const group = els().find((e) => e.id === a)!.groupId!
+    const xs = els().map((e) => e.x)
+    S().releaseStack(group)
+    expect(els().every((e) => !e.stack && !e.stackAt && !e.stackBg)).toBe(true)
+    expect(els().filter((e) => [a, b, c].includes(e.id)).every((e) => e.groupId === group)).toBe(true)
+    expect(els().map((e) => e.x)).toEqual(xs)
+  })
+
+  it('applyLayout déplace sans ajouter de cran d\'historique', () => {
+    const [a] = addRects(1)
+    const before = S().past.length
+    S().applyLayout(new Map([[a, { x: 123, y: 45 }]]))
+    expect(els().find((e) => e.id === a)).toMatchObject({ x: 123, y: 45 })
+    expect(S().past.length).toBe(before)
+  })
+
+  it('dégrouper une pile retire la pile', () => {
+    const [a] = stackOfThree()
+    S().select([a])
+    S().ungroupSelected()
+    expect(els().every((e) => !e.groupId)).toBe(true)
+  })
+})
+
+describe('masques d\'écrêtage', () => {
+  it('makeMask : la forme la plus haute devient le masque, tous sont groupés', () => {
+    const [a, b, c] = addRects(3)
+    S().select([a, b, c])
+    expect(S().makeMask()).toBe(true)
+    const m = els()
+    expect(new Set(m.map((e) => e.groupId)).size).toBe(1)
+    expect(m.filter((e) => e.clip).map((e) => e.id)).toEqual([c]) // la plus haute de la pile
+  })
+
+  it('makeMask refuse une sélection sans forme possible', () => {
+    S().addElement({ type: 'text', x: 0, y: 0, width: 100, height: 30 })
+    const t = S().selectedIds[0]
+    const [r] = addRects(1)
+    S().select([t])
+    expect(S().makeMask()).toBe(false) // un seul élément
+    S().select([t, r])
+    expect(S().makeMask()).toBe(true) // le rectangle sert de masque au texte
+    expect(els().find((e) => e.id === r)!.clip).toBe(true)
+  })
+
+  it('releaseMask retire la marque et garde le groupe', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().makeMask()
+    expect(S().releaseMask()).toBe(1)
+    expect(els().some((e) => e.clip)).toBe(false)
+    expect(new Set(els().map((e) => e.groupId)).size).toBe(1)
+  })
+
+  it('dégrouper retire le masque', () => {
+    const [a, b] = addRects(2)
+    S().select([a, b])
+    S().makeMask()
+    S().ungroupSelected()
+    expect(els().some((e) => e.clip || e.groupId)).toBe(false)
   })
 })

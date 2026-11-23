@@ -1,5 +1,7 @@
 import { createTextNode } from '@/exportPages'
 import type { FitText } from '@/mailMerge'
+import { applyPatches, reflowPage } from '@/stackLayout'
+import { measureElement } from '@/stackMeasure'
 import type { TrameElement } from '@/types'
 
 /** Un texte ne rétrécit pas de plus de moitié : au-delà il vaut mieux passer à la ligne que devenir illisible. */
@@ -29,3 +31,6 @@ const konvaLines = (e: TrameElement): number => createTextNode(e).textArr.length
 
 /** `fitText` avec la mise en page réelle du texte : à donner à `mergeDocument`. */
 export const fitToTemplate: FitText = (template, filled) => fitText(template, filled, konvaLines)
+
+/** Replace les piles (auto-layout) d'une page fusionnée selon la hauteur réelle des textes remplis : à donner à `mergeDocument`. */
+export const reflowToTemplate = (elements: TrameElement[]): TrameElement[] => applyPatches(elements, reflowPage(elements, measureElement))

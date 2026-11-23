@@ -17,6 +17,7 @@ function scaleStyle(e: TrameElement, s: number): TrameElement {
   if (e.cornerRadius !== undefined) out.cornerRadius = scaled(e.cornerRadius, s)
   if (e.shadow) out.shadow = { ...e.shadow, blur: e.shadow.blur * s, offsetX: e.shadow.offsetX * s, offsetY: e.shadow.offsetY * s }
   if (e.filters?.blur) out.filters = { ...e.filters, blur: e.filters.blur * s }
+  if (e.stack) out.stack = { ...e.stack, gap: e.stack.gap * s, pad: e.stack.pad * s }
   return out
 }
 

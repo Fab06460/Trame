@@ -111,6 +111,12 @@ export interface TrameElement {
   name?: string
   /** protection par le modèle (voir `protection.ts`) ; absent = élément libre */
   protect?: Protection
+  /** pile (auto-layout, voir `stackLayout.ts`) : réglages du groupe, identiques sur tous ses membres */
+  stack?: import('./stackLayout').StackSpec
+  /** rang dans la pile (0 = premier = ancre) ; absent = à la fin */
+  stackAt?: number
+  /** cet élément est le fond de la pile : il épouse son contenu */
+  stackBg?: true
   /** masque d'écrêtage (voir `clipMask.ts`) : cette forme, dans un groupe, n'est pas peinte et découpe les autres membres du groupe */
   clip?: true
   /** mode de fusion avec ce qui est dessous (voir `blend.ts`) ; absent = normal (l'élément recouvre) */

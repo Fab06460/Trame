@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fitToTemplate } from '@/mergeFit'
+import { fitToTemplate, reflowToTemplate } from '@/mergeFit'
 import { chooseImageFolder, ensureImages, imageResolver, imageValues, missingImageValues, useMergeImages } from '@/mergeImageStore'
 import { distinctValues, fieldsUsed, imageFieldsUsed, mergeDocument, parseRowRange, rowFileNames, selectRows, unknownFields } from '@/mailMerge'
 import { SHEET_PRESETS, applyPreset, freeLayout, presetById } from '@/sheetPresets'
@@ -39,7 +39,7 @@ export function MailMergeDialog(): React.JSX.Element | null {
   const imagesFolder = useMergeImages((s) => s.folder)
   const imageCount = useMergeImages((s) => s.files.length)
   const resolver = useMemo(() => (imageFields.length ? imageResolver() : undefined), [imageFields, imagesTick]) // eslint-disable-line react-hooks/exhaustive-deps
-  const preview = useMemo(() => (data ? mergeDocument(doc, data, [shown], fitToTemplate, resolver).pages : []), [doc, data, shown, resolver])
+  const preview = useMemo(() => (data ? mergeDocument(doc, data, [shown], fitToTemplate, resolver, reflowToTemplate).pages : []), [doc, data, shown, resolver])
   // les images de la ligne montrée sont chargées à la demande (le résultat réaffiche l'aperçu)
   useEffect(() => {
     if (data && imageFields.length && imagesFolder) void ensureImages(imageValues(data.columns, data.rows, [shown], imageFields))
@@ -61,7 +61,7 @@ export function MailMergeDialog(): React.JSX.Element | null {
   const sheetPreview = useMemo(() => {
     if (!data || !sheet || mode !== 'single' || problem || selected.length === 0) return null
     const perSheet = layout.cols * layout.rows
-    return sheetsFromMerged(mergeDocument(doc, data, selected.slice(0, perSheet), fitToTemplate, resolver), perCard, layout)
+    return sheetsFromMerged(mergeDocument(doc, data, selected.slice(0, perSheet), fitToTemplate, resolver, reflowToTemplate), perCard, layout)
   }, [doc, data, sheet, mode, problem, selected, layout, perCard, resolver])
   useEffect(() => {
     if (data && imageFields.length && imagesFolder && sheet) void ensureImages(imageValues(data.columns, data.rows, selected.slice(0, layout.cols * layout.rows), imageFields))

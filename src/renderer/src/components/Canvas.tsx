@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { boundsOf, intersects, snapBox, snapEdges, unionBox, type Box, type ChangedEdges, type SnapLine } from '@/geometry'
 import { compositeOf } from '@/blend'
 import { clipPlan } from '@/clipMask'
+import { reflowPage } from '@/stackLayout'
+import { measureElement } from '@/stackMeasure'
 import { clipPath } from '@/clipKonva'
 import { Rulers, ViewOptions } from './Rulers'
 import { Stage, Layer, Rect, Shape, Text, Image as KImage, Transformer, Group, Circle, Line } from 'react-konva'
@@ -262,6 +264,12 @@ export function Canvas(): React.JSX.Element {
   const safe = safeBox(doc, printSetup)
 
   const clips = useMemo(() => clipPlan(page.elements), [page.elements])
+
+  // piles (auto-layout) : quand un texte change de hauteur ou qu'un membre bouge, les autres se replacent ; le calcul est stable (rien à changer = rien appliqué)
+  useEffect(() => {
+    const patches = reflowPage(page.elements, measureElement)
+    if (patches.size) useEditor.getState().applyLayout(patches)
+  }, [page.elements, fontsVersion])
 
   const commonProps = (el: TrameElement): Konva.NodeConfig => ({
     id: el.id,

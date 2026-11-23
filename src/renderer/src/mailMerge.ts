@@ -258,7 +258,7 @@ function fillQrCodes(elements: TrameElement[], columns: string[], row: string[])
  * Document fusionné : les pages du modèle, remplies avec chacune des lignes choisies (ligne 1 : toutes les pages, puis ligne 2…).
  * Le document d'origine n'est pas modifié ; les données du publipostage ne suivent pas dans l'exportation.
  */
-export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: number[], fit?: FitText, images?: ImageResolver): TrameDocument {
+export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: number[], fit?: FitText, images?: ImageResolver, relayout?: (elements: TrameElement[]) => TrameElement[]): TrameDocument {
   const { mailMerge: _mm, ...rest } = doc
   void _mm
   const groupIds = new Map<string, string>()
@@ -268,17 +268,20 @@ export function mergeDocument(doc: TrameDocument, data: MergeData, rowIndexes: n
     return doc.pages.map((p) => ({
       ...p,
       id: nanoid(8),
-      elements: fillQrCodes(
-        p.elements.map((e) => {
-          const copy = fillElement(e, data.columns, row, fit, images)
-          if (e.groupId) {
-            if (!groupIds.has(e.groupId)) groupIds.set(e.groupId, nanoid(8))
-            copy.groupId = groupIds.get(e.groupId)
-          }
-          return copy
-        }),
-        data.columns,
-        row
+      // les piles (auto-layout) se replacent selon la longueur réelle des textes remplis
+      elements: (relayout ?? ((els: TrameElement[]) => els))(
+        fillQrCodes(
+          p.elements.map((e) => {
+            const copy = fillElement(e, data.columns, row, fit, images)
+            if (e.groupId) {
+              if (!groupIds.has(e.groupId)) groupIds.set(e.groupId, nanoid(8))
+              copy.groupId = groupIds.get(e.groupId)
+            }
+            return copy
+          }),
+          data.columns,
+          row
+        )
       )
     }))
   })

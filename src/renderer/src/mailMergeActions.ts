@@ -1,7 +1,7 @@
 import { fileSafeName } from '@/docName'
 import { describeFallbacks } from '@/pdfFallbacks'
 import { exportPdf } from '@/pdfExport'
-import { fitToTemplate } from '@/mergeFit'
+import { fitToTemplate, reflowToTemplate } from '@/mergeFit'
 import { decodeCsv, imageFieldsUsed, mergeDocument, parseCsv, rowFileNames, toMergeData, type MergeData } from '@/mailMerge'
 import { ensureImages, imageResolver, imageValues, releaseImages } from '@/mergeImageStore'
 import { sheetsFromMerged, type SheetLayout } from '@/mergeSheets'
@@ -61,7 +61,7 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
   if (o.mode === 'single') {
     o.onProgress?.(0, 1)
     if (resolver) await ensureImages(imageValues(data.columns, data.rows, rows, imageFields))
-    const merged = mergeDocument(doc, data, rows, fitToTemplate, resolver)
+    const merged = mergeDocument(doc, data, rows, fitToTemplate, resolver, reflowToTemplate)
     const { dataUrl, fallbacks } = await exportPdf(o.layout ? sheetsFromMerged(merged, doc.pages.length, o.layout).doc : merged)
     o.onProgress?.(1, 1)
     const saved = await window.trame.saveExport(dataUrl, `${base}.pdf`)
@@ -81,7 +81,7 @@ export async function exportMerge(o: MergeExportOptions): Promise<MergeExportRes
     o.onProgress?.(i, rows.length)
     const values = imageValues(data.columns, data.rows, [r], imageFields)
     if (resolver) await ensureImages(values)
-    const { dataUrl, fallbacks } = await exportPdf(mergeDocument(doc, data, [r], fitToTemplate, resolver))
+    const { dataUrl, fallbacks } = await exportPdf(mergeDocument(doc, data, [r], fitToTemplate, resolver, reflowToTemplate))
     if (resolver) releaseImages(values)
     if (i === 0) firstFallbacks = fallbacks
     if (!(await window.trame.writeExportFile(picked.dir, names[i], dataUrl))) throw new Error(t('xp.writeFailed', { name: names[i] }))

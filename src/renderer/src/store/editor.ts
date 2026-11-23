@@ -27,6 +27,7 @@ import { sanitizeImageStyle } from '@/imageStyle'
 import { sanitizeShadow } from '@/shadowStyle'
 import { sanitizeBlend } from '@/blend'
 import { canBeMask, sanitizeClip } from '@/clipMask'
+import { DEFAULT_STACK, applyPatches, sanitizeStack, stackContent, stackSpecOf, type LayoutPatch, type StackPlan, type StackSpec } from '@/stackLayout'
 import { sanitizeOpen } from '@/openPath'
 import { sanitizeStroke } from '@/strokeStyle'
 import { sanitizeTextStyle } from '@/textStyle'
@@ -123,6 +124,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeShadow(e)
       sanitizeBlend(e)
       sanitizeClip(e)
+      sanitizeStack(e)
       sanitizeList(e)
       sanitizeColumns(e)
       if (e.type !== 'path' || e.fillRule !== 'evenodd') delete e.fillRule
@@ -193,6 +195,18 @@ interface EditorState {
   ungroupSelected: () => void
   /** Masque d'écrêtage : la forme la plus haute de la sélection (rectangle, ellipse, tracé fermé) découpe les autres, qui forment avec elle un groupe ; `false` s'il n'y a pas de forme ou si un élément est verrouillé ou protégé. */
   makeMask: () => boolean
+  /** Crée une pile (auto-layout) avec les éléments sélectionnés, selon le plan calculé (voir `planStack`) ; `false` si un élément est verrouillé, protégé ou masque d'écrêtage. */
+  makeStack: (plan: StackPlan) => boolean
+  /** Change les réglages (sens, espacement, alignement, marge) de la pile d'un groupe. */
+  setStack: (groupId: string, patch: Partial<StackSpec>) => void
+  /** Libère la pile d'un groupe : les éléments gardent leur place et restent groupés. */
+  releaseStack: (groupId: string) => void
+  /** Monte (−1) ou descend (+1) un élément dans sa pile. */
+  moveInStack: (id: string, delta: -1 | 1) => void
+  /** Fait (ou défait) d'un élément le fond de sa pile : il épouse le contenu. */
+  setStackBackground: (id: string, on: boolean) => void
+  /** Applique à la page courante le résultat d'un calcul de pile, **sans** cran d'historique : il suit la modification qui l'a causé. */
+  applyLayout: (patches: ReadonlyMap<string, LayoutPatch>) => void
   /** Libère le masque du groupe de la sélection : la forme redevient un élément ordinaire (le groupe reste) ; rend le nombre de masques libérés. */
   releaseMask: () => number
   align: (mode: AlignMode) => void
@@ -462,6 +476,90 @@ export const useEditor = create<EditorState>((set, get) => {
         dirty: true
       })
       return true
+    },
+
+    makeStack: (plan) => {
+      const sel = selected()
+      if (sel.length < 2 || movable().length !== sel.length || sel.some((e) => e.clip)) return false
+      const ids = new Set(sel.map((e) => e.id))
+      const groupId = nanoid(8)
+      const order = new Map(plan.order.map((id, i) => [id, i]))
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (!ids.has(e.id)) return e
+            const { stackAt: _a, stackBg: _b, ...rest } = e
+            return { ...rest, groupId, stack: plan.spec, ...(order.has(e.id) ? { stackAt: order.get(e.id)! } : {}), ...(e.id === plan.backgroundId ? { stackBg: true as const } : {}) }
+          })
+        })),
+        dirty: true
+      })
+      return true
+    },
+
+    setStack: (groupId, patch) => {
+      const members = selectPage(get()).elements.filter((e) => e.groupId === groupId)
+      if (!members.length) return
+      const next: StackSpec = { ...(stackSpecOf(members) ?? DEFAULT_STACK), ...patch }
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (e.groupId === groupId ? { ...e, stack: next } : e)) })), dirty: true })
+    },
+
+    releaseStack: (groupId) => {
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (e.groupId !== groupId || !e.stack) return e
+            const { stack: _s, stackAt: _a, stackBg: _b, ...rest } = e
+            return rest
+          })
+        })),
+        dirty: true
+      })
+    },
+
+    moveInStack: (id, delta) => {
+      const page = selectPage(get())
+      const el = page.elements.find((e) => e.id === id)
+      if (!el?.groupId) return
+      const content = stackContent(page.elements.filter((e) => e.groupId === el.groupId))
+      const from = content.findIndex((e) => e.id === id)
+      const to = from + delta
+      if (from < 0 || to < 0 || to >= content.length) return
+      const ids = content.map((e) => e.id)
+      ;[ids[from], ids[to]] = [ids[to], ids[from]]
+      const rank = new Map(ids.map((x, i) => [x, i]))
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (rank.has(e.id) && e.groupId === el.groupId ? { ...e, stackAt: rank.get(e.id)! } : e)) })), dirty: true })
+    },
+
+    setStackBackground: (id, on) => {
+      const page = selectPage(get())
+      const el = page.elements.find((e) => e.id === id)
+      if (!el?.groupId || !el.stack) return
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (e.groupId !== el.groupId) return e
+            if (e.id === id) {
+              const { stackBg: _b, stackAt: _a, ...rest } = e
+              return on ? { ...rest, stackBg: true as const } : rest
+            }
+            const { stackBg: _b, ...rest } = e // un seul fond par pile
+            return on ? rest : e
+          })
+        })),
+        dirty: true
+      })
+    },
+
+    applyLayout: (patches) => {
+      if (!patches.size) return
+      set({ doc: mapPage((p) => ({ ...p, elements: applyPatches(p.elements, patches) })) })
     },
 
     releaseMask: () => {

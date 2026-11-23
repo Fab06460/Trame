@@ -2365,6 +2365,36 @@ try {
   const freedPng = await exportPng()
   check('masque : libérer le masque rend les deux formes (coin violet, centre orange)', purple(pngPixel(freedPng, 396, 446)) && pngPixel(freedPng, 540, 540)[0] > 240, JSON.stringify([pngPixel(freedPng, 396, 446), pngPixel(freedPng, 540, 540)]))
 
+  // pile (auto-layout) : une petite ellipse posée dans un rectangle ; le rectangle, qui la contient, devient le fond de la pile et l'épouse avec la marge
+  await reloadApp()
+  await sleep(500)
+  await click('header.toolbar button', 'Rectangle') // 300 × 200 en (390, 440)
+  await sleep(250)
+  await click('header.toolbar button', 'Ellipse')
+  await sleep(250)
+  await setField('width', 100)
+  await setField('height', 100)
+  await setField('x', 490)
+  await setField('y', 490) // l'ellipse occupe (490, 490)-(590, 590), dans le rectangle (390, 440)-(690, 640) : marges 100 à gauche et à droite, 50 en haut et en bas
+  await click('.sidebar .tabs button', 'Calques')
+  await sleep(300)
+  await run(`document.querySelectorAll('.layer')[1].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }))`)
+  await sleep(300)
+  check('pile : deux éléments sélectionnés proposent une pile verticale ou horizontale', (await count('[data-action="stack-make-v"]')) === 1 && (await count('[data-action="stack-make-h"]')) === 1 && (await count('[data-action="stack-release"]')) === 0)
+  await clickSel('[data-action="stack-make-v"]')
+  await sleep(600)
+  check('pile : après la création, les réglages apparaissent (espacement, alignement, marge du fond)', (await count('[data-action="stack-release"]')) === 1 && (await count('[data-field="stackGap"]')) === 1 && (await count('[data-field="stackAlign"]')) === 1 && (await count('[data-field="stackPad"]')) === 1)
+  check('pile : la marge reprend la plus petite marge actuelle (50)', (await field('stackPad')) === 50, String(await field('stackPad')))
+  check('pile : la liste des éléments porte le fond (rectangle) et le contenu (ellipse)', (await count('[data-stack-member]')) === 2 && (await count('[data-action="stack-bg"][aria-pressed="true"]')) === 1 && (await count('[data-action="stack-up"]')) === 1)
+  check('pile : le fond épouse le contenu avec la marge (200 × 200 = ellipse 100 + 2 × 50)', (await field('width')) === 200 && (await field('height')) === 200, JSON.stringify([await field('width'), await field('height')]))
+  await setField('stackPad', 100)
+  await sleep(600)
+  check('pile : changer la marge redimensionne le fond (100 + 2 × 100)', (await field('width')) === 300 && (await field('height')) === 300, JSON.stringify([await field('width'), await field('height')]))
+  if (process.env.SMOKE_STACK_SHOT) await writeFile(process.env.SMOKE_STACK_SHOT, Buffer.from((await cdp('Page.captureScreenshot', { format: 'png' })).result.data, 'base64')) // inspection visuelle
+  await clickSel('[data-action="stack-release"]')
+  await sleep(400)
+  check('pile : « Libérer la pile » retire les réglages', (await count('[data-action="stack-release"]')) === 0)
+
   // plusieurs kits de marque : créer, séparer les couleurs, pastilles sous les sélecteurs, exporter et importer un fichier .tramekit
   await reloadApp()
   await sleep(500)
