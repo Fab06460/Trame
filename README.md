@@ -61,7 +61,7 @@
 - **Style d'après une image** : extrait les couleurs dominantes d'une image (bouton sur une image sélectionnée, ou onglet Marque) et recolore la page ou tout le document avec elles — le clair reste clair, le sombre reste sombre, un texte lisible le reste ; les couleurs se gardent dans le kit de marque
 - Listes à puces et numérotées (retrait des lignes suivantes, texte vectoriel dans le PDF)
 - Modèles de marque verrouillés : éléments figés ou à remplir, remplacement d'image en gardant la place
-- Magic Resize : changer le format de la page en adaptant le contenu (composition conservée et centrée, décors gardés sur leurs bords)
+- Magic Resize : changer le format de la page en adaptant le contenu (composition conservée et centrée, décors gardés sur leurs bords) ; contraintes par élément et par axe (collé, centré, étiré entre les marges, proportionnel) pour que les blocs se recomposent au lieu d'être centrés
 - Nom du document modifiable (nom des exports et du fichier)
 - **Retourner** (panneau des propriétés, « Retourner ↔︎ / ↕︎ ») : miroir d'une forme, d'une icône, d'une image ou de toute une sélection, autour du milieu de la sélection ; le texte change de place mais reste lisible
 - **Impression professionnelle** (page, sans sélection) : **fond perdu** (0–10 mm), **marge de sécurité** (repère vert dans l'éditeur, avec alerte sur les textes qui en sortent) et **traits de coupe**. « Exporter en PDF » agrandit alors chaque page du fond perdu (le fond et ce qui déborde y sont dessinés), ajoute les traits et renseigne TrimBox / BleedBox ; l'impression directe et les exports image ne changent pas

@@ -967,3 +967,31 @@ describe('masques d\'écrêtage', () => {
     expect(els().some((e) => e.clip || e.groupId)).toBe(false)
   })
 })
+
+describe('contraintes de format (setPin)', () => {
+  it('s\'applique à la sélection et à son groupe, un axe à la fois, et se retire', () => {
+    const [a, b, c] = addRects(3)
+    S().select([a, b])
+    S().groupSelected()
+    S().select([a])
+    S().setPin('h', 'start')
+    S().setPin('v', 'end')
+    expect(els().find((e) => e.id === a)?.pin).toEqual({ h: 'start', v: 'end' })
+    expect(els().find((e) => e.id === b)?.pin).toEqual({ h: 'start', v: 'end' }) // même groupe
+    expect(els().find((e) => e.id === c)?.pin).toBeUndefined()
+    S().setPin('h', undefined)
+    expect(els().find((e) => e.id === a)?.pin).toEqual({ v: 'end' })
+    S().setPin('v', undefined)
+    expect(els().find((e) => e.id === a)?.pin).toBeUndefined()
+  })
+
+  it('un réglage = un cran d\'historique, annulable', () => {
+    const [a] = addRects(1)
+    S().select([a])
+    const n = S().past.length
+    S().setPin('h', 'center')
+    expect(S().past.length).toBe(n + 1)
+    S().undo()
+    expect(els().find((e) => e.id === a)?.pin).toBeUndefined()
+  })
+})

@@ -117,6 +117,8 @@ export interface TrameElement {
   stackAt?: number
   /** cet élément est le fond de la pile : il épouse son contenu */
   stackBg?: true
+  /** contraintes au changement de format (Magic Resize, voir `magicResize.ts`), par axe ; absent = automatique */
+  pin?: import('./magicResize').Pin
   /** masque d'écrêtage (voir `clipMask.ts`) : cette forme, dans un groupe, n'est pas peinte et découpe les autres membres du groupe */
   clip?: true
   /** mode de fusion avec ce qui est dessous (voir `blend.ts`) ; absent = normal (l'élément recouvre) */

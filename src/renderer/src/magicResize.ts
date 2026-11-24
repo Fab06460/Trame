@@ -6,6 +6,26 @@ export const SIZE_LIMITS = { min: 16, max: 8000 }
 /** Un élément qui occupe (presque) toute une dimension de la page : fond, bandeau… Il suit alors la page au lieu de rester à l'échelle. */
 const SPANS = 0.97
 
+/** Contrainte d'un bloc sur un axe, au changement de format : collé au début / à la fin, centré, étiré entre ses deux marges, ou proportionnel à la page. Absente = comportement automatique. */
+export type PinMode = 'start' | 'end' | 'center' | 'stretch' | 'scale'
+export const PIN_MODES: readonly PinMode[] = ['start', 'end', 'center', 'stretch', 'scale']
+export interface Pin { h?: PinMode; v?: PinMode }
+
+/** Contraintes d'un bloc : celles du premier membre qui en porte (un groupe les partage toutes). */
+export const pinOf = (members: TrameElement[]): Pin => members.find((m) => m.pin)?.pin ?? {}
+
+/** Nettoyage à la lecture : seules les contraintes connues sont gardées. Modifie l'élément en place. */
+export function sanitizePin(element: object): void {
+  const e = element as Record<string, unknown>
+  const p = e.pin as Record<string, unknown> | undefined
+  if (!p || typeof p !== 'object') { delete e.pin; return }
+  const pin: Pin = {}
+  if ((PIN_MODES as readonly unknown[]).includes(p.h)) pin.h = p.h as PinMode
+  if ((PIN_MODES as readonly unknown[]).includes(p.v)) pin.v = p.v as PinMode
+  if (pin.h || pin.v) e.pin = pin
+  else delete e.pin
+}
+
 const scaled = (v: number | undefined, s: number): number | undefined => (v === undefined ? v : v * s)
 
 /** Même élément, ses tailles « en pixels » (police, contour, ombre, arrondi, interlettrage) multipliées par `s`. Position et boîte : voir `adaptPage`. */
@@ -46,13 +66,32 @@ const EDGE = 0.04
  */
 type AxisKind = 'stretch' | 'start' | 'end' | 'free'
 
-function placeOnAxis(start: number, size: number, total: number, newTotal: number, s: number, offset: number, frameStart: number, canStretch: boolean): { pos: number; size: number; kind: AxisKind } {
+interface AxisPlace { pos: number; size: number; kind: AxisKind; /** la taille est imposée par la contrainte (sinon : taille × échelle) */ sized: boolean; /** contrainte posée par l'utilisateur */ explicit: boolean }
+
+function placeOnAxis(start: number, size: number, total: number, newTotal: number, s: number, offset: number, frameStart: number, canStretch: boolean, pin?: PinMode): AxisPlace {
   const before = start
   const after = total - (start + size)
-  if (canStretch && size >= total * SPANS) return { pos: 0, size: newTotal, kind: 'stretch' }
-  if (before <= EDGE * total && before <= after) return { pos: before * s, size: size * s, kind: 'start' }
-  if (after <= EDGE * total) return { pos: newTotal - after * s - size * s, size: size * s, kind: 'end' }
-  return { pos: offset + (start - frameStart) * s, size: size * s, kind: 'free' }
+  if (pin) {
+    const own = size * s
+    switch (pin) {
+      case 'start': return { pos: before * s, size: own, kind: 'start', sized: false, explicit: true }
+      case 'end': return { pos: newTotal - after * s - own, size: own, kind: 'end', sized: false, explicit: true }
+      case 'center': return { pos: newTotal / 2 + (start + size / 2 - total / 2) * s - own / 2, size: own, kind: 'free', sized: false, explicit: true }
+      case 'stretch':
+        // un groupe ou un élément pivoté ne s'étire pas : il reste collé au début
+        if (!canStretch) return { pos: before * s, size: own, kind: 'start', sized: false, explicit: true }
+        return { pos: before * s, size: Math.max(1, newTotal - (before + after) * s), kind: 'stretch', sized: true, explicit: true }
+      case 'scale': {
+        const r = newTotal / total
+        const sz = canStretch ? size * r : own
+        return { pos: (start + size / 2) * r - sz / 2, size: sz, kind: 'free', sized: canStretch, explicit: true }
+      }
+    }
+  }
+  if (canStretch && size >= total * SPANS) return { pos: 0, size: newTotal, kind: 'stretch', sized: true, explicit: false }
+  if (before <= EDGE * total && before <= after) return { pos: before * s, size: size * s, kind: 'start', sized: false, explicit: false }
+  if (after <= EDGE * total) return { pos: newTotal - after * s - size * s, size: size * s, kind: 'end', sized: false, explicit: false }
+  return { pos: offset + (start - frameStart) * s, size: size * s, kind: 'free', sized: false, explicit: false }
 }
 
 /**
@@ -64,6 +103,8 @@ function placeOnAxis(start: number, size: number, total: number, newTotal: numbe
  * - un élément non pivoté qui occupe presque toute une dimension (fond, bandeau) occupe toute la dimension du nouveau format ;
  * - un élément entièrement contenu dans un décor collé à un bord (une étoile sur un grand cercle) suit ce décor ;
  * - un groupe se déplace d'un bloc (ses membres gardent leurs écarts, à l'échelle `s`) ;
+ * - **contraintes explicites** (`pin`, par axe) : elles remplacent ces règles automatiques pour le bloc concerné (début, fin, centré,
+ *   étiré entre ses marges, proportionnel à la page) ;
  * - les repères suivent la composition.
  */
 export function adaptPage(page: TramePage, from: { width: number; height: number }, to: { width: number; height: number }, frame: Frame = { x: 0, y: 0, width: from.width, height: from.height }): TramePage {
@@ -80,20 +121,21 @@ export function adaptPage(page: TramePage, from: { width: number; height: number
   }
 
   // 1. placement de chaque bloc
-  interface Placed { members: TrameElement[]; box: ReturnType<typeof unionBox>; single: boolean; px: ReturnType<typeof placeOnAxis>; py: ReturnType<typeof placeOnAxis> }
+  interface Placed { members: TrameElement[]; box: ReturnType<typeof unionBox>; single: boolean; px: AxisPlace; py: AxisPlace }
   const placed: Placed[] = [...blocks.values()].map((members) => {
     const box = unionBox(members.map(boundsOf))
     const single = members.length === 1 && members[0].rotation === 0
-    return { members, box, single, px: placeOnAxis(box.x, box.width, from.width, to.width, s, ox, frame.x, single), py: placeOnAxis(box.y, box.height, from.height, to.height, s, oy, frame.y, single) }
+    const pin = pinOf(members)
+    return { members, box, single, px: placeOnAxis(box.x, box.width, from.width, to.width, s, ox, frame.x, single, pin.h), py: placeOnAxis(box.y, box.height, from.height, to.height, s, oy, frame.y, single, pin.v) }
   })
   const centreOf = (b: Placed['box']): { x: number; y: number } => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 })
   const contains = (a: Placed['box'], b: Placed['box']): boolean => b.x >= a.x - 1 && b.y >= a.y - 1 && b.x + b.width <= a.x + a.width + 1 && b.y + b.height <= a.y + a.height + 1
-  const pinned = (p: Placed['px']): boolean => p.kind === 'start' || p.kind === 'end'
+  const pinned = (p: AxisPlace): boolean => p.kind === 'start' || p.kind === 'end'
 
   // 2. un bloc entièrement contenu dans un décor collé à un bord (une étoile sur un grand cercle) le suit, axe par axe : sinon il s'en détacherait
   const owner = new Map<Placed, Placed>()
   for (const b of placed) {
-    if (pinned(b.px) || pinned(b.py)) continue
+    if (pinned(b.px) || pinned(b.py) || b.px.explicit || b.py.explicit) continue
     const hosts = placed.filter((h) => h !== b && (pinned(h.px) || pinned(h.py)) && contains(h.box, b.box) && h.box.width * h.box.height > b.box.width * b.box.height)
     if (hosts.length) owner.set(b, hosts.sort((x, y) => x.box.width * x.box.height - y.box.width * y.box.height)[0])
   }
@@ -114,8 +156,8 @@ export function adaptPage(page: TramePage, from: { width: number; height: number
     for (const e of b.members) {
       const n = scaleStyle(e, s)
       // un bloc étiré (fond, bandeau) prend la taille de l'axe ; sinon tout est à l'échelle s
-      n.width = b.single && b.px.kind === 'stretch' ? b.px.size : e.width * s
-      n.height = b.single && b.py.kind === 'stretch' ? b.py.size : e.height * s
+      n.width = b.single && b.px.sized ? b.px.size : e.width * s
+      n.height = b.single && b.py.sized ? b.py.size : e.height * s
       const ec = centerOf(e)
       const nc = b.single ? target : { x: target.x + (ec.x - c.x) * s, y: target.y + (ec.y - c.y) * s }
       const r = (e.rotation * Math.PI) / 180

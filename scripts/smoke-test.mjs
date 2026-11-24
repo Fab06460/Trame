@@ -2395,6 +2395,17 @@ try {
   await sleep(400)
   check('pile : « Libérer la pile » retire les réglages', (await count('[data-action="stack-release"]')) === 0)
 
+  // contraintes au changement de format : deux listes (horizontal, vertical) pour la sélection, la valeur choisie est conservée
+  await sleep(300)
+  const pinInfo = [await count('[data-field="pin-h"]'), await count('[data-field="pin-v"]'), await run(`document.querySelector('[data-field="pin-h"]')?.value`)]
+  check('contraintes : le panneau propose un réglage horizontal et vertical, « Automatique » au départ', pinInfo[0] === 1 && pinInfo[1] === 1 && pinInfo[2] === '', JSON.stringify(pinInfo))
+  await run(`(() => { const s = document.querySelector('[data-field="pin-h"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'stretch'); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await sleep(300)
+  check('contraintes : « Étiré entre les marges » est conservé', (await run(`document.querySelector('[data-field="pin-h"]').value`)) === 'stretch')
+  await run(`(() => { const s = document.querySelector('[data-field="pin-h"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ''); s.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await sleep(300)
+  check('contraintes : retour à « Automatique »', (await run(`document.querySelector('[data-field="pin-h"]').value`)) === '')
+
   // plusieurs kits de marque : créer, séparer les couleurs, pastilles sous les sélecteurs, exporter et importer un fichier .tramekit
   await reloadApp()
   await sleep(500)

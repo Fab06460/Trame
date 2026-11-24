@@ -5,7 +5,7 @@ import { create } from 'zustand'
 import { nanoid } from 'nanoid'
 import { sanitizeGradient } from '@/gradient'
 import { sanitizePageGradient, withBackgroundGradient, withBackgroundOf } from '@/pageBackground'
-import { adaptDocument } from '@/magicResize'
+import { adaptDocument, sanitizePin, type Pin, type PinMode } from '@/magicResize'
 import { registerEmbeddedFonts } from '@/fonts'
 import { sanitizeFrame } from '@/magicResize'
 import { allowedPatch, isEnforced, positionLocked, sanitizeProtection } from '@/protection'
@@ -125,6 +125,7 @@ export function parseDocument(json: string): TrameDocument {
       sanitizeBlend(e)
       sanitizeClip(e)
       sanitizeStack(e)
+      sanitizePin(e)
       sanitizeList(e)
       sanitizeColumns(e)
       if (e.type !== 'path' || e.fillRule !== 'evenodd') delete e.fillRule
@@ -199,6 +200,8 @@ interface EditorState {
   makeStack: (plan: StackPlan) => boolean
   /** Change les réglages (sens, espacement, alignement, marge) de la pile d'un groupe. */
   setStack: (groupId: string, patch: Partial<StackSpec>) => void
+  /** contrainte de format sur un axe pour la sélection (et les membres de ses groupes) ; `undefined` = automatique */
+  setPin: (axis: 'h' | 'v', mode: PinMode | undefined) => void
   /** Libère la pile d'un groupe : les éléments gardent leur place et restent groupés. */
   releaseStack: (groupId: string) => void
   /** Monte (−1) ou descend (+1) un élément dans sa pile. */
@@ -504,6 +507,27 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!members.length) return
       const next: StackSpec = { ...(stackSpecOf(members) ?? DEFAULT_STACK), ...patch }
       set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements: p.elements.map((e) => (e.groupId === groupId ? { ...e, stack: next } : e)) })), dirty: true })
+    },
+
+    setPin: (axis, mode) => {
+      const ids = new Set(get().selectedIds)
+      const groups = new Set(selectPage(get()).elements.filter((e) => ids.has(e.id) && e.groupId).map((e) => e.groupId))
+      const hit = (e: TrameElement): boolean => ids.has(e.id) || (!!e.groupId && groups.has(e.groupId))
+      if (!selectPage(get()).elements.some(hit)) return
+      set({
+        ...snapshot(),
+        doc: mapPage((p) => ({
+          ...p,
+          elements: p.elements.map((e) => {
+            if (!hit(e)) return e
+            const { pin: _p, ...rest } = e
+            const pin: Pin = { ..._p, [axis]: mode }
+            if (!mode) delete pin[axis]
+            return pin.h || pin.v ? { ...rest, pin } : rest
+          })
+        })),
+        dirty: true
+      })
     },
 
     releaseStack: (groupId) => {

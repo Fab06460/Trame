@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { boundsOf } from '@/geometry'
-import { adaptDocument, sanitizeFrame } from '@/magicResize'
+import { adaptDocument, sanitizeFrame, sanitizePin } from '@/magicResize'
 import type { TrameDocument, TrameElement } from '@/types'
 
 const el = (o: Partial<TrameElement>): TrameElement =>
@@ -166,5 +166,62 @@ describe('magicResize', () => {
       sanitizeFrame(nan)
       expect('layoutFrame' in nan).toBe(false)
     })
+  })
+})
+
+describe('contraintes (pin)', () => {
+  // carré 1000 → paysage 2000 × 1000 : s = 1, composition centrée (décalage x = 500) sauf contrainte
+  const run = (e: Partial<TrameElement>, pin: TrameElement['pin']): TrameElement => at(adaptDocument(doc([el({ x: 300, y: 450, width: 100, height: 100, pin, ...e })]), 2000, 1000))
+
+  it('sans contrainte : centré avec la composition', () => {
+    expect(run({}, undefined).x).toBe(800)
+  })
+  it('début : reste à sa distance du bord gauche', () => {
+    expect(run({}, { h: 'start' }).x).toBe(300)
+  })
+  it('fin : reste à sa distance du bord droit', () => {
+    expect(run({}, { h: 'end' }).x).toBe(2000 - (1000 - 400) - 100) // marge droite 600
+  })
+  it('centré : garde son écart au centre de la page', () => {
+    // centre à 350, soit 150 à gauche du centre (500) : dans 2000 → 1000 − 150 = 850
+    expect(run({}, { h: 'center' }).x).toBe(800)
+    expect(run({ x: 100 }, { h: 'center' }).x).toBe(600)
+  })
+  it('étiré : les deux marges sont conservées, la taille suit', () => {
+    const e = run({ x: 100, width: 800 }, { h: 'stretch' })
+    expect(e.x).toBe(100)
+    expect(e.width).toBe(1800) // 2000 − 100 − 100
+  })
+  it('étiré sur l\'axe vertical : la hauteur suit', () => {
+    const d = adaptDocument(doc([el({ x: 100, y: 100, width: 100, height: 800, pin: { v: 'stretch' } })]), 1000, 2000)
+    expect(at(d)).toMatchObject({ y: 100, height: 1800 })
+  })
+  it('proportionnel : position et taille suivent le rapport des pages', () => {
+    const e = run({ x: 100, width: 200 }, { h: 'scale' })
+    expect(e).toMatchObject({ x: 200, width: 400 })
+  })
+  it('un groupe ne s\'étire pas : il reste collé au début', () => {
+    const d = adaptDocument(doc([el({ id: 'a', groupId: 'g', x: 100, width: 100, pin: { h: 'stretch' } }), el({ id: 'b', groupId: 'g', x: 250, width: 100, pin: { h: 'stretch' } })]), 2000, 1000)
+    expect(at(d, 0)).toMatchObject({ x: 100, width: 100 })
+    expect(at(d, 1)).toMatchObject({ x: 250, width: 100 })
+  })
+  it('les axes sont indépendants', () => {
+    const e = run({}, { v: 'end' })
+    expect(e.x).toBe(800) // horizontal automatique
+    expect(e.y).toBe(450)
+  })
+  it('une contrainte explicite empêche l\'élément de suivre un décor collé à un bord', () => {
+    const host = el({ id: 'host', x: 0, y: 0, width: 400, height: 1000 })
+    const star = el({ id: 'star', x: 100, y: 100, width: 100, height: 100, pin: { h: 'center' } })
+    const d = adaptDocument(doc([host, star]), 2000, 1000)
+    expect(at(d, 1).x).toBe(600) // centre 150 = 350 à gauche du milieu → 1000 − 350 = 650, soit x = 600 (sans contrainte il suivrait le décor collé à gauche : x = 100)
+  })
+  it('sanitizePin ne garde que des modes connus', () => {
+    const e: Record<string, unknown> = { pin: { h: 'start', v: 'bof', x: 1 } }
+    sanitizePin(e)
+    expect(e.pin).toEqual({ h: 'start' })
+    const f: Record<string, unknown> = { pin: { h: 3 } }
+    sanitizePin(f)
+    expect(f.pin).toBeUndefined()
   })
 })
