@@ -15,6 +15,29 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.17.0',
+    fr: [
+      'Piles : rangez plusieurs éléments l\'un après l\'autre (espacement, alignement, fond facultatif) ; ils se replacent tout seuls quand un texte s\'allonge, y compris dans le publipostage.',
+      'Magic Resize : réglez par élément comment il suit un changement de format (collé à un bord, centré, étiré entre les marges, proportionnel).',
+      'Contour en forme : le trait d\'une forme, d\'une ligne ou d\'une flèche devient une surface pleine, modifiable point par point.'
+    ],
+    en: [
+      'Stacks: arrange several elements one after another (spacing, alignment, optional background); they rearrange themselves when a text grows, including in mail merge.',
+      'Magic Resize: set per element how it follows a format change (pinned to an edge, centered, stretched between margins, proportional).',
+      'Outline to shape: the stroke of a shape, line or arrow becomes a filled shape, editable point by point.'
+    ],
+    de: [
+      'Stapel: Mehrere Elemente nacheinander anordnen (Abstand, Ausrichtung, optionaler Hintergrund); sie ordnen sich selbst neu, wenn ein Text länger wird, auch im Serienbrief.',
+      'Magic Resize: Pro Element festlegen, wie es einem Formatwechsel folgt (am Rand fixiert, zentriert, zwischen den Rändern gestreckt, proportional).',
+      'Kontur in Form: Die Kontur einer Form, Linie oder eines Pfeils wird zu einer gefüllten Fläche, Punkt für Punkt bearbeitbar.'
+    ],
+    es: [
+      'Pilas: coloque varios elementos uno tras otro (espaciado, alineación, fondo opcional); se recolocan solos cuando un texto crece, también en la combinación de correspondencia.',
+      'Magic Resize: indique por elemento cómo sigue un cambio de formato (fijado a un borde, centrado, estirado entre los márgenes, proporcional).',
+      'Contorno en forma: el trazo de una forma, línea o flecha se convierte en una forma rellena, editable punto a punto.'
+    ]
+  },
+  {
     version: '0.16.0',
     fr: [
       'Formes : unir, soustraire, intersecter ou exclure des formes (sélectionnez-en deux ou plus) pour dessiner logos et icônes sur mesure.',
