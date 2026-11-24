@@ -246,6 +246,8 @@ interface EditorState {
   replaceSelection: (element: TrameElement) => boolean
   /** Remplace des éléments par d'autres, chacun à sa place dans la pile (texte converti en tracé), en un seul cran d'historique ; ceux qui sont verrouillés ou protégés sont laissés (ils ne comptent pas) et le nombre remplacé est rendu. */
   replaceElements: (changes: Array<{ id: string; element: TrameElement }>) => number
+  /** Remplace chaque élément par un ou plusieurs (contour converti en forme : l'élément et son trait), à sa place dans la pile, en un seul cran d'historique ; les éléments verrouillés ou protégés sont laissés ; rend le nombre remplacé. La sélection devient les nouveaux éléments. */
+  expandElements: (changes: Array<{ id: string; elements: TrameElement[] }>) => number
   /** Remplace les éléments du groupe de ce graphique par de nouveaux (même place dans la pile), un seul cran d'historique. */
   replaceChart: (anchorId: string, elements: TrameElement[]) => void
   /** Remet les textes d'une page dans l'ordre donné (les autres éléments gardent leur place : seul l'ordre des textes entre eux change). */
@@ -841,6 +843,23 @@ export const useEditor = create<EditorState>((set, get) => {
       })
       if (!done.size) return 0
       const selectedIds = get().selectedIds.map((id) => done.get(id)?.id ?? id)
+      set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements })), selectedIds, dirty: true })
+      return done.size
+    },
+
+    expandElements: (changes) => {
+      const enforced = enforcedNow()
+      const page = selectPage(get())
+      const wanted = new Map(changes.map((c) => [c.id, c.elements]))
+      const done = new Map<string, TrameElement[]>()
+      const elements = page.elements.flatMap((e) => {
+        const next = wanted.get(e.id)
+        if (!next?.length || positionLocked(e, enforced)) return [e]
+        done.set(e.id, next)
+        return next
+      })
+      if (!done.size) return 0
+      const selectedIds = [...done.values()].flatMap((list) => list.map((e) => e.id))
       set({ ...snapshot(), doc: mapPage((p) => ({ ...p, elements })), selectedIds, dirty: true })
       return done.size
     },

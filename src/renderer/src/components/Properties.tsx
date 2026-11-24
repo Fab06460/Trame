@@ -23,6 +23,7 @@ import { BooleanPanel } from './BooleanPanel'
 import { MaskPanel } from './MaskPanel'
 import { StackPanel } from './StackPanel'
 import { PinPanel } from './PinPanel'
+import { OutlinePanel } from './OutlinePanel'
 import { convertibleTexts, convertSelectedTexts } from '@/textPathActions'
 import { useBrand } from '@/store/brand'
 import { KitSwatches } from './KitSwatches'
@@ -188,6 +189,7 @@ export function Properties(): React.JSX.Element {
           </div>
         )}
         <BooleanPanel />
+        <OutlinePanel />
         <MaskPanel />
         <StackPanel />
         <PinPanel />
@@ -523,6 +525,7 @@ export function Properties(): React.JSX.Element {
         />
       </label>
 
+      <OutlinePanel />
       <MaskPanel />
       <StackPanel />
       <PinPanel />
