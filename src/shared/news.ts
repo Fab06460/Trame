@@ -15,6 +15,29 @@ export interface NewsEntry {
 
 export const NEWS: readonly NewsEntry[] = [
   {
+    version: '0.17.1',
+    fr: [
+      'Éléments hors de la page : ils restent visibles (estompés), sélectionnables et déplaçables, au lieu de disparaître.',
+      'Enregistrement d\'écran : la vidéo se termine bien quand on enregistre aussi le son de l\'ordinateur.',
+      'Tutoriel automatique : le suivi des clics fonctionne sous Windows ; sous Linux Wayland, une explication remplace l\'option absente.'
+    ],
+    en: [
+      'Elements outside the page: they stay visible (dimmed), selectable and movable instead of disappearing.',
+      'Screen recording: the video now finishes properly when the computer\'s sound is recorded too.',
+      'Automatic tutorial: click tracking works on Windows; on Linux Wayland, an explanation replaces the missing option.'
+    ],
+    de: [
+      'Elemente außerhalb der Seite: Sie bleiben sichtbar (abgedunkelt), auswählbar und verschiebbar, statt zu verschwinden.',
+      'Bildschirmaufnahme: Das Video wird jetzt richtig abgeschlossen, wenn auch der Ton des Computers aufgenommen wird.',
+      'Automatisches Tutorial: Die Klickverfolgung funktioniert unter Windows; unter Linux Wayland ersetzt ein Hinweis die fehlende Option.'
+    ],
+    es: [
+      'Elementos fuera de la página: siguen visibles (atenuados), seleccionables y movibles en lugar de desaparecer.',
+      'Grabación de pantalla: el vídeo ahora termina correctamente cuando también se graba el sonido del ordenador.',
+      'Tutorial automático: el seguimiento de clics funciona en Windows; en Linux Wayland, una explicación sustituye a la opción ausente.'
+    ]
+  },
+  {
     version: '0.17.0',
     fr: [
       'Piles : rangez plusieurs éléments l\'un après l\'autre (espacement, alignement, fond facultatif) ; ils se replacent tout seuls quand un texte s\'allonge, y compris dans le publipostage.',
