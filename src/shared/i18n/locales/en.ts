@@ -1863,6 +1863,7 @@ export const en: Catalog = {
   'capture.tutorial.name': 'Tutorial',
   'capture.tutorial.noClicks': 'No click was tracked: the video is inserted as a clip.',
   'capture.tutorial.reading': 'Reading the text of the steps… {done} of {total}',
+  'capture.tutorial.wayland': 'The automatic tutorial is not available in this session (Wayland): the system forbids tracking clicks. It works on macOS, Windows and Linux in an X11 session.',
   'bool.title': 'Combine shapes',
   'bool.unite': 'Unite',
   'bool.unite.title': 'Merges the selected shapes into a single shape (their union)',

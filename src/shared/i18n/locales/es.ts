@@ -1863,6 +1863,7 @@ export const es: Catalog = {
   'capture.tutorial.name': 'Tutorial',
   'capture.tutorial.noClicks': 'No se registró ningún clic: el vídeo se inserta como clip.',
   'capture.tutorial.reading': 'Leyendo el texto de los pasos… {done} de {total}',
+  'capture.tutorial.wayland': 'El tutorial automático no está disponible en esta sesión (Wayland): el sistema prohíbe seguir los clics. Funciona en macOS, Windows y Linux en una sesión X11.',
   'bool.title': 'Combinar formas',
   'bool.unite': 'Unir',
   'bool.unite.title': 'Fusiona las formas seleccionadas en una sola (su unión)',

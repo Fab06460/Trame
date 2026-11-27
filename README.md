@@ -86,6 +86,10 @@
 Raccourcis : `⌘Z` / `⇧⌘Z` annuler / rétablir · `⌘C` / `⌘X` / `⌘V` copier / couper / coller · `⌘D` dupliquer · `⌘A` tout sélectionner · `Tab` / `⇧Tab` élément suivant / précédent · `⌘-clic` sélectionner l'élément situé en dessous (clics répétés : on descend, puis on remonte) · double-clic sur un membre de groupe : entrer dans le groupe · « Sélectionner tout le même type » (propriétés) · `⌘G` / `⇧⌘G` grouper / dissocier · `⌘N` / `⌘O` / `⌘S` / `⇧⌘S` nouveau / ouvrir / enregistrer / enregistrer sous · `⌘,` réglages · `Suppr` supprimer · flèches déplacer (`Maj` = 10 px) · `Échap` désélectionner · `⌘+` / `⌘-` zoom · `⌘0` ajuster à la fenêtre · `⌘1` taille réelle · `Espace` + glisser (ou clic molette) déplacer la vue · `⇧R` / `⇧G` / `⇧A` règles / repères / aimantation · pendant un glisser : `⌘` suspend l'aimantation, `Maj` bloque l'axe, `Alt` duplique.
 (Sous Windows/Linux, `Ctrl` remplace `⌘` et s'affiche comme tel ; ces plateformes se construisent mais n'ont pas été testées sur une vraie machine, voir [limitations](docs/LIMITATIONS.md).)
 
+## Installer sous Linux (AppImage)
+
+Rendre le fichier exécutable (`chmod +x Trame-*.AppImage`) puis le lancer. Sous **Ubuntu 22.04 et suivants**, l'AppImage demande la bibliothèque FUSE 2, absente par défaut (message « dlopen(): error loading libfuse.so.2 ») : `sudo apt install libfuse2t64` (`libfuse2` avant Ubuntu 24.04). Sans rien installer : `./Trame-*.AppImage --appimage-extract-and-run`. Le tutoriel automatique à partir des clics n'existe pas en session **Wayland** (le système interdit de suivre la souris) ; la capture d'écran, elle, y fonctionne.
+
 ## Démarrage rapide
 
 Prérequis : Node.js récent (développé avec Node 25) et npm.

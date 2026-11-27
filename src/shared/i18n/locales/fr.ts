@@ -1864,6 +1864,7 @@ export const fr = {
   'capture.tutorial.name': 'Tutoriel',
   'capture.tutorial.noClicks': 'Aucun clic n\'a été suivi : la vidéo est insérée comme un clip.',
   'capture.tutorial.reading': 'Lecture du texte des étapes… {done} sur {total}',
+  'capture.tutorial.wayland': 'Le tutoriel automatique n\'est pas disponible dans cette session (Wayland) : le système interdit de suivre les clics. Il fonctionne sous macOS, Windows et Linux en session X11.',
   'bool.title': 'Combiner les formes',
   'bool.unite': 'Unir',
   'bool.unite.title': 'Fond les formes sélectionnées en une seule forme (la réunion)',

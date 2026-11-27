@@ -758,6 +758,24 @@ try {
   await drag(grab, [grab[0] - 187 * fit, grab[1] - 137 * fit], 0, 14)
   check('le bord gauche et le haut s\'accrochent aux repères (X = 200, Y = 300)', (await field('x')) === 200 && (await field('y')) === 300, JSON.stringify([await field('x'), await field('y')]))
 
+  // table de montage : un élément entièrement hors de la page reste visible (estompé), sélectionnable et déplaçable
+  await setField('width', 100)
+  await setField('x', -120) // de -120 à -20 : entièrement à gauche de la page
+  await sleep(300)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check('hors page : l\'élément est désélectionné avant l\'essai', (await count('.panel [data-field="x"]')) === 0)
+  await mouse('mousePressed', sx(-70), sy(400))
+  await mouse('mouseReleased', sx(-70), sy(400))
+  await sleep(300)
+  check('hors page : un clic sur l\'élément placé hors de la feuille le sélectionne', (await field('x')) === -120, String(await field('x')))
+  await drag([sx(-70), sy(400)], [sx(380), sy(400)], 0, 14)
+  check('hors page : on le ramène sur la feuille en le glissant', (await field('x')) > 100, String(await field('x')))
+  await setField('width', 300) // on remet le rectangle comme il était pour la suite
+  await setField('x', 200)
+  await setField('y', 300)
+
   // ⌘ maintenu : aimantation suspendue. Le geste s'éloigne d'abord (pour dépasser le seuil de démarrage d'un glisser), puis revient
   // à 3 px du repère : sans ⌘ il s'accrocherait à 200, avec ⌘ il reste à ≈ 203.
   const here = [sx(200 + 150), sy(300 + 100)]

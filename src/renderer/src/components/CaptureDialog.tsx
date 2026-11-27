@@ -348,6 +348,7 @@ function Dialog({ initial }: { initial: 'image' | 'video' }): React.JSX.Element 
                   <input type="checkbox" data-field="captureMic" checked={options.mic} onChange={(e) => remember({ ...options, mic: e.target.checked })} /> {t('capture.mic')}
                 </label>
               )}
+              {mode === 'video' && portal && <p className="hint" data-hint="tutorial-wayland">{t('capture.tutorial.wayland')}</p>}
               {mode === 'video' && canTutorial && (
                 <label className="check">
                   <input type="checkbox" data-field="captureTutorial" checked={options.tutorial} onChange={(e) => remember({ ...options, tutorial: e.target.checked })} /> {t('capture.tutorial')}

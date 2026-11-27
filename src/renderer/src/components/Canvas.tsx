@@ -11,6 +11,7 @@ import type Konva from 'konva'
 import { useEditor, selectPage } from '@/store/editor'
 import { boxHitFunc, openHitFunc, openSceneFunc, pathSceneFunc } from '@/shapes'
 import { useView } from '@/store/view'
+import { useTheme } from '@/store/theme'
 import { dropImages } from '@/imageDrop'
 import { useColorVision } from '@/store/colorVision'
 import { colorVisionFilter } from '@/readability'
@@ -59,6 +60,9 @@ const SIDE_EDGES: Record<string, ChangedEdges> = {
   'top-center': { top: true },
   'bottom-center': { bottom: true }
 }
+
+/** Voile posé sur ce qui est hors de la page : la couleur du fond de l'éditeur (`--canvas`, selon le thème) à 62 % */
+const OFF_PAGE_DIM = { dark: 'rgba(21, 22, 26, 0.62)', light: 'rgba(211, 214, 223, 0.62)' } as const
 
 /** Copie de l'aperçu d'un clip avec un repère de lecture au centre (éditeur seulement : les exports montrent l'aperçu seul). */
 function withPlayBadge(img: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
@@ -137,6 +141,7 @@ export function Canvas(): React.JSX.Element {
 
   // Vue : `fit` ajuste la page à la zone ; zoom et décalage viennent du store de vue (molette, pincement, boutons)
   const zoom = useView((v) => v.zoom)
+  const theme = useTheme((t) => t.theme)
   const panX = useView((v) => v.panX)
   const panY = useView((v) => v.panY)
   const fit = Math.max(0.01, Math.min((size.w - PADDING * 2) / doc.width, (size.h - PADDING * 2) / doc.height))
@@ -615,10 +620,6 @@ export function Canvas(): React.JSX.Element {
             y={offY}
             scaleX={scale}
             scaleY={scale}
-            clipX={-bleedPx}
-            clipY={-bleedPx}
-            clipWidth={doc.width + 2 * bleedPx}
-            clipHeight={doc.height + 2 * bleedPx}
           >
             {page.elements.filter((el) => !el.hidden).map((el) => {
               const node = elementNode(el)
@@ -632,6 +633,21 @@ export function Canvas(): React.JSX.Element {
               )
             })}
           </Group>
+          {/* table de montage : ce qui dépasse de la page (fond perdu compris) reste visible, sélectionnable et déplaçable, mais estompé ; éditeur seulement, les exports coupent à la page */}
+          <Shape
+            listening={false}
+            name="off-page-dim"
+            sceneFunc={(ctx) => {
+              const c = ctx._context
+              c.save()
+              c.beginPath()
+              c.rect(0, 0, size.w, size.h)
+              c.rect(offX - bleedPx * scale, offY - bleedPx * scale, (doc.width + 2 * bleedPx) * scale, (doc.height + 2 * bleedPx) * scale)
+              c.fillStyle = OFF_PAGE_DIM[theme]
+              c.fill('evenodd')
+              c.restore()
+            }}
+          />
           {(() => {
             const ce = cropId ? page.elements.find((x) => x.id === cropId && x.type === 'image' && !x.hidden) : undefined
             return ce && selectedIds.length === 1 && selectedIds[0] === ce.id ? <CropHandles el={ce} offX={offX} offY={offY} scale={scale} /> : null

@@ -100,7 +100,7 @@ Un élément est dessiné à **quatre endroits**, volontairement distincts :
 
 ### Canvas (`Canvas.tsx`)
 
-- Le `Stage` occupe tout l'espace ; le design est dessiné dans un `Group` mis à l'échelle (`scale`) et centré (`offX/offY`) pour tenir dans la fenêtre. Un second `Group` clippé à la taille du design contient les éléments.
+- Le `Stage` occupe tout l'espace ; le design est dessiné dans un `Group` mis à l'échelle (`scale`) et centré (`offX/offY`) pour tenir dans la fenêtre. Un second `Group` (non clippé) contient les éléments : **table de montage** — ce qui dépasse de la page (fond perdu compris) reste visible, sélectionnable et déplaçable, mais estompé par un voile (`Shape` `off-page-dim` : le fond de l'éditeur `--canvas` à 62 %, couleur selon le thème, évènements désactivés) ; les exports, eux, coupent à la page (le voile et la table de montage n'existent que dans l'éditeur). Auparavant ce groupe était clippé à la page : un élément déplacé entièrement dehors devenait invisible et impossible à reprendre à la souris.
 - Le `Transformer` Konva est attaché aux nœuds de `selectedIds` (effet `useEffect`).
 - **Redimensionnement** : en sélection simple, `onTransform` convertit en direct l'échelle en `width/height` (remet `scale` à 1) pour garder texte et formes nets. En sélection multiple, le Transformer gère l'échelle de chaque nœud et on fige le résultat dans `onTransformEnd`.
 - **Déplacement groupé** : au `dragstart`, les positions de départ de toute la sélection sont mémorisées dans un `ref` ; à chaque `dragmove` on applique le même delta à tous via `setPositions` (sans historique).

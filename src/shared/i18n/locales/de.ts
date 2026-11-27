@@ -1863,6 +1863,7 @@ export const de: Catalog = {
   'capture.tutorial.name': 'Anleitung',
   'capture.tutorial.noClicks': 'Es wurde kein Klick erfasst: Das Video wird als Clip eingefügt.',
   'capture.tutorial.reading': 'Text der Schritte wird gelesen… {done} von {total}',
+  'capture.tutorial.wayland': 'Das automatische Tutorial ist in dieser Sitzung (Wayland) nicht verfügbar: Das System verbietet das Verfolgen von Klicks. Es funktioniert unter macOS, Windows und Linux in einer X11-Sitzung.',
   'bool.title': 'Formen kombinieren',
   'bool.unite': 'Vereinigen',
   'bool.unite.title': 'Verschmilzt die ausgewählten Formen zu einer einzigen Form (ihre Vereinigung)',
