@@ -212,8 +212,10 @@ export async function startScreenRecording(mic: boolean, system: boolean, onFull
   let lastKey = -Infinity
   let frames = 0
 
+  let videoReader: ReadableStreamDefaultReader<VideoFrame> | null = null
   const readVideo = async (): Promise<void> => {
     const reader = new MediaStreamTrackProcessor<VideoFrame>({ track: videoTrack }).readable.getReader()
+    videoReader = reader
     const interval = 1_000_000 / CAPTURE_FPS
     for (;;) {
       const { done, value } = await reader.read()
@@ -273,6 +275,8 @@ export async function startScreenRecording(mic: boolean, system: boolean, onFull
   const release = (): void => {
     running = false
     stopAll(display, micStream)
+    // la piste de sortie du mélangeur ne se termine pas quand ses sources s'arrêtent : sans cet arrêt, la lecture du son n'a jamais de fin et l'enregistrement ne se finalise pas
+    if (mixer) audioTrack?.stop()
     void mixer?.close().catch(() => {})
   }
   return {
@@ -300,7 +304,10 @@ export async function startScreenRecording(mic: boolean, system: boolean, onFull
     stop: async () => {
       const seconds = (performance.now() - startedAt) / 1000
       release()
-      await loops
+      // filet de sécurité : si une lecture ne se termine pas d'elle-même, on la coupe plutôt que d'attendre sans fin
+      await Promise.race([loops, new Promise<void>((r) => setTimeout(r, 3000))])
+      void videoReader?.cancel().catch(() => {})
+      void audioReader?.cancel().catch(() => {})
       try {
         if (failure) throw failure
         if (!frames) throw new Error('no frame')

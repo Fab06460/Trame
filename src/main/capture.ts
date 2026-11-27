@@ -59,6 +59,18 @@ function systemAudioSupported(): boolean {
   return major > 23 || (major === 23 && minor >= 2)
 }
 
+/** Écran (identifiant d'affichage) de chaque source d'écran listée, d'après `display_id` : le numéro contenu dans l'identifiant de la source (« screen:N:0 ») n'est celui de l'écran que sous macOS. */
+const sourceDisplays = new Map<string, string>()
+
+/** L'écran qui correspond à une source d'écran, ou `undefined` (fenêtre, source inconnue). */
+export function displayOfSource(id: string): Electron.Display | undefined {
+  if (!id.startsWith('screen:')) return undefined
+  const displays = screen.getAllDisplays()
+  const known = sourceDisplays.get(id)
+  const byDisplayId = known ? displays.find((d) => String(d.id) === known) : undefined
+  return byDisplayId ?? displays.find((d) => id.split(':')[1] === String(d.id)) ?? (displays.length === 1 ? displays[0] : undefined)
+}
+
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 export function registerCapture({ getWindow, testMode }: Deps): void {
@@ -94,6 +106,7 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: THUMB, fetchWindowIcons: false })
       const own = ownId()
+      for (const s of sources) if (s.display_id) sourceDisplays.set(s.id, s.display_id)
       const list: CaptureSource[] = sources
         .filter((s) => s.id !== own && !s.thumbnail.isEmpty())
         .map((s) => ({ id: s.id, name: s.name || (s.id.startsWith('screen') ? 'Screen' : 'Window'), kind: s.id.startsWith('screen') ? ('screen' as const) : ('window' as const), thumb: s.thumbnail.toDataURL() }))
@@ -121,7 +134,7 @@ export function registerCapture({ getWindow, testMode }: Deps): void {
         await sleep(900) // la fin de l'animation du système
       }
       const portal = id === PORTAL
-      const display = screen.getAllDisplays().find((d) => id.startsWith('screen:') && id.split(':')[1] === String(d.id))
+      const display = displayOfSource(id)
       const scale = display?.scaleFactor ?? 1
       const size = display ? { width: Math.round(display.size.width * scale), height: Math.round(display.size.height * scale) } : { width: 3840, height: 2160 }
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: Math.min(size.width, MAX_STILL_SIDE), height: Math.min(size.height, MAX_STILL_SIDE) }, fetchWindowIcons: false })

@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, screen, shell, systemPreferences } from 'electron'
+import { displayOfSource } from './capture'
 import { CLICK_MIN_GAP_MS, clickFraction, type ClickTrackProblem } from '../shared/capture'
 
 interface Deps {
@@ -48,7 +49,7 @@ export function registerClicks({ getWindow, testMode, portalSession }: Deps): vo
     if (testMode) return 'failed'
     if (portalSession()) return 'portal'
     if (!id.startsWith('screen:')) return 'window'
-    const display = screen.getAllDisplays().find((d) => id.split(':')[1] === String(d.id))
+    const display = displayOfSource(id)
     if (!display) return 'failed'
     // macOS : suivre la souris en dehors de la fenêtre demande l'autorisation « Accessibilité » (la question est posée ici, une seule fois)
     if (process.platform === 'darwin' && !systemPreferences.isTrustedAccessibilityClient(true)) {
