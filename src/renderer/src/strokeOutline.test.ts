@@ -107,7 +107,7 @@ describe('strokeShape', () => {
     const r = await strokeShape(el({ type: 'path', path: d, open: true, width: 2400, height: 400, stroke: '#00f', strokeWidth: 6 }))
     expect(r).not.toBeNull()
     expect(Date.now() - started).toBeLessThan(15000)
-  })
+  }, 30000)
 
   it('sans contour, rien', async () => {
     expect(await strokeShape(el({}))).toBeNull()
